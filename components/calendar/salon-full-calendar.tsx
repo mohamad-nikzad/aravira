@@ -1,0 +1,231 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import FullCalendar from '@fullcalendar/react'
+import type { DateSelectArg, DatesSetArg, EventClickArg, EventInput } from '@fullcalendar/core'
+import faLocale from '@fullcalendar/core/locales/fa'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import timeGridPlugin from '@fullcalendar/timegrid'
+import listPlugin from '@fullcalendar/list'
+import interactionPlugin from '@fullcalendar/interaction'
+import { format, subDays } from 'date-fns'
+import { AppointmentWithDetails, CalendarView, WORKING_HOURS } from '@/lib/types'
+import {
+  expandedZonedToDate,
+  formatPersianDayHeader,
+  formatPersianDayNumber,
+  formatPersianListDay,
+  formatPersianTimeHm,
+} from '@/lib/jalali-display'
+import { cn } from '@/lib/utils'
+
+function staffColorToCssVar(staffColor: string): string {
+  const m = staffColor.match(/^bg-staff-(\d)$/)
+  if (m) return `var(--staff-${m[1]})`
+  return 'var(--primary)'
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function fcDayCellToDate(cell: { date: unknown }): Date {
+  const d = cell.date
+  if (d instanceof Date && !Number.isNaN(d.getTime())) return d
+  if (Array.isArray(d) && d.length >= 3) {
+    return new Date(d[0] as number, (d[1] as number) - 1, d[2] as number, 12, 0, 0, 0)
+  }
+  return new Date(d as number)
+}
+
+function calendarViewToFc(view: CalendarView): string {
+  switch (view) {
+    case 'day':
+      return 'timeGridDay'
+    case 'week':
+      return 'timeGridWeek'
+    case 'month':
+      return 'dayGridMonth'
+    case 'list':
+      return 'listWeek'
+    default:
+      return 'timeGridWeek'
+  }
+}
+
+export interface SalonFullCalendarProps {
+  className?: string
+  appointments: AppointmentWithDetails[]
+  view: CalendarView
+  currentDate: Date
+  onVisibleRangeChange: (start: string, endInclusive: string, activeStart: Date) => void
+  onSlotSelect: (dateStr: string, timeStr: string) => void
+  onEventClick: (appointment: AppointmentWithDetails) => void
+}
+
+export function SalonFullCalendar({
+  className,
+  appointments,
+  view,
+  currentDate,
+  onVisibleRangeChange,
+  onSlotSelect,
+  onEventClick,
+}: SalonFullCalendarProps) {
+  const calendarRef = useRef<InstanceType<typeof FullCalendar>>(null)
+  const appointmentsById = useMemo(() => {
+    const m = new Map<string, AppointmentWithDetails>()
+    for (const a of appointments) m.set(a.id, a)
+    return m
+  }, [appointments])
+
+  const events: EventInput[] = useMemo(
+    () =>
+      appointments.map((apt) => ({
+        id: apt.id,
+        title: `${apt.client.name} — ${apt.service.name}`,
+        start: `${apt.date}T${apt.startTime}:00`,
+        end: `${apt.date}T${apt.endTime}:00`,
+        allDay: false,
+        extendedProps: { appointmentId: apt.id },
+        backgroundColor: staffColorToCssVar(apt.staff.color),
+        borderColor: staffColorToCssVar(apt.staff.color),
+      })),
+    [appointments]
+  )
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      const api = calendarRef.current?.getApi()
+      if (!api) return
+      const fcView = calendarViewToFc(view)
+      if (api.view.type !== fcView) {
+        api.changeView(fcView, currentDate)
+      } else {
+        api.gotoDate(currentDate)
+      }
+    })
+    return () => cancelAnimationFrame(id)
+  }, [view, currentDate])
+
+  const handleDatesSet = useCallback(
+    (arg: DatesSetArg) => {
+      const start = format(arg.start, 'yyyy-MM-dd')
+      const endInclusive = format(subDays(arg.end, 1), 'yyyy-MM-dd')
+      onVisibleRangeChange(start, endInclusive, arg.view.activeStart)
+    },
+    [onVisibleRangeChange]
+  )
+
+  const handleDateSelect = useCallback(
+    (arg: DateSelectArg) => {
+      const dateStr = format(arg.start, 'yyyy-MM-dd')
+      let timeStr = format(arg.start, 'HH:mm')
+      if (arg.allDay || arg.view.type === 'dayGridMonth') {
+        timeStr = WORKING_HOURS.start
+      }
+      onSlotSelect(dateStr, timeStr)
+      arg.view.calendar.unselect()
+    },
+    [onSlotSelect]
+  )
+
+  const selectAllow = useCallback((span: { start: Date; allDay: boolean }) => {
+    if (span.allDay) return true
+    const [endH, endM] = WORKING_HOURS.end.split(':').map(Number)
+    const boundary = new Date(span.start)
+    boundary.setHours(endH, endM, 0, 0)
+    return span.start < boundary
+  }, [])
+
+  const handleEventClick = useCallback(
+    (info: EventClickArg) => {
+      info.jsEvent.preventDefault()
+      const id = info.event.extendedProps.appointmentId as string | undefined
+      if (!id) return
+      const apt = appointmentsById.get(id)
+      if (apt) onEventClick(apt)
+    },
+    [appointmentsById, onEventClick]
+  )
+
+  const handleDateClick = useCallback(
+    (arg: { date: Date; dateStr: string; view: { type: string } }) => {
+      if (arg.view.type === 'dayGridMonth') {
+        const timeStr = WORKING_HOURS.start
+        onSlotSelect(arg.dateStr, timeStr)
+      }
+    },
+    [onSlotSelect]
+  )
+
+  return (
+    <div className={cn('salon-fullcalendar h-full min-h-[480px] flex-1', className)}>
+      <FullCalendar
+        ref={calendarRef}
+        plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+        initialView={calendarViewToFc(view)}
+        initialDate={currentDate}
+        locale={faLocale}
+        headerToolbar={false}
+        events={events}
+        height="100%"
+        direction="rtl"
+        firstDay={6}
+        slotDuration="00:30:00"
+        slotMinTime={`${WORKING_HOURS.start}:00`}
+        slotMaxTime={`${WORKING_HOURS.end}:00`}
+        allDaySlot={false}
+        nowIndicator
+        selectable
+        selectMirror
+        selectOverlap={false}
+        selectAllow={selectAllow}
+        select={handleDateSelect}
+        dateClick={handleDateClick}
+        eventClick={handleEventClick}
+        datesSet={handleDatesSet}
+        // Use HTML custom content (not React nodes) so @fullcalendar/react avoids flushSync
+        // during lifecycle — see fullcalendar#7448 / React 18+ strict rendering.
+        dayHeaderContent={({ date }) => ({
+          html: `<span>${escapeHtml(formatPersianDayHeader(date))}</span>`,
+        })}
+        dayCellContent={(arg) => {
+          if (arg.view.type !== 'dayGridMonth') {
+            return {
+              html: `<span class="fc-daygrid-day-number">${escapeHtml(arg.dayNumberText)}</span>`,
+            }
+          }
+          return {
+            html: `<span class="fc-daygrid-day-number">${escapeHtml(formatPersianDayNumber(fcDayCellToDate(arg)))}</span>`,
+          }
+        }}
+        slotLabelContent={({ date }) => ({
+          html: `<span>${escapeHtml(formatPersianTimeHm(date))}</span>`,
+        })}
+        dayMaxEvents
+        stickyHeaderDates
+        businessHours={{
+          daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+          startTime: WORKING_HOURS.start,
+          endTime: WORKING_HOURS.end,
+        }}
+        eventTimeFormat={(arg) => {
+          const s = expandedZonedToDate(arg.start)
+          const e = arg.end ? expandedZonedToDate(arg.end) : s
+          return `${formatPersianTimeHm(s)} – ${formatPersianTimeHm(e)}`
+        }}
+        listDayFormat={(arg) => formatPersianListDay(expandedZonedToDate(arg.date))}
+        listDaySideFormat={false}
+        noEventsText="نوبتی در این بازه نیست"
+        eventDisplay="block"
+        displayEventEnd
+      />
+    </div>
+  )
+}
