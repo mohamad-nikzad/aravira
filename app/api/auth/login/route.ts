@@ -4,20 +4,20 @@ import { login } from '@/lib/auth'
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json()
+    const { phone, password } = await request.json()
 
-    if (!email || !password) {
+    if (!phone || !password) {
       return NextResponse.json(
-        { error: 'ایمیل و رمز عبور الزامی است' },
+        { error: 'شماره موبایل و رمز عبور الزامی است' },
         { status: 400 }
       )
     }
 
-    const result = await login(String(email).trim(), password)
+    const result = await login(String(phone).trim(), password)
 
     if (!result) {
       return NextResponse.json(
-        { error: 'ایمیل یا رمز عبور اشتباه است' },
+        { error: 'شماره موبایل یا رمز عبور اشتباه است' },
         { status: 401 }
       )
     }
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
       path: '/',
     })
 

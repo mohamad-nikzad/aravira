@@ -32,8 +32,7 @@ export function StaffFilter({ staff, selectedIds, onToggle }: StaffFilterProps) 
   }
 
   return (
-    <div className="flex items-center gap-1 overflow-x-auto px-4 py-2 border-b">
-      <span className="shrink-0 text-xs text-muted-foreground mr-2">فیلتر:</span>
+    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
       {staff.map((member) => {
         const isSelected = selectedIds.length === 0 || selectedIds.includes(member.id)
         return (
@@ -41,14 +40,14 @@ export function StaffFilter({ staff, selectedIds, onToggle }: StaffFilterProps) 
             key={member.id}
             onClick={() => onToggle(member.id)}
             className={cn(
-              'flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-all',
+              'flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-all touch-manipulation',
               isSelected
-                ? 'border-primary/50 bg-primary/10'
-                : 'border-border bg-card opacity-50 hover:opacity-75'
+                ? 'border-primary/40 bg-primary/8 text-foreground'
+                : 'border-transparent bg-transparent text-muted-foreground opacity-50'
             )}
           >
             <Avatar className="h-5 w-5">
-              <AvatarFallback className={cn('text-[10px] text-foreground', getStaffColorClass(member.color))}>
+              <AvatarFallback className={cn('text-[9px] text-foreground font-medium', getStaffColorClass(member.color))}>
                 {getInitials(member.name)}
               </AvatarFallback>
             </Avatar>

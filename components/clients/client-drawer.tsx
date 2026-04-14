@@ -33,7 +33,6 @@ export function ClientDrawer({
   const [error, setError] = useState('')
 
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [notes, setNotes] = useState('')
 
@@ -43,12 +42,10 @@ export function ClientDrawer({
     if (open) {
       if (client) {
         setName(client.name)
-        setEmail(client.email || '')
         setPhone(client.phone)
         setNotes(client.notes || '')
       } else {
         setName('')
-        setEmail('')
         setPhone('')
         setNotes('')
       }
@@ -71,7 +68,6 @@ export function ClientDrawer({
         credentials: 'include',
         body: JSON.stringify({
           name,
-          email: email || undefined,
           phone,
           notes: notes || undefined,
         }),
@@ -125,19 +121,8 @@ export function ClientDrawer({
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="۰۹۱۲..."
                 required
-              />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="client-email">ایمیل (اختیاری)</FieldLabel>
-              <Input
-                id="client-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@example.com"
-                className="text-left"
                 dir="ltr"
+                className="text-left"
               />
             </Field>
 
@@ -156,7 +141,7 @@ export function ClientDrawer({
         </form>
 
         <DrawerFooter>
-          <Button onClick={handleSubmit} disabled={loading || !name || !phone}>
+          <Button onClick={handleSubmit} disabled={loading || !name || !phone} className="touch-manipulation">
             {loading && <Spinner className="ml-2" />}
             {loading ? 'در حال ذخیره...' : isEditing ? 'ذخیره تغییرات' : 'افزودن مشتری'}
           </Button>

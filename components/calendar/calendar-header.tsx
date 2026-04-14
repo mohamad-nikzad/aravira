@@ -1,7 +1,7 @@
 'use client'
 
 import { addDays, addWeeks, addMonths, subDays, subWeeks, subMonths } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CalendarView } from '@/lib/types'
 import {
@@ -11,14 +11,11 @@ import {
 } from '@/lib/jalali-display'
 
 interface CalendarHeaderProps {
-  /** Visible period anchor from FullCalendar `datesSet` — used for the title only */
   titleAnchor: Date
-  /** Date passed to `gotoDate` — must be used for prev/next so we do not add months to the grid’s leading cell */
   navigationDate: Date
   view: CalendarView
   onDateChange: (date: Date) => void
   onToday: () => void
-  onAddAppointment: () => void
 }
 
 export function CalendarHeader({
@@ -27,7 +24,6 @@ export function CalendarHeader({
   view,
   onDateChange,
   onToday,
-  onAddAppointment,
 }: CalendarHeaderProps) {
   const navigate = (direction: 'prev' | 'next') => {
     const d = navigationDate
@@ -53,36 +49,51 @@ export function CalendarHeader({
       case 'list':
         return formatPersianWeekRange(titleAnchor, addDays(titleAnchor, 6))
       case 'month':
-        // `titleAnchor` is the first cell of the grid (often previous Gregorian month); month label should match `gotoDate`
         return formatPersianMonthYear(navigationDate)
     }
   }
 
   return (
-    <header className="flex items-center justify-between gap-4 border-b bg-card px-4 py-3">
-      {/* LTR: left = past, right = future — stable under page RTL so chevrons match behavior */}
-      <div dir="ltr" className="flex items-center gap-2">
-        <Button variant="ghost" size="icon-sm" onClick={() => navigate('prev')} type="button">
+    <header className="calendar-header-gradient flex items-center gap-2 px-3 py-2 sm:px-4">
+      <div className="flex items-center gap-0.5 shrink-0">
+        <span className="text-base font-bold text-primary tracking-tight ml-1.5">آراویرا</span>
+      </div>
+
+      <div className="flex-1 min-w-0 text-center">
+        <p className="text-[13px] font-semibold text-foreground truncate leading-tight">
+          {getTitle()}
+        </p>
+      </div>
+
+      <div dir="ltr" className="flex items-center gap-0.5 shrink-0">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => navigate('prev')}
+          type="button"
+          className="h-8 w-8 touch-manipulation"
+        >
           <ChevronLeft className="h-4 w-4" />
           <span className="sr-only">قبلی</span>
         </Button>
-        <Button variant="ghost" size="icon-sm" onClick={() => navigate('next')} type="button">
+        <button
+          onClick={onToday}
+          className="px-2 py-1 text-xs font-semibold text-primary touch-manipulation rounded-md hover:bg-primary/8 transition-colors"
+          type="button"
+        >
+          امروز
+        </button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => navigate('next')}
+          type="button"
+          className="h-8 w-8 touch-manipulation"
+        >
           <ChevronRight className="h-4 w-4" />
           <span className="sr-only">بعدی</span>
         </Button>
-        <Button variant="outline" size="sm" onClick={onToday} className="hidden sm:flex" type="button">
-          امروز
-        </Button>
       </div>
-
-      <h1 className="text-sm font-semibold text-foreground sm:text-base">
-        {getTitle()}
-      </h1>
-
-      <Button size="sm" onClick={onAddAppointment} className="gap-1.5">
-        <Plus className="h-4 w-4" />
-        <span className="hidden sm:inline">نوبت جدید</span>
-      </Button>
     </header>
   )
 }

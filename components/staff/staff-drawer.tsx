@@ -37,7 +37,6 @@ export function StaffDrawer({
   const [error, setError] = useState('')
 
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
   const [role, setRole] = useState<'staff' | 'manager'>('staff')
@@ -45,7 +44,6 @@ export function StaffDrawer({
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {
       setName('')
-      setEmail('')
       setPassword('')
       setPhone('')
       setRole('staff')
@@ -66,9 +64,8 @@ export function StaffDrawer({
         credentials: 'include',
         body: JSON.stringify({
           name,
-          email,
           password,
-          phone: phone || undefined,
+          phone,
           role,
         }),
       })
@@ -94,9 +91,7 @@ export function StaffDrawer({
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>پرسنل جدید</DrawerTitle>
-          <DrawerDescription>
-            عضو جدیدی به تیم سالن اضافه کنید
-          </DrawerDescription>
+          <DrawerDescription>عضو جدیدی به تیم سالن اضافه کنید</DrawerDescription>
         </DrawerHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-auto px-4">
@@ -113,16 +108,16 @@ export function StaffDrawer({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="staff-email">ایمیل</FieldLabel>
+              <FieldLabel htmlFor="staff-phone">شماره موبایل</FieldLabel>
               <Input
-                id="staff-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                className="text-left"
-                dir="ltr"
+                id="staff-phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="0912..."
                 required
+                dir="ltr"
+                className="text-left"
               />
             </Field>
 
@@ -135,17 +130,6 @@ export function StaffDrawer({
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="رمز ورود به سیستم"
                 required
-              />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="staff-phone">تلفن (اختیاری)</FieldLabel>
-              <Input
-                id="staff-phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="۰۹۱۲..."
               />
             </Field>
 
@@ -167,7 +151,11 @@ export function StaffDrawer({
         </form>
 
         <DrawerFooter>
-          <Button onClick={handleSubmit} disabled={loading || !name || !email || !password}>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading || !name || !phone || !password}
+            className="touch-manipulation"
+          >
             {loading && <Spinner className="ml-2" />}
             {loading ? 'در حال افزودن...' : 'افزودن پرسنل'}
           </Button>

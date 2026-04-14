@@ -3,20 +3,35 @@
 import { useState, useMemo, useCallback } from 'react'
 import { format, parseISO, subDays, addDays } from 'date-fns'
 import useSWR from 'swr'
+import { Plus } from 'lucide-react'
 import { CalendarHeader } from '@/components/calendar/calendar-header'
 import { SalonFullCalendar } from '@/components/calendar/salon-full-calendar'
 import { StaffFilter } from '@/components/calendar/staff-filter'
 import { AppointmentDrawer } from '@/components/calendar/appointment-drawer'
 import { AppointmentDetailDrawer } from '@/components/calendar/appointment-detail-drawer'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { CalendarView, AppointmentWithDetails, User, Service, Client } from '@/lib/types'
+import {
+  CalendarView,
+  AppointmentWithDetails,
+  User,
+  Service,
+  Client,
+  WORKING_HOURS,
+  type BusinessHours,
+} from '@/lib/types'
 import { useAuth } from '@/components/auth-provider'
 import { Spinner } from '@/components/ui/spinner'
+import { cn } from '@/lib/utils'
 
 const fetcher = (url: string) =>
   fetch(url, { credentials: 'include' }).then((res) => res.json())
 
-/** Wide initial window so events load before/after `datesSet`; API uses Gregorian yyyy-MM-dd */
+const VIEW_OPTIONS: { value: CalendarView; label: string }[] = [
+  { value: 'day', label: 'روز' },
+  { value: 'week', label: 'هفته' },
+  { value: 'month', label: 'ماه' },
+  { value: 'list', label: 'لیست' },
+]
+
 function defaultRange(_view: CalendarView, anchor: Date): { start: string; end: string } {
   const start = subDays(anchor, 120)
   const end = addDays(anchor, 120)
@@ -25,6 +40,7 @@ function defaultRange(_view: CalendarView, anchor: Date): { start: string; end: 
 
 export default function CalendarPage() {
   const { user, loading: authLoading } = useAuth()
+  const isManager = user?.role === 'manager'
   const [view, setView] = useState<CalendarView>('week')
   const [navDate, setNavDate] = useState(() => new Date())
   const [titleAnchor, setTitleAnchor] = useState(() => new Date())
@@ -46,17 +62,34 @@ export default function CalendarPage() {
   )
   const { data: staffData } = useSWR(user ? '/api/staff' : null, fetcher)
   const { data: servicesData } = useSWR(user ? '/api/services' : null, fetcher)
-  const { data: clientsData } = useSWR(user ? '/api/clients' : null, fetcher)
+  const { data: clientsData, mutate: mutateClients } = useSWR(user && isManager ? '/api/clients' : null, fetcher)
+  const { data: businessData } = useSWR(user ? '/api/settings/business' : null, fetcher)
 
   const appointments: AppointmentWithDetails[] = appointmentsData?.appointments || []
   const staff: User[] = staffData?.staff || []
   const services: Service[] = servicesData?.services || []
   const clients: Client[] = clientsData?.clients || []
 
+  const businessHours: BusinessHours = useMemo(() => {
+    const s = businessData?.settings
+    if (s?.workingStart && s?.workingEnd && s?.slotDurationMinutes != null) {
+      return {
+        workingStart: s.workingStart,
+        workingEnd: s.workingEnd,
+        slotDurationMinutes: s.slotDurationMinutes,
+      }
+    }
+    return {
+      workingStart: WORKING_HOURS.start,
+      workingEnd: WORKING_HOURS.end,
+      slotDurationMinutes: WORKING_HOURS.slotDuration,
+    }
+  }, [businessData])
+
   const filteredAppointments = useMemo(() => {
-    if (selectedStaffIds.length === 0) return appointments
+    if (!isManager || selectedStaffIds.length === 0) return appointments
     return appointments.filter((apt) => selectedStaffIds.includes(apt.staffId))
-  }, [appointments, selectedStaffIds])
+  }, [appointments, selectedStaffIds, isManager])
 
   const handleVisibleRangeChange = useCallback(
     (start: string, endInclusive: string, activeStart: Date) => {
@@ -85,16 +118,21 @@ export default function CalendarPage() {
   }
 
   const handleAddAppointment = () => {
+    if (!isManager) return
     setCreateDate(format(navDate, 'yyyy-MM-dd'))
-    setCreateTime('09:00')
+    setCreateTime(businessHours.workingStart)
     setShowCreateDrawer(true)
   }
 
-  const handleSlotSelect = useCallback((dateStr: string, timeStr: string) => {
-    setCreateDate(dateStr)
-    setCreateTime(timeStr)
-    setShowCreateDrawer(true)
-  }, [])
+  const handleSlotSelect = useCallback(
+    (dateStr: string, timeStr: string) => {
+      if (!isManager) return
+      setCreateDate(dateStr)
+      setCreateTime(timeStr)
+      setShowCreateDrawer(true)
+    },
+    [isManager]
+  )
 
   const handleAppointmentClick = (appointment: AppointmentWithDetails) => {
     setSelectedAppointment(appointment)
@@ -112,7 +150,7 @@ export default function CalendarPage() {
 
   if (authLoading) {
     return (
-      <div className="flex h-dvh items-center justify-center">
+      <div className="flex h-full items-center justify-center">
         <Spinner className="h-8 w-8" />
       </div>
     )
@@ -121,54 +159,77 @@ export default function CalendarPage() {
   if (!user) return null
 
   return (
-    <div className="flex h-dvh flex-col bg-background">
+    <div className="relative flex h-full flex-col bg-background">
       <CalendarHeader
         titleAnchor={titleAnchor}
         navigationDate={navDate}
         view={view}
         onDateChange={setNavDate}
         onToday={handleToday}
-        onAddAppointment={handleAddAppointment}
       />
 
-      <div className="flex flex-col border-b bg-card sm:flex-row sm:items-center sm:justify-between">
-        <Tabs value={view} onValueChange={(v) => setView(v as CalendarView)} className="px-4 py-2">
-          <TabsList className="flex-wrap h-auto gap-1">
-            <TabsTrigger value="day">روز</TabsTrigger>
-            <TabsTrigger value="week">هفته</TabsTrigger>
-            <TabsTrigger value="month">ماه</TabsTrigger>
-            <TabsTrigger value="list">برنامه</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <StaffFilter
-          staff={staff}
-          selectedIds={selectedStaffIds}
-          onToggle={handleStaffToggle}
-        />
+      <div className="flex items-center gap-2 border-b border-border/50 bg-card/80 px-3 py-1.5 sm:px-4">
+        <div className="flex items-center rounded-lg bg-muted/70 p-0.5">
+          {VIEW_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setView(opt.value)}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-[11px] font-semibold transition-all touch-manipulation',
+                view === opt.value
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {isManager && staff.length > 0 && (
+          <div className="flex-1 overflow-hidden">
+            <StaffFilter staff={staff} selectedIds={selectedStaffIds} onToggle={handleStaffToggle} />
+          </div>
+        )}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-1 sm:p-2">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <SalonFullCalendar
-          className="rounded-xl border border-border bg-card shadow-sm"
+          className="flex-1"
           appointments={filteredAppointments}
           view={view}
           currentDate={navDate}
+          businessHours={businessHours}
+          readOnly={!isManager}
           onVisibleRangeChange={handleVisibleRangeChange}
           onSlotSelect={handleSlotSelect}
           onEventClick={handleAppointmentClick}
         />
       </div>
 
-      <AppointmentDrawer
-        open={showCreateDrawer}
-        onOpenChange={setShowCreateDrawer}
-        initialDate={createDate}
-        initialTime={createTime}
-        staff={staff}
-        services={services}
-        clients={clients}
-        onSuccess={handleAppointmentCreated}
-      />
+      {isManager && (
+        <button
+          onClick={handleAddAppointment}
+          className="absolute bottom-5 left-4 z-40 flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-lg shadow-primary/25 transition-all active:scale-[0.92] touch-manipulation"
+          aria-label="نوبت جدید"
+        >
+          <Plus className="h-6 w-6" strokeWidth={2.5} />
+        </button>
+      )}
+
+      {isManager && (
+        <AppointmentDrawer
+          open={showCreateDrawer}
+          onOpenChange={setShowCreateDrawer}
+          initialDate={createDate}
+          initialTime={createTime}
+          staff={staff}
+          services={services}
+          clients={clients}
+          onSuccess={handleAppointmentCreated}
+          onClientsChanged={() => mutateClients()}
+        />
+      )}
 
       <AppointmentDetailDrawer
         appointment={selectedAppointment}
@@ -176,7 +237,9 @@ export default function CalendarPage() {
         staff={staff}
         services={services}
         clients={clients}
+        readOnly={!isManager}
         onSuccess={handleAppointmentUpdated}
+        onClientsChanged={() => mutateClients()}
       />
     </div>
   )

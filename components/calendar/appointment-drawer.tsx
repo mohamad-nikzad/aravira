@@ -30,6 +30,7 @@ import {
   parseTimeHm,
   validateAppointmentWindow,
 } from '@/lib/appointment-time'
+import { ClientPicker } from '@/components/calendar/client-picker'
 
 const CATEGORY_LABELS: Record<string, string> = {
   hair: 'مو',
@@ -49,6 +50,7 @@ interface AppointmentDrawerProps {
   services: Service[]
   clients: Client[]
   onSuccess: () => void
+  onClientsChanged?: () => void
 }
 
 export function AppointmentDrawer({
@@ -60,6 +62,7 @@ export function AppointmentDrawer({
   services,
   clients,
   onSuccess,
+  onClientsChanged,
 }: AppointmentDrawerProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -74,8 +77,13 @@ export function AppointmentDrawer({
     endTimeFromDuration(formatTimeHm(parseTimeHm(initialTime)), 45)
   )
   const [notes, setNotes] = useState('')
+  const [localClients, setLocalClients] = useState<Client[]>(clients)
   const durationRef = useRef(durationMinutes)
   durationRef.current = durationMinutes
+
+  useEffect(() => {
+    setLocalClients(clients)
+  }, [clients])
 
   const applyDuration = (mins: number) => {
     const clamped = Math.min(
@@ -110,6 +118,7 @@ export function AppointmentDrawer({
       setServiceId('')
       setNotes('')
       setError('')
+      setLocalClients(clients)
     }
     onOpenChange(isOpen)
   }
@@ -126,6 +135,11 @@ export function AppointmentDrawer({
     setServiceId(id)
     const svc = services.find((s) => s.id === id)
     if (svc) applyDuration(svc.duration)
+  }
+
+  const handleClientCreated = (newClient: Client) => {
+    setLocalClients((prev) => [newClient, ...prev])
+    onClientsChanged?.()
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -189,7 +203,7 @@ export function AppointmentDrawer({
         <DrawerHeader>
           <DrawerTitle>نوبت جدید</DrawerTitle>
           <DrawerDescription>
-            مدت زمان را می‌توانید تغییر دهید؛ مقدار پیشنهادی فقط از روی خدمت پر می‌شود.
+            مدت زمان پیشنهادی از روی خدمت انتخابی پر می‌شود.
           </DrawerDescription>
         </DrawerHeader>
 
@@ -197,18 +211,12 @@ export function AppointmentDrawer({
           <FieldGroup>
             <Field>
               <FieldLabel>مشتری</FieldLabel>
-              <Select value={clientId} onValueChange={setClientId} required>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="انتخاب مشتری" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ClientPicker
+                clients={localClients}
+                value={clientId}
+                onChange={setClientId}
+                onClientCreated={handleClientCreated}
+              />
             </Field>
 
             <Field>

@@ -10,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
     }
 
-    const staff = getAllStaff()
+    const staff = await getAllStaff()
     return NextResponse.json({ staff })
   } catch (error) {
     console.error('Get staff error:', error)
@@ -22,36 +22,38 @@ export async function POST(request: Request) {
   try {
     const user = await getCurrentUser()
     if (!user || user.role !== 'manager') {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
+      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
     const body = await request.json()
-    const { email, password, name, role, phone } = body
+    const { password, name, role, phone } = body
 
-    if (!email || !password || !name) {
+    if (!phone || !password || !name) {
       return NextResponse.json(
-        { error: 'ایمیل، رمز عبور و نام الزامی است' },
+        { error: 'شماره موبایل، رمز عبور و نام الزامی است' },
         { status: 400 }
       )
     }
 
-    // Assign a color based on existing staff count
-    const existingStaff = getAllStaff()
+    const existingStaff = await getAllStaff()
     const colorIndex = existingStaff.length % STAFF_COLORS.length
     const color = STAFF_COLORS[colorIndex]
 
-    const newUser = createUser({
-      email,
+    const newUser = await createUser({
+      phone,
       password,
       name,
       role: role || 'staff',
       color,
-      phone,
     })
 
     return NextResponse.json({ user: newUser })
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Create staff error:', error)
+    const msg = error instanceof Error ? error.message : ''
+    if (msg.includes('unique') || msg.includes('duplicate')) {
+      return NextResponse.json({ error: 'این شماره موبایل قبلاً ثبت شده است' }, { status: 409 })
+    }
     return NextResponse.json({ error: 'خطای سرور. لطفاً دوباره تلاش کنید.' }, { status: 500 })
   }
 }

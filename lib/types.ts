@@ -2,11 +2,10 @@ export type UserRole = 'manager' | 'staff'
 
 export interface User {
   id: string
-  email: string
   name: string
   role: UserRole
   color: string
-  phone?: string
+  phone: string
   createdAt: Date
 }
 
@@ -23,7 +22,6 @@ export interface Service {
 export interface Client {
   id: string
   name: string
-  email?: string
   phone: string
   notes?: string
   createdAt: Date
@@ -56,6 +54,19 @@ export interface TimeSlot {
   available: boolean
 }
 
+/** Default fallback when DB business_settings row is missing */
+export const WORKING_HOURS = {
+  start: '09:00',
+  end: '19:00',
+  slotDuration: 30, // minutes
+} as const
+
+export interface BusinessHours {
+  workingStart: string
+  workingEnd: string
+  slotDurationMinutes: number
+}
+
 export const SERVICE_CATEGORIES = {
   hair: { label: 'مو', color: 'bg-staff-1' },
   nails: { label: 'ناخن', color: 'bg-staff-2' },
@@ -77,10 +88,4 @@ export const APPOINTMENT_STATUS = {
   completed: { label: 'انجام شده', color: 'bg-green-100 text-green-700' },
   cancelled: { label: 'لغو شده', color: 'bg-destructive/20 text-destructive' },
   'no-show': { label: 'غیبت', color: 'bg-orange-100 text-orange-700' },
-} as const
-
-export const WORKING_HOURS = {
-  start: '09:00',
-  end: '19:00',
-  slotDuration: 30, // minutes
 } as const

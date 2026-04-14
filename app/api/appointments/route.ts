@@ -8,8 +8,18 @@ import {
   getServiceById,
   hasConflict,
 } from '@/lib/db'
-import { AppointmentWithDetails } from '@/lib/types'
+import type { Appointment, AppointmentWithDetails } from '@/lib/types'
 import { endTimeFromDuration, validateAppointmentWindow } from '@/lib/appointment-time'
+
+async function enrichAppointment(apt: Appointment): Promise<AppointmentWithDetails | null> {
+  const [client, staff, service] = await Promise.all([
+    getClientById(apt.clientId),
+    getUserById(apt.staffId),
+    getServiceById(apt.serviceId),
+  ])
+  if (!client || !staff || !service) return null
+  return { ...apt, client, staff, service }
+}
 
 export async function GET(request: Request) {
   try {
@@ -29,27 +39,14 @@ export async function GET(request: Request) {
       )
     }
 
-    const appointments = getAppointmentsByDateRange(startDate, endDate)
+    const staffFilter = user.role === 'staff' ? user.id : undefined
+    const list = await getAppointmentsByDateRange(startDate, endDate, staffFilter)
 
-    // Enrich with related data
-    const enrichedAppointments: AppointmentWithDetails[] = appointments
-      .map((apt) => {
-        const client = getClientById(apt.clientId)
-        const staff = getUserById(apt.staffId)
-        const service = getServiceById(apt.serviceId)
+    const enriched = (
+      await Promise.all(list.map((apt) => enrichAppointment(apt)))
+    ).filter((a): a is AppointmentWithDetails => a !== null)
 
-        if (!client || !staff || !service) return null
-
-        return {
-          ...apt,
-          client,
-          staff,
-          service,
-        }
-      })
-      .filter((apt): apt is AppointmentWithDetails => apt !== null)
-
-    return NextResponse.json({ appointments: enrichedAppointments })
+    return NextResponse.json({ appointments: enriched })
   } catch (error) {
     console.error('Get appointments error:', error)
     return NextResponse.json({ error: 'خطای سرور. لطفاً دوباره تلاش کنید.' }, { status: 500 })
@@ -59,23 +56,28 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser()
-    if (!user) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
+    if (!user || user.role !== 'manager') {
+      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
     const body = await request.json()
-    const { clientId, staffId, serviceId, date, startTime, endTime: endTimeRaw, durationMinutes, notes } =
-      body
+    const {
+      clientId,
+      staffId,
+      serviceId,
+      date,
+      startTime,
+      endTime: endTimeRaw,
+      durationMinutes,
+      notes,
+    } = body
 
     if (!clientId || !staffId || !serviceId || !date || !startTime) {
-      return NextResponse.json(
-        { error: 'فیلدهای الزامی کامل نیست' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'فیلدهای الزامی کامل نیست' }, { status: 400 })
     }
 
-    const service = getServiceById(serviceId)
-    if (!service) {
+    const service = await getServiceById(serviceId)
+    if (!service || !service.active) {
       return NextResponse.json({ error: 'خدمت یافت نشد' }, { status: 404 })
     }
 
@@ -102,28 +104,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: windowCheck.error }, { status: 400 })
     }
 
-    // Check for conflicts
-    if (hasConflict(staffId, date, startTime, endTime)) {
+    if (await hasConflict(staffId, date, startTime, endTime)) {
       return NextResponse.json(
         { error: 'این زمان با نوبت دیگری تداخل دارد' },
         { status: 409 }
       )
     }
 
-    const appointment = createAppointment({
-      clientId,
-      staffId,
-      serviceId,
-      date,
-      startTime,
-      endTime,
-      status: 'scheduled',
-      notes,
-    })
+    const appointment = await createAppointment(
+      {
+        clientId,
+        staffId,
+        serviceId,
+        date,
+        startTime,
+        endTime,
+        status: 'scheduled',
+        notes,
+      },
+      user.id
+    )
 
-    // Enrich with related data
-    const client = getClientById(appointment.clientId)
-    const staff = getUserById(appointment.staffId)
+    const client = await getClientById(appointment.clientId)
+    const staff = await getUserById(appointment.staffId)
 
     return NextResponse.json({
       appointment: {

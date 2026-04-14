@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { getAllClients, createClient } from '@/lib/db'
+import { getBusinessSettings, updateBusinessSettings } from '@/lib/db'
 
 export async function GET() {
   try {
@@ -8,19 +8,16 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
     }
-    if (user.role !== 'manager') {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
-    }
 
-    const clients = await getAllClients()
-    return NextResponse.json({ clients })
+    const settings = await getBusinessSettings()
+    return NextResponse.json({ settings })
   } catch (error) {
-    console.error('Get clients error:', error)
+    console.error('Get business settings error:', error)
     return NextResponse.json({ error: 'خطای سرور. لطفاً دوباره تلاش کنید.' }, { status: 500 })
   }
 }
 
-export async function POST(request: Request) {
+export async function PATCH(request: Request) {
   try {
     const user = await getCurrentUser()
     if (!user || user.role !== 'manager') {
@@ -28,16 +25,17 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { name, phone, notes } = body
+    const { workingStart, workingEnd, slotDurationMinutes } = body
 
-    if (!name || !phone) {
-      return NextResponse.json({ error: 'نام و شماره تماس الزامی است' }, { status: 400 })
-    }
+    const next = await updateBusinessSettings({
+      ...(typeof workingStart === 'string' ? { workingStart } : {}),
+      ...(typeof workingEnd === 'string' ? { workingEnd } : {}),
+      ...(typeof slotDurationMinutes === 'number' ? { slotDurationMinutes } : {}),
+    })
 
-    const client = await createClient({ name, phone, notes })
-    return NextResponse.json({ client })
+    return NextResponse.json({ settings: next })
   } catch (error) {
-    console.error('Create client error:', error)
+    console.error('Update business settings error:', error)
     return NextResponse.json({ error: 'خطای سرور. لطفاً دوباره تلاش کنید.' }, { status: 500 })
   }
 }

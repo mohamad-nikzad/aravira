@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
-import { Plus, Search, Phone, Mail, MoreHorizontal } from 'lucide-react'
+import { Plus, Search, Phone, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,19 +22,25 @@ const fetcher = (url: string) =>
   fetch(url, { credentials: 'include' }).then((res) => res.json())
 
 export default function ClientsPage() {
+  const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const [search, setSearch] = useState('')
   const [showDrawer, setShowDrawer] = useState(false)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
 
-  const { data, mutate } = useSWR(user ? '/api/clients' : null, fetcher)
+  useEffect(() => {
+    if (!authLoading && user && user.role !== 'manager') {
+      router.replace('/calendar')
+    }
+  }, [authLoading, user, router])
+
+  const { data, mutate } = useSWR(user?.role === 'manager' ? '/api/clients' : null, fetcher)
   const clients: Client[] = data?.clients || []
 
   const filteredClients = clients.filter(
     (client) =>
       client.name.toLowerCase().includes(search.toLowerCase()) ||
-      client.phone.includes(search) ||
-      client.email?.toLowerCase().includes(search.toLowerCase())
+      client.phone.includes(search)
   )
 
   const handleAddClient = () => {
@@ -63,98 +69,83 @@ export default function ClientsPage() {
 
   if (authLoading) {
     return (
-      <div className="flex h-dvh items-center justify-center">
+      <div className="flex h-full items-center justify-center">
         <Spinner className="h-8 w-8" />
       </div>
     )
   }
 
-  if (!user) return null
+  if (!user || user.role !== 'manager') return null
 
   return (
-    <div className="flex h-dvh flex-col bg-background">
-      {/* Header */}
-      <header className="flex items-center justify-between gap-4 border-b bg-card px-4 py-3">
-        <h1 className="text-lg font-semibold">مشتریان</h1>
-        <Button size="sm" onClick={handleAddClient}>
+    <div className="flex h-full flex-col bg-background">
+      <header className="flex items-center justify-between gap-4 bg-card px-4 py-3 border-b border-border/50">
+        <h1 className="text-lg font-bold">مشتریان</h1>
+        <Button size="sm" onClick={handleAddClient} className="gap-1.5 touch-manipulation">
           <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline mr-1.5">مشتری جدید</span>
+          <span className="hidden sm:inline">مشتری جدید</span>
         </Button>
       </header>
 
-      {/* Search */}
-      <div className="border-b bg-card px-4 py-3">
+      <div className="bg-card px-4 pb-3">
         <div className="relative">
           <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="جستجوی مشتری..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pr-9"
+            className="pr-9 h-10 bg-muted/50 border-0"
           />
         </div>
       </div>
 
-      {/* Client list */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto">
         {filteredClients.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-muted-foreground">مشتری‌ای یافت نشد</p>
-            <Button variant="link" onClick={handleAddClient}>
+            <Button variant="link" onClick={handleAddClient} className="text-primary">
               اولین مشتری را اضافه کنید
             </Button>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-border/50">
             {filteredClients.map((client) => (
-              <Card key={client.id} className="py-3">
-                <CardContent className="flex items-center gap-3 px-4 py-0">
-                  <Avatar>
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {getInitials(client.name)}
-                    </AvatarFallback>
-                  </Avatar>
+              <div
+                key={client.id}
+                className="flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted/50"
+              >
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-primary/8 text-primary text-sm font-medium">
+                    {getInitials(client.name)}
+                  </AvatarFallback>
+                </Avatar>
 
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{client.name}</p>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1" dir="ltr">
-                        <Phone className="h-3 w-3" />
-                        {client.phone}
-                      </span>
-                      {client.email && (
-                        <span className="hidden sm:flex items-center gap-1 truncate" dir="ltr">
-                          <Mail className="h-3 w-3" />
-                          {client.email}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{client.name}</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5" dir="ltr">
+                    <Phone className="h-3 w-3" />
+                    {client.phone}
+                  </p>
+                </div>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon-sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem onClick={() => handleEditClient(client)}>
-                        ویرایش
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon-sm" className="touch-manipulation shrink-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => handleEditClient(client)}>
+                      ویرایش
+                    </DropdownMenuItem>
+                    {client.phone && (
+                      <DropdownMenuItem asChild>
+                        <a href={`tel:${client.phone}`}>تماس</a>
                       </DropdownMenuItem>
-                      {client.phone && (
-                        <DropdownMenuItem asChild>
-                          <a href={`tel:${client.phone}`}>تماس</a>
-                        </DropdownMenuItem>
-                      )}
-                      {client.email && (
-                        <DropdownMenuItem asChild>
-                          <a href={`mailto:${client.email}`}>ایمیل</a>
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </CardContent>
-              </Card>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             ))}
           </div>
         )}

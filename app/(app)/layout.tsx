@@ -8,10 +8,12 @@ export default function AppLayout({
 }) {
   return (
     <AuthProvider>
-      <div className="pb-16">
-        {children}
+      <div className="flex h-dvh flex-col overflow-hidden">
+        <div className="flex-1 min-h-0">
+          {children}
+        </div>
+        <BottomNav />
       </div>
-      <BottomNav />
     </AuthProvider>
   )
 }

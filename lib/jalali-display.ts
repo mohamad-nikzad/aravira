@@ -19,6 +19,14 @@ export function formatPersianDayHeader(date: Date): string {
   return safeFormat(date, { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
+/** Compact day header for narrow columns: weekday abbreviation + day number on separate lines */
+export function formatPersianDayHeaderCompact(date: Date): { weekday: string; day: string } {
+  return {
+    weekday: safeFormat(date, { weekday: 'short' }),
+    day: safeFormat(date, { day: 'numeric' }),
+  }
+}
+
 /** Numeric day inside month grid */
 export function formatPersianDayNumber(date: Date): string {
   return safeFormat(date, { day: 'numeric' })

@@ -17,7 +17,7 @@ import {
 } from '@/lib/appointment-time'
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -27,15 +27,19 @@ export async function GET(
     }
 
     const { id } = await params
-    const appointment = getAppointmentById(id)
+    const appointment = await getAppointmentById(id)
 
     if (!appointment) {
       return NextResponse.json({ error: 'نوبت یافت نشد' }, { status: 404 })
     }
 
-    const client = getClientById(appointment.clientId)
-    const staff = getUserById(appointment.staffId)
-    const service = getServiceById(appointment.serviceId)
+    if (user.role === 'staff' && appointment.staffId !== user.id) {
+      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
+    }
+
+    const client = await getClientById(appointment.clientId)
+    const staff = await getUserById(appointment.staffId)
+    const service = await getServiceById(appointment.serviceId)
 
     return NextResponse.json({
       appointment: {
@@ -57,8 +61,8 @@ export async function PATCH(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
+    if (!user || user.role !== 'manager') {
+      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
     const { id } = await params
@@ -75,7 +79,7 @@ export async function PATCH(
       notes,
     } = body
 
-    const existing = getAppointmentById(id)
+    const existing = await getAppointmentById(id)
     if (!existing) {
       return NextResponse.json({ error: 'نوبت یافت نشد' }, { status: 404 })
     }
@@ -105,7 +109,7 @@ export async function PATCH(
       const keep = Math.max(5, prevLen)
       endTime = endTimeFromDuration(effectiveStart, keep)
     } else if (serviceChanged) {
-      const svc = getServiceById(serviceId)
+      const svc = await getServiceById(serviceId)
       if (svc) {
         endTime = endTimeFromDuration(effectiveStart, svc.duration)
       }
@@ -116,11 +120,13 @@ export async function PATCH(
       return NextResponse.json({ error: windowCheck.error }, { status: 400 })
     }
 
-    // Check for conflicts (excluding current appointment)
     const checkStaffId = staffId || existing.staffId
     const checkDate = date || existing.date
 
-    if (status !== 'cancelled' && hasConflict(checkStaffId, checkDate, effectiveStart, endTime, id)) {
+    if (
+      status !== 'cancelled' &&
+      (await hasConflict(checkStaffId, checkDate, effectiveStart, endTime, id))
+    ) {
       return NextResponse.json(
         { error: 'این زمان با نوبت دیگری تداخل دارد' },
         { status: 409 }
@@ -138,15 +144,15 @@ export async function PATCH(
     if (status !== undefined) patch.status = status
     if (notes !== undefined) patch.notes = notes
 
-    const appointment = updateAppointment(id, patch)
+    const appointment = await updateAppointment(id, patch)
 
     if (!appointment) {
       return NextResponse.json({ error: 'به‌روزرسانی انجام نشد' }, { status: 500 })
     }
 
-    const client = getClientById(appointment.clientId)
-    const staff = getUserById(appointment.staffId)
-    const service = getServiceById(appointment.serviceId)
+    const client = await getClientById(appointment.clientId)
+    const staff = await getUserById(appointment.staffId)
+    const service = await getServiceById(appointment.serviceId)
 
     return NextResponse.json({
       appointment: {
@@ -163,17 +169,17 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
+    if (!user || user.role !== 'manager') {
+      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
     const { id } = await params
-    const deleted = deleteAppointment(id)
+    const deleted = await deleteAppointment(id)
 
     if (!deleted) {
       return NextResponse.json({ error: 'نوبت یافت نشد' }, { status: 404 })

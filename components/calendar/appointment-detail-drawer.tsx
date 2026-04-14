@@ -33,13 +33,14 @@ import {
   APPOINTMENT_STATUS,
 } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { Phone, Mail, Clock, Calendar, User as UserIcon, Trash2 } from 'lucide-react'
+import { Phone, Clock, Calendar, User as UserIcon, Trash2 } from 'lucide-react'
 import {
   APPOINTMENT_DURATION_BOUNDS,
   durationMinutesFromRange,
   endTimeFromDuration,
   validateAppointmentWindow,
 } from '@/lib/appointment-time'
+import { ClientPicker } from '@/components/calendar/client-picker'
 
 function formatTomans(price: number) {
   return `${new Intl.NumberFormat('fa-IR').format(price)} تومان`
@@ -52,6 +53,8 @@ interface AppointmentDetailDrawerProps {
   services: Service[]
   clients: Client[]
   onSuccess: () => void
+  onClientsChanged?: () => void
+  readOnly?: boolean
 }
 
 export function AppointmentDetailDrawer({
@@ -61,11 +64,14 @@ export function AppointmentDetailDrawer({
   services,
   clients,
   onSuccess,
+  onClientsChanged,
+  readOnly = false,
 }: AppointmentDetailDrawerProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [isEditing, setIsEditing] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [localClients, setLocalClients] = useState<Client[]>(clients)
 
   const [clientId, setClientId] = useState('')
   const [staffId, setStaffId] = useState('')
@@ -101,12 +107,19 @@ export function AppointmentDetailDrawer({
       setIsEditing(false)
       setShowDeleteConfirm(false)
       setError('')
+    } else {
+      setLocalClients(clients)
     }
     onOpenChange(isOpen)
   }
 
+  const handleClientCreated = (newClient: Client) => {
+    setLocalClients((prev) => [newClient, ...prev])
+    onClientsChanged?.()
+  }
+
   const startEditing = () => {
-    if (!appointment) return
+    if (!appointment || readOnly) return
     setClientId(appointment.clientId)
     setStaffId(appointment.staffId)
     setServiceId(appointment.serviceId)
@@ -257,18 +270,12 @@ export function AppointmentDetailDrawer({
             <FieldGroup>
               <Field>
                 <FieldLabel>مشتری</FieldLabel>
-                <Select value={clientId} onValueChange={setClientId} required>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="انتخاب مشتری" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ClientPicker
+                  clients={localClients}
+                  value={clientId}
+                  onChange={setClientId}
+                  onClientCreated={handleClientCreated}
+                />
               </Field>
 
               <Field>
@@ -444,19 +451,6 @@ export function AppointmentDetailDrawer({
                 </div>
               )}
 
-              {appointment.client.email && (
-                <div className="flex items-center gap-3 text-sm">
-                  <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <a
-                    href={`mailto:${appointment.client.email}`}
-                    className="text-primary hover:underline"
-                    dir="ltr"
-                  >
-                    {appointment.client.email}
-                  </a>
-                </div>
-              )}
-
               {appointment.notes && (
                 <div className="rounded-lg bg-muted p-3 text-sm">
                   <p className="text-muted-foreground">{appointment.notes}</p>
@@ -464,7 +458,7 @@ export function AppointmentDetailDrawer({
               )}
             </div>
 
-            {appointment.status === 'scheduled' && (
+            {!readOnly && appointment.status === 'scheduled' && (
               <div className="flex gap-2">
                 <Button
                   size="sm"
@@ -485,7 +479,7 @@ export function AppointmentDetailDrawer({
               </div>
             )}
 
-            {appointment.status === 'confirmed' && (
+            {!readOnly && appointment.status === 'confirmed' && (
               <div className="flex gap-2">
                 <Button
                   size="sm"
@@ -511,7 +505,13 @@ export function AppointmentDetailDrawer({
         )}
 
         <DrawerFooter>
-          {isEditing ? (
+          {readOnly ? (
+            <DrawerClose asChild>
+              <Button variant="outline" className="w-full">
+                بستن
+              </Button>
+            </DrawerClose>
+          ) : isEditing ? (
             <>
               <Button onClick={handleUpdate} disabled={loading}>
                 {loading && <Spinner className="mr-2" />}
@@ -536,7 +536,9 @@ export function AppointmentDetailDrawer({
             </>
           ) : (
             <>
-              <Button onClick={startEditing}>ویرایش نوبت</Button>
+              <Button onClick={startEditing} className="touch-manipulation">
+                ویرایش نوبت
+              </Button>
               <div className="flex gap-2">
                 <DrawerClose asChild>
                   <Button variant="outline" className="flex-1">

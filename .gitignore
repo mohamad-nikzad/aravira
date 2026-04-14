@@ -17,3 +17,4 @@ node_modules
 
 # Local persisted salon data (users, appointments — do not commit)
 data/salon-db.json
+.vercel

@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field'
 import { Spinner } from '@/components/ui/spinner'
 
@@ -19,7 +18,7 @@ export default function LoginPage() {
     setLoading(true)
 
     const form = new FormData(e.currentTarget)
-    const email = (form.get('email') as string).trim()
+    const phone = (form.get('phone') as string).trim()
     const password = form.get('password') as string
 
     try {
@@ -27,13 +26,13 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ phone, password }),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'ایمیل یا رمز عبور اشتباه است')
+        setError(data.error || 'شماره موبایل یا رمز عبور اشتباه است')
         setLoading(false)
         return
       }
@@ -47,91 +46,87 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-background p-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary">
-            <svg
-              className="h-7 w-7 text-primary-foreground"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+    <main className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-background p-4">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: 'radial-gradient(circle at 30% 20%, var(--primary) 0%, transparent 50%), radial-gradient(circle at 70% 80%, var(--primary) 0%, transparent 50%)',
+        }}
+      />
+
+      <div className="relative w-full max-w-sm">
+        <div className="mb-10 text-center">
+          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 shadow-sm">
+            <span className="text-3xl font-black text-primary">آ</span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">سالن زیبایی بلوم</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            سیستم مدیریت نوبت‌دهی
-          </p>
+          <h1 className="text-3xl font-black text-foreground tracking-tight">آراویرا</h1>
+          <p className="mt-2 text-sm text-muted-foreground">سامانه مدیریت نوبت‌دهی</p>
         </div>
 
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle>خوش آمدید</CardTitle>
-            <CardDescription>
-              برای مدیریت نوبت‌ها وارد شوید
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit}>
-              <FieldGroup>
-                <Field>
-                  <FieldLabel htmlFor="email">ایمیل</FieldLabel>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="manager@salon.com"
-                    autoComplete="email"
-                    required
-                    disabled={loading}
-                    className="text-left"
-                    dir="ltr"
-                  />
-                </Field>
+        <div className="rounded-2xl border border-border/40 bg-card p-6 shadow-sm">
+          <div className="mb-6 text-center">
+            <h2 className="text-base font-semibold text-foreground">خوش آمدید</h2>
+            <p className="mt-1 text-sm text-muted-foreground">برای ادامه وارد شوید</p>
+          </div>
 
-                <Field>
-                  <FieldLabel htmlFor="password">رمز عبور</FieldLabel>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="رمز عبور را وارد کنید"
-                    autoComplete="current-password"
-                    required
-                    disabled={loading}
-                  />
-                </Field>
+          <form onSubmit={handleSubmit}>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="phone">شماره موبایل</FieldLabel>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  placeholder="09120000000"
+                  autoComplete="username"
+                  inputMode="numeric"
+                  required
+                  disabled={loading}
+                  className="text-left h-12 rounded-xl bg-muted/40 border-border/50 text-base"
+                  dir="ltr"
+                />
+              </Field>
 
-                {error && <FieldError>{error}</FieldError>}
+              <Field>
+                <FieldLabel htmlFor="password">رمز عبور</FieldLabel>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="رمز عبور را وارد کنید"
+                  autoComplete="current-password"
+                  required
+                  disabled={loading}
+                  className="h-12 rounded-xl bg-muted/40 border-border/50"
+                />
+              </Field>
 
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? <Spinner className="ml-2" /> : null}
-                  {loading ? 'در حال ورود...' : 'ورود'}
-                </Button>
-              </FieldGroup>
-            </form>
+              {error && <FieldError>{error}</FieldError>}
 
-            <div className="mt-6 rounded-lg bg-muted p-4">
-              <p className="mb-2 text-xs font-medium text-muted-foreground">اطلاعات ورود نمایشی:</p>
-              <p className="text-xs text-muted-foreground">
-                مدیر: manager@salon.com
-              </p>
-              <p className="text-xs text-muted-foreground">
-                پرسنل: emma@salon.com، lisa@salon.com، nina@salon.com
-              </p>
-              <p className="text-xs text-muted-foreground">
-                رمز عبور (همه): admin123
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+              <Button
+                type="submit"
+                className="w-full h-12 rounded-xl text-base font-semibold touch-manipulation shadow-sm"
+                disabled={loading}
+              >
+                {loading ? <Spinner className="ml-2" /> : null}
+                {loading ? 'در حال ورود...' : 'ورود'}
+              </Button>
+            </FieldGroup>
+          </form>
+        </div>
+
+        <div className="mt-5 rounded-xl bg-muted/40 p-4">
+          <p className="mb-2 text-xs font-medium text-muted-foreground">حساب‌های آزمایشی:</p>
+          <div className="space-y-0.5">
+            <p className="text-xs text-muted-foreground" dir="ltr">
+              مدیر: 09120000000
+            </p>
+            <p className="text-xs text-muted-foreground" dir="ltr">
+              پرسنل: 09120000001، 09120000002
+            </p>
+            <p className="text-xs text-muted-foreground">رمز (همه): admin123</p>
+          </div>
+        </div>
       </div>
     </main>
   )

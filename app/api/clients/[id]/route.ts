@@ -3,17 +3,17 @@ import { getCurrentUser } from '@/lib/auth'
 import { getClientById, updateClient } from '@/lib/db'
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
+    if (!user || user.role !== 'manager') {
+      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
     const { id } = await params
-    const client = getClientById(id)
+    const client = await getClientById(id)
 
     if (!client) {
       return NextResponse.json({ error: 'مشتری یافت نشد' }, { status: 404 })
@@ -32,15 +32,15 @@ export async function PATCH(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
+    if (!user || user.role !== 'manager') {
+      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
     const { id } = await params
     const body = await request.json()
-    const { name, email, phone, notes } = body
+    const { name, phone, notes } = body
 
-    const client = updateClient(id, { name, email, phone, notes })
+    const client = await updateClient(id, { name, phone, notes })
 
     if (!client) {
       return NextResponse.json({ error: 'مشتری یافت نشد' }, { status: 404 })

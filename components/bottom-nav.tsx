@@ -2,23 +2,30 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Calendar, Users, UserCircle, Settings } from 'lucide-react'
+import { Calendar, Users, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/components/auth-provider'
 
-const navItems = [
+const managerItems = [
   { href: '/calendar', label: 'تقویم', icon: Calendar },
   { href: '/clients', label: 'مشتریان', icon: Users },
-  { href: '/staff', label: 'پرسنل', icon: UserCircle },
   { href: '/settings', label: 'تنظیمات', icon: Settings },
-]
+] as const
+
+const staffItems = [
+  { href: '/calendar', label: 'تقویم', icon: Calendar },
+  { href: '/settings', label: 'تنظیمات', icon: Settings },
+] as const
 
 export function BottomNav() {
   const pathname = usePathname()
+  const { user } = useAuth()
+  const items = user?.role === 'manager' ? managerItems : staffItems
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card safe-area-pb">
-      <div className="flex items-center justify-around">
-        {navItems.map((item) => {
+    <nav className="shrink-0 border-t border-border/60 bg-card safe-area-pb">
+      <div className="mx-auto flex max-w-lg items-stretch justify-around">
+        {items.map((item) => {
           const isActive = pathname.startsWith(item.href)
           const Icon = item.icon
 
@@ -27,14 +34,19 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-1 flex-col items-center gap-1 py-2 text-xs transition-colors',
+                'relative flex min-h-[52px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium transition-colors touch-manipulation',
                 isActive
                   ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
+                  : 'text-muted-foreground active:text-foreground'
               )}
             >
-              <Icon className={cn('h-5 w-5', isActive && 'text-primary')} />
-              <span>{item.label}</span>
+              <div className={cn(
+                'flex h-7 w-7 items-center justify-center rounded-lg transition-all',
+                isActive && 'bg-primary/12'
+              )}>
+                <Icon className="h-5 w-5" strokeWidth={isActive ? 2.2 : 1.7} />
+              </div>
+              <span className="truncate px-1">{item.label}</span>
             </Link>
           )
         })}

@@ -9,10 +9,10 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
 import { format, subDays } from 'date-fns'
-import { AppointmentWithDetails, CalendarView, WORKING_HOURS } from '@/lib/types'
+import { AppointmentWithDetails, CalendarView, WORKING_HOURS, type BusinessHours } from '@/lib/types'
 import {
   expandedZonedToDate,
-  formatPersianDayHeader,
+  formatPersianDayHeaderCompact,
   formatPersianDayNumber,
   formatPersianListDay,
   formatPersianTimeHm,
@@ -58,6 +58,12 @@ function calendarViewToFc(view: CalendarView): string {
   }
 }
 
+function minutesToSlotDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`
+}
+
 export interface SalonFullCalendarProps {
   className?: string
   appointments: AppointmentWithDetails[]
@@ -66,6 +72,10 @@ export interface SalonFullCalendarProps {
   onVisibleRangeChange: (start: string, endInclusive: string, activeStart: Date) => void
   onSlotSelect: (dateStr: string, timeStr: string) => void
   onEventClick: (appointment: AppointmentWithDetails) => void
+  /** From DB / API; falls back to WORKING_HOURS if omitted */
+  businessHours?: BusinessHours
+  /** Staff: view-only calendar (no slot selection). */
+  readOnly?: boolean
 }
 
 export function SalonFullCalendar({
@@ -76,8 +86,16 @@ export function SalonFullCalendar({
   onVisibleRangeChange,
   onSlotSelect,
   onEventClick,
+  businessHours: businessHoursProp,
+  readOnly = false,
 }: SalonFullCalendarProps) {
   const calendarRef = useRef<InstanceType<typeof FullCalendar>>(null)
+  const bh = businessHoursProp ?? {
+    workingStart: WORKING_HOURS.start,
+    workingEnd: WORKING_HOURS.end,
+    slotDurationMinutes: WORKING_HOURS.slotDuration,
+  }
+  const slotIso = minutesToSlotDuration(bh.slotDurationMinutes)
   const appointmentsById = useMemo(() => {
     const m = new Map<string, AppointmentWithDetails>()
     for (const a of appointments) m.set(a.id, a)
@@ -127,21 +145,24 @@ export function SalonFullCalendar({
       const dateStr = format(arg.start, 'yyyy-MM-dd')
       let timeStr = format(arg.start, 'HH:mm')
       if (arg.allDay || arg.view.type === 'dayGridMonth') {
-        timeStr = WORKING_HOURS.start
+        timeStr = bh.workingStart
       }
       onSlotSelect(dateStr, timeStr)
       arg.view.calendar.unselect()
     },
-    [onSlotSelect]
+    [onSlotSelect, bh.workingStart]
   )
 
-  const selectAllow = useCallback((span: { start: Date; allDay: boolean }) => {
-    if (span.allDay) return true
-    const [endH, endM] = WORKING_HOURS.end.split(':').map(Number)
-    const boundary = new Date(span.start)
-    boundary.setHours(endH, endM, 0, 0)
-    return span.start < boundary
-  }, [])
+  const selectAllow = useCallback(
+    (span: { start: Date; allDay: boolean }) => {
+      if (span.allDay) return true
+      const [endH, endM] = bh.workingEnd.split(':').map(Number)
+      const boundary = new Date(span.start)
+      boundary.setHours(endH, endM, 0, 0)
+      return span.start < boundary
+    },
+    [bh.workingEnd]
+  )
 
   const handleEventClick = useCallback(
     (info: EventClickArg) => {
@@ -157,15 +178,16 @@ export function SalonFullCalendar({
   const handleDateClick = useCallback(
     (arg: { date: Date; dateStr: string; view: { type: string } }) => {
       if (arg.view.type === 'dayGridMonth') {
-        const timeStr = WORKING_HOURS.start
-        onSlotSelect(arg.dateStr, timeStr)
+        onSlotSelect(format(arg.date, 'yyyy-MM-dd'), bh.workingStart)
+      } else {
+        onSlotSelect(format(arg.date, 'yyyy-MM-dd'), format(arg.date, 'HH:mm'))
       }
     },
-    [onSlotSelect]
+    [onSlotSelect, bh.workingStart]
   )
 
   return (
-    <div className={cn('salon-fullcalendar h-full min-h-[480px] flex-1', className)}>
+    <div className={cn('salon-fullcalendar h-full min-h-[400px] flex-1', className)}>
       <FullCalendar
         ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
@@ -177,24 +199,27 @@ export function SalonFullCalendar({
         height="100%"
         direction="rtl"
         firstDay={6}
-        slotDuration="00:30:00"
-        slotMinTime={`${WORKING_HOURS.start}:00`}
-        slotMaxTime={`${WORKING_HOURS.end}:00`}
+        slotDuration={slotIso}
+        slotMinTime={`${bh.workingStart}:00`}
+        slotMaxTime={`${bh.workingEnd}:00`}
         allDaySlot={false}
         nowIndicator
-        selectable
-        selectMirror
+        selectable={!readOnly}
+        selectMirror={!readOnly}
         selectOverlap={false}
-        selectAllow={selectAllow}
-        select={handleDateSelect}
-        dateClick={handleDateClick}
+        selectAllow={readOnly ? () => false : selectAllow}
+        select={readOnly ? undefined : handleDateSelect}
+        dateClick={readOnly ? undefined : handleDateClick}
         eventClick={handleEventClick}
         datesSet={handleDatesSet}
         // Use HTML custom content (not React nodes) so @fullcalendar/react avoids flushSync
         // during lifecycle — see fullcalendar#7448 / React 18+ strict rendering.
-        dayHeaderContent={({ date }) => ({
-          html: `<span>${escapeHtml(formatPersianDayHeader(date))}</span>`,
-        })}
+        dayHeaderContent={({ date }) => {
+          const { weekday, day } = formatPersianDayHeaderCompact(date)
+          return {
+            html: `<div class="day-header-compact"><span class="day-header-weekday">${escapeHtml(weekday)}</span><span class="day-header-num">${escapeHtml(day)}</span></div>`,
+          }
+        }}
         dayCellContent={(arg) => {
           if (arg.view.type !== 'dayGridMonth') {
             return {
@@ -212,8 +237,8 @@ export function SalonFullCalendar({
         stickyHeaderDates
         businessHours={{
           daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
-          startTime: WORKING_HOURS.start,
-          endTime: WORKING_HOURS.end,
+          startTime: bh.workingStart,
+          endTime: bh.workingEnd,
         }}
         eventTimeFormat={(arg) => {
           const s = expandedZonedToDate(arg.start)
