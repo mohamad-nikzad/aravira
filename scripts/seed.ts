@@ -7,16 +7,11 @@ import bcrypt from 'bcryptjs'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { count, eq } from 'drizzle-orm'
 import postgres from 'postgres'
+import { getDatabaseUrl } from '../db/config'
 import * as schema from '../db/schema'
 import { appointments, businessSettings, clients, services, users } from '../db/schema'
 
-const url = process.env.DATABASE_URL
-if (!url) {
-  console.error('DATABASE_URL is required')
-  process.exit(1)
-}
-
-const client = postgres(url, { max: 1 })
+const client = postgres(getDatabaseUrl({ preferDirect: true }), { max: 1 })
 const db = drizzle(client, { schema })
 
 const passwordHash = bcrypt.hashSync('admin123', 10)

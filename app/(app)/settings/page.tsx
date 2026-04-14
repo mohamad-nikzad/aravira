@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
-import { LogOut, Moon, Sun, Users, Plus, Pencil, ChevronLeft } from 'lucide-react'
+import { LogOut, Moon, Sun, Users, Plus, Pencil, ChevronLeft, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -134,9 +134,18 @@ export default function SettingsPage() {
         {isManager && (
           <Card className="border-border/50">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">مدیریت تیم</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">مدیریت</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
+              <Button variant="outline" className="w-full justify-between touch-manipulation" asChild>
+                <Link href="/dashboard">
+                  <span className="flex items-center gap-2">
+                    <LayoutDashboard className="h-4 w-4" />
+                    داشبورد و آمار
+                  </span>
+                  <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              </Button>
               <Button variant="outline" className="w-full justify-between touch-manipulation" asChild>
                 <Link href="/staff">
                   <span className="flex items-center gap-2">

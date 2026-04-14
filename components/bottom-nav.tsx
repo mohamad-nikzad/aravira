@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Calendar, Users, Settings } from 'lucide-react'
+import { Calendar, Users, Settings, LayoutDashboard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/components/auth-provider'
 
 const managerItems = [
   { href: '/calendar', label: 'تقویم', icon: Calendar },
   { href: '/clients', label: 'مشتریان', icon: Users },
+  { href: '/dashboard', label: 'داشبورد', icon: LayoutDashboard },
   { href: '/settings', label: 'تنظیمات', icon: Settings },
 ] as const
 
