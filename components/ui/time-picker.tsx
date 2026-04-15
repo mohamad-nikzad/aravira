@@ -168,7 +168,9 @@ export function TimePicker({ value, onChange, id, label }: TimePickerProps) {
           'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
         )}
       >
-        <span className="tabular-nums">{displayTime}</span>
+        <span className="tabular-nums" dir="ltr">
+          {displayTime}
+        </span>
         <Clock className="h-4 w-4 opacity-50" />
       </button>
 
@@ -179,7 +181,7 @@ export function TimePicker({ value, onChange, id, label }: TimePickerProps) {
             <DrawerDescription>ساعت و دقیقه را انتخاب کنید</DrawerDescription>
           </DrawerHeader>
 
-          <div className="flex items-center justify-center gap-2 px-8 py-4">
+          <div className="flex flex-row-reverse items-center justify-center gap-2 px-8 py-4">
             <WheelColumn
               items={HOURS}
               value={tempHour}
