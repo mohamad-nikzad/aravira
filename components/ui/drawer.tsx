@@ -6,9 +6,10 @@ import { Drawer as DrawerPrimitive } from 'vaul'
 import { cn } from '@/lib/utils'
 
 function Drawer({
+  repositionInputs = false,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />
+  return <DrawerPrimitive.Root data-slot="drawer" repositionInputs={repositionInputs} {...props} />
 }
 
 function DrawerTrigger({
@@ -122,9 +123,16 @@ function DrawerDescription({
 }
 
 function DrawerNested({
+  repositionInputs = false,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.NestedRoot>) {
-  return <DrawerPrimitive.NestedRoot data-slot="drawer-nested" {...props} />
+  return (
+    <DrawerPrimitive.NestedRoot
+      data-slot="drawer-nested"
+      repositionInputs={repositionInputs}
+      {...props}
+    />
+  )
 }
 
 export {

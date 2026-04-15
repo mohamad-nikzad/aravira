@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Analytics } from '@vercel/analytics/next'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
+import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
 export const viewport: Viewport = {
@@ -125,6 +126,7 @@ export default function RootLayout({
       <body className="antialiased">
         {children}
         <ServiceWorkerRegister />
+        <Toaster />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

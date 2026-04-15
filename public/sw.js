@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aravira-v2'
+const CACHE_NAME = 'aravira-v3'
 
 const PRECACHE_ASSETS = [
   '/manifest.json',
@@ -12,7 +12,12 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_ASSETS))
   )
-  self.skipWaiting()
+})
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
 })
 
 self.addEventListener('activate', (event) => {

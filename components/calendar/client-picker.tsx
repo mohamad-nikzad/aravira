@@ -60,6 +60,9 @@ export function ClientPicker({
     if (mode === 'closed') return
     function handleClick(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur()
+        }
         setMode('closed')
         setQuery('')
       }
@@ -75,6 +78,9 @@ export function ClientPicker({
   }
 
   const selectClient = (id: string) => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
     onChange(id)
     setMode('closed')
     setQuery('')
@@ -118,6 +124,9 @@ export function ClientPicker({
       }
 
       const created: Client = data.client
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur()
+      }
       onClientCreated(created)
       onChange(created.id)
       setMode('closed')
