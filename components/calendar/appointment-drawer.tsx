@@ -31,6 +31,8 @@ import {
   validateAppointmentWindow,
 } from '@/lib/appointment-time'
 import { ClientPicker } from '@/components/calendar/client-picker'
+import { JalaliDatePicker } from '@/components/ui/jalali-date-picker'
+import { TimePicker } from '@/components/ui/time-picker'
 
 const CATEGORY_LABELS: Record<string, string> = {
   hair: 'مو',
@@ -261,29 +263,24 @@ export function AppointmentDrawer({
             <div className="grid grid-cols-2 gap-4">
               <Field>
                 <FieldLabel htmlFor="date">تاریخ</FieldLabel>
-                <Input
+                <JalaliDatePicker
                   id="date"
-                  type="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={setDate}
                   required
-                  dir="ltr"
                 />
               </Field>
 
               <Field>
                 <FieldLabel htmlFor="time">شروع</FieldLabel>
-                <Input
+                <TimePicker
                   id="time"
-                  type="time"
                   value={startTime}
-                  onChange={(e) => {
-                    const st = e.target.value
+                  onChange={(st) => {
                     setStartTime(st)
                     setEndTime(endTimeFromDuration(st, durationMinutes))
                   }}
-                  required
-                  dir="ltr"
+                  label="ساعت شروع"
                 />
               </Field>
             </div>
@@ -322,13 +319,11 @@ export function AppointmentDrawer({
 
             <Field>
               <FieldLabel htmlFor="end-time">پایان</FieldLabel>
-              <Input
+              <TimePicker
                 id="end-time"
-                type="time"
                 value={endTime}
-                onChange={(e) => applyEndTime(e.target.value)}
-                required
-                dir="ltr"
+                onChange={applyEndTime}
+                label="ساعت پایان"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 تغییر پایان، مدت را هم‌زمان به‌روز می‌کند.

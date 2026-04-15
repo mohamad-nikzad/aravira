@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
-import { faIR } from 'date-fns/locale'
 import {
   Drawer,
   DrawerContent,
@@ -41,6 +40,9 @@ import {
   validateAppointmentWindow,
 } from '@/lib/appointment-time'
 import { ClientPicker } from '@/components/calendar/client-picker'
+import { JalaliDatePicker } from '@/components/ui/jalali-date-picker'
+import { TimePicker } from '@/components/ui/time-picker'
+import { formatJalaliFullDate } from '@/lib/jalali'
 
 function formatTomans(price: number) {
   return `${new Intl.NumberFormat('fa-IR').format(price)} تومان`
@@ -320,29 +322,24 @@ export function AppointmentDetailDrawer({
               <div className="grid grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="edit-date">تاریخ</FieldLabel>
-                  <Input
+                  <JalaliDatePicker
                     id="edit-date"
-                    type="date"
                     value={date}
-                    onChange={(e) => setDate(e.target.value)}
+                    onChange={setDate}
                     required
-                    dir="ltr"
                   />
                 </Field>
 
                 <Field>
                   <FieldLabel htmlFor="edit-time">شروع</FieldLabel>
-                  <Input
+                  <TimePicker
                     id="edit-time"
-                    type="time"
                     value={startTime}
-                    onChange={(e) => {
-                      const st = e.target.value
+                    onChange={(st) => {
                       setStartTime(st)
                       setEndTime(endTimeFromDuration(st, durationMinutes))
                     }}
-                    required
-                    dir="ltr"
+                    label="ساعت شروع"
                   />
                 </Field>
               </div>
@@ -368,13 +365,11 @@ export function AppointmentDetailDrawer({
 
               <Field>
                 <FieldLabel htmlFor="edit-end">پایان</FieldLabel>
-                <Input
+                <TimePicker
                   id="edit-end"
-                  type="time"
                   value={endTime}
-                  onChange={(e) => applyEndTime(e.target.value)}
-                  required
-                  dir="ltr"
+                  onChange={applyEndTime}
+                  label="ساعت پایان"
                 />
               </Field>
 
@@ -419,7 +414,7 @@ export function AppointmentDetailDrawer({
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-sm">
                 <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span>{format(parseISO(appointment.date), 'EEEE، d MMMM yyyy', { locale: faIR })}</span>
+                <span>{formatJalaliFullDate(appointment.date)}</span>
               </div>
 
               <div className="flex items-center gap-3 text-sm">
