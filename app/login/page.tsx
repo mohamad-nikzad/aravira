@@ -56,8 +56,14 @@ export default function LoginPage() {
 
       <div className="relative w-full max-w-sm">
         <div className="mb-10 text-center">
-          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 shadow-sm">
-            <span className="text-3xl font-black text-primary">آ</span>
+          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#9B3636]">
+            <svg viewBox="-250 -310 500 540" className="h-14 w-14" aria-label="آراویرا">
+              <circle cx="-120" cy="120" r="75" fill="none" stroke="white" strokeWidth="40"/>
+              <circle cx="120" cy="120" r="75" fill="none" stroke="white" strokeWidth="40"/>
+              <path d="M-68,62 L-30,-10 L80,-260 C85,-272 75,-280 65,-275 L-18,2 Z" fill="white"/>
+              <path d="M68,62 L30,-10 L-80,-260 C-85,-272 -75,-280 -65,-275 L18,2 Z" fill="white"/>
+              <circle cx="0" cy="10" r="22" fill="#9B3636" stroke="white" strokeWidth="12"/>
+            </svg>
           </div>
           <h1 className="text-3xl font-black text-foreground tracking-tight">آراویرا</h1>
           <p className="mt-2 text-sm text-muted-foreground">سامانه مدیریت نوبت‌دهی</p>
