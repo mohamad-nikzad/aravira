@@ -69,3 +69,14 @@ export const businessSettings = pgTable('business_settings', {
   workingEnd: text('working_end').notNull().default('19:00'),
   slotDurationMinutes: integer('slot_duration_minutes').notNull().default(30),
 })
+
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})

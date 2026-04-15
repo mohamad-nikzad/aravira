@@ -19,17 +19,17 @@ const fetcher = (url: string) =>
 
 export default function StaffPage() {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [showDrawer, setShowDrawer] = useState(false)
 
   useEffect(() => {
-    if (!authLoading && user && user.role !== 'manager') {
+    if (user && user.role !== 'manager') {
       router.replace('/calendar')
     }
-  }, [authLoading, user, router])
+  }, [user, router])
 
-  const { data, mutate } = useSWR(user?.role === 'manager' ? '/api/staff' : null, fetcher)
+  const { data, isLoading: staffLoading, mutate } = useSWR(user?.role === 'manager' ? '/api/staff' : null, fetcher)
   const staff: User[] = data?.staff || []
 
   const filteredStaff = staff.filter(
@@ -66,7 +66,7 @@ export default function StaffPage() {
     return colorMap[color] || 'bg-primary'
   }
 
-  if (authLoading) {
+  if (staffLoading) {
     return <StaffSkeleton />
   }
 

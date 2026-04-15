@@ -118,7 +118,7 @@ const BAR_COLORS = [
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user } = useAuth()
   const { data, isLoading } = useSWR<DashboardData>(
     user?.role === 'manager' ? '/api/dashboard' : null,
     fetcher,
@@ -126,12 +126,12 @@ export default function DashboardPage() {
   )
 
   useEffect(() => {
-    if (!authLoading && user && user.role !== 'manager') {
+    if (user && user.role !== 'manager') {
       router.replace('/calendar')
     }
-  }, [authLoading, user, router])
+  }, [user, router])
 
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return <DashboardSkeleton />
   }
 

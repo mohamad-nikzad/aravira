@@ -23,18 +23,18 @@ const fetcher = (url: string) =>
 
 export default function ClientsPage() {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [showDrawer, setShowDrawer] = useState(false)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
 
   useEffect(() => {
-    if (!authLoading && user && user.role !== 'manager') {
+    if (user && user.role !== 'manager') {
       router.replace('/calendar')
     }
-  }, [authLoading, user, router])
+  }, [user, router])
 
-  const { data, mutate } = useSWR(user?.role === 'manager' ? '/api/clients' : null, fetcher)
+  const { data, isLoading: clientsLoading, mutate } = useSWR(user?.role === 'manager' ? '/api/clients' : null, fetcher)
   const clients: Client[] = data?.clients || []
 
   const filteredClients = clients.filter(
@@ -67,7 +67,7 @@ export default function ClientsPage() {
       .slice(0, 2)
   }
 
-  if (authLoading) {
+  if (clientsLoading) {
     return <ClientsSkeleton />
   }
 

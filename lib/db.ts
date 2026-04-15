@@ -7,6 +7,7 @@ import {
   clients,
   appointments,
   businessSettings,
+  pushSubscriptions,
 } from '@/db/schema'
 import type { User, Service, Client, Appointment, BusinessHours } from './types'
 import { normalizePhone } from './phone'
@@ -355,6 +356,70 @@ export async function getBusinessSettings(): Promise<BusinessHours> {
     workingEnd: row.workingEnd,
     slotDurationMinutes: row.slotDurationMinutes,
   }
+}
+
+export type PushSubscriptionKeys = {
+  endpoint: string
+  p256dh: string
+  auth: string
+}
+
+export async function upsertPushSubscription(
+  userId: string,
+  keys: PushSubscriptionKeys
+): Promise<void> {
+  const db = getDb()
+  await db
+    .insert(pushSubscriptions)
+    .values({
+      userId,
+      endpoint: keys.endpoint,
+      p256dh: keys.p256dh,
+      auth: keys.auth,
+    })
+    .onConflictDoUpdate({
+      target: pushSubscriptions.endpoint,
+      set: {
+        userId,
+        p256dh: keys.p256dh,
+        auth: keys.auth,
+        createdAt: new Date(),
+      },
+    })
+}
+
+export async function getPushSubscriptionsForUser(
+  userId: string
+): Promise<PushSubscriptionKeys[]> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      endpoint: pushSubscriptions.endpoint,
+      p256dh: pushSubscriptions.p256dh,
+      auth: pushSubscriptions.auth,
+    })
+    .from(pushSubscriptions)
+    .where(eq(pushSubscriptions.userId, userId))
+  return rows
+}
+
+export async function deletePushSubscriptionByEndpoint(endpoint: string): Promise<void> {
+  const db = getDb()
+  await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint))
+}
+
+export async function deletePushSubscriptionForUser(
+  userId: string,
+  endpoint: string
+): Promise<boolean> {
+  const db = getDb()
+  const removed = await db
+    .delete(pushSubscriptions)
+    .where(
+      and(eq(pushSubscriptions.userId, userId), eq(pushSubscriptions.endpoint, endpoint))
+    )
+    .returning({ id: pushSubscriptions.id })
+  return removed.length > 0
 }
 
 export async function updateBusinessSettings(

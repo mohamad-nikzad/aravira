@@ -10,6 +10,7 @@ import {
 } from '@/lib/db'
 import type { Appointment, AppointmentWithDetails } from '@/lib/types'
 import { endTimeFromDuration, validateAppointmentWindow } from '@/lib/appointment-time'
+import { sendWebPushToUser, isWebPushConfigured } from '@/lib/push'
 
 async function enrichAppointment(apt: Appointment): Promise<AppointmentWithDetails | null> {
   const [client, staff, service] = await Promise.all([
@@ -127,6 +128,14 @@ export async function POST(request: Request) {
 
     const client = await getClientById(appointment.clientId)
     const staff = await getUserById(appointment.staffId)
+
+    if (isWebPushConfigured() && client && staff && staffId !== user.id) {
+      void sendWebPushToUser(staffId, {
+        title: 'نوبت جدید برای شما',
+        body: `${client.name} — ${service.name}، ${date} ساعت ${startTime}`,
+        url: '/calendar',
+      })
+    }
 
     return NextResponse.json({
       appointment: {

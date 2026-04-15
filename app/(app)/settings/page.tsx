@@ -13,6 +13,7 @@ import { Field, FieldLabel, FieldGroup } from '@/components/ui/field'
 import { useAuth } from '@/components/auth-provider'
 import { Spinner } from '@/components/ui/spinner'
 import { SettingsSkeleton } from '@/components/skeletons/settings-skeleton'
+import { StaffPushSettings } from '@/components/pwa/staff-push-settings'
 import { ServiceDrawer } from '@/components/services/service-drawer'
 import { Badge } from '@/components/ui/badge'
 import type { Service } from '@/lib/types'
@@ -22,7 +23,7 @@ const fetcher = (url: string) =>
   fetch(url, { credentials: 'include' }).then((res) => res.json())
 
 export default function SettingsPage() {
-  const { user, loading: authLoading, logout } = useAuth()
+  const { user, logout } = useAuth()
   const [loggingOut, setLoggingOut] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
 
@@ -94,7 +95,8 @@ export default function SettingsPage() {
     }
   }
 
-  if (authLoading) {
+  const settingsDataLoading = user?.role === 'manager' && !bizData && !svcData
+  if (settingsDataLoading) {
     return <SettingsSkeleton />
   }
 
@@ -127,6 +129,8 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {user.role === 'staff' && <StaffPushSettings />}
 
         {isManager && (
           <Card className="border-border/50">

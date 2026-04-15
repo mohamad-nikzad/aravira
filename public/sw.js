@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aravira-v3'
+const CACHE_NAME = 'aravira-v4'
 
 const PRECACHE_ASSETS = [
   '/manifest.json',
@@ -29,6 +29,52 @@ self.addEventListener('activate', (event) => {
     )
   )
   self.clients.claim()
+})
+
+self.addEventListener('push', (event) => {
+  let payload = { title: 'آراویرا', body: '', url: '/calendar' }
+  try {
+    if (event.data) {
+      const parsed = event.data.json()
+      if (parsed && typeof parsed === 'object') {
+        if (typeof parsed.title === 'string') payload.title = parsed.title
+        if (typeof parsed.body === 'string') payload.body = parsed.body
+        if (typeof parsed.url === 'string') payload.url = parsed.url
+      }
+    }
+  } catch (_) {
+    /* ignore */
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-192x192.png',
+      data: { url: payload.url },
+      lang: 'fa',
+      dir: 'rtl',
+    })
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const targetUrl = event.notification.data?.url || '/calendar'
+  const url = new URL(targetUrl, self.location.origin).href
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          return client.focus()
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(url)
+      }
+    })
+  )
 })
 
 self.addEventListener('fetch', (event) => {

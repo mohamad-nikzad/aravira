@@ -8,6 +8,13 @@
       "when": 1776179146180,
       "tag": "0000_rainy_bedlam",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776179200000,
+      "tag": "0001_push_subscriptions",
+      "breakpoints": true
     }
   ]
 }

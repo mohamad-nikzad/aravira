@@ -39,7 +39,7 @@ function defaultRange(_view: CalendarView, anchor: Date): { start: string; end: 
 }
 
 export default function CalendarPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user } = useAuth()
   const isManager = user?.role === 'manager'
   const [view, setView] = useState<CalendarView>('week')
   const [navDate, setNavDate] = useState(() => new Date())
@@ -56,7 +56,7 @@ export default function CalendarPage() {
   const fallbackRange = useMemo(() => defaultRange(view, navDate), [view, navDate])
   const { start: startDate, end: endDate } = range ?? fallbackRange
 
-  const { data: appointmentsData, mutate: mutateAppointments } = useSWR(
+  const { data: appointmentsData, isLoading: appointmentsLoading, mutate: mutateAppointments } = useSWR(
     user ? `/api/appointments?startDate=${startDate}&endDate=${endDate}` : null,
     fetcher
   )
@@ -148,7 +148,7 @@ export default function CalendarPage() {
     mutateAppointments()
   }
 
-  if (authLoading) {
+  if (appointmentsLoading) {
     return <CalendarSkeleton />
   }
 
