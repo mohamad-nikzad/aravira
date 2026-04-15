@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { StaffDrawer } from '@/components/staff/staff-drawer'
 import { useAuth } from '@/components/auth-provider'
-import { Spinner } from '@/components/ui/spinner'
+import { StaffSkeleton } from '@/components/skeletons/staff-skeleton'
 import { User } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -67,11 +67,7 @@ export default function StaffPage() {
   }
 
   if (authLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Spinner className="h-8 w-8" />
-      </div>
-    )
+    return <StaffSkeleton />
   }
 
   if (!user || user.role !== 'manager') return null

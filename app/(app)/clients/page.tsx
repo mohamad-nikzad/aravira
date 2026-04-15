@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ClientDrawer } from '@/components/clients/client-drawer'
 import { useAuth } from '@/components/auth-provider'
-import { Spinner } from '@/components/ui/spinner'
+import { ClientsSkeleton } from '@/components/skeletons/clients-skeleton'
 import { Client } from '@/lib/types'
 
 const fetcher = (url: string) =>
@@ -68,11 +68,7 @@ export default function ClientsPage() {
   }
 
   if (authLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Spinner className="h-8 w-8" />
-      </div>
-    )
+    return <ClientsSkeleton />
   }
 
   if (!user || user.role !== 'manager') return null

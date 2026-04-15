@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/components/auth-provider'
-import { Spinner } from '@/components/ui/spinner'
+import { DashboardSkeleton } from '@/components/skeletons/dashboard-skeleton'
 import { APPOINTMENT_STATUS } from '@/lib/types'
 import Link from 'next/link'
 
@@ -132,11 +132,7 @@ export default function DashboardPage() {
   }, [authLoading, user, router])
 
   if (authLoading || isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Spinner className="h-8 w-8" />
-      </div>
-    )
+    return <DashboardSkeleton />
   }
 
   if (!user || user.role !== 'manager') return null

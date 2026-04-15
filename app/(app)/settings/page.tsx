@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Field, FieldLabel, FieldGroup } from '@/components/ui/field'
 import { useAuth } from '@/components/auth-provider'
 import { Spinner } from '@/components/ui/spinner'
+import { SettingsSkeleton } from '@/components/skeletons/settings-skeleton'
 import { ServiceDrawer } from '@/components/services/service-drawer'
 import { Badge } from '@/components/ui/badge'
 import type { Service } from '@/lib/types'
@@ -94,11 +95,7 @@ export default function SettingsPage() {
   }
 
   if (authLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Spinner className="h-8 w-8" />
-      </div>
-    )
+    return <SettingsSkeleton />
   }
 
   if (!user) return null

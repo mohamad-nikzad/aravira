@@ -19,7 +19,7 @@ import {
   type BusinessHours,
 } from '@/lib/types'
 import { useAuth } from '@/components/auth-provider'
-import { Spinner } from '@/components/ui/spinner'
+import { CalendarSkeleton } from '@/components/skeletons/calendar-skeleton'
 import { cn } from '@/lib/utils'
 
 const fetcher = (url: string) =>
@@ -149,11 +149,7 @@ export default function CalendarPage() {
   }
 
   if (authLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Spinner className="h-8 w-8" />
-      </div>
-    )
+    return <CalendarSkeleton />
   }
 
   if (!user) return null
