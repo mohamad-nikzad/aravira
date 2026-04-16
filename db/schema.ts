@@ -5,6 +5,7 @@ import {
   boolean,
   integer,
   timestamp,
+  index,
 } from 'drizzle-orm/pg-core'
 
 export const users = pgTable('users', {
@@ -37,30 +38,37 @@ export const clients = pgTable('clients', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const appointments = pgTable('appointments', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  clientId: uuid('client_id')
-    .notNull()
-    .references(() => clients.id, { onDelete: 'restrict' }),
-  staffId: uuid('staff_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'restrict' }),
-  serviceId: uuid('service_id')
-    .notNull()
-    .references(() => services.id, { onDelete: 'restrict' }),
-  date: text('date').notNull(),
-  startTime: text('start_time').notNull(),
-  endTime: text('end_time').notNull(),
-  status: text('status')
-    .notNull()
-    .$type<'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show'>(),
-  notes: text('notes'),
-  createdByUserId: uuid('created_by_user_id').references(() => users.id, {
-    onDelete: 'set null',
-  }),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const appointments = pgTable(
+  'appointments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => clients.id, { onDelete: 'restrict' }),
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    serviceId: uuid('service_id')
+      .notNull()
+      .references(() => services.id, { onDelete: 'restrict' }),
+    date: text('date').notNull(),
+    startTime: text('start_time').notNull(),
+    endTime: text('end_time').notNull(),
+    status: text('status')
+      .notNull()
+      .$type<'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show'>(),
+    notes: text('notes'),
+    createdByUserId: uuid('created_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('appointments_staff_id_date_idx').on(t.staffId, t.date),
+    index('appointments_client_id_date_idx').on(t.clientId, t.date),
+  ]
+)
 
 /** Single-row table: use id = 1 */
 export const businessSettings = pgTable('business_settings', {

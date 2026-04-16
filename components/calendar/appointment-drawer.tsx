@@ -205,7 +205,9 @@ export function AppointmentDrawer({
         <DrawerHeader>
           <DrawerTitle>نوبت جدید</DrawerTitle>
           <DrawerDescription>
-            مدت زمان پیشنهادی از روی خدمت انتخابی پر می‌شود.
+            مدت زمان پیشنهادی از روی خدمت انتخابی پر می‌شود. چند نوبت هم‌زمان فقط وقتی مجاز است
+            که پرسنل و مشتری با نوبت‌های هم‌پوشان فرق کنند؛ در غیر این صورت پیام خطا نشان داده
+            می‌شود.
           </DrawerDescription>
         </DrawerHeader>
 

@@ -8,8 +8,9 @@ import {
   getClientById,
   getUserById,
   getServiceById,
-  hasConflict,
+  getScheduleOverlapFlags,
 } from '@/lib/db'
+import { isBlockingAppointmentStatus, SCHEDULE_CONFLICT_CODES } from '@/lib/appointment-conflict'
 import {
   endTimeFromDuration,
   validateAppointmentWindow,
@@ -120,17 +121,39 @@ export async function PATCH(
       return NextResponse.json({ error: windowCheck.error }, { status: 400 })
     }
 
-    const checkStaffId = staffId || existing.staffId
-    const checkDate = date || existing.date
+    const checkStaffId = typeof staffId === 'string' ? staffId : existing.staffId
+    const checkClientId = typeof clientId === 'string' ? clientId : existing.clientId
+    const checkDate = typeof date === 'string' ? date : existing.date
+    const resolvedStatus: Appointment['status'] =
+      typeof status === 'string' ? (status as Appointment['status']) : existing.status
 
-    if (
-      status !== 'cancelled' &&
-      (await hasConflict(checkStaffId, checkDate, effectiveStart, endTime, id))
-    ) {
-      return NextResponse.json(
-        { error: 'این زمان با نوبت دیگری تداخل دارد' },
-        { status: 409 }
+    if (isBlockingAppointmentStatus(resolvedStatus)) {
+      const overlaps = await getScheduleOverlapFlags(
+        checkStaffId,
+        checkClientId,
+        checkDate,
+        effectiveStart,
+        endTime,
+        id
       )
+      if (overlaps.staffConflict) {
+        return NextResponse.json(
+          {
+            error: 'پرسنل انتخاب‌شده در این بازه زمانی نوبت فعال دیگری دارد.',
+            code: SCHEDULE_CONFLICT_CODES.STAFF_OVERLAP,
+          },
+          { status: 409 }
+        )
+      }
+      if (overlaps.clientConflict) {
+        return NextResponse.json(
+          {
+            error: 'این مشتری در این بازه زمانی نوبت فعال دیگری دارد.',
+            code: SCHEDULE_CONFLICT_CODES.CLIENT_OVERLAP,
+          },
+          { status: 409 }
+        )
+      }
     }
 
     const patch: Partial<Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>> = {

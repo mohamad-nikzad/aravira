@@ -6,8 +6,9 @@ import {
   getClientById,
   getUserById,
   getServiceById,
-  hasConflict,
+  getScheduleOverlapFlags,
 } from '@/lib/db'
+import { SCHEDULE_CONFLICT_CODES } from '@/lib/appointment-conflict'
 import type { Appointment, AppointmentWithDetails } from '@/lib/types'
 import { endTimeFromDuration, validateAppointmentWindow } from '@/lib/appointment-time'
 import { sendWebPushToUser, isWebPushConfigured } from '@/lib/push'
@@ -105,9 +106,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: windowCheck.error }, { status: 400 })
     }
 
-    if (await hasConflict(staffId, date, startTime, endTime)) {
+    const overlaps = await getScheduleOverlapFlags(
+      staffId,
+      clientId,
+      date,
+      startTime,
+      endTime
+    )
+    if (overlaps.staffConflict) {
       return NextResponse.json(
-        { error: 'این زمان با نوبت دیگری تداخل دارد' },
+        {
+          error: 'پرسنل انتخاب‌شده در این بازه زمانی نوبت فعال دیگری دارد.',
+          code: SCHEDULE_CONFLICT_CODES.STAFF_OVERLAP,
+        },
+        { status: 409 }
+      )
+    }
+    if (overlaps.clientConflict) {
+      return NextResponse.json(
+        {
+          error: 'این مشتری در این بازه زمانی نوبت فعال دیگری دارد.',
+          code: SCHEDULE_CONFLICT_CODES.CLIENT_OVERLAP,
+        },
         { status: 409 }
       )
     }

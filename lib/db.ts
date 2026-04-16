@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, asc } from 'drizzle-orm'
+import { eq, and, or, gte, lte, asc } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { getDb } from '@/db'
 import {
@@ -11,7 +11,7 @@ import {
 } from '@/db/schema'
 import type { User, Service, Client, Appointment, BusinessHours } from './types'
 import { normalizePhone } from './phone'
-import { hasAppointmentConflict } from './appointment-conflict'
+import { detectScheduleOverlaps } from './appointment-conflict'
 
 function rowToUser(row: typeof users.$inferSelect): User {
   return {
@@ -313,27 +313,41 @@ export async function deleteAppointment(id: string): Promise<boolean> {
   return deleted.length > 0
 }
 
-export async function hasConflict(
+export async function getScheduleOverlapFlags(
   staffId: string,
+  clientId: string,
   date: string,
   startTime: string,
   endTime: string,
   excludeId?: string
-): Promise<boolean> {
+) {
   const db = getDb()
   const rows = await db
     .select({
       id: appointments.id,
       staffId: appointments.staffId,
+      clientId: appointments.clientId,
       date: appointments.date,
       startTime: appointments.startTime,
       endTime: appointments.endTime,
       status: appointments.status,
     })
     .from(appointments)
-    .where(and(eq(appointments.staffId, staffId), eq(appointments.date, date)))
+    .where(
+      and(
+        eq(appointments.date, date),
+        or(eq(appointments.staffId, staffId), eq(appointments.clientId, clientId))
+      )
+    )
 
-  return hasAppointmentConflict(rows, staffId, date, startTime, endTime, excludeId)
+  return detectScheduleOverlaps(rows, {
+    staffId,
+    clientId,
+    date,
+    startTime,
+    endTime,
+    excludeId,
+  })
 }
 
 const defaultBusinessHours: BusinessHours = {

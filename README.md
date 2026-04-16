@@ -14,7 +14,7 @@ This project is intentionally configured to stay portable across Neon, Supabase,
 1. Create a Postgres database in Neon.
 2. Copy the pooled connection string into Vercel as `DATABASE_URL`.
 3. Copy the direct connection string into Vercel as `DATABASE_URL_DIRECT`.
-4. Add the same variables to your local `.env.local`.
+4. For local work, add the same database variables to `.env.database.main` (and a dev branch file if you use split env; see **Local development** below). Put `JWT_SECRET` in `.env.local`.
 5. Set `JWT_SECRET` in both Vercel and `.env.local`.
 
 Example:
@@ -27,11 +27,22 @@ JWT_SECRET=replace-with-a-long-random-secret
 
 ## Local development
 
+Use a **split env** so you can switch Neon branches without editing secrets:
+
+- `.env.local` — `JWT_SECRET`, VAPID keys, and anything else that is not branch-specific
+- `.env.database.dev` — `DATABASE_URL` + `DATABASE_URL_DIRECT` for your **dev** Neon branch
+- `.env.database.main` — same for your **production** Neon branch
+
+Scripts (via Bun) load `.env.local` first, then the database file, so the database URLs always match the command you run:
+
 ```bash
 bun install
-bun run db:push
-bun run db:seed
-bun run dev
+bun run db:push       # schema → dev branch (default)
+bun run db:seed       # seed dev branch
+bun run dev           # Next.js against dev branch
+
+bun run dev:main      # Next.js against production branch (read/write — be careful)
+bun run db:push:main  # schema → production (use with care)
 ```
 
 ## Switching providers later

@@ -263,7 +263,9 @@ export function AppointmentDetailDrawer({
             {isEditing ? 'ویرایش نوبت' : appointment.client.name}
           </DrawerTitle>
           <DrawerDescription>
-            {isEditing ? 'جزئیات نوبت را ویرایش کنید' : appointment.service.name}
+            {isEditing
+              ? 'جزئیات نوبت را ویرایش کنید. نوبت‌های هم‌زمان فقط با پرسنل و مشتری متفاوت نسبت به نوبت‌های هم‌پوشان مجاز است.'
+              : appointment.service.name}
           </DrawerDescription>
         </DrawerHeader>
 

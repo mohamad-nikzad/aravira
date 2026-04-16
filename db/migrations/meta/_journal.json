@@ -15,6 +15,13 @@
       "when": 1776179200000,
       "tag": "0001_push_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776326531057,
+      "tag": "0002_lonely_husk",
+      "breakpoints": true
     }
   ]
 }

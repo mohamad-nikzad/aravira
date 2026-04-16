@@ -206,7 +206,8 @@ export function SalonFullCalendar({
         nowIndicator
         selectable={!readOnly}
         selectMirror={!readOnly}
-        selectOverlap={false}
+        slotEventOverlap
+        selectOverlap
         selectAllow={readOnly ? () => false : selectAllow}
         select={readOnly ? undefined : handleDateSelect}
         dateClick={readOnly ? undefined : handleDateClick}
