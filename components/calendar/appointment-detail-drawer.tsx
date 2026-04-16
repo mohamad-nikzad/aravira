@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
 import {
   Drawer,
@@ -31,6 +31,11 @@ import {
   SERVICE_CATEGORIES,
   APPOINTMENT_STATUS,
 } from '@/lib/types'
+import {
+  autoPickServiceForStaff,
+  eligibleServicesForStaff,
+  eligibleStaffForService,
+} from '@/lib/staff-service-autofill'
 import { cn } from '@/lib/utils'
 import { Phone, Clock, Calendar, User as UserIcon, Trash2 } from 'lucide-react'
 import {
@@ -84,6 +89,11 @@ export function AppointmentDetailDrawer({
   const [endTime, setEndTime] = useState('')
   const [status, setStatus] = useState<string>('')
   const [notes, setNotes] = useState('')
+
+  const staffRoleOnly = useMemo(
+    () => staff.filter((m) => m.role === 'staff'),
+    [staff]
+  )
 
   const applyDuration = (mins: number) => {
     const clamped = Math.min(
@@ -140,6 +150,39 @@ export function AppointmentDetailDrawer({
     setServiceId(id)
     const svc = services.find((s) => s.id === id)
     if (svc) applyDuration(svc.duration)
+
+    const eligibleAll = eligibleStaffForService(staff, id)
+    const eligibleStaffMembers = eligibleStaffForService(staffRoleOnly, id)
+    if (eligibleStaffMembers.length === 1) {
+      setStaffId(eligibleStaffMembers[0].id)
+    } else if (!eligibleAll.some((m) => m.id === staffId)) {
+      setStaffId('')
+    }
+  }
+
+  const handleEditStaffChange = (id: string) => {
+    setStaffId(id)
+    const member = staff.find((s) => s.id === id)
+    if (!member) return
+
+    const eligible = eligibleServicesForStaff(member, services)
+    const current = services.find((s) => s.id === serviceId)
+    const serviceStillOk =
+      !!current && eligible.some((s) => s.id === serviceId)
+
+    if (!serviceStillOk) {
+      const explicitList =
+        member.serviceIds != null && member.serviceIds.length > 0
+      const auto = autoPickServiceForStaff(eligible, {
+        staffHasExplicitServiceList: explicitList,
+      })
+      if (auto) {
+        setServiceId(auto.id)
+        applyDuration(auto.duration)
+      } else {
+        setServiceId('')
+      }
+    }
   }
 
   const handleUpdate = async (e: React.FormEvent) => {
@@ -282,44 +325,56 @@ export function AppointmentDetailDrawer({
                 />
               </Field>
 
-              <Field>
-                <FieldLabel>خدمت</FieldLabel>
-                <Select value={serviceId} onValueChange={handleEditServiceChange} required>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="انتخاب خدمت" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(servicesByCategory).map(([category, categoryServices]) => (
-                      <div key={category}>
-                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                          {SERVICE_CATEGORIES[category as keyof typeof SERVICE_CATEGORIES]?.label || category}
-                        </div>
-                        {categoryServices.map((service) => (
-                          <SelectItem key={service.id} value={service.id}>
-                            {service.name} · پیشنهاد {service.duration} دقیقه — {formatTomans(service.price)}
-                          </SelectItem>
-                        ))}
-                      </div>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+              <div className="flex min-w-0 flex-col gap-7">
+                <Field>
+                  <FieldLabel>پرسنل</FieldLabel>
+                  <Select
+                    value={staffId || undefined}
+                    onValueChange={handleEditStaffChange}
+                    required
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="انتخاب پرسنل" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staff.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
 
-              <Field>
-                <FieldLabel>پرسنل</FieldLabel>
-                <Select value={staffId} onValueChange={setStaffId} required>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="انتخاب پرسنل" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staff.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+                <Field>
+                  <FieldLabel>خدمت</FieldLabel>
+                  <Select
+                    value={serviceId || undefined}
+                    onValueChange={handleEditServiceChange}
+                    required
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="انتخاب خدمت" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(servicesByCategory).map(([category, categoryServices]) => (
+                        <div key={category}>
+                          <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                            {SERVICE_CATEGORIES[category as keyof typeof SERVICE_CATEGORIES]?.label ||
+                              category}
+                          </div>
+                          {categoryServices.map((service) => (
+                            <SelectItem key={service.id} value={service.id}>
+                              {service.name} · پیشنهاد {service.duration} دقیقه —{' '}
+                              {formatTomans(service.price)}
+                            </SelectItem>
+                          ))}
+                        </div>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <Field>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Drawer,
   DrawerContent,
@@ -22,6 +22,11 @@ import {
 } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { User, Service, Client } from '@/lib/types'
+import {
+  autoPickServiceForStaff,
+  eligibleServicesForStaff,
+  eligibleStaffForService,
+} from '@/lib/staff-service-autofill'
 import {
   APPOINTMENT_DURATION_BOUNDS,
   durationMinutesFromRange,
@@ -137,6 +142,39 @@ export function AppointmentDrawer({
     setServiceId(id)
     const svc = services.find((s) => s.id === id)
     if (svc) applyDuration(svc.duration)
+
+    const eligibleAll = eligibleStaffForService(staff, id)
+    const eligibleStaffMembers = eligibleStaffForService(staffRoleOnly, id)
+    if (eligibleStaffMembers.length === 1) {
+      setStaffId(eligibleStaffMembers[0].id)
+    } else if (!eligibleAll.some((m) => m.id === staffId)) {
+      setStaffId('')
+    }
+  }
+
+  const handleStaffChange = (id: string) => {
+    setStaffId(id)
+    const member = staff.find((s) => s.id === id)
+    if (!member) return
+
+    const eligible = eligibleServicesForStaff(member, services)
+    const current = services.find((s) => s.id === serviceId)
+    const serviceStillOk =
+      !!current && eligible.some((s) => s.id === serviceId)
+
+    if (!serviceStillOk) {
+      const explicitList =
+        member.serviceIds != null && member.serviceIds.length > 0
+      const auto = autoPickServiceForStaff(eligible, {
+        staffHasExplicitServiceList: explicitList,
+      })
+      if (auto) {
+        setServiceId(auto.id)
+        applyDuration(auto.duration)
+      } else {
+        setServiceId('')
+      }
+    }
   }
 
   const handleClientCreated = (newClient: Client) => {
@@ -195,6 +233,12 @@ export function AppointmentDrawer({
     return acc
   }, {} as Record<string, Service[]>)
 
+  /** Managers are often unrestricted; autofill only among real staff to avoid false ambiguity. */
+  const staffRoleOnly = useMemo(
+    () => staff.filter((m) => m.role === 'staff'),
+    [staff]
+  )
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('fa-IR').format(price) + ' تومان'
   }
@@ -223,44 +267,51 @@ export function AppointmentDrawer({
               />
             </Field>
 
-            <Field>
-              <FieldLabel>خدمت</FieldLabel>
-              <Select value={serviceId} onValueChange={handleServiceChange} required>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="انتخاب خدمت" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(servicesByCategory).map(([category, categoryServices]) => (
-                    <div key={category}>
-                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                        {CATEGORY_LABELS[category] || category}
-                      </div>
-                      {categoryServices.map((service) => (
-                        <SelectItem key={service.id} value={service.id}>
-                          {service.name} · پیشنهاد {service.duration} دقیقه — {formatPrice(service.price)}
-                        </SelectItem>
-                      ))}
-                    </div>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
+            {/* Nested column so staff always stacks above service (stable in RTL / flex layouts). */}
+            <div className="flex min-w-0 flex-col gap-7">
+              <Field>
+                <FieldLabel>پرسنل</FieldLabel>
+                <Select value={staffId || undefined} onValueChange={handleStaffChange} required>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="انتخاب پرسنل" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staff.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
 
-            <Field>
-              <FieldLabel>پرسنل</FieldLabel>
-              <Select value={staffId} onValueChange={setStaffId} required>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="انتخاب پرسنل" />
-                </SelectTrigger>
-                <SelectContent>
-                  {staff.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
+              <Field>
+                <FieldLabel>خدمت</FieldLabel>
+                <Select
+                  value={serviceId || undefined}
+                  onValueChange={handleServiceChange}
+                  required
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="انتخاب خدمت" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(servicesByCategory).map(([category, categoryServices]) => (
+                      <div key={category}>
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                          {CATEGORY_LABELS[category] || category}
+                        </div>
+                        {categoryServices.map((service) => (
+                          <SelectItem key={service.id} value={service.id}>
+                            {service.name} · پیشنهاد {service.duration} دقیقه — {formatPrice(service.price)}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <Field>

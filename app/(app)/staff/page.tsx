@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
-import { Plus, Search, Phone, Shield, User as UserIcon } from 'lucide-react'
+import { Plus, Search, Phone, Shield, User as UserIcon, ListChecks } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { StaffDrawer } from '@/components/staff/staff-drawer'
+import { StaffServicesDrawer } from '@/components/staff/staff-services-drawer'
 import { useAuth } from '@/components/auth-provider'
 import { StaffSkeleton } from '@/components/skeletons/staff-skeleton'
 import { User } from '@/lib/types'
@@ -22,6 +23,7 @@ export default function StaffPage() {
   const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [showDrawer, setShowDrawer] = useState(false)
+  const [servicesStaff, setServicesStaff] = useState<User | null>(null)
 
   useEffect(() => {
     if (user && user.role !== 'manager') {
@@ -30,7 +32,9 @@ export default function StaffPage() {
   }, [user, router])
 
   const { data, isLoading: staffLoading, mutate } = useSWR(user?.role === 'manager' ? '/api/staff' : null, fetcher)
+  const { data: servicesData } = useSWR(user?.role === 'manager' ? '/api/services' : null, fetcher)
   const staff: User[] = data?.staff || []
+  const servicesList = servicesData?.services || []
 
   const filteredStaff = staff.filter(
     (member) =>
@@ -44,6 +48,11 @@ export default function StaffPage() {
 
   const handleSuccess = () => {
     setShowDrawer(false)
+    mutate()
+  }
+
+  const handleServicesSuccess = () => {
+    setServicesStaff(null)
     mutate()
   }
 
@@ -131,6 +140,19 @@ export default function StaffPage() {
                     {member.phone}
                   </p>
                 </div>
+
+                {member.role === 'staff' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 touch-manipulation gap-1"
+                    onClick={() => setServicesStaff(member)}
+                  >
+                    <ListChecks className="h-4 w-4" />
+                    <span className="hidden sm:inline">خدمات</span>
+                  </Button>
+                )}
               </div>
             ))}
           </div>
@@ -141,6 +163,14 @@ export default function StaffPage() {
         open={showDrawer}
         onOpenChange={setShowDrawer}
         onSuccess={handleSuccess}
+      />
+
+      <StaffServicesDrawer
+        open={!!servicesStaff}
+        onOpenChange={(o) => !o && setServicesStaff(null)}
+        staff={servicesStaff}
+        services={servicesList}
+        onSuccess={handleServicesSuccess}
       />
     </div>
   )

@@ -7,6 +7,7 @@ import {
   getUserById,
   getServiceById,
   getScheduleOverlapFlags,
+  staffMayPerformService,
 } from '@/lib/db'
 import { SCHEDULE_CONFLICT_CODES } from '@/lib/appointment-conflict'
 import type { Appointment, AppointmentWithDetails } from '@/lib/types'
@@ -81,6 +82,14 @@ export async function POST(request: Request) {
     const service = await getServiceById(serviceId)
     if (!service || !service.active) {
       return NextResponse.json({ error: 'خدمت یافت نشد' }, { status: 404 })
+    }
+
+    const staffOk = await staffMayPerformService(staffId, serviceId)
+    if (!staffOk) {
+      return NextResponse.json(
+        { error: 'این پرسنل برای خدمت انتخاب‌شده تعریف نشده است.' },
+        { status: 400 }
+      )
     }
 
     const endExplicit =

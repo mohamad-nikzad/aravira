@@ -1,4 +1,4 @@
-import { eq, and, or, gte, lte, asc } from 'drizzle-orm'
+import { eq, and, or, gte, lte, asc, inArray } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { getDb } from '@/db'
 import {
@@ -8,6 +8,7 @@ import {
   appointments,
   businessSettings,
   pushSubscriptions,
+  staffServices,
 } from '@/db/schema'
 import type { User, Service, Client, Appointment, BusinessHours } from './types'
 import { normalizePhone } from './phone'
@@ -107,7 +108,87 @@ export async function getAllStaff(): Promise<User[]> {
     .from(users)
     .where(eq(users.active, true))
     .orderBy(asc(users.name))
-  return rows.map(rowToUser)
+  if (rows.length === 0) return []
+
+  const ids = rows.map((r) => r.id)
+  const links = await db
+    .select({
+      staffUserId: staffServices.staffUserId,
+      serviceId: staffServices.serviceId,
+    })
+    .from(staffServices)
+    .where(inArray(staffServices.staffUserId, ids))
+
+  const byUser = new Map<string, string[]>()
+  for (const row of links) {
+    const cur = byUser.get(row.staffUserId) ?? []
+    cur.push(row.serviceId)
+    byUser.set(row.staffUserId, cur)
+  }
+
+  return rows.map((row) => {
+    const base = rowToUser(row)
+    const assigned = byUser.get(row.id)
+    if (assigned === undefined) {
+      return { ...base, serviceIds: null as string[] | null }
+    }
+    const unique = [...new Set(assigned)].sort()
+    return { ...base, serviceIds: unique }
+  })
+}
+
+export async function staffMayPerformService(staffId: string, serviceId: string): Promise<boolean> {
+  const db = getDb()
+  const rows = await db
+    .select({ serviceId: staffServices.serviceId })
+    .from(staffServices)
+    .where(eq(staffServices.staffUserId, staffId))
+  if (rows.length === 0) return true
+  return rows.some((r) => r.serviceId === serviceId)
+}
+
+export async function getUserWithServiceIds(id: string): Promise<User | undefined> {
+  const base = await getUserById(id)
+  if (!base) return undefined
+  const db = getDb()
+  const links = await db
+    .select({ serviceId: staffServices.serviceId })
+    .from(staffServices)
+    .where(eq(staffServices.staffUserId, id))
+  if (links.length === 0) {
+    return { ...base, serviceIds: null as string[] | null }
+  }
+  const unique = [...new Set(links.map((r) => r.serviceId))].sort()
+  return { ...base, serviceIds: unique }
+}
+
+/** `null` or empty after delete = unrestricted (همه خدمات فعال). */
+export async function setStaffServiceIds(
+  staffUserId: string,
+  serviceIds: string[] | null
+): Promise<void> {
+  const db = getDb()
+  await db.transaction(async (tx) => {
+    await tx.delete(staffServices).where(eq(staffServices.staffUserId, staffUserId))
+    if (serviceIds != null && serviceIds.length > 0) {
+      await tx.insert(staffServices).values(
+        serviceIds.map((serviceId) => ({
+          staffUserId,
+          serviceId,
+        }))
+      )
+    }
+  })
+}
+
+export async function validateActiveServiceIds(ids: string[]): Promise<boolean> {
+  if (ids.length === 0) return true
+  const db = getDb()
+  const rows = await db
+    .select({ id: services.id })
+    .from(services)
+    .where(and(eq(services.active, true), inArray(services.id, ids)))
+  return rows.length === ids.length
 }
 
 export async function createUser(

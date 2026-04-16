@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aravira-v4'
+const CACHE_NAME = 'aravira-v10'
 
 const PRECACHE_ASSETS = [
   '/manifest.json',

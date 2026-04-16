@@ -7,6 +7,11 @@ export interface User {
   color: string
   phone: string
   createdAt: Date
+  /**
+   * When omitted or `null`, the user may perform every active service.
+   * When a non-empty array, only those services apply.
+   */
+  serviceIds?: string[] | null
 }
 
 export interface Service {

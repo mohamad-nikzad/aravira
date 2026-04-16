@@ -5,11 +5,18 @@
  */
 import bcrypt from 'bcryptjs'
 import { drizzle } from 'drizzle-orm/postgres-js'
-import { count, eq } from 'drizzle-orm'
+import { and, asc, count, eq } from 'drizzle-orm'
 import postgres from 'postgres'
 import { getDatabaseUrl } from '../db/config'
 import * as schema from '../db/schema'
-import { appointments, businessSettings, clients, services, users } from '../db/schema'
+import {
+  appointments,
+  businessSettings,
+  clients,
+  services,
+  staffServices,
+  users,
+} from '../db/schema'
 
 const client = postgres(getDatabaseUrl({ preferDirect: true }), { max: 1 })
 const db = drizzle(client, { schema })
@@ -121,6 +128,19 @@ async function main() {
     ])
   }
 
+  /** Extra demo staff (idempotent) — only one service for autofill smoke tests. */
+  const [existingSara] = await db.select().from(users).where(eq(users.phone, '09120000003')).limit(1)
+  if (!existingSara) {
+    await db.insert(users).values({
+      name: 'سارا محمودی',
+      phone: '09120000003',
+      passwordHash,
+      role: 'staff',
+      color: 'bg-staff-4',
+      active: true,
+    })
+  }
+
   const clientRows = [
     { name: 'زهرا کریمی', phone: '09121234567', notes: 'مشتری ثابت' },
     { name: 'نازنین حسینی', phone: '09122345678', notes: null },
@@ -139,13 +159,54 @@ async function main() {
   const allClients = await db.select().from(clients)
 
   const manager = allUsers.find((u) => u.role === 'manager')
-  const staffA = allUsers.find((u) => u.phone === '09120000001')
-  const staffB = allUsers.find((u) => u.phone === '09120000002')
+  const staffUsersOrdered = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.active, true), eq(users.role, 'staff')))
+    .orderBy(asc(users.name))
+  const staffA = staffUsersOrdered[0]
+  const staffB = staffUsersOrdered[1]
 
   const hairService = allServices.find((s) => s.name === 'کوتاهی مو')
   const colorService = allServices.find((s) => s.name === 'رنگ مو')
   const manicureService = allServices.find((s) => s.name === 'مانیکور')
   const skincareService = allServices.find((s) => s.name === 'پاکسازی صورت')
+  const massageService = allServices.find((s) => s.name === 'ماساژ سوئدی')
+
+  if (
+    staffA &&
+    staffB &&
+    hairService &&
+    colorService &&
+    manicureService &&
+    massageService &&
+    skincareService
+  ) {
+    await db
+      .insert(staffServices)
+      .values([
+        { staffUserId: staffA.id, serviceId: hairService.id },
+        { staffUserId: staffA.id, serviceId: colorService.id },
+        { staffUserId: staffA.id, serviceId: massageService.id },
+        { staffUserId: staffB.id, serviceId: hairService.id },
+        { staffUserId: staffB.id, serviceId: colorService.id },
+        { staffUserId: staffB.id, serviceId: manicureService.id },
+        { staffUserId: staffB.id, serviceId: skincareService.id },
+      ])
+      .onConflictDoNothing()
+  }
+
+  const [staffOneService] = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.active, true), eq(users.phone, '09120000003')))
+    .limit(1)
+  if (staffOneService && massageService) {
+    await db
+      .insert(staffServices)
+      .values([{ staffUserId: staffOneService.id, serviceId: massageService.id }])
+      .onConflictDoNothing()
+  }
 
   const today = new Date()
   const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
@@ -212,7 +273,8 @@ async function main() {
 
   console.log('Seed complete.')
   console.log('Manager: 09120000000 / admin123')
-  console.log('Staff: 09120000001, 09120000002 / admin123')
+  console.log('Staff: 09120000001, 09120000002, 09120000003 / admin123')
+  console.log('سارا محمودی (09120000003) فقط ماساژ سوئدی — برای تست پیش‌پر یک خدمت.')
   await client.end()
 }
 

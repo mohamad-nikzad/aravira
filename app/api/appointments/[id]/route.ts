@@ -9,6 +9,7 @@ import {
   getUserById,
   getServiceById,
   getScheduleOverlapFlags,
+  staffMayPerformService,
 } from '@/lib/db'
 import { isBlockingAppointmentStatus, SCHEDULE_CONFLICT_CODES } from '@/lib/appointment-conflict'
 import {
@@ -119,6 +120,20 @@ export async function PATCH(
     const windowCheck = validateAppointmentWindow(effectiveStart, endTime)
     if (!windowCheck.ok) {
       return NextResponse.json({ error: windowCheck.error }, { status: 400 })
+    }
+
+    const resolvedServiceId = typeof serviceId === 'string' ? serviceId : existing.serviceId
+    const resolvedStaffId = typeof staffId === 'string' ? staffId : existing.staffId
+    const svcForPair = await getServiceById(resolvedServiceId)
+    if (!svcForPair || !svcForPair.active) {
+      return NextResponse.json({ error: 'خدمت یافت نشد' }, { status: 404 })
+    }
+    const pairOk = await staffMayPerformService(resolvedStaffId, resolvedServiceId)
+    if (!pairOk) {
+      return NextResponse.json(
+        { error: 'این پرسنل برای خدمت انتخاب‌شده تعریف نشده است.' },
+        { status: 400 }
+      )
     }
 
     const checkStaffId = typeof staffId === 'string' ? staffId : existing.staffId

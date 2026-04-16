@@ -6,6 +6,7 @@ import {
   integer,
   timestamp,
   index,
+  primaryKey,
 } from 'drizzle-orm/pg-core'
 
 export const users = pgTable('users', {
@@ -29,6 +30,23 @@ export const services = pgTable('services', {
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
+
+/** When a user has no rows here, they may perform every active service. */
+export const staffServices = pgTable(
+  'staff_services',
+  {
+    staffUserId: uuid('staff_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    serviceId: uuid('service_id')
+      .notNull()
+      .references(() => services.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.staffUserId, t.serviceId] }),
+    index('staff_services_service_id_idx').on(t.serviceId),
+  ]
+)
 
 export const clients = pgTable('clients', {
   id: uuid('id').primaryKey().defaultRandom(),
