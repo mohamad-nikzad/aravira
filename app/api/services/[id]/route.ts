@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
 import { getServiceById, updateService } from '@/lib/db'
 import type { Service } from '@/lib/types'
+import { getTenantUser, isManagerRole } from '@/lib/server/auth/tenant'
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'manager') {
+    const user = await getTenantUser()
+    if (!user || !isManagerRole(user.role)) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
@@ -25,14 +25,18 @@ export async function PATCH(
     if (color !== undefined) patch.color = color
     if (active !== undefined) patch.active = Boolean(active)
 
-    const service = await updateService(id, patch)
+    const service = await updateService(id, user.salonId, patch)
     if (!service) {
       return NextResponse.json({ error: 'خدمت یافت نشد' }, { status: 404 })
     }
 
     return NextResponse.json({ service })
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Update service error:', error)
+    const msg = error instanceof Error ? error.message : ''
+    if (msg.includes('unique') || msg.includes('duplicate')) {
+      return NextResponse.json({ error: 'این نام خدمت برای این سالن قبلاً ثبت شده است' }, { status: 409 })
+    }
     return NextResponse.json({ error: 'خطای سرور. لطفاً دوباره تلاش کنید.' }, { status: 500 })
   }
 }
@@ -42,13 +46,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser()
+    const user = await getTenantUser()
     if (!user) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
     }
 
     const { id } = await params
-    const service = await getServiceById(id)
+    const service = await getServiceById(id, user.salonId)
     if (!service) {
       return NextResponse.json({ error: 'خدمت یافت نشد' }, { status: 404 })
     }

@@ -31,6 +31,7 @@ Use a **split env** so you can switch Neon branches without editing secrets:
 
 - `.env.local` — `JWT_SECRET`, VAPID keys, and anything else that is not branch-specific
 - `.env.database.dev` — `DATABASE_URL` + `DATABASE_URL_DIRECT` for your **dev** Neon branch
+- `.env.database.multitenant` — `DATABASE_URL` + `DATABASE_URL_DIRECT` for the multi-tenant MVP feature branch
 - `.env.database.main` — same for your **production** Neon branch
 
 Scripts (via Bun) load `.env.local` first, then the database file, so the database URLs always match the command you run:
@@ -40,6 +41,10 @@ bun install
 bun run db:push       # schema → dev branch (default)
 bun run db:seed       # seed dev branch
 bun run dev           # Next.js against dev branch
+
+bun run db:migrate:multitenant  # checked-in migrations → multi-tenant feature branch
+bun run db:seed:multitenant     # seed multi-tenant feature branch
+bun run dev:multitenant         # Next.js against multi-tenant feature branch
 
 bun run dev:main      # Next.js against production branch (read/write — be careful)
 bun run db:push:main  # schema → production (use with care)

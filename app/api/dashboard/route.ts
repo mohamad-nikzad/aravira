@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { eq, and, gte, lte, sql, count, ne } from 'drizzle-orm'
-import { getCurrentUser } from '@/lib/auth'
 import { getDb } from '@/db'
 import { clients, users, appointments, services } from '@/db/schema'
+import { getTenantUser, isManagerRole } from '@/lib/server/auth/tenant'
 
 function todayStr() {
   const d = new Date()
@@ -35,8 +35,8 @@ function monthBounds() {
 
 export async function GET() {
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'manager') {
+    const user = await getTenantUser()
+    if (!user || !isManagerRole(user.role)) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
@@ -58,18 +58,19 @@ export async function GET() {
       monthRevenue,
       newClientsThisMonth,
     ] = await Promise.all([
-      db.select({ value: count() }).from(clients),
+      db.select({ value: count() }).from(clients).where(eq(clients.salonId, user.salonId)),
 
       db
         .select({ value: count() })
         .from(users)
-        .where(eq(users.active, true)),
+        .where(and(eq(users.salonId, user.salonId), eq(users.active, true))),
 
       db
         .select({ value: count() })
         .from(appointments)
         .where(
           and(
+            eq(appointments.salonId, user.salonId),
             eq(appointments.date, today),
             ne(appointments.status, 'cancelled')
           )
@@ -80,6 +81,7 @@ export async function GET() {
         .from(appointments)
         .where(
           and(
+            eq(appointments.salonId, user.salonId),
             gte(appointments.date, week.start),
             lte(appointments.date, week.end),
             ne(appointments.status, 'cancelled')
@@ -91,6 +93,7 @@ export async function GET() {
         .from(appointments)
         .where(
           and(
+            eq(appointments.salonId, user.salonId),
             gte(appointments.date, month.start),
             lte(appointments.date, month.end),
             ne(appointments.status, 'cancelled')
@@ -103,7 +106,7 @@ export async function GET() {
           count: count(),
         })
         .from(appointments)
-        .where(eq(appointments.date, today))
+        .where(and(eq(appointments.salonId, user.salonId), eq(appointments.date, today)))
         .groupBy(appointments.status),
 
       db
@@ -114,6 +117,7 @@ export async function GET() {
         .from(appointments)
         .where(
           and(
+            eq(appointments.salonId, user.salonId),
             gte(appointments.date, month.start),
             lte(appointments.date, month.end)
           )
@@ -127,9 +131,13 @@ export async function GET() {
           count: count(),
         })
         .from(appointments)
-        .innerJoin(services, eq(appointments.serviceId, services.id))
+        .innerJoin(
+          services,
+          and(eq(appointments.serviceId, services.id), eq(services.salonId, user.salonId))
+        )
         .where(
           and(
+            eq(appointments.salonId, user.salonId),
             gte(appointments.date, month.start),
             lte(appointments.date, month.end),
             ne(appointments.status, 'cancelled')
@@ -147,9 +155,13 @@ export async function GET() {
           count: count(),
         })
         .from(appointments)
-        .innerJoin(users, eq(appointments.staffId, users.id))
+        .innerJoin(
+          users,
+          and(eq(appointments.staffId, users.id), eq(users.salonId, user.salonId))
+        )
         .where(
           and(
+            eq(appointments.salonId, user.salonId),
             gte(appointments.date, month.start),
             lte(appointments.date, month.end),
             ne(appointments.status, 'cancelled')
@@ -163,9 +175,13 @@ export async function GET() {
           value: sql<number>`coalesce(sum(${services.price}), 0)`,
         })
         .from(appointments)
-        .innerJoin(services, eq(appointments.serviceId, services.id))
+        .innerJoin(
+          services,
+          and(eq(appointments.serviceId, services.id), eq(services.salonId, user.salonId))
+        )
         .where(
           and(
+            eq(appointments.salonId, user.salonId),
             gte(appointments.date, month.start),
             lte(appointments.date, month.end),
             eq(appointments.status, 'completed')
@@ -177,6 +193,7 @@ export async function GET() {
         .from(clients)
         .where(
           and(
+            eq(clients.salonId, user.salonId),
             gte(clients.createdAt, new Date(month.start + 'T00:00:00')),
             lte(clients.createdAt, new Date(month.end + 'T23:59:59'))
           )

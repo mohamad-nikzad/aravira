@@ -8,7 +8,7 @@ type DatabaseUrlOptions = {
 let envLoaded = false
 
 function loadLocalEnvFile(fileName: string) {
-  const filePath = path.join(process.cwd(), fileName)
+  const filePath = path.join(/* turbopackIgnore: true */ process.cwd(), fileName)
   if (!existsSync(filePath)) return
 
   const contents = readFileSync(filePath, 'utf8')

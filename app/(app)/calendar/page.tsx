@@ -65,7 +65,10 @@ export default function CalendarPage() {
   const { data: clientsData, mutate: mutateClients } = useSWR(user && isManager ? '/api/clients' : null, fetcher)
   const { data: businessData } = useSWR(user ? '/api/settings/business' : null, fetcher)
 
-  const appointments: AppointmentWithDetails[] = appointmentsData?.appointments || []
+  const appointments = useMemo<AppointmentWithDetails[]>(
+    () => appointmentsData?.appointments || [],
+    [appointmentsData]
+  )
   const staff: User[] = staffData?.staff || []
   const services: Service[] = servicesData?.services || []
   const clients: Client[] = clientsData?.clients || []

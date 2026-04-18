@@ -4,13 +4,55 @@ import {
   text,
   boolean,
   integer,
+  serial,
   timestamp,
   index,
+  uniqueIndex,
   primaryKey,
 } from 'drizzle-orm/pg-core'
 
+export const salons = pgTable(
+  'salons',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    phone: text('phone'),
+    address: text('address'),
+    timezone: text('timezone').notNull().default('Asia/Tehran'),
+    locale: text('locale').notNull().default('fa-IR'),
+    status: text('status').notNull().$type<'active' | 'suspended' | 'archived'>().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('salons_slug_unique').on(t.slug)]
+)
+
+export const locations = pgTable(
+  'locations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    address: text('address'),
+    phone: text('phone'),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('locations_salon_id_active_idx').on(t.salonId, t.active),
+    uniqueIndex('locations_salon_id_name_unique').on(t.salonId, t.name),
+  ]
+)
+
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
+  salonId: uuid('salon_id')
+    .notNull()
+    .references(() => salons.id, { onDelete: 'restrict' }),
   name: text('name').notNull(),
   phone: text('phone').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
@@ -18,18 +60,81 @@ export const users = pgTable('users', {
   color: text('color').notNull(),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
+}, (t) => [
+  index('users_salon_id_role_active_idx').on(t.salonId, t.role, t.active),
+])
 
-export const services = pgTable('services', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  category: text('category').notNull().$type<'hair' | 'nails' | 'skincare' | 'spa'>(),
-  duration: integer('duration').notNull(),
-  price: integer('price').notNull(),
-  color: text('color').notNull(),
-  active: boolean('active').notNull().default(true),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const staffSchedules = pgTable(
+  'staff_schedules',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'cascade' }),
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    dayOfWeek: integer('day_of_week').notNull(),
+    workingStart: text('working_start').notNull(),
+    workingEnd: text('working_end').notNull(),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('staff_schedules_salon_id_staff_id_day_unique').on(
+      t.salonId,
+      t.staffId,
+      t.dayOfWeek
+    ),
+    index('staff_schedules_salon_id_staff_id_idx').on(t.salonId, t.staffId),
+    index('staff_schedules_salon_id_day_active_idx').on(t.salonId, t.dayOfWeek, t.active),
+  ]
+)
+
+export const services = pgTable(
+  'services',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    category: text('category').notNull().$type<'hair' | 'nails' | 'skincare' | 'spa'>(),
+    duration: integer('duration').notNull(),
+    price: integer('price').notNull(),
+    color: text('color').notNull(),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('services_salon_id_name_unique').on(t.salonId, t.name),
+    index('services_salon_id_active_idx').on(t.salonId, t.active),
+  ]
+)
+
+export const resources = pgTable(
+  'resources',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'cascade' }),
+    locationId: uuid('location_id')
+      .notNull()
+      .references(() => locations.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    type: text('type').notNull(),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('resources_salon_id_active_idx').on(t.salonId, t.active),
+    index('resources_salon_id_location_id_idx').on(t.salonId, t.locationId),
+    uniqueIndex('resources_salon_id_location_id_name_unique').on(t.salonId, t.locationId, t.name),
+  ]
+)
 
 /** When a user has no rows here, they may perform every active service. */
 export const staffServices = pgTable(
@@ -41,25 +146,43 @@ export const staffServices = pgTable(
     serviceId: uuid('service_id')
       .notNull()
       .references(() => services.id, { onDelete: 'cascade' }),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'cascade' }),
   },
   (t) => [
     primaryKey({ columns: [t.staffUserId, t.serviceId] }),
     index('staff_services_service_id_idx').on(t.serviceId),
+    index('staff_services_salon_id_staff_user_id_idx').on(t.salonId, t.staffUserId),
+    index('staff_services_salon_id_service_id_idx').on(t.salonId, t.serviceId),
   ]
 )
 
-export const clients = pgTable('clients', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  phone: text('phone').notNull().unique(),
-  notes: text('notes'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const clients = pgTable(
+  'clients',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    phone: text('phone').notNull(),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('clients_salon_id_phone_unique').on(t.salonId, t.phone),
+    index('clients_salon_id_phone_idx').on(t.salonId, t.phone),
+  ]
+)
 
 export const appointments = pgTable(
   'appointments',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'restrict' }),
     clientId: uuid('client_id')
       .notNull()
       .references(() => clients.id, { onDelete: 'restrict' }),
@@ -83,21 +206,43 @@ export const appointments = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    index('appointments_salon_id_date_idx').on(t.salonId, t.date),
+    index('appointments_salon_id_staff_id_date_idx').on(t.salonId, t.staffId, t.date),
+    index('appointments_salon_id_client_id_date_idx').on(t.salonId, t.clientId, t.date),
     index('appointments_staff_id_date_idx').on(t.staffId, t.date),
     index('appointments_client_id_date_idx').on(t.clientId, t.date),
   ]
 )
 
-/** Single-row table: use id = 1 */
-export const businessSettings = pgTable('business_settings', {
-  id: integer('id').primaryKey().default(1),
-  workingStart: text('working_start').notNull().default('09:00'),
-  workingEnd: text('working_end').notNull().default('19:00'),
-  slotDurationMinutes: integer('slot_duration_minutes').notNull().default(30),
+export const businessSettings = pgTable(
+  'business_settings',
+  {
+    id: serial('id').primaryKey(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'cascade' }),
+    workingStart: text('working_start').notNull().default('09:00'),
+    workingEnd: text('working_end').notNull().default('19:00'),
+    slotDurationMinutes: integer('slot_duration_minutes').notNull().default(30),
+  },
+  (t) => [uniqueIndex('business_settings_salon_id_unique').on(t.salonId)]
+)
+
+export const salonOnboarding = pgTable('salon_onboarding', {
+  salonId: uuid('salon_id')
+    .primaryKey()
+    .references(() => salons.id, { onDelete: 'cascade' }),
+  profileConfirmedAt: timestamp('profile_confirmed_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  skippedAt: timestamp('skipped_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
 export const pushSubscriptions = pgTable('push_subscriptions', {
   id: uuid('id').primaryKey().defaultRandom(),
+  salonId: uuid('salon_id')
+    .notNull()
+    .references(() => salons.id, { onDelete: 'cascade' }),
   userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),

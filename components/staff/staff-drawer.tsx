@@ -26,12 +26,14 @@ interface StaffDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
+  roleLocked?: 'staff' | 'manager'
 }
 
 export function StaffDrawer({
   open,
   onOpenChange,
   onSuccess,
+  roleLocked,
 }: StaffDrawerProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -46,7 +48,7 @@ export function StaffDrawer({
       setName('')
       setPassword('')
       setPhone('')
-      setRole('staff')
+      setRole(roleLocked ?? 'staff')
       setError('')
     }
     onOpenChange(isOpen)
@@ -66,7 +68,7 @@ export function StaffDrawer({
           name,
           password,
           phone,
-          role,
+          role: roleLocked ?? role,
         }),
       })
 
@@ -133,18 +135,25 @@ export function StaffDrawer({
               />
             </Field>
 
-            <Field>
-              <FieldLabel>نقش</FieldLabel>
-              <Select value={role} onValueChange={(v) => setRole(v as 'staff' | 'manager')}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="staff">پرسنل</SelectItem>
-                  <SelectItem value="manager">مدیر</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
+            {roleLocked ? (
+              <Field>
+                <FieldLabel>نقش</FieldLabel>
+                <Input value={roleLocked === 'staff' ? 'پرسنل' : 'مدیر'} disabled />
+              </Field>
+            ) : (
+              <Field>
+                <FieldLabel>نقش</FieldLabel>
+                <Select value={role} onValueChange={(v) => setRole(v as 'staff' | 'manager')}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="staff">پرسنل</SelectItem>
+                    <SelectItem value="manager">مدیر</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
 
             {error && <FieldError>{error}</FieldError>}
           </FieldGroup>

@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
 import { getBusinessSettings, updateBusinessSettings } from '@/lib/db'
+import { getTenantUser, isManagerRole } from '@/lib/server/auth/tenant'
 
 export async function GET() {
   try {
-    const user = await getCurrentUser()
+    const user = await getTenantUser()
     if (!user) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
     }
 
-    const settings = await getBusinessSettings()
+    const settings = await getBusinessSettings(user.salonId)
     return NextResponse.json({ settings })
   } catch (error) {
     console.error('Get business settings error:', error)
@@ -19,15 +19,15 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'manager') {
+    const user = await getTenantUser()
+    if (!user || !isManagerRole(user.role)) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
     const body = await request.json()
     const { workingStart, workingEnd, slotDurationMinutes } = body
 
-    const next = await updateBusinessSettings({
+    const next = await updateBusinessSettings(user.salonId, {
       ...(typeof workingStart === 'string' ? { workingStart } : {}),
       ...(typeof workingEnd === 'string' ? { workingEnd } : {}),
       ...(typeof slotDurationMinutes === 'number' ? { slotDurationMinutes } : {}),

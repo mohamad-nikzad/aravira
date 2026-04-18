@@ -227,4 +227,21 @@ describe('detectScheduleOverlaps', () => {
     )
     expect(flags).toEqual({ staffConflict: false, clientConflict: false })
   })
+
+  it('ignores overlapping rows from a different salon when tenant context is provided', () => {
+    const flags = detectScheduleOverlaps(
+      [
+        { ...baseRow, id: 'other-salon', salonId: 'salon-b', staffId: 's1', clientId: 'c1' },
+      ],
+      {
+        salonId: 'salon-a',
+        staffId: 's1',
+        clientId: 'c1',
+        date: '2026-01-01',
+        startTime: '09:30',
+        endTime: '10:30',
+      }
+    )
+    expect(flags).toEqual({ staffConflict: false, clientConflict: false })
+  })
 })

@@ -1,25 +1,25 @@
 import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
 import {
   getUserById,
   getUserWithServiceIds,
   setStaffServiceIds,
   validateActiveServiceIds,
 } from '@/lib/db'
+import { getTenantUser, isManagerRole } from '@/lib/server/auth/tenant'
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'manager') {
+    const user = await getTenantUser()
+    if (!user || !isManagerRole(user.role)) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
     const { id: staffId } = await params
     const target = await getUserById(staffId)
-    if (!target) {
+    if (!target || target.salonId !== user.salonId) {
       return NextResponse.json({ error: 'کاربر یافت نشد' }, { status: 404 })
     }
     if (target.role !== 'staff') {
@@ -43,7 +43,7 @@ export async function PATCH(
     }
 
     if (normalized !== null) {
-      const ok = await validateActiveServiceIds(normalized)
+      const ok = await validateActiveServiceIds(normalized, user.salonId)
       if (!ok) {
         return NextResponse.json(
           { error: 'یک یا چند شناسه خدمت نامعتبر یا غیرفعال است.' },
@@ -52,8 +52,8 @@ export async function PATCH(
       }
     }
 
-    await setStaffServiceIds(staffId, normalized)
-    const updated = await getUserWithServiceIds(staffId)
+    await setStaffServiceIds(staffId, normalized, user.salonId)
+    const updated = await getUserWithServiceIds(staffId, user.salonId)
     if (!updated) {
       return NextResponse.json({ error: 'به‌روزرسانی انجام شد اما کاربر بازخوانی نشد' }, { status: 500 })
     }

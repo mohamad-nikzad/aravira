@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getCurrentUser } from '@/lib/auth'
 import { upsertPushSubscription, deletePushSubscriptionForUser } from '@/lib/db'
 import { isWebPushConfigured } from '@/lib/push'
+import { getTenantUser } from '@/lib/server/auth/tenant'
 
 const subscribeBody = z.object({
   subscription: z.object({
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'اعلان فشاری پیکربندی نشده است' }, { status: 503 })
     }
 
-    const user = await getCurrentUser()
+    const user = await getTenantUser()
     if (!user) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
     }
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     const { subscription } = parsed.data
-    await upsertPushSubscription(user.id, {
+    await upsertPushSubscription(user.userId, user.salonId, {
       endpoint: subscription.endpoint,
       p256dh: subscription.keys.p256dh,
       auth: subscription.keys.auth,
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const user = await getCurrentUser()
+    const user = await getTenantUser()
     if (!user) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
     }
@@ -62,7 +62,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'داده نامعتبر' }, { status: 400 })
     }
 
-    await deletePushSubscriptionForUser(user.id, parsed.data.endpoint)
+    await deletePushSubscriptionForUser(user.userId, user.salonId, parsed.data.endpoint)
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('Push unsubscribe error:', error)

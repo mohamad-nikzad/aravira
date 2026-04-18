@@ -9,6 +9,7 @@ import type { Service, User } from './types'
 
 const baseUser = (over: Partial<User>): User => ({
   id: 'u1',
+  salonId: 'salon-1',
   name: 'Test',
   role: 'staff',
   color: 'bg-staff-1',

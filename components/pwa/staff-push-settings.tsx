@@ -28,7 +28,7 @@ export function StaffPushSettings() {
     let cancelled = false
     void (async () => {
       try {
-        const res = await fetch('/api/push/config')
+        const res = await fetch('/api/push/config', { credentials: 'include' })
         if (!res.ok || cancelled) return
         const data = (await res.json()) as { configured?: boolean; publicKey?: string | null }
         if (data.configured && data.publicKey) {

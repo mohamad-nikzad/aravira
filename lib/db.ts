@@ -1,22 +1,26 @@
-import { eq, and, or, gte, lte, asc, inArray } from 'drizzle-orm'
+import { eq, and, or, gte, lte, asc, inArray, count } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { getDb } from '@/db'
 import {
   users,
+  salons,
   services,
   clients,
   appointments,
   businessSettings,
   pushSubscriptions,
   staffServices,
+  staffSchedules,
+  salonOnboarding,
 } from '@/db/schema'
-import type { User, Service, Client, Appointment, BusinessHours } from './types'
+import type { User, Service, Client, Appointment, BusinessHours, StaffSchedule } from './types'
 import { normalizePhone } from './phone'
 import { detectScheduleOverlaps } from './appointment-conflict'
 
 function rowToUser(row: typeof users.$inferSelect): User {
   return {
     id: row.id,
+    salonId: row.salonId,
     name: row.name,
     phone: row.phone,
     role: row.role,
@@ -63,6 +67,20 @@ function rowToAppointment(row: typeof appointments.$inferSelect): Appointment {
   }
 }
 
+function rowToStaffSchedule(row: typeof staffSchedules.$inferSelect): StaffSchedule {
+  return {
+    id: row.id,
+    salonId: row.salonId,
+    staffId: row.staffId,
+    dayOfWeek: row.dayOfWeek,
+    workingStart: row.workingStart,
+    workingEnd: row.workingEnd,
+    active: row.active,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+}
+
 export async function getUserByPhone(phone: string): Promise<User | undefined> {
   const db = getDb()
   const normalized = normalizePhone(phone)
@@ -101,12 +119,12 @@ export async function getUserById(id: string): Promise<User | undefined> {
   return row ? rowToUser(row) : undefined
 }
 
-export async function getAllStaff(): Promise<User[]> {
+export async function getAllStaff(salonId: string): Promise<User[]> {
   const db = getDb()
   const rows = await db
     .select()
     .from(users)
-    .where(eq(users.active, true))
+    .where(and(eq(users.salonId, salonId), eq(users.active, true)))
     .orderBy(asc(users.name))
   if (rows.length === 0) return []
 
@@ -117,7 +135,7 @@ export async function getAllStaff(): Promise<User[]> {
       serviceId: staffServices.serviceId,
     })
     .from(staffServices)
-    .where(inArray(staffServices.staffUserId, ids))
+    .where(and(eq(staffServices.salonId, salonId), inArray(staffServices.staffUserId, ids)))
 
   const byUser = new Map<string, string[]>()
   for (const row of links) {
@@ -137,24 +155,31 @@ export async function getAllStaff(): Promise<User[]> {
   })
 }
 
-export async function staffMayPerformService(staffId: string, serviceId: string): Promise<boolean> {
+export async function staffMayPerformService(
+  staffId: string,
+  serviceId: string,
+  salonId: string
+): Promise<boolean> {
   const db = getDb()
   const rows = await db
     .select({ serviceId: staffServices.serviceId })
     .from(staffServices)
-    .where(eq(staffServices.staffUserId, staffId))
+    .where(and(eq(staffServices.salonId, salonId), eq(staffServices.staffUserId, staffId)))
   if (rows.length === 0) return true
   return rows.some((r) => r.serviceId === serviceId)
 }
 
-export async function getUserWithServiceIds(id: string): Promise<User | undefined> {
+export async function getUserWithServiceIds(
+  id: string,
+  salonId: string
+): Promise<User | undefined> {
   const base = await getUserById(id)
-  if (!base) return undefined
+  if (!base || base.salonId !== salonId) return undefined
   const db = getDb()
   const links = await db
     .select({ serviceId: staffServices.serviceId })
     .from(staffServices)
-    .where(eq(staffServices.staffUserId, id))
+    .where(and(eq(staffServices.salonId, salonId), eq(staffServices.staffUserId, id)))
   if (links.length === 0) {
     return { ...base, serviceIds: null as string[] | null }
   }
@@ -165,29 +190,33 @@ export async function getUserWithServiceIds(id: string): Promise<User | undefine
 /** `null` or empty after delete = unrestricted (همه خدمات فعال). */
 export async function setStaffServiceIds(
   staffUserId: string,
-  serviceIds: string[] | null
+  serviceIds: string[] | null,
+  salonId: string
 ): Promise<void> {
   const db = getDb()
   await db.transaction(async (tx) => {
-    await tx.delete(staffServices).where(eq(staffServices.staffUserId, staffUserId))
+    await tx
+      .delete(staffServices)
+      .where(and(eq(staffServices.salonId, salonId), eq(staffServices.staffUserId, staffUserId)))
     if (serviceIds != null && serviceIds.length > 0) {
       await tx.insert(staffServices).values(
         serviceIds.map((serviceId) => ({
           staffUserId,
           serviceId,
+          salonId,
         }))
       )
     }
   })
 }
 
-export async function validateActiveServiceIds(ids: string[]): Promise<boolean> {
+export async function validateActiveServiceIds(ids: string[], salonId: string): Promise<boolean> {
   if (ids.length === 0) return true
   const db = getDb()
   const rows = await db
     .select({ id: services.id })
     .from(services)
-    .where(and(eq(services.active, true), inArray(services.id, ids)))
+    .where(and(eq(services.salonId, salonId), eq(services.active, true), inArray(services.id, ids)))
   return rows.length === ids.length
 }
 
@@ -200,6 +229,7 @@ export async function createUser(
   const [row] = await db
     .insert(users)
     .values({
+      salonId: input.salonId,
       name: input.name,
       phone: normalized,
       passwordHash: hashedPassword,
@@ -211,32 +241,41 @@ export async function createUser(
   return rowToUser(row)
 }
 
-export async function getAllServices(includeInactive = false): Promise<Service[]> {
+export async function getAllServices(salonId: string, includeInactive = false): Promise<Service[]> {
   const db = getDb()
   const rows = includeInactive
-    ? await db.select().from(services).orderBy(asc(services.category), asc(services.name))
+    ? await db
+        .select()
+        .from(services)
+        .where(eq(services.salonId, salonId))
+        .orderBy(asc(services.category), asc(services.name))
     : await db
         .select()
         .from(services)
-        .where(eq(services.active, true))
+        .where(and(eq(services.salonId, salonId), eq(services.active, true)))
         .orderBy(asc(services.category), asc(services.name))
   return rows.map(rowToService)
 }
 
-export async function getServiceById(id: string): Promise<Service | undefined> {
+export async function getServiceById(id: string, salonId: string): Promise<Service | undefined> {
   const db = getDb()
-  const rows = await db.select().from(services).where(eq(services.id, id)).limit(1)
+  const rows = await db
+    .select()
+    .from(services)
+    .where(and(eq(services.id, id), eq(services.salonId, salonId)))
+    .limit(1)
   const row = rows[0]
   return row ? rowToService(row) : undefined
 }
 
 export async function createService(
-  input: Omit<Service, 'id' | 'active'> & { active?: boolean }
+  input: Omit<Service, 'id' | 'active'> & { active?: boolean; salonId: string }
 ): Promise<Service> {
   const db = getDb()
   const [row] = await db
     .insert(services)
     .values({
+      salonId: input.salonId,
       name: input.name,
       category: input.category,
       duration: input.duration,
@@ -250,6 +289,7 @@ export async function createService(
 
 export async function updateService(
   id: string,
+  salonId: string,
   data: Partial<Omit<Service, 'id'>>
 ): Promise<Service | undefined> {
   const db = getDb()
@@ -263,30 +303,41 @@ export async function updateService(
       ...(data.color !== undefined ? { color: data.color } : {}),
       ...(data.active !== undefined ? { active: data.active } : {}),
     })
-    .where(eq(services.id, id))
+    .where(and(eq(services.id, id), eq(services.salonId, salonId)))
     .returning()
   return row ? rowToService(row) : undefined
 }
 
-export async function getAllClients(): Promise<Client[]> {
+export async function getAllClients(salonId: string): Promise<Client[]> {
   const db = getDb()
-  const rows = await db.select().from(clients).orderBy(asc(clients.name))
+  const rows = await db
+    .select()
+    .from(clients)
+    .where(eq(clients.salonId, salonId))
+    .orderBy(asc(clients.name))
   return rows.map(rowToClient)
 }
 
-export async function getClientById(id: string): Promise<Client | undefined> {
+export async function getClientById(id: string, salonId: string): Promise<Client | undefined> {
   const db = getDb()
-  const rows = await db.select().from(clients).where(eq(clients.id, id)).limit(1)
+  const rows = await db
+    .select()
+    .from(clients)
+    .where(and(eq(clients.id, id), eq(clients.salonId, salonId)))
+    .limit(1)
   const row = rows[0]
   return row ? rowToClient(row) : undefined
 }
 
-export async function createClient(input: Omit<Client, 'id' | 'createdAt'>): Promise<Client> {
+export async function createClient(
+  input: Omit<Client, 'id' | 'createdAt'> & { salonId: string }
+): Promise<Client> {
   const db = getDb()
   const normalized = normalizePhone(input.phone)
   const [row] = await db
     .insert(clients)
     .values({
+      salonId: input.salonId,
       name: input.name,
       phone: normalized,
       notes: input.notes,
@@ -297,6 +348,7 @@ export async function createClient(input: Omit<Client, 'id' | 'createdAt'>): Pro
 
 export async function updateClient(
   id: string,
+  salonId: string,
   data: Partial<Omit<Client, 'id' | 'createdAt'>>
 ): Promise<Client | undefined> {
   const db = getDb()
@@ -305,17 +357,23 @@ export async function updateClient(
   if (data.phone !== undefined) patch.phone = normalizePhone(data.phone)
   if (data.notes !== undefined) patch.notes = data.notes
 
-  const [row] = await db.update(clients).set(patch).where(eq(clients.id, id)).returning()
+  const [row] = await db
+    .update(clients)
+    .set(patch)
+    .where(and(eq(clients.id, id), eq(clients.salonId, salonId)))
+    .returning()
   return row ? rowToClient(row) : undefined
 }
 
 export async function getAppointmentsByDateRange(
+  salonId: string,
   startDate: string,
   endDate: string,
   staffIdFilter?: string
 ): Promise<Appointment[]> {
   const db = getDb()
   const conditions = [
+    eq(appointments.salonId, salonId),
     gte(appointments.date, startDate),
     lte(appointments.date, endDate),
   ]
@@ -330,12 +388,15 @@ export async function getAppointmentsByDateRange(
   return rows.map(rowToAppointment)
 }
 
-export async function getAppointmentById(id: string): Promise<Appointment | undefined> {
+export async function getAppointmentById(
+  id: string,
+  salonId: string
+): Promise<Appointment | undefined> {
   const db = getDb()
   const rows = await db
     .select()
     .from(appointments)
-    .where(eq(appointments.id, id))
+    .where(and(eq(appointments.id, id), eq(appointments.salonId, salonId)))
     .limit(1)
   const row = rows[0]
   return row ? rowToAppointment(row) : undefined
@@ -343,12 +404,14 @@ export async function getAppointmentById(id: string): Promise<Appointment | unde
 
 export async function createAppointment(
   apt: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>,
+  salonId: string,
   createdByUserId?: string
 ): Promise<Appointment> {
   const db = getDb()
   const [row] = await db
     .insert(appointments)
     .values({
+      salonId,
       clientId: apt.clientId,
       staffId: apt.staffId,
       serviceId: apt.serviceId,
@@ -365,6 +428,7 @@ export async function createAppointment(
 
 export async function updateAppointment(
   id: string,
+  salonId: string,
   data: Partial<Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>>
 ): Promise<Appointment | undefined> {
   const db = getDb()
@@ -383,18 +447,22 @@ export async function updateAppointment(
   const [row] = await db
     .update(appointments)
     .set(patch)
-    .where(eq(appointments.id, id))
+    .where(and(eq(appointments.id, id), eq(appointments.salonId, salonId)))
     .returning()
   return row ? rowToAppointment(row) : undefined
 }
 
-export async function deleteAppointment(id: string): Promise<boolean> {
+export async function deleteAppointment(id: string, salonId: string): Promise<boolean> {
   const db = getDb()
-  const deleted = await db.delete(appointments).where(eq(appointments.id, id)).returning()
+  const deleted = await db
+    .delete(appointments)
+    .where(and(eq(appointments.id, id), eq(appointments.salonId, salonId)))
+    .returning()
   return deleted.length > 0
 }
 
 export async function getScheduleOverlapFlags(
+  salonId: string,
   staffId: string,
   clientId: string,
   date: string,
@@ -406,6 +474,7 @@ export async function getScheduleOverlapFlags(
   const rows = await db
     .select({
       id: appointments.id,
+      salonId: appointments.salonId,
       staffId: appointments.staffId,
       clientId: appointments.clientId,
       date: appointments.date,
@@ -416,6 +485,7 @@ export async function getScheduleOverlapFlags(
     .from(appointments)
     .where(
       and(
+        eq(appointments.salonId, salonId),
         eq(appointments.date, date),
         or(eq(appointments.staffId, staffId), eq(appointments.clientId, clientId))
       )
@@ -428,6 +498,7 @@ export async function getScheduleOverlapFlags(
     startTime,
     endTime,
     excludeId,
+    salonId,
   })
 }
 
@@ -437,12 +508,12 @@ const defaultBusinessHours: BusinessHours = {
   slotDurationMinutes: 30,
 }
 
-export async function getBusinessSettings(): Promise<BusinessHours> {
+export async function getBusinessSettings(salonId: string): Promise<BusinessHours> {
   const db = getDb()
   const rows = await db
     .select()
     .from(businessSettings)
-    .where(eq(businessSettings.id, 1))
+    .where(eq(businessSettings.salonId, salonId))
     .limit(1)
   const row = rows[0]
   if (!row) return defaultBusinessHours
@@ -450,6 +521,49 @@ export async function getBusinessSettings(): Promise<BusinessHours> {
     workingStart: row.workingStart,
     workingEnd: row.workingEnd,
     slotDurationMinutes: row.slotDurationMinutes,
+  }
+}
+
+export async function getStaffScheduleForDay(
+  salonId: string,
+  staffId: string,
+  dayOfWeek: number
+): Promise<StaffSchedule | undefined> {
+  const db = getDb()
+  const rows = await db
+    .select()
+    .from(staffSchedules)
+    .where(
+      and(
+        eq(staffSchedules.salonId, salonId),
+        eq(staffSchedules.staffId, staffId),
+        eq(staffSchedules.dayOfWeek, dayOfWeek),
+        eq(staffSchedules.active, true)
+      )
+    )
+    .limit(1)
+  const row = rows[0]
+  return row ? rowToStaffSchedule(row) : undefined
+}
+
+export async function getEffectiveBusinessHours(
+  salonId: string,
+  options?: { staffId?: string; dayOfWeek?: number }
+): Promise<BusinessHours> {
+  const salonHours = await getBusinessSettings(salonId)
+  if (options?.staffId == null || options.dayOfWeek == null) {
+    return salonHours
+  }
+
+  const schedule = await getStaffScheduleForDay(salonId, options.staffId, options.dayOfWeek)
+  if (!schedule) {
+    return salonHours
+  }
+
+  return {
+    workingStart: schedule.workingStart,
+    workingEnd: schedule.workingEnd,
+    slotDurationMinutes: salonHours.slotDurationMinutes,
   }
 }
 
@@ -461,12 +575,14 @@ export type PushSubscriptionKeys = {
 
 export async function upsertPushSubscription(
   userId: string,
+  salonId: string,
   keys: PushSubscriptionKeys
 ): Promise<void> {
   const db = getDb()
   await db
     .insert(pushSubscriptions)
     .values({
+      salonId,
       userId,
       endpoint: keys.endpoint,
       p256dh: keys.p256dh,
@@ -476,6 +592,7 @@ export async function upsertPushSubscription(
       target: pushSubscriptions.endpoint,
       set: {
         userId,
+        salonId,
         p256dh: keys.p256dh,
         auth: keys.auth,
         createdAt: new Date(),
@@ -484,7 +601,8 @@ export async function upsertPushSubscription(
 }
 
 export async function getPushSubscriptionsForUser(
-  userId: string
+  userId: string,
+  salonId?: string
 ): Promise<PushSubscriptionKeys[]> {
   const db = getDb()
   const rows = await db
@@ -494,7 +612,11 @@ export async function getPushSubscriptionsForUser(
       auth: pushSubscriptions.auth,
     })
     .from(pushSubscriptions)
-    .where(eq(pushSubscriptions.userId, userId))
+    .where(
+      salonId
+        ? and(eq(pushSubscriptions.userId, userId), eq(pushSubscriptions.salonId, salonId))
+        : eq(pushSubscriptions.userId, userId)
+    )
   return rows
 }
 
@@ -505,34 +627,40 @@ export async function deletePushSubscriptionByEndpoint(endpoint: string): Promis
 
 export async function deletePushSubscriptionForUser(
   userId: string,
+  salonId: string,
   endpoint: string
 ): Promise<boolean> {
   const db = getDb()
   const removed = await db
     .delete(pushSubscriptions)
     .where(
-      and(eq(pushSubscriptions.userId, userId), eq(pushSubscriptions.endpoint, endpoint))
+      and(
+        eq(pushSubscriptions.userId, userId),
+        eq(pushSubscriptions.salonId, salonId),
+        eq(pushSubscriptions.endpoint, endpoint)
+      )
     )
     .returning({ id: pushSubscriptions.id })
   return removed.length > 0
 }
 
 export async function updateBusinessSettings(
+  salonId: string,
   data: Partial<BusinessHours>
 ): Promise<BusinessHours> {
   const db = getDb()
-  const current = await getBusinessSettings()
+  const current = await getBusinessSettings(salonId)
   const next = { ...current, ...data }
   await db
     .insert(businessSettings)
     .values({
-      id: 1,
+      salonId,
       workingStart: next.workingStart,
       workingEnd: next.workingEnd,
       slotDurationMinutes: next.slotDurationMinutes,
     })
     .onConflictDoUpdate({
-      target: businessSettings.id,
+      target: businessSettings.salonId,
       set: {
         workingStart: next.workingStart,
         workingEnd: next.workingEnd,
@@ -540,4 +668,140 @@ export async function updateBusinessSettings(
       },
     })
   return next
+}
+
+export type OnboardingStatus = {
+  salon: {
+    id: string
+    name: string
+    slug: string
+    phone: string | null
+    address: string | null
+  } | null
+  steps: {
+    profileConfirmed: boolean
+    businessHoursSet: boolean
+    servicesAdded: boolean
+    staffAdded: boolean
+    firstAppointmentCreated: boolean
+  }
+  completedAt: Date | null
+  skippedAt: Date | null
+}
+
+export type OnboardingAction = 'confirm-profile' | 'complete' | 'skip' | 'reopen'
+
+export async function getOnboardingStatus(salonId: string): Promise<OnboardingStatus> {
+  const db = getDb()
+
+  const [
+    salonRows,
+    onboardingRows,
+    settingsCount,
+    serviceCount,
+    staffCount,
+    appointmentCount,
+  ] = await Promise.all([
+    db
+      .select({
+        id: salons.id,
+        name: salons.name,
+        slug: salons.slug,
+        phone: salons.phone,
+        address: salons.address,
+      })
+      .from(salons)
+      .where(eq(salons.id, salonId))
+      .limit(1),
+
+    db
+      .select()
+      .from(salonOnboarding)
+      .where(eq(salonOnboarding.salonId, salonId))
+      .limit(1),
+
+    db
+      .select({ value: count() })
+      .from(businessSettings)
+      .where(eq(businessSettings.salonId, salonId)),
+
+    db
+      .select({ value: count() })
+      .from(services)
+      .where(and(eq(services.salonId, salonId), eq(services.active, true))),
+
+    db
+      .select({ value: count() })
+      .from(users)
+      .where(and(eq(users.salonId, salonId), eq(users.role, 'staff'), eq(users.active, true))),
+
+    db
+      .select({ value: count() })
+      .from(appointments)
+      .where(eq(appointments.salonId, salonId)),
+  ])
+
+  const onboarding = onboardingRows[0]
+
+  return {
+    salon: salonRows[0] ?? null,
+    steps: {
+      profileConfirmed: !!onboarding?.profileConfirmedAt,
+      businessHoursSet: (settingsCount[0]?.value ?? 0) > 0,
+      servicesAdded: (serviceCount[0]?.value ?? 0) > 0,
+      staffAdded: (staffCount[0]?.value ?? 0) > 0,
+      firstAppointmentCreated: (appointmentCount[0]?.value ?? 0) > 0,
+    },
+    completedAt: onboarding?.completedAt ?? null,
+    skippedAt: onboarding?.skippedAt ?? null,
+  }
+}
+
+export async function updateOnboardingState(
+  salonId: string,
+  action: OnboardingAction
+): Promise<OnboardingStatus> {
+  const db = getDb()
+  const now = new Date()
+
+  if (action === 'reopen') {
+    await db
+      .insert(salonOnboarding)
+      .values({
+        salonId,
+        completedAt: null,
+        skippedAt: null,
+        updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: salonOnboarding.salonId,
+        set: {
+          completedAt: null,
+          skippedAt: null,
+          updatedAt: now,
+        },
+      })
+    return getOnboardingStatus(salonId)
+  }
+
+  await db
+    .insert(salonOnboarding)
+    .values({
+      salonId,
+      profileConfirmedAt: action === 'confirm-profile' ? now : null,
+      completedAt: action === 'complete' ? now : null,
+      skippedAt: action === 'skip' ? now : null,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: salonOnboarding.salonId,
+      set: {
+        ...(action === 'confirm-profile' ? { profileConfirmedAt: now } : {}),
+        ...(action === 'complete' ? { completedAt: now, skippedAt: null } : {}),
+        ...(action === 'skip' ? { skippedAt: now, completedAt: null } : {}),
+        updatedAt: now,
+      },
+    })
+
+  return getOnboardingStatus(salonId)
 }

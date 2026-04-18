@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
 import {
   getAppointmentsByDateRange,
   createAppointment,
@@ -13,20 +12,24 @@ import { SCHEDULE_CONFLICT_CODES } from '@/lib/appointment-conflict'
 import type { Appointment, AppointmentWithDetails } from '@/lib/types'
 import { endTimeFromDuration, validateAppointmentWindow } from '@/lib/appointment-time'
 import { sendWebPushToUser, isWebPushConfigured } from '@/lib/push'
+import { getTenantUser, isManagerRole } from '@/lib/server/auth/tenant'
 
-async function enrichAppointment(apt: Appointment): Promise<AppointmentWithDetails | null> {
+async function enrichAppointment(
+  apt: Appointment,
+  salonId: string
+): Promise<AppointmentWithDetails | null> {
   const [client, staff, service] = await Promise.all([
-    getClientById(apt.clientId),
+    getClientById(apt.clientId, salonId),
     getUserById(apt.staffId),
-    getServiceById(apt.serviceId),
+    getServiceById(apt.serviceId, salonId),
   ])
-  if (!client || !staff || !service) return null
+  if (!client || !staff || staff.salonId !== salonId || !service) return null
   return { ...apt, client, staff, service }
 }
 
 export async function GET(request: Request) {
   try {
-    const user = await getCurrentUser()
+    const user = await getTenantUser()
     if (!user) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
     }
@@ -42,11 +45,11 @@ export async function GET(request: Request) {
       )
     }
 
-    const staffFilter = user.role === 'staff' ? user.id : undefined
-    const list = await getAppointmentsByDateRange(startDate, endDate, staffFilter)
+    const staffFilter = user.role === 'staff' ? user.userId : undefined
+    const list = await getAppointmentsByDateRange(user.salonId, startDate, endDate, staffFilter)
 
     const enriched = (
-      await Promise.all(list.map((apt) => enrichAppointment(apt)))
+      await Promise.all(list.map((apt) => enrichAppointment(apt, user.salonId)))
     ).filter((a): a is AppointmentWithDetails => a !== null)
 
     return NextResponse.json({ appointments: enriched })
@@ -58,8 +61,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'manager') {
+    const user = await getTenantUser()
+    if (!user || !isManagerRole(user.role)) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
@@ -79,12 +82,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'فیلدهای الزامی کامل نیست' }, { status: 400 })
     }
 
-    const service = await getServiceById(serviceId)
+    const service = await getServiceById(serviceId, user.salonId)
     if (!service || !service.active) {
       return NextResponse.json({ error: 'خدمت یافت نشد' }, { status: 404 })
     }
 
-    const staffOk = await staffMayPerformService(staffId, serviceId)
+    const staff = await getUserById(staffId)
+    if (!staff || staff.salonId !== user.salonId || staff.role !== 'staff') {
+      return NextResponse.json({ error: 'پرسنل یافت نشد' }, { status: 404 })
+    }
+
+    const clientForSalon = await getClientById(clientId, user.salonId)
+    if (!clientForSalon) {
+      return NextResponse.json({ error: 'مشتری یافت نشد' }, { status: 404 })
+    }
+
+    const staffOk = await staffMayPerformService(staffId, serviceId, user.salonId)
     if (!staffOk) {
       return NextResponse.json(
         { error: 'این پرسنل برای خدمت انتخاب‌شده تعریف نشده است.' },
@@ -116,6 +129,7 @@ export async function POST(request: Request) {
     }
 
     const overlaps = await getScheduleOverlapFlags(
+      user.salonId,
       staffId,
       clientId,
       date,
@@ -152,13 +166,13 @@ export async function POST(request: Request) {
         status: 'scheduled',
         notes,
       },
-      user.id
+      user.salonId,
+      user.userId
     )
 
-    const client = await getClientById(appointment.clientId)
-    const staff = await getUserById(appointment.staffId)
+    const client = await getClientById(appointment.clientId, user.salonId)
 
-    if (isWebPushConfigured() && client && staff && staffId !== user.id) {
+    if (isWebPushConfigured() && client && staff && staffId !== user.userId) {
       void sendWebPushToUser(staffId, {
         title: 'نوبت جدید برای شما',
         body: `${client.name} — ${service.name}، ${date} ساعت ${startTime}`,

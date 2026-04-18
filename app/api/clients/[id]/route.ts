@@ -1,19 +1,19 @@
 import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
 import { getClientById, updateClient } from '@/lib/db'
+import { getTenantUser, isManagerRole } from '@/lib/server/auth/tenant'
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'manager') {
+    const user = await getTenantUser()
+    if (!user || !isManagerRole(user.role)) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
     const { id } = await params
-    const client = await getClientById(id)
+    const client = await getClientById(id, user.salonId)
 
     if (!client) {
       return NextResponse.json({ error: 'مشتری یافت نشد' }, { status: 404 })
@@ -31,8 +31,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'manager') {
+    const user = await getTenantUser()
+    if (!user || !isManagerRole(user.role)) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
@@ -40,15 +40,19 @@ export async function PATCH(
     const body = await request.json()
     const { name, phone, notes } = body
 
-    const client = await updateClient(id, { name, phone, notes })
+    const client = await updateClient(id, user.salonId, { name, phone, notes })
 
     if (!client) {
       return NextResponse.json({ error: 'مشتری یافت نشد' }, { status: 404 })
     }
 
     return NextResponse.json({ client })
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Update client error:', error)
+    const msg = error instanceof Error ? error.message : ''
+    if (msg.includes('unique') || msg.includes('duplicate')) {
+      return NextResponse.json({ error: 'این شماره تماس برای این سالن قبلاً ثبت شده است' }, { status: 409 })
+    }
     return NextResponse.json({ error: 'خطای سرور. لطفاً دوباره تلاش کنید.' }, { status: 500 })
   }
 }

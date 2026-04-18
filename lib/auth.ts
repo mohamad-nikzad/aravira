@@ -4,22 +4,37 @@ import { User } from './types'
 import { getUserById, getUserWithPasswordByPhone } from './db'
 import bcrypt from 'bcryptjs'
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-secret-key-change-in-production'
-)
+const DEV_JWT_SECRET = 'development-only-jwt-secret-do-not-use-in-production'
+
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET?.trim()
+
+  if (secret) {
+    if (process.env.NODE_ENV === 'production' && secret.length < 32) {
+      throw new Error('JWT_SECRET must be at least 32 characters in production.')
+    }
+    return new TextEncoder().encode(secret)
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET is required in production.')
+  }
+
+  return new TextEncoder().encode(DEV_JWT_SECRET)
+}
 
 export async function createSession(userId: string): Promise<string> {
   const token = await new SignJWT({ userId })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('7d')
-    .sign(JWT_SECRET)
+    .sign(getJwtSecret())
 
   return token
 }
 
 export async function verifySession(token: string): Promise<string | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET)
+    const { payload } = await jwtVerify(token, getJwtSecret())
     return payload.userId as string
   } catch {
     return null

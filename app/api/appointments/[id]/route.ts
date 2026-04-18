@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
 import type { Appointment } from '@/lib/types'
 import {
   getAppointmentById,
@@ -17,31 +16,32 @@ import {
   validateAppointmentWindow,
   durationMinutesFromRange,
 } from '@/lib/appointment-time'
+import { getTenantUser, isManagerRole } from '@/lib/server/auth/tenant'
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser()
+    const user = await getTenantUser()
     if (!user) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
     }
 
     const { id } = await params
-    const appointment = await getAppointmentById(id)
+    const appointment = await getAppointmentById(id, user.salonId)
 
     if (!appointment) {
       return NextResponse.json({ error: 'نوبت یافت نشد' }, { status: 404 })
     }
 
-    if (user.role === 'staff' && appointment.staffId !== user.id) {
+    if (user.role === 'staff' && appointment.staffId !== user.userId) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
-    const client = await getClientById(appointment.clientId)
+    const client = await getClientById(appointment.clientId, user.salonId)
     const staff = await getUserById(appointment.staffId)
-    const service = await getServiceById(appointment.serviceId)
+    const service = await getServiceById(appointment.serviceId, user.salonId)
 
     return NextResponse.json({
       appointment: {
@@ -62,8 +62,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'manager') {
+    const user = await getTenantUser()
+    if (!user || !isManagerRole(user.role)) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
@@ -81,7 +81,7 @@ export async function PATCH(
       notes,
     } = body
 
-    const existing = await getAppointmentById(id)
+    const existing = await getAppointmentById(id, user.salonId)
     if (!existing) {
       return NextResponse.json({ error: 'نوبت یافت نشد' }, { status: 404 })
     }
@@ -111,7 +111,7 @@ export async function PATCH(
       const keep = Math.max(5, prevLen)
       endTime = endTimeFromDuration(effectiveStart, keep)
     } else if (serviceChanged) {
-      const svc = await getServiceById(serviceId)
+      const svc = await getServiceById(serviceId, user.salonId)
       if (svc) {
         endTime = endTimeFromDuration(effectiveStart, svc.duration)
       }
@@ -124,11 +124,24 @@ export async function PATCH(
 
     const resolvedServiceId = typeof serviceId === 'string' ? serviceId : existing.serviceId
     const resolvedStaffId = typeof staffId === 'string' ? staffId : existing.staffId
-    const svcForPair = await getServiceById(resolvedServiceId)
+    const checkStaffId = typeof staffId === 'string' ? staffId : existing.staffId
+    const checkClientId = typeof clientId === 'string' ? clientId : existing.clientId
+    const checkDate = typeof date === 'string' ? date : existing.date
+    const svcForPair = await getServiceById(resolvedServiceId, user.salonId)
     if (!svcForPair || !svcForPair.active) {
       return NextResponse.json({ error: 'خدمت یافت نشد' }, { status: 404 })
     }
-    const pairOk = await staffMayPerformService(resolvedStaffId, resolvedServiceId)
+    const staffForPair = await getUserById(resolvedStaffId)
+    if (!staffForPair || staffForPair.salonId !== user.salonId || staffForPair.role !== 'staff') {
+      return NextResponse.json({ error: 'پرسنل یافت نشد' }, { status: 404 })
+    }
+
+    const clientForPair = await getClientById(checkClientId, user.salonId)
+    if (!clientForPair) {
+      return NextResponse.json({ error: 'مشتری یافت نشد' }, { status: 404 })
+    }
+
+    const pairOk = await staffMayPerformService(resolvedStaffId, resolvedServiceId, user.salonId)
     if (!pairOk) {
       return NextResponse.json(
         { error: 'این پرسنل برای خدمت انتخاب‌شده تعریف نشده است.' },
@@ -136,14 +149,12 @@ export async function PATCH(
       )
     }
 
-    const checkStaffId = typeof staffId === 'string' ? staffId : existing.staffId
-    const checkClientId = typeof clientId === 'string' ? clientId : existing.clientId
-    const checkDate = typeof date === 'string' ? date : existing.date
     const resolvedStatus: Appointment['status'] =
       typeof status === 'string' ? (status as Appointment['status']) : existing.status
 
     if (isBlockingAppointmentStatus(resolvedStatus)) {
       const overlaps = await getScheduleOverlapFlags(
+        user.salonId,
         checkStaffId,
         checkClientId,
         checkDate,
@@ -182,15 +193,15 @@ export async function PATCH(
     if (status !== undefined) patch.status = status
     if (notes !== undefined) patch.notes = notes
 
-    const appointment = await updateAppointment(id, patch)
+    const appointment = await updateAppointment(id, user.salonId, patch)
 
     if (!appointment) {
       return NextResponse.json({ error: 'به‌روزرسانی انجام نشد' }, { status: 500 })
     }
 
-    const client = await getClientById(appointment.clientId)
+    const client = await getClientById(appointment.clientId, user.salonId)
     const staff = await getUserById(appointment.staffId)
-    const service = await getServiceById(appointment.serviceId)
+    const service = await getServiceById(appointment.serviceId, user.salonId)
 
     return NextResponse.json({
       appointment: {
@@ -211,13 +222,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'manager') {
+    const user = await getTenantUser()
+    if (!user || !isManagerRole(user.role)) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
     const { id } = await params
-    const deleted = await deleteAppointment(id)
+    const deleted = await deleteAppointment(id, user.salonId)
 
     if (!deleted) {
       return NextResponse.json({ error: 'نوبت یافت نشد' }, { status: 404 })

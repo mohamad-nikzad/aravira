@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
 import { getAllServices, createService } from '@/lib/db'
 import type { Service } from '@/lib/types'
+import { getTenantUser, isManagerRole } from '@/lib/server/auth/tenant'
 
 export async function GET(request: Request) {
   try {
-    const user = await getCurrentUser()
+    const user = await getTenantUser()
     if (!user) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
-    const all = searchParams.get('all') === '1' && user.role === 'manager'
-    const list = await getAllServices(all)
+    const all = searchParams.get('all') === '1' && isManagerRole(user.role)
+    const list = await getAllServices(user.salonId, all)
     return NextResponse.json({ services: list })
   } catch (error) {
     console.error('Get services error:', error)
@@ -22,8 +22,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'manager') {
+    const user = await getTenantUser()
+    if (!user || !isManagerRole(user.role)) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
@@ -41,11 +41,16 @@ export async function POST(request: Request) {
       price: Number(price),
       color,
       active: active !== false,
+      salonId: user.salonId,
     })
 
     return NextResponse.json({ service })
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Create service error:', error)
+    const msg = error instanceof Error ? error.message : ''
+    if (msg.includes('unique') || msg.includes('duplicate')) {
+      return NextResponse.json({ error: 'این نام خدمت برای این سالن قبلاً ثبت شده است' }, { status: 409 })
+    }
     return NextResponse.json({ error: 'خطای سرور. لطفاً دوباره تلاش کنید.' }, { status: 500 })
   }
 }

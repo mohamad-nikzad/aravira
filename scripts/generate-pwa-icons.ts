@@ -1,9 +1,11 @@
 import sharp from 'sharp'
 import pngToIco from 'png-to-ico'
 import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
+import { dirname, join } from 'path'
+import { fileURLToPath } from 'url'
 
-const PUBLIC_DIR = join(import.meta.dir, '..', 'public')
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
+const PUBLIC_DIR = join(SCRIPT_DIR, '..', 'public')
 const ICON_BASE = join(PUBLIC_DIR, 'icon-base.png')
 
 const BG_COLOR = '#9B3636'

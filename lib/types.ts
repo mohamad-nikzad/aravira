@@ -2,6 +2,7 @@ export type UserRole = 'manager' | 'staff'
 
 export interface User {
   id: string
+  salonId: string
   name: string
   role: UserRole
   color: string
@@ -70,6 +71,18 @@ export interface BusinessHours {
   workingStart: string
   workingEnd: string
   slotDurationMinutes: number
+}
+
+export interface StaffSchedule {
+  id: string
+  salonId: string
+  staffId: string
+  dayOfWeek: number
+  workingStart: string
+  workingEnd: string
+  active: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 export const SERVICE_CATEGORIES = {

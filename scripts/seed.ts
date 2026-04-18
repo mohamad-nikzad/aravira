@@ -13,7 +13,11 @@ import {
   appointments,
   businessSettings,
   clients,
+  locations,
+  resources,
+  salons,
   services,
+  staffSchedules,
   staffServices,
   users,
 } from '../db/schema'
@@ -28,6 +32,56 @@ function formatDate(d: Date) {
 }
 
 async function main() {
+  const [primarySalon] = await db
+    .insert(salons)
+    .values({
+      name: 'سالن آراویرا',
+      slug: 'aravira',
+      phone: '02100000000',
+      address: 'تهران',
+      timezone: 'Asia/Tehran',
+      locale: 'fa-IR',
+      status: 'active',
+    })
+    .onConflictDoUpdate({
+      target: salons.slug,
+      set: {
+        name: 'سالن آراویرا',
+        phone: '02100000000',
+        address: 'تهران',
+        timezone: 'Asia/Tehran',
+        locale: 'fa-IR',
+        status: 'active',
+        updatedAt: new Date(),
+      },
+    })
+    .returning()
+
+  const [secondSalon] = await db
+    .insert(salons)
+    .values({
+      name: 'سالن نیلوفر',
+      slug: 'niloufar',
+      phone: '02100000001',
+      address: 'تهران، سعادت‌آباد',
+      timezone: 'Asia/Tehran',
+      locale: 'fa-IR',
+      status: 'active',
+    })
+    .onConflictDoUpdate({
+      target: salons.slug,
+      set: {
+        name: 'سالن نیلوفر',
+        phone: '02100000001',
+        address: 'تهران، سعادت‌آباد',
+        timezone: 'Asia/Tehran',
+        locale: 'fa-IR',
+        status: 'active',
+        updatedAt: new Date(),
+      },
+    })
+    .returning()
+
   // Repair early local seeds that were inserted without the leading zero.
   await db.update(users).set({ phone: '09120000000' }).where(eq(users.phone, '9120000000'))
   await db.update(users).set({ phone: '09120000001' }).where(eq(users.phone, '9120000001'))
@@ -36,19 +90,103 @@ async function main() {
   await db
     .insert(businessSettings)
     .values({
-      id: 1,
+      salonId: primarySalon.id,
       workingStart: '09:00',
       workingEnd: '19:00',
       slotDurationMinutes: 30,
     })
     .onConflictDoUpdate({
-      target: businessSettings.id,
+      target: businessSettings.salonId,
       set: {
         workingStart: '09:00',
         workingEnd: '19:00',
         slotDurationMinutes: 30,
       },
     })
+
+  await db
+    .insert(businessSettings)
+    .values({
+      salonId: secondSalon.id,
+      workingStart: '10:00',
+      workingEnd: '18:00',
+      slotDurationMinutes: 30,
+    })
+    .onConflictDoUpdate({
+      target: businessSettings.salonId,
+      set: {
+        workingStart: '10:00',
+        workingEnd: '18:00',
+        slotDurationMinutes: 30,
+      },
+    })
+
+  const [primaryLocation] = await db
+    .insert(locations)
+    .values({
+      salonId: primarySalon.id,
+      name: 'شعبه اصلی',
+      address: 'تهران',
+      phone: '02100000000',
+      active: true,
+    })
+    .onConflictDoUpdate({
+      target: [locations.salonId, locations.name],
+      set: {
+        address: 'تهران',
+        phone: '02100000000',
+        active: true,
+        updatedAt: new Date(),
+      },
+    })
+    .returning()
+
+  const [secondLocation] = await db
+    .insert(locations)
+    .values({
+      salonId: secondSalon.id,
+      name: 'شعبه اصلی',
+      address: 'تهران، سعادت‌آباد',
+      phone: '02100000001',
+      active: true,
+    })
+    .onConflictDoUpdate({
+      target: [locations.salonId, locations.name],
+      set: {
+        address: 'تهران، سعادت‌آباد',
+        phone: '02100000001',
+        active: true,
+        updatedAt: new Date(),
+      },
+    })
+    .returning()
+
+  await db
+    .insert(resources)
+    .values([
+      {
+        salonId: primarySalon.id,
+        locationId: primaryLocation.id,
+        name: 'اتاق رنگ',
+        type: 'room',
+        active: true,
+      },
+      {
+        salonId: primarySalon.id,
+        locationId: primaryLocation.id,
+        name: 'صندلی شماره ۱',
+        type: 'chair',
+        active: true,
+      },
+      {
+        salonId: secondSalon.id,
+        locationId: secondLocation.id,
+        name: 'صندلی شماره ۱',
+        type: 'chair',
+        active: true,
+      },
+    ])
+    .onConflictDoNothing()
 
   const serviceRows = [
     {
@@ -93,15 +231,22 @@ async function main() {
     },
   ]
 
-  const [{ value: serviceCount }] = await db.select({ value: count() }).from(services)
+  const [{ value: serviceCount }] = await db
+    .select({ value: count() })
+    .from(services)
+    .where(eq(services.salonId, primarySalon.id))
   if (serviceCount === 0) {
-    await db.insert(services).values(serviceRows)
+    await db.insert(services).values(serviceRows.map((row) => ({ ...row, salonId: primarySalon.id })))
   }
 
-  const [{ value: userCount }] = await db.select({ value: count() }).from(users)
+  const [{ value: userCount }] = await db
+    .select({ value: count() })
+    .from(users)
+    .where(eq(users.salonId, primarySalon.id))
   if (userCount === 0) {
     await db.insert(users).values([
       {
+        salonId: primarySalon.id,
         name: 'مدیر سالن',
         phone: '09120000000',
         passwordHash,
@@ -110,6 +255,7 @@ async function main() {
         active: true,
       },
       {
+        salonId: primarySalon.id,
         name: 'مریم احمدی',
         phone: '09120000001',
         passwordHash,
@@ -118,6 +264,7 @@ async function main() {
         active: true,
       },
       {
+        salonId: primarySalon.id,
         name: 'فاطمه رضایی',
         phone: '09120000002',
         passwordHash,
@@ -132,6 +279,7 @@ async function main() {
   const [existingSara] = await db.select().from(users).where(eq(users.phone, '09120000003')).limit(1)
   if (!existingSara) {
     await db.insert(users).values({
+      salonId: primarySalon.id,
       name: 'سارا محمودی',
       phone: '09120000003',
       passwordHash,
@@ -149,23 +297,50 @@ async function main() {
     { name: 'الهام نوری', phone: '09125678901', notes: 'حساسیت به رنگ' },
   ]
 
-  const [{ value: clientCount }] = await db.select({ value: count() }).from(clients)
+  const [{ value: clientCount }] = await db
+    .select({ value: count() })
+    .from(clients)
+    .where(eq(clients.salonId, primarySalon.id))
   if (clientCount === 0) {
-    await db.insert(clients).values(clientRows)
+    await db.insert(clients).values(clientRows.map((row) => ({ ...row, salonId: primarySalon.id })))
   }
 
-  const allUsers = await db.select().from(users)
-  const allServices = await db.select().from(services)
-  const allClients = await db.select().from(clients)
+  const allUsers = await db.select().from(users).where(eq(users.salonId, primarySalon.id))
+  const allServices = await db.select().from(services).where(eq(services.salonId, primarySalon.id))
+  const allClients = await db.select().from(clients).where(eq(clients.salonId, primarySalon.id))
 
   const manager = allUsers.find((u) => u.role === 'manager')
   const staffUsersOrdered = await db
     .select()
     .from(users)
-    .where(and(eq(users.active, true), eq(users.role, 'staff')))
+    .where(and(eq(users.salonId, primarySalon.id), eq(users.active, true), eq(users.role, 'staff')))
     .orderBy(asc(users.name))
   const staffA = staffUsersOrdered[0]
   const staffB = staffUsersOrdered[1]
+
+  if (staffA) {
+    await db
+      .insert(staffSchedules)
+      .values([
+        {
+          salonId: primarySalon.id,
+          staffId: staffA.id,
+          dayOfWeek: 0,
+          workingStart: '10:00',
+          workingEnd: '16:00',
+          active: true,
+        },
+        {
+          salonId: primarySalon.id,
+          staffId: staffA.id,
+          dayOfWeek: 1,
+          workingStart: '09:00',
+          workingEnd: '17:00',
+          active: true,
+        },
+      ])
+      .onConflictDoNothing()
+  }
 
   const hairService = allServices.find((s) => s.name === 'کوتاهی مو')
   const colorService = allServices.find((s) => s.name === 'رنگ مو')
@@ -185,13 +360,13 @@ async function main() {
     await db
       .insert(staffServices)
       .values([
-        { staffUserId: staffA.id, serviceId: hairService.id },
-        { staffUserId: staffA.id, serviceId: colorService.id },
-        { staffUserId: staffA.id, serviceId: massageService.id },
-        { staffUserId: staffB.id, serviceId: hairService.id },
-        { staffUserId: staffB.id, serviceId: colorService.id },
-        { staffUserId: staffB.id, serviceId: manicureService.id },
-        { staffUserId: staffB.id, serviceId: skincareService.id },
+        { salonId: primarySalon.id, staffUserId: staffA.id, serviceId: hairService.id },
+        { salonId: primarySalon.id, staffUserId: staffA.id, serviceId: colorService.id },
+        { salonId: primarySalon.id, staffUserId: staffA.id, serviceId: massageService.id },
+        { salonId: primarySalon.id, staffUserId: staffB.id, serviceId: hairService.id },
+        { salonId: primarySalon.id, staffUserId: staffB.id, serviceId: colorService.id },
+        { salonId: primarySalon.id, staffUserId: staffB.id, serviceId: manicureService.id },
+        { salonId: primarySalon.id, staffUserId: staffB.id, serviceId: skincareService.id },
       ])
       .onConflictDoNothing()
   }
@@ -199,19 +374,22 @@ async function main() {
   const [staffOneService] = await db
     .select()
     .from(users)
-    .where(and(eq(users.active, true), eq(users.phone, '09120000003')))
+    .where(and(eq(users.salonId, primarySalon.id), eq(users.active, true), eq(users.phone, '09120000003')))
     .limit(1)
   if (staffOneService && massageService) {
     await db
       .insert(staffServices)
-      .values([{ staffUserId: staffOneService.id, serviceId: massageService.id }])
+      .values([{ salonId: primarySalon.id, staffUserId: staffOneService.id, serviceId: massageService.id }])
       .onConflictDoNothing()
   }
 
   const today = new Date()
   const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
 
-  const [{ value: appointmentCount }] = await db.select({ value: count() }).from(appointments)
+  const [{ value: appointmentCount }] = await db
+    .select({ value: count() })
+    .from(appointments)
+    .where(eq(appointments.salonId, primarySalon.id))
   if (
     appointmentCount === 0 &&
     manager &&
@@ -225,6 +403,7 @@ async function main() {
   ) {
     await db.insert(appointments).values([
       {
+        salonId: primarySalon.id,
         clientId: allClients[0].id,
         staffId: staffA.id,
         serviceId: hairService.id,
@@ -236,6 +415,7 @@ async function main() {
         createdByUserId: manager.id,
       },
       {
+        salonId: primarySalon.id,
         clientId: allClients[1].id,
         staffId: staffB.id,
         serviceId: manicureService.id,
@@ -247,6 +427,7 @@ async function main() {
         createdByUserId: manager.id,
       },
       {
+        salonId: primarySalon.id,
         clientId: allClients[2].id,
         staffId: staffA.id,
         serviceId: colorService.id,
@@ -258,6 +439,7 @@ async function main() {
         createdByUserId: manager.id,
       },
       {
+        salonId: primarySalon.id,
         clientId: allClients[3].id,
         staffId: staffB.id,
         serviceId: skincareService.id,
@@ -271,8 +453,54 @@ async function main() {
     ])
   }
 
+  const [{ value: secondUserCount }] = await db
+    .select({ value: count() })
+    .from(users)
+    .where(eq(users.salonId, secondSalon.id))
+  if (secondUserCount === 0) {
+    await db.insert(users).values({
+      salonId: secondSalon.id,
+      name: 'مدیر نیلوفر',
+      phone: '09130000000',
+      passwordHash,
+      role: 'manager',
+      color: 'bg-staff-1',
+      active: true,
+    })
+  }
+
+  const [{ value: secondServiceCount }] = await db
+    .select({ value: count() })
+    .from(services)
+    .where(eq(services.salonId, secondSalon.id))
+  if (secondServiceCount === 0) {
+    await db.insert(services).values({
+      salonId: secondSalon.id,
+      name: 'براشینگ',
+      category: 'hair',
+      duration: 45,
+      price: 450_000,
+      color: 'bg-staff-2',
+      active: true,
+    })
+  }
+
+  const [{ value: secondClientCount }] = await db
+    .select({ value: count() })
+    .from(clients)
+    .where(eq(clients.salonId, secondSalon.id))
+  if (secondClientCount === 0) {
+    await db.insert(clients).values({
+      salonId: secondSalon.id,
+      name: 'مشتری نیلوفر',
+      phone: '09121234567',
+      notes: 'شماره تکراری در سالن دیگر برای تست unique per salon',
+    })
+  }
+
   console.log('Seed complete.')
   console.log('Manager: 09120000000 / admin123')
+  console.log('Second salon manager: 09130000000 / admin123')
   console.log('Staff: 09120000001, 09120000002, 09120000003 / admin123')
   console.log('سارا محمودی (09120000003) فقط ماساژ سوئدی — برای تست پیش‌پر یک خدمت.')
   await client.end()

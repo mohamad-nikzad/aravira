@@ -1,8 +1,23 @@
 'use client'
 
+import { useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import useSWR from 'swr'
 import { useAuth } from '@/components/auth-provider'
 import { BottomNav } from '@/components/bottom-nav'
 import { Skeleton } from '@/components/ui/skeleton'
+
+type OnboardingStatus = {
+  steps: {
+    servicesAdded: boolean
+    staffAdded: boolean
+  }
+  completedAt: string | null
+  skippedAt: string | null
+}
+
+const fetcher = (url: string) =>
+  fetch(url, { credentials: 'include' }).then((res) => res.json())
 
 function AppShellSkeleton() {
   return (
@@ -38,16 +53,38 @@ function AppShellSkeleton() {
 }
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { loading } = useAuth()
+  const { user, loading } = useAuth()
+  const pathname = usePathname()
+  const router = useRouter()
+  const { data, isLoading: onboardingLoading } = useSWR<{ onboarding: OnboardingStatus }>(
+    user?.role === 'manager' ? '/api/onboarding' : null,
+    fetcher
+  )
 
-  if (loading) {
+  const onboarding = data?.onboarding
+  const managerSetupLocked =
+    user?.role === 'manager' &&
+    !!onboarding &&
+    (!onboarding.steps.servicesAdded || !onboarding.steps.staffAdded)
+
+  useEffect(() => {
+    if (managerSetupLocked && pathname !== '/onboarding') {
+      router.replace('/onboarding')
+    }
+  }, [managerSetupLocked, pathname, router])
+
+  if (loading || (user?.role === 'manager' && (onboardingLoading || !data?.onboarding))) {
+    return <AppShellSkeleton />
+  }
+
+  if (managerSetupLocked && pathname !== '/onboarding') {
     return <AppShellSkeleton />
   }
 
   return (
     <>
       <div className="flex-1 min-h-0">{children}</div>
-      <BottomNav />
+      {!managerSetupLocked && <BottomNav />}
     </>
   )
 }

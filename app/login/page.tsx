@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const router = useRouter()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const showDemoCredentials = process.env.NODE_ENV !== 'production'
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -83,7 +85,7 @@ export default function LoginPage() {
                   id="phone"
                   name="phone"
                   type="tel"
-                  placeholder="09120000000"
+                  placeholder="09xxxxxxxxx"
                   autoComplete="username"
                   inputMode="numeric"
                   required
@@ -121,18 +123,27 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <div className="mt-5 rounded-xl bg-muted/40 p-4">
-          <p className="mb-2 text-xs font-medium text-muted-foreground">حساب‌های آزمایشی:</p>
-          <div className="space-y-0.5">
-            <p className="text-xs text-muted-foreground" dir="ltr">
-              مدیر: 09120000000
-            </p>
-            <p className="text-xs text-muted-foreground" dir="ltr">
-              پرسنل: 09120000001، 09120000002
-            </p>
-            <p className="text-xs text-muted-foreground">رمز (همه): admin123</p>
+        <p className="mt-5 text-center text-sm text-muted-foreground">
+          سالن جدید دارید؟{' '}
+          <Link href="/signup" className="font-medium text-primary underline-offset-4 hover:underline">
+            ساخت حساب مدیر
+          </Link>
+        </p>
+
+        {showDemoCredentials && (
+          <div className="mt-5 rounded-xl bg-muted/40 p-4">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">حساب‌های آزمایشی:</p>
+            <div className="space-y-0.5">
+              <p className="text-xs text-muted-foreground" dir="ltr">
+                مدیر: 09120000000
+              </p>
+              <p className="text-xs text-muted-foreground" dir="ltr">
+                پرسنل: 09120000001، 09120000002
+              </p>
+              <p className="text-xs text-muted-foreground">رمز (همه): admin123</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </main>
   )
