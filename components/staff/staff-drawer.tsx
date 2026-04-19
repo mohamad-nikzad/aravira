@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Drawer,
   DrawerContent,
@@ -42,6 +42,15 @@ export function StaffDrawer({
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
   const [role, setRole] = useState<'staff' | 'manager'>('staff')
+
+  useEffect(() => {
+    if (!open) return
+    setName('')
+    setPassword('')
+    setPhone('')
+    setRole(roleLocked ?? 'staff')
+    setError('')
+  }, [open, roleLocked])
 
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {

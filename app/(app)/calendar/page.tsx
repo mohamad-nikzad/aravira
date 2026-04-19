@@ -25,6 +25,10 @@ import { cn } from '@/lib/utils'
 const fetcher = (url: string) =>
   fetch(url, { credentials: 'include' }).then((res) => res.json())
 
+type AppointmentsResponse = {
+  appointments: AppointmentWithDetails[]
+}
+
 const VIEW_OPTIONS: { value: CalendarView; label: string }[] = [
   { value: 'day', label: 'روز' },
   { value: 'week', label: 'هفته' },
@@ -36,6 +40,10 @@ function defaultRange(_view: CalendarView, anchor: Date): { start: string; end: 
   const start = subDays(anchor, 120)
   const end = addDays(anchor, 120)
   return { start: format(start, 'yyyy-MM-dd'), end: format(end, 'yyyy-MM-dd') }
+}
+
+function compareAppointments(a: AppointmentWithDetails, b: AppointmentWithDetails) {
+  return `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`)
 }
 
 export default function CalendarPage() {
@@ -56,9 +64,15 @@ export default function CalendarPage() {
   const fallbackRange = useMemo(() => defaultRange(view, navDate), [view, navDate])
   const { start: startDate, end: endDate } = range ?? fallbackRange
 
-  const { data: appointmentsData, isLoading: appointmentsLoading, mutate: mutateAppointments } = useSWR(
+  const {
+    data: appointmentsData,
+    isLoading: appointmentsLoading,
+    isValidating: appointmentsRefreshing,
+    mutate: mutateAppointments,
+  } = useSWR<AppointmentsResponse>(
     user ? `/api/appointments?startDate=${startDate}&endDate=${endDate}` : null,
-    fetcher
+    fetcher,
+    { keepPreviousData: true }
   )
   const { data: staffData } = useSWR(user ? '/api/staff' : null, fetcher)
   const { data: servicesData } = useSWR(user ? '/api/services' : null, fetcher)
@@ -93,6 +107,44 @@ export default function CalendarPage() {
     if (!isManager || selectedStaffIds.length === 0) return appointments
     return appointments.filter((apt) => selectedStaffIds.includes(apt.staffId))
   }, [appointments, selectedStaffIds, isManager])
+
+  const upsertAppointmentInCache = useCallback(
+    (appointment: AppointmentWithDetails) => {
+      const shouldKeep = appointment.date >= startDate && appointment.date <= endDate
+      void mutateAppointments(
+        (current) => {
+          const base = current?.appointments ?? appointments
+          const withoutAppointment = base.filter((apt) => apt.id !== appointment.id)
+          const nextAppointments = shouldKeep
+            ? [...withoutAppointment, appointment].sort(compareAppointments)
+            : withoutAppointment
+
+          return {
+            ...(current ?? appointmentsData ?? { appointments: [] }),
+            appointments: nextAppointments,
+          }
+        },
+        { revalidate: false }
+      )
+    },
+    [appointments, appointmentsData, endDate, mutateAppointments, startDate]
+  )
+
+  const removeAppointmentFromCache = useCallback(
+    (id: string) => {
+      void mutateAppointments(
+        (current) => {
+          const base = current?.appointments ?? appointments
+          return {
+            ...(current ?? appointmentsData ?? { appointments: [] }),
+            appointments: base.filter((apt) => apt.id !== id),
+          }
+        },
+        { revalidate: false }
+      )
+    },
+    [appointments, appointmentsData, mutateAppointments]
+  )
 
   const handleVisibleRangeChange = useCallback(
     (start: string, endInclusive: string, activeStart: Date) => {
@@ -141,14 +193,24 @@ export default function CalendarPage() {
     setSelectedAppointment(appointment)
   }
 
-  const handleAppointmentCreated = () => {
+  const handleAppointmentCreated = (appointment: AppointmentWithDetails) => {
+    upsertAppointmentInCache(appointment)
     setShowCreateDrawer(false)
-    mutateAppointments()
+    void mutateAppointments()
   }
 
-  const handleAppointmentUpdated = () => {
+  const handleAppointmentChanged = (
+    change:
+      | { type: 'updated'; appointment: AppointmentWithDetails }
+      | { type: 'deleted'; id: string }
+  ) => {
+    if (change.type === 'updated') {
+      upsertAppointmentInCache(change.appointment)
+    } else {
+      removeAppointmentFromCache(change.id)
+    }
     setSelectedAppointment(null)
-    mutateAppointments()
+    void mutateAppointments()
   }
 
   if (appointmentsLoading) {
@@ -203,6 +265,7 @@ export default function CalendarPage() {
           onVisibleRangeChange={handleVisibleRangeChange}
           onSlotSelect={handleSlotSelect}
           onEventClick={handleAppointmentClick}
+          isRefreshing={appointmentsRefreshing && !appointmentsLoading}
         />
       </div>
 
@@ -237,7 +300,7 @@ export default function CalendarPage() {
         services={services}
         clients={clients}
         readOnly={!isManager}
-        onSuccess={handleAppointmentUpdated}
+        onSuccess={handleAppointmentChanged}
         onClientsChanged={() => mutateClients()}
       />
     </div>

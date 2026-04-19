@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
 import {
   Drawer,
@@ -59,10 +59,14 @@ interface AppointmentDetailDrawerProps {
   staff: User[]
   services: Service[]
   clients: Client[]
-  onSuccess: () => void
+  onSuccess: (change: AppointmentDetailChange) => void
   onClientsChanged?: () => void
   readOnly?: boolean
 }
+
+type AppointmentDetailChange =
+  | { type: 'updated'; appointment: AppointmentWithDetails }
+  | { type: 'deleted'; id: string }
 
 export function AppointmentDetailDrawer({
   appointment,
@@ -77,6 +81,7 @@ export function AppointmentDetailDrawer({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [isEditing, setIsEditing] = useState(false)
+  const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [localClients, setLocalClients] = useState<Client[]>(clients)
 
@@ -94,6 +99,17 @@ export function AppointmentDetailDrawer({
     () => staff.filter((m) => m.role === 'staff'),
     [staff]
   )
+
+  useEffect(() => {
+    setLocalClients(clients)
+  }, [clients])
+
+  useEffect(() => {
+    setIsEditing(false)
+    setEditingAppointmentId(null)
+    setShowDeleteConfirm(false)
+    setError('')
+  }, [appointment?.id])
 
   const applyDuration = (mins: number) => {
     const clamped = Math.min(
@@ -117,6 +133,7 @@ export function AppointmentDetailDrawer({
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       setIsEditing(false)
+      setEditingAppointmentId(null)
       setShowDeleteConfirm(false)
       setError('')
     } else {
@@ -144,6 +161,7 @@ export function AppointmentDetailDrawer({
     setStatus(appointment.status)
     setNotes(appointment.notes || '')
     setIsEditing(true)
+    setEditingAppointmentId(appointment.id)
   }
 
   const handleEditServiceChange = (id: string) => {
@@ -223,7 +241,13 @@ export function AppointmentDetailDrawer({
         return
       }
 
-      onSuccess()
+      if (!data.appointment) {
+        setError('پاسخ به‌روزرسانی کامل نبود')
+        setLoading(false)
+        return
+      }
+
+      onSuccess({ type: 'updated', appointment: data.appointment })
     } catch {
       setError('خطایی رخ داد. لطفاً دوباره تلاش کنید.')
     } finally {
@@ -233,6 +257,7 @@ export function AppointmentDetailDrawer({
 
   const handleDelete = async () => {
     if (!appointment) return
+    setError('')
     setLoading(true)
 
     try {
@@ -248,7 +273,7 @@ export function AppointmentDetailDrawer({
         return
       }
 
-      onSuccess()
+      onSuccess({ type: 'deleted', id: appointment.id })
     } catch {
       setError('خطایی رخ داد. لطفاً دوباره تلاش کنید.')
     } finally {
@@ -258,6 +283,7 @@ export function AppointmentDetailDrawer({
 
   const handleStatusChange = async (newStatus: string) => {
     if (!appointment) return
+    setError('')
     setLoading(true)
 
     try {
@@ -268,14 +294,21 @@ export function AppointmentDetailDrawer({
         body: JSON.stringify({ status: newStatus }),
       })
 
+      const data = await res.json()
+
       if (!res.ok) {
-        const data = await res.json()
         setError(data.error || 'تغییر وضعیت انجام نشد')
         setLoading(false)
         return
       }
 
-      onSuccess()
+      if (!data.appointment) {
+        setError('پاسخ تغییر وضعیت کامل نبود')
+        setLoading(false)
+        return
+      }
+
+      onSuccess({ type: 'updated', appointment: data.appointment })
     } catch {
       setError('خطایی رخ داد. لطفاً دوباره تلاش کنید.')
     } finally {
@@ -297,22 +330,23 @@ export function AppointmentDetailDrawer({
   if (!appointment) return null
 
   const statusInfo = APPOINTMENT_STATUS[appointment.status]
+  const isEditingCurrentAppointment = isEditing && editingAppointmentId === appointment.id
 
   return (
     <Drawer open={!!appointment} onOpenChange={handleOpenChange}>
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle className="flex items-center gap-2">
-            {isEditing ? 'ویرایش نوبت' : appointment.client.name}
+            {isEditingCurrentAppointment ? 'ویرایش نوبت' : appointment.client.name}
           </DrawerTitle>
           <DrawerDescription>
-            {isEditing
+            {isEditingCurrentAppointment
               ? 'جزئیات نوبت را ویرایش کنید. نوبت‌های هم‌زمان فقط با پرسنل و مشتری متفاوت نسبت به نوبت‌های هم‌پوشان مجاز است.'
               : appointment.service.name}
           </DrawerDescription>
         </DrawerHeader>
 
-        {isEditing ? (
+        {isEditingCurrentAppointment ? (
           <form onSubmit={handleUpdate} className="flex flex-col gap-4 overflow-auto px-4">
             <FieldGroup>
               <Field>
@@ -563,13 +597,19 @@ export function AppointmentDetailDrawer({
                 بستن
               </Button>
             </DrawerClose>
-          ) : isEditing ? (
+          ) : isEditingCurrentAppointment ? (
             <>
               <Button onClick={handleUpdate} disabled={loading}>
                 {loading && <Spinner className="mr-2" />}
                 {loading ? 'در حال ذخیره...' : 'ذخیره تغییرات'}
               </Button>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditing(false)
+                  setEditingAppointmentId(null)
+                }}
+              >
                 انصراف
               </Button>
             </>

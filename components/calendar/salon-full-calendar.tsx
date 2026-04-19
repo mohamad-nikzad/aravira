@@ -76,6 +76,8 @@ export interface SalonFullCalendarProps {
   businessHours?: BusinessHours
   /** Staff: view-only calendar (no slot selection). */
   readOnly?: boolean
+  /** Non-blocking refresh state for range navigation and background revalidation. */
+  isRefreshing?: boolean
 }
 
 export function SalonFullCalendar({
@@ -88,6 +90,7 @@ export function SalonFullCalendar({
   onEventClick,
   businessHours: businessHoursProp,
   readOnly = false,
+  isRefreshing = false,
 }: SalonFullCalendarProps) {
   const calendarRef = useRef<InstanceType<typeof FullCalendar>>(null)
   const bh = businessHoursProp ?? {
@@ -187,7 +190,21 @@ export function SalonFullCalendar({
   )
 
   return (
-    <div className={cn('salon-fullcalendar h-full min-h-[400px] flex-1', className)}>
+    <div className={cn('salon-fullcalendar relative h-full min-h-[400px] flex-1', className)}>
+      {isRefreshing && (
+        <div
+          className="calendar-refresh-layer pointer-events-none absolute inset-x-2 top-2 z-20 overflow-hidden rounded-md border border-border/60 bg-card/85 px-3 py-2 shadow-sm backdrop-blur-sm"
+          aria-live="polite"
+        >
+          <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground">
+            <span className="calendar-refresh-dot" aria-hidden="true" />
+            <span>در حال به‌روزرسانی تقویم...</span>
+          </div>
+          <div className="calendar-refresh-bar mt-2 h-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+            <span />
+          </div>
+        </div>
+      )}
       <FullCalendar
         ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
