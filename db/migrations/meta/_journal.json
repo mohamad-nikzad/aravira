@@ -50,6 +50,13 @@
       "when": 1776531000000,
       "tag": "0006_large_salon_readiness",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776636368771,
+      "tag": "0007_cooing_madame_hydra",
+      "breakpoints": true
     }
   ]
 }

@@ -3,7 +3,17 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
-import { LogOut, Moon, Sun, Users, Plus, Pencil, ChevronLeft, LayoutDashboard } from 'lucide-react'
+import {
+  LogOut,
+  Moon,
+  Sun,
+  Users,
+  Plus,
+  Pencil,
+  ChevronLeft,
+  LayoutDashboard,
+  ListChecks,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -152,6 +162,15 @@ export default function SettingsPage() {
                   <span className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     پرسنل و نقش‌ها
+                  </span>
+                  <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full justify-between touch-manipulation" asChild>
+                <Link href="/onboarding">
+                  <span className="flex items-center gap-2">
+                    <ListChecks className="h-4 w-4" />
+                    راه‌اندازی سالن
                   </span>
                   <ChevronLeft className="h-4 w-4 text-muted-foreground" />
                 </Link>

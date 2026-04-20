@@ -5,13 +5,15 @@
  */
 import bcrypt from 'bcryptjs'
 import { drizzle } from 'drizzle-orm/postgres-js'
-import { and, asc, count, eq } from 'drizzle-orm'
+import { and, asc, count, eq, inArray, like } from 'drizzle-orm'
 import postgres from 'postgres'
 import { getDatabaseUrl } from '../db/config'
 import * as schema from '../db/schema'
 import {
   appointments,
   businessSettings,
+  clientFollowUps,
+  clientTags,
   clients,
   locations,
   resources,
@@ -29,6 +31,390 @@ const passwordHash = bcrypt.hashSync('admin123', 10)
 
 function formatDate(d: Date) {
   return d.toISOString().split('T')[0]
+}
+
+function salonYmdTehran(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tehran' })
+}
+
+function addDaysYmd(ymd: string, deltaDays: number): string {
+  const [y, m, d] = ymd.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+  dt.setUTCDate(dt.getUTCDate() + deltaDays)
+  return dt.toISOString().slice(0, 10)
+}
+
+function currentHmTehran(): string {
+  return new Date().toLocaleTimeString('en-GB', {
+    timeZone: 'Asia/Tehran',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+function hmToMinutes(hm: string): number {
+  const [h, m] = hm.split(':').map(Number)
+  return h * 60 + m
+}
+
+function minutesToHm(total: number): string {
+  let n = total % (24 * 60)
+  if (n < 0) n += 24 * 60
+  const h = Math.floor(n / 60)
+  const min = n % 60
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
+}
+
+const tagColors: Record<string, string> = {
+  VIP: 'bg-amber-100 text-amber-800 border-amber-200',
+  حساسیت: 'bg-rose-100 text-rose-800 border-rose-200',
+  'رنگ خاص': 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
+  'نیاز به پیگیری': 'bg-cyan-100 text-cyan-800 border-cyan-200',
+  بدقول: 'bg-orange-100 text-orange-800 border-orange-200',
+}
+
+/** Phones 09129900*** — removed and reinserted each run for retention / today / tags demos. */
+async function seedRetentionAndFeaturesDemo(salonId: string) {
+  const todayStr = salonYmdTehran()
+  const yesterdayStr = addDaysYmd(todayStr, -1)
+  const d10 = addDaysYmd(todayStr, -10)
+  const d20 = addDaysYmd(todayStr, -20)
+  const d45 = addDaysYmd(todayStr, -45)
+  const d75 = addDaysYmd(todayStr, -75)
+
+  const existingDemo = await db
+    .select({ id: clients.id })
+    .from(clients)
+    .where(and(eq(clients.salonId, salonId), like(clients.phone, '09129900%')))
+  const demoIds = existingDemo.map((r) => r.id)
+  if (demoIds.length > 0) {
+    await db.delete(appointments).where(inArray(appointments.clientId, demoIds))
+    await db.delete(clientTags).where(inArray(clientTags.clientId, demoIds))
+    await db.delete(clientFollowUps).where(inArray(clientFollowUps.clientId, demoIds))
+    await db.delete(clients).where(inArray(clients.id, demoIds))
+  }
+
+  const manager = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.salonId, salonId), eq(users.role, 'manager')))
+    .limit(1)
+    .then((r) => r[0])
+  const staffOrdered = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.salonId, salonId), eq(users.active, true), eq(users.role, 'staff')))
+    .orderBy(asc(users.name))
+  const staffA = staffOrdered[0]
+  const staffB = staffOrdered[1]
+  if (!manager || !staffA || !staffB) {
+    console.warn('Skip feature demo seed: need manager + 2 staff.')
+    return
+  }
+
+  const svcRows = await db.select().from(services).where(eq(services.salonId, salonId))
+  const hair = svcRows.find((s) => s.name === 'کوتاهی مو')
+  const color = svcRows.find((s) => s.name === 'رنگ مو')
+  const manicure = svcRows.find((s) => s.name === 'مانیکور')
+  const skincare = svcRows.find((s) => s.name === 'پاکسازی صورت')
+  const massage = svcRows.find((s) => s.name === 'ماساژ سوئدی')
+  if (!hair || !color || !manicure || !skincare || !massage) {
+    console.warn('Skip feature demo seed: services missing.')
+    return
+  }
+
+  const nowMin = hmToMinutes(currentHmTehran())
+  let overdueDate = todayStr
+  let overdueStart: string
+  let overdueEnd: string
+  if (nowMin < 120) {
+    overdueDate = yesterdayStr
+    overdueStart = '15:00'
+    overdueEnd = '16:30'
+  } else {
+    overdueStart = minutesToHm(nowMin - 75)
+    overdueEnd = minutesToHm(nowMin - 15)
+  }
+
+  let soonStart = minutesToHm(nowMin + 35)
+  let soonEnd = minutesToHm(nowMin + 95)
+  if (hmToMinutes(soonEnd) > 18 * 60 + 30 || hmToMinutes(soonStart) < 9 * 60) {
+    soonStart = '11:00'
+    soonEnd = '11:45'
+  }
+
+  const demoClientSpecs = [
+    { phone: '09129900101', name: 'دمو غیرفعال', notes: '[seed-demo] آخرین مراجعهٔ تکمیل‌شده بیش از ۶۰ روز پیش' },
+    { phone: '09129900102', name: 'دمو بدون نوبت دوم', notes: '[seed-demo] فقط یک مراجعهٔ انجام‌شده' },
+    { phone: '09129900103', name: 'دمو غیبت', notes: '[seed-demo] دو غیبت برای پیگیری' },
+    { phone: '09129900104', name: 'دمو VIP امروز', notes: '[seed-demo] برچسب VIP + نوبت امروز' },
+    { phone: '09129900105', name: 'دمو بار اول', notes: '[seed-demo] اولین نوبت فقط امروز' },
+    { phone: '09129900106', name: 'دمو آمار', notes: '[seed-demo] لغو و انجام‌شده' },
+    { phone: '09129900107', name: 'دمو ارزشمند', notes: '[seed-demo] چند مراجعهٔ پرهزینه' },
+    { phone: '09129900108', name: 'دمو پیگیری ردشده', notes: '[seed-demo] follow-up dismissed' },
+  ] as const
+
+  const insertedClients = await db
+    .insert(clients)
+    .values(demoClientSpecs.map((c) => ({ ...c, salonId })))
+    .returning()
+
+  const byPhone = (phone: string) => insertedClients.find((c) => c.phone === phone)!
+  const cInactive = byPhone('09129900101')
+  const cNewOnly = byPhone('09129900102')
+  const cNoShow = byPhone('09129900103')
+  const cVipToday = byPhone('09129900104')
+  const cFirstToday = byPhone('09129900105')
+  const cStats = byPhone('09129900106')
+  const cHighValue = byPhone('09129900107')
+  const cDismissed = byPhone('09129900108')
+
+  await db.insert(clientTags).values([
+    { salonId, clientId: cVipToday.id, label: 'VIP', color: tagColors.VIP },
+    { salonId, clientId: cStats.id, label: 'حساسیت', color: tagColors['حساسیت'] },
+    { salonId, clientId: cHighValue.id, label: 'بدقول', color: tagColors['بدقول'] },
+  ])
+
+  const legacyVip = await db
+    .select()
+    .from(clients)
+    .where(and(eq(clients.salonId, salonId), eq(clients.phone, '09121234567')))
+    .limit(1)
+  if (legacyVip[0]) {
+    await db
+      .insert(clientTags)
+      .values({
+        salonId,
+        clientId: legacyVip[0].id,
+        label: 'VIP',
+        color: tagColors.VIP,
+      })
+      .onConflictDoUpdate({
+        target: [clientTags.salonId, clientTags.clientId, clientTags.label],
+        set: { color: tagColors.VIP },
+      })
+  }
+
+  await db.insert(clientFollowUps).values({
+    salonId,
+    clientId: cDismissed.id,
+    reason: 'manual',
+    status: 'dismissed',
+    dueDate: todayStr,
+    reviewedAt: null,
+  })
+
+  const aptRows: (typeof appointments.$inferInsert)[] = [
+    {
+      salonId,
+      clientId: cInactive.id,
+      staffId: staffA.id,
+      serviceId: hair.id,
+      date: d75,
+      startTime: '10:00',
+      endTime: '10:45',
+      status: 'completed',
+      notes: '[seed-demo]',
+      createdByUserId: manager.id,
+    },
+    {
+      salonId,
+      clientId: cNewOnly.id,
+      staffId: staffB.id,
+      serviceId: manicure.id,
+      date: d10,
+      startTime: '11:00',
+      endTime: '11:30',
+      status: 'completed',
+      notes: '[seed-demo]',
+      createdByUserId: manager.id,
+    },
+    {
+      salonId,
+      clientId: cNoShow.id,
+      staffId: staffA.id,
+      serviceId: hair.id,
+      date: d20,
+      startTime: '09:00',
+      endTime: '09:45',
+      status: 'no-show',
+      notes: '[seed-demo]',
+      createdByUserId: manager.id,
+    },
+    {
+      salonId,
+      clientId: cNoShow.id,
+      staffId: staffB.id,
+      serviceId: manicure.id,
+      date: d45,
+      startTime: '14:00',
+      endTime: '14:30',
+      status: 'no-show',
+      notes: '[seed-demo]',
+      createdByUserId: manager.id,
+    },
+    {
+      salonId,
+      clientId: cNoShow.id,
+      staffId: staffA.id,
+      serviceId: skincare.id,
+      date: d10,
+      startTime: '16:00',
+      endTime: '17:00',
+      status: 'completed',
+      notes: '[seed-demo]',
+      createdByUserId: manager.id,
+    },
+    {
+      salonId,
+      clientId: cNoShow.id,
+      staffId: staffB.id,
+      serviceId: hair.id,
+      date: todayStr,
+      startTime: '13:00',
+      endTime: '13:45',
+      status: 'scheduled',
+      notes: '[seed-demo] سابقهٔ غیبت + نوبت امروز',
+      createdByUserId: manager.id,
+    },
+    {
+      salonId,
+      clientId: cVipToday.id,
+      staffId: staffA.id,
+      serviceId: color.id,
+      date: todayStr,
+      startTime: '12:00',
+      endTime: '14:00',
+      status: 'scheduled',
+      notes: '[seed-demo] VIP امروز',
+      createdByUserId: manager.id,
+    },
+    {
+      salonId,
+      clientId: cFirstToday.id,
+      staffId: staffB.id,
+      serviceId: hair.id,
+      date: todayStr,
+      startTime: soonStart,
+      endTime: soonEnd,
+      status: 'scheduled',
+      notes: '[seed-demo] زمان نسبی برای «نزدیک است»',
+      createdByUserId: manager.id,
+    },
+    {
+      salonId,
+      clientId: cStats.id,
+      staffId: staffA.id,
+      serviceId: hair.id,
+      date: d20,
+      startTime: '10:00',
+      endTime: '10:45',
+      status: 'completed',
+      notes: '[seed-demo]',
+      createdByUserId: manager.id,
+    },
+    {
+      salonId,
+      clientId: cStats.id,
+      staffId: staffB.id,
+      serviceId: manicure.id,
+      date: d10,
+      startTime: '15:00',
+      endTime: '15:30',
+      status: 'cancelled',
+      notes: '[seed-demo]',
+      createdByUserId: manager.id,
+    },
+    {
+      salonId,
+      clientId: cHighValue.id,
+      staffId: staffA.id,
+      serviceId: color.id,
+      date: addDaysYmd(todayStr, -30),
+      startTime: '10:00',
+      endTime: '12:00',
+      status: 'completed',
+      notes: '[seed-demo]',
+      createdByUserId: manager.id,
+    },
+    {
+      salonId,
+      clientId: cHighValue.id,
+      staffId: staffA.id,
+      serviceId: color.id,
+      date: addDaysYmd(todayStr, -25),
+      startTime: '10:00',
+      endTime: '12:00',
+      status: 'completed',
+      notes: '[seed-demo]',
+      createdByUserId: manager.id,
+    },
+    {
+      salonId,
+      clientId: cHighValue.id,
+      staffId: staffB.id,
+      serviceId: massage.id,
+      date: addDaysYmd(todayStr, -15),
+      startTime: '11:00',
+      endTime: '12:00',
+      status: 'completed',
+      notes: '[seed-demo]',
+      createdByUserId: manager.id,
+    },
+    {
+      salonId,
+      clientId: cHighValue.id,
+      staffId: staffB.id,
+      serviceId: color.id,
+      date: addDaysYmd(todayStr, -5),
+      startTime: '09:00',
+      endTime: '11:00',
+      status: 'completed',
+      notes: '[seed-demo]',
+      createdByUserId: manager.id,
+    },
+    {
+      salonId,
+      clientId: cInactive.id,
+      staffId: staffB.id,
+      serviceId: skincare.id,
+      date: overdueDate,
+      startTime: overdueStart,
+      endTime: overdueEnd,
+      status: 'confirmed',
+      notes: '[seed-demo] برای «نیاز به ثبت نتیجه»',
+      createdByUserId: manager.id,
+    },
+  ]
+
+  await db.insert(appointments).values(aptRows)
+
+  const days = [0, 1, 2, 3, 4, 5, 6] as const
+  for (const dayOfWeek of days) {
+    const active = dayOfWeek !== 5
+    await db
+      .insert(staffSchedules)
+      .values({
+        salonId,
+        staffId: staffB.id,
+        dayOfWeek,
+        workingStart: '09:00',
+        workingEnd: '18:00',
+        active,
+      })
+      .onConflictDoUpdate({
+        target: [staffSchedules.salonId, staffSchedules.staffId, staffSchedules.dayOfWeek],
+        set: {
+          active,
+          workingStart: '09:00',
+          workingEnd: '18:00',
+          updatedAt: new Date(),
+        },
+      })
+  }
+
+  console.log('Feature demo: clients 09129900101–09129900108 refreshed.')
 }
 
 async function main() {
@@ -497,6 +883,8 @@ async function main() {
       notes: 'شماره تکراری در سالن دیگر برای تست unique per salon',
     })
   }
+
+  await seedRetentionAndFeaturesDemo(primarySalon.id)
 
   console.log('Seed complete.')
   console.log('Manager: 09120000000 / admin123')

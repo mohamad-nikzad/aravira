@@ -12,9 +12,12 @@ import {
 } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import { Field, FieldLabel, FieldGroup, FieldError } from '@/components/ui/field'
 import { Spinner } from '@/components/ui/spinner'
 import { Client } from '@/lib/types'
+
+const tagOptions = ['VIP', 'حساسیت', 'رنگ خاص', 'نیاز به پیگیری', 'بدقول'] as const
 
 interface ClientDrawerProps {
   open: boolean
@@ -35,6 +38,7 @@ export function ClientDrawer({
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [notes, setNotes] = useState('')
+  const [tags, setTags] = useState<string[]>([])
 
   const isEditing = !!client
 
@@ -44,10 +48,12 @@ export function ClientDrawer({
         setName(client.name)
         setPhone(client.phone)
         setNotes(client.notes || '')
+        setTags(client.tags?.map((tag) => tag.label) ?? [])
       } else {
         setName('')
         setPhone('')
         setNotes('')
+        setTags([])
       }
       setError('')
     }
@@ -70,6 +76,7 @@ export function ClientDrawer({
           name,
           phone,
           notes: notes || undefined,
+          tags,
         }),
       })
 
@@ -87,6 +94,12 @@ export function ClientDrawer({
     } finally {
       setLoading(false)
     }
+  }
+
+  const toggleTag = (label: string) => {
+    setTags((current) =>
+      current.includes(label) ? current.filter((tag) => tag !== label) : [...current, label]
+    )
   }
 
   return (
@@ -134,6 +147,27 @@ export function ClientDrawer({
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="یادداشت درباره این مشتری..."
               />
+            </Field>
+
+            <Field>
+              <FieldLabel>برچسب‌ها</FieldLabel>
+              <div className="flex flex-wrap gap-2">
+                {tagOptions.map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => toggleTag(label)}
+                    className="touch-manipulation"
+                  >
+                    <Badge
+                      variant={tags.includes(label) ? 'default' : 'outline'}
+                      className="px-2.5 py-1"
+                    >
+                      {label}
+                    </Badge>
+                  </button>
+                ))}
+              </div>
             </Field>
 
             {error && <FieldError>{error}</FieldError>}

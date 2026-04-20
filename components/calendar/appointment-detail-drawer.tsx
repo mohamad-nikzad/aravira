@@ -162,7 +162,7 @@ export function AppointmentDetailDrawer({
 
   const handleEditStaffChange = (id: string) => {
     setStaffId(id)
-    const member = staff.find((s) => s.id === id)
+    const member = staffRoleOnly.find((s) => s.id === id)
     if (!member) return
 
     const eligible = eligibleServicesForStaff(member, services)
@@ -337,7 +337,7 @@ export function AppointmentDetailDrawer({
                       <SelectValue placeholder="انتخاب پرسنل" />
                     </SelectTrigger>
                     <SelectContent>
-                      {staff.map((member) => (
+                      {staffRoleOnly.map((member) => (
                         <SelectItem key={member.id} value={member.id}>
                           {member.name}
                         </SelectItem>

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getClientById, updateClient } from '@/lib/db'
+import { getClientById, getClientTags, setClientTags, updateClient } from '@/lib/db'
 import { getTenantUser, isManagerRole } from '@/lib/server/auth/tenant'
 
 export async function GET(
@@ -19,7 +19,8 @@ export async function GET(
       return NextResponse.json({ error: 'مشتری یافت نشد' }, { status: 404 })
     }
 
-    return NextResponse.json({ client })
+    const tags = await getClientTags(id, user.salonId)
+    return NextResponse.json({ client: { ...client, tags } })
   } catch (error) {
     console.error('Get client error:', error)
     return NextResponse.json({ error: 'خطای سرور. لطفاً دوباره تلاش کنید.' }, { status: 500 })
@@ -38,7 +39,7 @@ export async function PATCH(
 
     const { id } = await params
     const body = await request.json()
-    const { name, phone, notes } = body
+    const { name, phone, notes, tags } = body
 
     const client = await updateClient(id, user.salonId, { name, phone, notes })
 
@@ -46,7 +47,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'مشتری یافت نشد' }, { status: 404 })
     }
 
-    return NextResponse.json({ client })
+    const savedTags = Array.isArray(tags)
+      ? await setClientTags(id, user.salonId, tags.map(String))
+      : await getClientTags(id, user.salonId)
+
+    return NextResponse.json({ client: { ...client, tags: savedTags } })
   } catch (error: unknown) {
     console.error('Update client error:', error)
     const msg = error instanceof Error ? error.message : ''

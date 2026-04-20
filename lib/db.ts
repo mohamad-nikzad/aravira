@@ -1,4 +1,4 @@
-import { eq, and, or, gte, lte, asc, inArray, count } from 'drizzle-orm'
+import { eq, and, or, gte, lte, lt, asc, desc, inArray, count, sql } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { getDb } from '@/db'
 import {
@@ -6,6 +6,8 @@ import {
   salons,
   services,
   clients,
+  clientTags,
+  clientFollowUps,
   appointments,
   businessSettings,
   pushSubscriptions,
@@ -13,9 +15,31 @@ import {
   staffSchedules,
   salonOnboarding,
 } from '@/db/schema'
-import type { User, Service, Client, Appointment, BusinessHours, StaffSchedule } from './types'
+import type {
+  User,
+  Service,
+  Client,
+  ClientTag,
+  ClientFollowUp,
+  Appointment,
+  AppointmentWithDetails,
+  BusinessHours,
+  StaffSchedule,
+  ClientSummary,
+  TodayData,
+  TodayAttentionItem,
+  RetentionItem,
+  FollowUpReason,
+  FollowUpStatus,
+} from './types'
 import { normalizePhone } from './phone'
 import { detectScheduleOverlaps } from './appointment-conflict'
+import {
+  dayOfWeekFromDate,
+  validateStaffAvailability,
+  type StaffAvailabilityResult,
+} from './staff-availability'
+import { durationMinutesFromRange } from './appointment-time'
 
 function rowToUser(row: typeof users.$inferSelect): User {
   return {
@@ -51,6 +75,31 @@ function rowToClient(row: typeof clients.$inferSelect): Client {
   }
 }
 
+function rowToClientTag(row: typeof clientTags.$inferSelect): ClientTag {
+  return {
+    id: row.id,
+    salonId: row.salonId,
+    clientId: row.clientId,
+    label: row.label,
+    color: row.color,
+    createdAt: row.createdAt,
+  }
+}
+
+function rowToClientFollowUp(row: typeof clientFollowUps.$inferSelect): ClientFollowUp {
+  return {
+    id: row.id,
+    salonId: row.salonId,
+    clientId: row.clientId,
+    reason: row.reason,
+    status: row.status,
+    dueDate: row.dueDate,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    reviewedAt: row.reviewedAt,
+  }
+}
+
 function rowToAppointment(row: typeof appointments.$inferSelect): Appointment {
   return {
     id: row.id,
@@ -79,6 +128,67 @@ function rowToStaffSchedule(row: typeof staffSchedules.$inferSelect): StaffSched
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
+}
+
+function attachDetails(row: {
+  appointment: typeof appointments.$inferSelect
+  client: typeof clients.$inferSelect
+  staff: typeof users.$inferSelect
+  service: typeof services.$inferSelect
+}): AppointmentWithDetails {
+  return {
+    ...rowToAppointment(row.appointment),
+    client: rowToClient(row.client),
+    staff: rowToUser(row.staff),
+    service: rowToService(row.service),
+  }
+}
+
+function dateAddDays(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function currentHmInTehran() {
+  return new Date().toLocaleTimeString('en-GB', {
+    timeZone: 'Asia/Tehran',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+function twoHoursLaterHmInTehran() {
+  return new Date(Date.now() + 2 * 60 * 60 * 1000).toLocaleTimeString('en-GB', {
+    timeZone: 'Asia/Tehran',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+function monthBounds(date = new Date()) {
+  const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1))
+  const end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0))
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10),
+  }
+}
+
+function mapTagsByClient(rows: ClientTag[]): Map<string, ClientTag[]> {
+  const byClient = new Map<string, ClientTag[]>()
+  for (const tag of rows) {
+    const list = byClient.get(tag.clientId) ?? []
+    list.push(tag)
+    byClient.set(tag.clientId, list)
+  }
+  return byClient
 }
 
 export async function getUserByPhone(phone: string): Promise<User | undefined> {
@@ -315,7 +425,19 @@ export async function getAllClients(salonId: string): Promise<Client[]> {
     .from(clients)
     .where(eq(clients.salonId, salonId))
     .orderBy(asc(clients.name))
-  return rows.map(rowToClient)
+  if (rows.length === 0) return []
+
+  const tagRows = await db
+    .select()
+    .from(clientTags)
+    .where(and(eq(clientTags.salonId, salonId), inArray(clientTags.clientId, rows.map((r) => r.id))))
+    .orderBy(asc(clientTags.label))
+  const tagsByClient = mapTagsByClient(tagRows.map(rowToClientTag))
+
+  return rows.map((row) => ({
+    ...rowToClient(row),
+    tags: tagsByClient.get(row.id) ?? [],
+  }))
 }
 
 export async function getClientById(id: string, salonId: string): Promise<Client | undefined> {
@@ -365,6 +487,66 @@ export async function updateClient(
   return row ? rowToClient(row) : undefined
 }
 
+const tagColors: Record<string, string> = {
+  VIP: 'bg-amber-100 text-amber-800 border-amber-200',
+  'حساسیت': 'bg-rose-100 text-rose-800 border-rose-200',
+  'رنگ خاص': 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
+  'نیاز به پیگیری': 'bg-cyan-100 text-cyan-800 border-cyan-200',
+  'بدقول': 'bg-orange-100 text-orange-800 border-orange-200',
+}
+
+export async function getClientTags(clientId: string, salonId: string): Promise<ClientTag[]> {
+  const db = getDb()
+  const rows = await db
+    .select()
+    .from(clientTags)
+    .where(and(eq(clientTags.salonId, salonId), eq(clientTags.clientId, clientId)))
+    .orderBy(asc(clientTags.label))
+  return rows.map(rowToClientTag)
+}
+
+export async function getClientTagsForClients(
+  clientIds: string[],
+  salonId: string
+): Promise<Map<string, ClientTag[]>> {
+  if (clientIds.length === 0) return new Map()
+  const db = getDb()
+  const rows = await db
+    .select()
+    .from(clientTags)
+    .where(and(eq(clientTags.salonId, salonId), inArray(clientTags.clientId, clientIds)))
+    .orderBy(asc(clientTags.label))
+  return mapTagsByClient(rows.map(rowToClientTag))
+}
+
+export async function setClientTags(
+  clientId: string,
+  salonId: string,
+  labels: string[]
+): Promise<ClientTag[]> {
+  const db = getDb()
+  const normalized = [...new Set(labels.map((l) => l.trim()).filter(Boolean))].slice(0, 8)
+
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(clientTags)
+      .where(and(eq(clientTags.salonId, salonId), eq(clientTags.clientId, clientId)))
+
+    if (normalized.length > 0) {
+      await tx.insert(clientTags).values(
+        normalized.map((label) => ({
+          salonId,
+          clientId,
+          label,
+          color: tagColors[label] ?? 'bg-muted text-foreground border-border',
+        }))
+      )
+    }
+  })
+
+  return getClientTags(clientId, salonId)
+}
+
 export async function getAppointmentsByDateRange(
   salonId: string,
   startDate: string,
@@ -386,6 +568,61 @@ export async function getAppointmentsByDateRange(
     .where(and(...conditions))
     .orderBy(asc(appointments.date), asc(appointments.startTime))
   return rows.map(rowToAppointment)
+}
+
+export async function getAppointmentsWithDetailsByDateRange(
+  salonId: string,
+  startDate: string,
+  endDate: string,
+  staffIdFilter?: string
+): Promise<AppointmentWithDetails[]> {
+  const db = getDb()
+  const conditions = [
+    eq(appointments.salonId, salonId),
+    gte(appointments.date, startDate),
+    lte(appointments.date, endDate),
+  ]
+  if (staffIdFilter) {
+    conditions.push(eq(appointments.staffId, staffIdFilter))
+  }
+
+  const rows = await db
+    .select({
+      appointment: appointments,
+      client: clients,
+      staff: users,
+      service: services,
+    })
+    .from(appointments)
+    .innerJoin(clients, and(eq(appointments.clientId, clients.id), eq(clients.salonId, salonId)))
+    .innerJoin(users, and(eq(appointments.staffId, users.id), eq(users.salonId, salonId)))
+    .innerJoin(services, and(eq(appointments.serviceId, services.id), eq(services.salonId, salonId)))
+    .where(and(...conditions))
+    .orderBy(asc(appointments.date), asc(appointments.startTime))
+
+  return rows.map(attachDetails)
+}
+
+export async function getClientAppointmentsWithDetails(
+  salonId: string,
+  clientId: string
+): Promise<AppointmentWithDetails[]> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      appointment: appointments,
+      client: clients,
+      staff: users,
+      service: services,
+    })
+    .from(appointments)
+    .innerJoin(clients, and(eq(appointments.clientId, clients.id), eq(clients.salonId, salonId)))
+    .innerJoin(users, and(eq(appointments.staffId, users.id), eq(users.salonId, salonId)))
+    .innerJoin(services, and(eq(appointments.serviceId, services.id), eq(services.salonId, salonId)))
+    .where(and(eq(appointments.salonId, salonId), eq(appointments.clientId, clientId)))
+    .orderBy(desc(appointments.date), desc(appointments.startTime))
+
+  return rows.map(attachDetails)
 }
 
 export async function getAppointmentById(
@@ -544,6 +781,553 @@ export async function getStaffScheduleForDay(
     .limit(1)
   const row = rows[0]
   return row ? rowToStaffSchedule(row) : undefined
+}
+
+export async function getStaffScheduleForDayAnyStatus(
+  salonId: string,
+  staffId: string,
+  dayOfWeek: number
+): Promise<StaffSchedule | undefined> {
+  const db = getDb()
+  const rows = await db
+    .select()
+    .from(staffSchedules)
+    .where(
+      and(
+        eq(staffSchedules.salonId, salonId),
+        eq(staffSchedules.staffId, staffId),
+        eq(staffSchedules.dayOfWeek, dayOfWeek)
+      )
+    )
+    .limit(1)
+  const row = rows[0]
+  return row ? rowToStaffSchedule(row) : undefined
+}
+
+export async function getStaffSchedules(
+  salonId: string,
+  staffId: string
+): Promise<StaffSchedule[]> {
+  const db = getDb()
+  const rows = await db
+    .select()
+    .from(staffSchedules)
+    .where(and(eq(staffSchedules.salonId, salonId), eq(staffSchedules.staffId, staffId)))
+    .orderBy(asc(staffSchedules.dayOfWeek))
+  return rows.map(rowToStaffSchedule)
+}
+
+export async function setStaffSchedules(
+  salonId: string,
+  staffId: string,
+  schedule: Array<{
+    dayOfWeek: number
+    active: boolean
+    workingStart: string
+    workingEnd: string
+  }>
+): Promise<StaffSchedule[]> {
+  const db = getDb()
+  await db.transaction(async (tx) => {
+    for (const row of schedule) {
+      await tx
+        .insert(staffSchedules)
+        .values({
+          salonId,
+          staffId,
+          dayOfWeek: row.dayOfWeek,
+          active: row.active,
+          workingStart: row.workingStart,
+          workingEnd: row.workingEnd,
+        })
+        .onConflictDoUpdate({
+          target: [staffSchedules.salonId, staffSchedules.staffId, staffSchedules.dayOfWeek],
+          set: {
+            active: row.active,
+            workingStart: row.workingStart,
+            workingEnd: row.workingEnd,
+            updatedAt: new Date(),
+          },
+        })
+    }
+  })
+
+  return getStaffSchedules(salonId, staffId)
+}
+
+export async function checkStaffAvailabilityForAppointment(
+  salonId: string,
+  staffId: string,
+  date: string,
+  startTime: string,
+  endTime: string
+): Promise<StaffAvailabilityResult> {
+  const businessHours = await getBusinessSettings(salonId)
+  const dayOfWeek = dayOfWeekFromDate(date)
+  const schedules = dayOfWeek >= 0 ? await getStaffSchedules(salonId, staffId) : []
+  const schedule = schedules.find((row) => row.dayOfWeek === dayOfWeek)
+
+  return validateStaffAvailability({
+    schedule,
+    hasAnyScheduleRows: schedules.length > 0,
+    businessHours,
+    startTime,
+    endTime,
+  })
+}
+
+export async function getStaffBookingAvailabilityForSlot(
+  salonId: string,
+  date: string,
+  startTime: string,
+  endTime: string
+): Promise<Array<{ staffId: string; available: boolean; reason?: string }>> {
+  const everyone = await getAllStaff(salonId)
+  const staffMembers = everyone.filter((u) => u.role === 'staff')
+  return Promise.all(
+    staffMembers.map(async (u) => {
+      const r = await checkStaffAvailabilityForAppointment(salonId, u.id, date, startTime, endTime)
+      return {
+        staffId: u.id,
+        available: r.ok,
+        ...(r.ok ? {} : { reason: r.error }),
+      }
+    })
+  )
+}
+
+export async function getClientSummary(
+  salonId: string,
+  clientId: string
+): Promise<ClientSummary | null> {
+  const [client, tags, allAppointments, openFollowUps] = await Promise.all([
+    getClientById(clientId, salonId),
+    getClientTags(clientId, salonId),
+    getClientAppointmentsWithDetails(salonId, clientId),
+    getClientFollowUps(salonId, { clientId, status: 'open' }),
+  ])
+  if (!client) return null
+
+  const today = todayIsoDate()
+  const upcomingAppointment =
+    allAppointments
+      .filter((apt) => apt.date >= today && apt.status !== 'cancelled' && apt.status !== 'no-show')
+      .sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`))[0] ??
+    null
+
+  const completed = allAppointments.filter((apt) => apt.status === 'completed')
+  const cancelled = allAppointments.filter((apt) => apt.status === 'cancelled')
+  const noShows = allAppointments.filter((apt) => apt.status === 'no-show')
+  const estimatedSpend = completed.reduce((sum, apt) => sum + apt.service.price, 0)
+  const lastCompleted = completed
+    .slice()
+    .sort((a, b) => `${b.date} ${b.startTime}`.localeCompare(`${a.date} ${a.startTime}`))[0]
+
+  const serviceCounts = new Map<string, { name: string; count: number }>()
+  for (const apt of completed) {
+    const cur = serviceCounts.get(apt.serviceId) ?? { name: apt.service.name, count: 0 }
+    cur.count += 1
+    serviceCounts.set(apt.serviceId, cur)
+  }
+  const favoriteService = [...serviceCounts.values()].sort((a, b) => b.count - a.count)[0]
+
+  return {
+    client: { ...client, tags },
+    tags,
+    upcomingAppointment,
+    history: allAppointments,
+    stats: {
+      completedCount: completed.length,
+      cancelledCount: cancelled.length,
+      noShowCount: noShows.length,
+      estimatedSpend,
+      lastVisitDate: lastCompleted?.date ?? null,
+      favoriteServiceName: favoriteService?.name ?? null,
+      lastStaffName: lastCompleted?.staff.name ?? null,
+      totalCompletedVisits: completed.length,
+    },
+    openFollowUps,
+  }
+}
+
+export async function getClientFollowUps(
+  salonId: string,
+  options?: { clientId?: string; status?: FollowUpStatus }
+): Promise<ClientFollowUp[]> {
+  const db = getDb()
+  const conditions = [eq(clientFollowUps.salonId, salonId)]
+  if (options?.clientId) conditions.push(eq(clientFollowUps.clientId, options.clientId))
+  if (options?.status) conditions.push(eq(clientFollowUps.status, options.status))
+
+  const rows = await db
+    .select()
+    .from(clientFollowUps)
+    .where(and(...conditions))
+    .orderBy(asc(clientFollowUps.dueDate), desc(clientFollowUps.createdAt))
+  return rows.map(rowToClientFollowUp)
+}
+
+export async function createClientFollowUp(
+  salonId: string,
+  clientId: string,
+  reason: FollowUpReason,
+  dueDate = todayIsoDate()
+): Promise<ClientFollowUp> {
+  const db = getDb()
+  const [row] = await db
+    .insert(clientFollowUps)
+    .values({
+      salonId,
+      clientId,
+      reason,
+      status: 'open',
+      dueDate,
+    })
+    .onConflictDoUpdate({
+      target: [clientFollowUps.salonId, clientFollowUps.clientId, clientFollowUps.reason],
+      set: {
+        status: 'open',
+        dueDate,
+        reviewedAt: null,
+        updatedAt: new Date(),
+      },
+    })
+    .returning()
+  return rowToClientFollowUp(row)
+}
+
+export async function updateClientFollowUpStatus(
+  salonId: string,
+  id: string,
+  status: FollowUpStatus
+): Promise<ClientFollowUp | undefined> {
+  const db = getDb()
+  const [row] = await db
+    .update(clientFollowUps)
+    .set({
+      status,
+      reviewedAt: status === 'reviewed' ? new Date() : null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(clientFollowUps.salonId, salonId), eq(clientFollowUps.id, id)))
+    .returning()
+  return row ? rowToClientFollowUp(row) : undefined
+}
+
+export async function getTodayData(
+  salonId: string,
+  date = todayIsoDate(),
+  staffIdFilter?: string
+): Promise<TodayData> {
+  const salonListToday = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tehran' })
+  const useLiveClock = date === salonListToday
+
+  const appointmentsForDay = await getAppointmentsWithDetailsByDateRange(
+    salonId,
+    date,
+    date,
+    staffIdFilter
+  )
+  const [staff, tagsByClient, allClientAppointments, businessHours] = await Promise.all([
+    getAllStaff(salonId),
+    getClientTagsForClients(
+      [...new Set(appointmentsForDay.map((apt) => apt.clientId))],
+      salonId
+    ),
+    getAppointmentsWithDetailsByDateRange(salonId, '1900-01-01', date),
+    getBusinessSettings(salonId),
+  ])
+
+  const counts: TodayData['counts'] = {
+    scheduled: 0,
+    confirmed: 0,
+    completed: 0,
+    cancelled: 0,
+    'no-show': 0,
+  }
+  for (const apt of appointmentsForDay) counts[apt.status] += 1
+
+  const historyByClient = new Map<string, AppointmentWithDetails[]>()
+  for (const apt of allClientAppointments) {
+    const list = historyByClient.get(apt.clientId) ?? []
+    list.push(apt)
+    historyByClient.set(apt.clientId, list)
+  }
+
+  const current = useLiveClock ? currentHmInTehran() : ''
+  const plusTwo = useLiveClock ? twoHoursLaterHmInTehran() : ''
+  const attentionItems: TodayAttentionItem[] = []
+  for (const apt of appointmentsForDay) {
+    const clientHistory = historyByClient.get(apt.clientId) ?? []
+    const previousCompleted = clientHistory.filter(
+      (row) =>
+        row.id !== apt.id &&
+        row.status === 'completed' &&
+        `${row.date} ${row.startTime}` < `${apt.date} ${apt.startTime}`
+    )
+    const noShowCount = clientHistory.filter((row) => row.status === 'no-show').length
+    const tags = tagsByClient.get(apt.clientId) ?? []
+    const isVip = tags.some((tag) => tag.label.toLowerCase() === 'vip')
+
+    if (
+      useLiveClock &&
+      apt.status === 'scheduled' &&
+      apt.startTime >= current &&
+      apt.startTime <= plusTwo
+    ) {
+      attentionItems.push({
+        id: `${apt.id}:soon`,
+        type: 'soon',
+        title: `${apt.client.name} نزدیک است`,
+        detail: `${apt.startTime} با ${apt.staff.name}`,
+        appointmentId: apt.id,
+        clientId: apt.clientId,
+        priority: 2,
+      })
+    }
+    if (useLiveClock && apt.status === 'confirmed' && apt.endTime < current) {
+      attentionItems.push({
+        id: `${apt.id}:overdue`,
+        type: 'overdue',
+        title: `${apt.client.name} نیاز به ثبت نتیجه دارد`,
+        detail: `پایان نوبت ${apt.endTime}`,
+        appointmentId: apt.id,
+        clientId: apt.clientId,
+        priority: 1,
+      })
+    }
+    if (noShowCount >= 2) {
+      attentionItems.push({
+        id: `${apt.id}:no-show-risk`,
+        type: 'no-show-risk',
+        title: `${apt.client.name} سابقه بدقولی دارد`,
+        detail: `${noShowCount} غیبت ثبت شده`,
+        appointmentId: apt.id,
+        clientId: apt.clientId,
+        priority: 3,
+      })
+    }
+    if (previousCompleted.length === 0) {
+      attentionItems.push({
+        id: `${apt.id}:first-time`,
+        type: 'first-time',
+        title: `${apt.client.name} مشتری بار اول است`,
+        detail: apt.service.name,
+        appointmentId: apt.id,
+        clientId: apt.clientId,
+        priority: 4,
+      })
+    }
+    if (isVip) {
+      attentionItems.push({
+        id: `${apt.id}:vip`,
+        type: 'vip',
+        title: `${apt.client.name} VIP است`,
+        detail: apt.service.name,
+        appointmentId: apt.id,
+        clientId: apt.clientId,
+        priority: 2,
+      })
+    }
+  }
+
+  const staffLoad = staff
+    .filter((member) => member.role === 'staff' && (!staffIdFilter || member.id === staffIdFilter))
+    .map((member) => {
+      const rows = appointmentsForDay.filter(
+        (apt) => apt.staffId === member.id && apt.status !== 'cancelled' && apt.status !== 'no-show'
+      )
+      return {
+        staffId: member.id,
+        staffName: member.name,
+        appointmentCount: rows.length,
+        bookedMinutes: rows.reduce(
+          (sum, apt) => sum + durationMinutesFromRange(apt.startTime, apt.endTime),
+          0
+        ),
+      }
+    })
+
+  const scheduleRows = await Promise.all(
+    staffLoad.map(async (load) => [load.staffId, await getStaffSchedules(salonId, load.staffId)] as const)
+  )
+  const schedulesByStaff = new Map(scheduleRows)
+
+  const openSlots = staffLoad.map((load) => {
+    const memberSchedules = schedulesByStaff.get(load.staffId) ?? []
+    const schedule = memberSchedules.find((row) => row.dayOfWeek === dayOfWeekFromDate(date))
+    if (schedule && !schedule.active) {
+      return { staffId: load.staffId, staffName: load.staffName, ranges: [] }
+    }
+    if (memberSchedules.length > 0 && !schedule) {
+      return { staffId: load.staffId, staffName: load.staffName, ranges: [] }
+    }
+    const start = schedule?.active ? schedule.workingStart : businessHours.workingStart
+    const end = schedule?.active ? schedule.workingEnd : businessHours.workingEnd
+    const booked = appointmentsForDay
+      .filter((apt) => apt.staffId === load.staffId && (apt.status === 'scheduled' || apt.status === 'confirmed'))
+      .sort((a, b) => a.startTime.localeCompare(b.startTime))
+    const ranges: Array<{ startTime: string; endTime: string }> = []
+    let cursor = start
+    for (const apt of booked) {
+      if (cursor < apt.startTime) ranges.push({ startTime: cursor, endTime: apt.startTime })
+      if (cursor < apt.endTime) cursor = apt.endTime
+    }
+    if (cursor < end) ranges.push({ startTime: cursor, endTime: end })
+    return { staffId: load.staffId, staffName: load.staffName, ranges }
+  })
+
+  return {
+    date,
+    counts,
+    appointments: appointmentsForDay,
+    attentionItems: attentionItems.sort((a, b) => a.priority - b.priority),
+    staffLoad,
+    openSlots,
+  }
+}
+
+export async function getRetentionQueue(salonId: string): Promise<RetentionItem[]> {
+  const db = getDb()
+  const today = todayIsoDate()
+  const inactiveCutoff = dateAddDays(today, -60)
+  const [clientRows, appointmentRows, existingRows] = await Promise.all([
+    getAllClients(salonId),
+    getAppointmentsWithDetailsByDateRange(salonId, '1900-01-01', today),
+    getClientFollowUps(salonId),
+  ])
+
+  const byClient = new Map<string, AppointmentWithDetails[]>()
+  for (const apt of appointmentRows) {
+    const list = byClient.get(apt.clientId) ?? []
+    list.push(apt)
+    byClient.set(apt.clientId, list)
+  }
+
+  const candidates = new Map<string, {
+    client: Client
+    reason: FollowUpReason
+    dueDate: string
+    suggestedReason: string
+    completedCount: number
+    estimatedSpend: number
+    noShowCount: number
+    lastVisitDate: string | null
+    lastServiceName: string | null
+  }>()
+
+  const enriched = clientRows.map((client) => {
+    const rows = byClient.get(client.id) ?? []
+    const completed = rows.filter((apt) => apt.status === 'completed')
+    const noShows = rows.filter((apt) => apt.status === 'no-show')
+    const lastCompleted = completed
+      .slice()
+      .sort((a, b) => `${b.date} ${b.startTime}`.localeCompare(`${a.date} ${a.startTime}`))[0]
+    return {
+      client,
+      rows,
+      completed,
+      noShows,
+      lastCompleted,
+      estimatedSpend: completed.reduce((sum, apt) => sum + apt.service.price, 0),
+    }
+  })
+
+  for (const item of enriched) {
+    const lastVisitDate = item.lastCompleted?.date ?? null
+    const base = {
+      client: item.client,
+      dueDate: today,
+      completedCount: item.completed.length,
+      estimatedSpend: item.estimatedSpend,
+      noShowCount: item.noShows.length,
+      lastVisitDate,
+      lastServiceName: item.lastCompleted?.service.name ?? null,
+    }
+    if (item.completed.length > 0 && lastVisitDate && lastVisitDate < inactiveCutoff) {
+      candidates.set(`${item.client.id}:inactive`, {
+        ...base,
+        reason: 'inactive',
+        suggestedReason: '۶۰ روز از آخرین مراجعه گذشته است.',
+      })
+    }
+    if (item.completed.length === 1 && !item.rows.some((apt) => apt.date > today && apt.status !== 'cancelled')) {
+      candidates.set(`${item.client.id}:new-client`, {
+        ...base,
+        reason: 'new-client',
+        suggestedReason: 'بعد از اولین مراجعه هنوز نوبت دوم ثبت نشده است.',
+      })
+    }
+    if (item.noShows.length > 0) {
+      candidates.set(`${item.client.id}:no-show`, {
+        ...base,
+        reason: 'no-show',
+        suggestedReason: `${item.noShows.length} غیبت نیاز به بررسی دارد.`,
+      })
+    }
+  }
+
+  for (const item of enriched
+    .filter((row) => row.completed.length > 0)
+    .sort((a, b) => b.estimatedSpend - a.estimatedSpend || b.completed.length - a.completed.length)
+    .slice(0, 5)) {
+    candidates.set(`${item.client.id}:vip`, {
+      client: item.client,
+      reason: 'vip',
+      dueDate: today,
+      completedCount: item.completed.length,
+      estimatedSpend: item.estimatedSpend,
+      noShowCount: item.noShows.length,
+      lastVisitDate: item.lastCompleted?.date ?? null,
+      lastServiceName: item.lastCompleted?.service.name ?? null,
+      suggestedReason: 'جزو مشتریان ارزشمند سالن است.',
+    })
+  }
+
+  const existingByKey = new Map(existingRows.map((row) => [`${row.clientId}:${row.reason}`, row]))
+  const result: RetentionItem[] = []
+
+  for (const candidate of candidates.values()) {
+    const existing = existingByKey.get(`${candidate.client.id}:${candidate.reason}`)
+    if (existing && existing.status !== 'open') continue
+
+    const followUp =
+      existing ??
+      rowToClientFollowUp(
+        (
+          await db
+            .insert(clientFollowUps)
+            .values({
+              salonId,
+              clientId: candidate.client.id,
+              reason: candidate.reason,
+              status: 'open',
+              dueDate: candidate.dueDate,
+            })
+            .onConflictDoUpdate({
+              target: [clientFollowUps.salonId, clientFollowUps.clientId, clientFollowUps.reason],
+              set: { updatedAt: new Date() },
+            })
+            .returning()
+        )[0]
+      )
+
+    result.push({
+      id: followUp.id,
+      client: candidate.client,
+      reason: candidate.reason,
+      status: followUp.status,
+      dueDate: followUp.dueDate,
+      lastVisitDate: candidate.lastVisitDate,
+      lastServiceName: candidate.lastServiceName,
+      completedCount: candidate.completedCount,
+      estimatedSpend: candidate.estimatedSpend,
+      noShowCount: candidate.noShowCount,
+      suggestedReason: candidate.suggestedReason,
+    })
+  }
+
+  return result.sort((a, b) => a.dueDate.localeCompare(b.dueDate))
 }
 
 export async function getEffectiveBusinessHours(

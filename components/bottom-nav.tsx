@@ -2,15 +2,23 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Calendar, Users, Settings, LayoutDashboard, ListChecks } from 'lucide-react'
+import {
+  Calendar,
+  Users,
+  Settings,
+  LayoutDashboard,
+  CalendarDays,
+  UserRoundSearch,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/components/auth-provider'
 
 const managerItems = [
   { href: '/calendar', label: 'تقویم', icon: Calendar },
+  { href: '/today', label: 'امروز', icon: CalendarDays },
   { href: '/clients', label: 'مشتریان', icon: Users },
+  { href: '/retention', label: 'پیگیری', icon: UserRoundSearch },
   { href: '/dashboard', label: 'داشبورد', icon: LayoutDashboard },
-  { href: '/onboarding', label: 'راه‌اندازی', icon: ListChecks },
   { href: '/settings', label: 'تنظیمات', icon: Settings },
 ] as const
 
@@ -28,7 +36,10 @@ export function BottomNav() {
     <nav className="shrink-0 border-t border-border/60 bg-card safe-area-pb">
       <div className="mx-auto flex max-w-lg items-stretch justify-around">
         {items.map((item) => {
-          const isActive = pathname.startsWith(item.href)
+          const isActive =
+            item.href === '/clients'
+              ? pathname === '/clients' || pathname.startsWith('/clients/')
+              : pathname.startsWith(item.href)
           const Icon = item.icon
 
           return (

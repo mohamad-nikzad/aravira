@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { Suspense, useState, useMemo, useCallback, useEffect } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { format, parseISO, subDays, addDays } from 'date-fns'
 import useSWR from 'swr'
 import { Plus } from 'lucide-react'
@@ -38,7 +39,10 @@ function defaultRange(_view: CalendarView, anchor: Date): { start: string; end: 
   return { start: format(start, 'yyyy-MM-dd'), end: format(end, 'yyyy-MM-dd') }
 }
 
-export default function CalendarPage() {
+function CalendarPageContent() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
   const { user } = useAuth()
   const isManager = user?.role === 'manager'
   const [view, setView] = useState<CalendarView>('week')
@@ -50,6 +54,7 @@ export default function CalendarPage() {
   const [showCreateDrawer, setShowCreateDrawer] = useState(false)
   const [createDate, setCreateDate] = useState<string>('')
   const [createTime, setCreateTime] = useState<string>('')
+  const [initialClientIdForCreate, setInitialClientIdForCreate] = useState<string | undefined>(undefined)
 
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithDetails | null>(null)
 
@@ -71,7 +76,7 @@ export default function CalendarPage() {
   )
   const staff: User[] = staffData?.staff || []
   const services: Service[] = servicesData?.services || []
-  const clients: Client[] = clientsData?.clients || []
+  const clients = useMemo<Client[]>(() => clientsData?.clients ?? [], [clientsData])
 
   const businessHours: BusinessHours = useMemo(() => {
     const s = businessData?.settings
@@ -93,6 +98,18 @@ export default function CalendarPage() {
     if (!isManager || selectedStaffIds.length === 0) return appointments
     return appointments.filter((apt) => selectedStaffIds.includes(apt.staffId))
   }, [appointments, selectedStaffIds, isManager])
+
+  const clientIdParam = searchParams.get('clientId')
+
+  useEffect(() => {
+    if (!isManager || !clientIdParam || clients.length === 0) return
+    if (!clients.some((c) => c.id === clientIdParam)) return
+    setInitialClientIdForCreate(clientIdParam)
+    setCreateDate(format(navDate, 'yyyy-MM-dd'))
+    setCreateTime(businessHours.workingStart)
+    setShowCreateDrawer(true)
+    router.replace(pathname, { scroll: false })
+  }, [clientIdParam, clients, isManager, navDate, businessHours.workingStart, router, pathname])
 
   const handleVisibleRangeChange = useCallback(
     (start: string, endInclusive: string, activeStart: Date) => {
@@ -122,6 +139,7 @@ export default function CalendarPage() {
 
   const handleAddAppointment = () => {
     if (!isManager) return
+    setInitialClientIdForCreate(undefined)
     setCreateDate(format(navDate, 'yyyy-MM-dd'))
     setCreateTime(businessHours.workingStart)
     setShowCreateDrawer(true)
@@ -130,6 +148,7 @@ export default function CalendarPage() {
   const handleSlotSelect = useCallback(
     (dateStr: string, timeStr: string) => {
       if (!isManager) return
+      setInitialClientIdForCreate(undefined)
       setCreateDate(dateStr)
       setCreateTime(timeStr)
       setShowCreateDrawer(true)
@@ -143,12 +162,18 @@ export default function CalendarPage() {
 
   const handleAppointmentCreated = () => {
     setShowCreateDrawer(false)
+    setInitialClientIdForCreate(undefined)
     mutateAppointments()
   }
 
   const handleAppointmentUpdated = () => {
     setSelectedAppointment(null)
     mutateAppointments()
+  }
+
+  const handleCreateDrawerOpenChange = (open: boolean) => {
+    setShowCreateDrawer(open)
+    if (!open) setInitialClientIdForCreate(undefined)
   }
 
   if (appointmentsLoading) {
@@ -219,9 +244,10 @@ export default function CalendarPage() {
       {isManager && (
         <AppointmentDrawer
           open={showCreateDrawer}
-          onOpenChange={setShowCreateDrawer}
+          onOpenChange={handleCreateDrawerOpenChange}
           initialDate={createDate}
           initialTime={createTime}
+          initialClientId={initialClientIdForCreate}
           staff={staff}
           services={services}
           clients={clients}
@@ -241,5 +267,13 @@ export default function CalendarPage() {
         onClientsChanged={() => mutateClients()}
       />
     </div>
+  )
+}
+
+export default function CalendarPage() {
+  return (
+    <Suspense fallback={<CalendarSkeleton />}>
+      <CalendarPageContent />
+    </Suspense>
   )
 }

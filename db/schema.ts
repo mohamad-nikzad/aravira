@@ -176,6 +176,27 @@ export const clients = pgTable(
   ]
 )
 
+export const clientTags = pgTable(
+  'client_tags',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => clients.id, { onDelete: 'cascade' }),
+    label: text('label').notNull(),
+    color: text('color').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('client_tags_salon_id_client_id_label_unique').on(t.salonId, t.clientId, t.label),
+    index('client_tags_salon_id_client_id_idx').on(t.salonId, t.clientId),
+    index('client_tags_salon_id_label_idx').on(t.salonId, t.label),
+  ]
+)
+
 export const appointments = pgTable(
   'appointments',
   {
@@ -211,6 +232,36 @@ export const appointments = pgTable(
     index('appointments_salon_id_client_id_date_idx').on(t.salonId, t.clientId, t.date),
     index('appointments_staff_id_date_idx').on(t.staffId, t.date),
     index('appointments_client_id_date_idx').on(t.clientId, t.date),
+  ]
+)
+
+export const clientFollowUps = pgTable(
+  'client_follow_ups',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => clients.id, { onDelete: 'cascade' }),
+    reason: text('reason')
+      .notNull()
+      .$type<'inactive' | 'no-show' | 'new-client' | 'vip' | 'manual'>(),
+    status: text('status').notNull().$type<'open' | 'reviewed' | 'dismissed'>().default('open'),
+    dueDate: text('due_date').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('client_follow_ups_salon_id_client_id_reason_unique').on(
+      t.salonId,
+      t.clientId,
+      t.reason
+    ),
+    index('client_follow_ups_salon_id_status_due_idx').on(t.salonId, t.status, t.dueDate),
+    index('client_follow_ups_salon_id_client_id_idx').on(t.salonId, t.clientId),
   ]
 )
 

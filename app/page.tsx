@@ -76,18 +76,10 @@ export default function LandingPage() {
   return (
     <main
       dir="ltr"
-      className={`${bodyFont.className} box-border min-h-dvh overflow-hidden bg-[#fbf7f9] text-[#1d2520]`}
+      className={`${bodyFont.className} aravira-landing box-border min-h-dvh overflow-hidden bg-[#fbf7f9] text-[#1d2520]`}
     >
-      <script
-        dangerouslySetInnerHTML={{
-          __html:
-            "document.documentElement.setAttribute('dir','ltr');document.body.setAttribute('dir','ltr');",
-        }}
-      />
       <style>{`
-        html,
-        body {
-          direction: ltr;
+        .aravira-landing {
           max-width: 100%;
           overflow-x: hidden;
         }

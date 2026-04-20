@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getAllClients, createClient } from '@/lib/db'
+import { getAllClients, createClient, setClientTags } from '@/lib/db'
 import { getTenantUser, isManagerRole } from '@/lib/server/auth/tenant'
 
 export async function GET() {
@@ -28,14 +28,17 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { name, phone, notes } = body
+    const { name, phone, notes, tags } = body
 
     if (!name || !phone) {
       return NextResponse.json({ error: 'نام و شماره تماس الزامی است' }, { status: 400 })
     }
 
     const client = await createClient({ name, phone, notes, salonId: user.salonId })
-    return NextResponse.json({ client })
+    const savedTags = Array.isArray(tags)
+      ? await setClientTags(client.id, user.salonId, tags.map(String))
+      : []
+    return NextResponse.json({ client: { ...client, tags: savedTags } })
   } catch (error: unknown) {
     console.error('Create client error:', error)
     const msg = error instanceof Error ? error.message : ''

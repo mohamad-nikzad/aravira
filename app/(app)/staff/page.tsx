@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
-import { Plus, Search, Phone, Shield, User as UserIcon, ListChecks } from 'lucide-react'
+import { Plus, Search, Phone, Shield, User as UserIcon, ListChecks, Clock3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { StaffDrawer } from '@/components/staff/staff-drawer'
 import { StaffServicesDrawer } from '@/components/staff/staff-services-drawer'
+import { StaffScheduleDrawer } from '@/components/staff/staff-schedule-drawer'
 import { useAuth } from '@/components/auth-provider'
 import { StaffSkeleton } from '@/components/skeletons/staff-skeleton'
 import { User } from '@/lib/types'
@@ -24,6 +25,7 @@ export default function StaffPage() {
   const [search, setSearch] = useState('')
   const [showDrawer, setShowDrawer] = useState(false)
   const [servicesStaff, setServicesStaff] = useState<User | null>(null)
+  const [scheduleStaff, setScheduleStaff] = useState<User | null>(null)
 
   useEffect(() => {
     if (user && user.role !== 'manager') {
@@ -53,6 +55,11 @@ export default function StaffPage() {
 
   const handleServicesSuccess = () => {
     setServicesStaff(null)
+    mutate()
+  }
+
+  const handleScheduleSuccess = () => {
+    setScheduleStaff(null)
     mutate()
   }
 
@@ -142,16 +149,28 @@ export default function StaffPage() {
                 </div>
 
                 {member.role === 'staff' && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 touch-manipulation gap-1"
-                    onClick={() => setServicesStaff(member)}
-                  >
-                    <ListChecks className="h-4 w-4" />
-                    <span className="hidden sm:inline">خدمات</span>
-                  </Button>
+                  <div className="flex shrink-0 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="touch-manipulation gap-1"
+                      onClick={() => setScheduleStaff(member)}
+                    >
+                      <Clock3 className="h-4 w-4" />
+                      <span className="hidden sm:inline">ساعت</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="touch-manipulation gap-1"
+                      onClick={() => setServicesStaff(member)}
+                    >
+                      <ListChecks className="h-4 w-4" />
+                      <span className="hidden sm:inline">خدمات</span>
+                    </Button>
+                  </div>
                 )}
               </div>
             ))}
@@ -171,6 +190,13 @@ export default function StaffPage() {
         staff={servicesStaff}
         services={servicesList}
         onSuccess={handleServicesSuccess}
+      />
+
+      <StaffScheduleDrawer
+        open={!!scheduleStaff}
+        onOpenChange={(o) => !o && setScheduleStaff(null)}
+        staff={scheduleStaff}
+        onSuccess={handleScheduleSuccess}
       />
     </div>
   )

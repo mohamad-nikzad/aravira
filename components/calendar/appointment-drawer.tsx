@@ -53,6 +53,8 @@ interface AppointmentDrawerProps {
   onOpenChange: (open: boolean) => void
   initialDate: string
   initialTime: string
+  /** When set while opening, pre-selects this client (e.g. deep link from client profile). */
+  initialClientId?: string
   staff: User[]
   services: Service[]
   clients: Client[]
@@ -65,6 +67,7 @@ export function AppointmentDrawer({
   onOpenChange,
   initialDate,
   initialTime,
+  initialClientId,
   staff,
   services,
   clients,
@@ -85,6 +88,7 @@ export function AppointmentDrawer({
   )
   const [notes, setNotes] = useState('')
   const [localClients, setLocalClients] = useState<Client[]>(clients)
+  const [staffSlotOk, setStaffSlotOk] = useState<Record<string, boolean>>({})
   const durationRef = useRef(durationMinutes)
   durationRef.current = durationMinutes
 
@@ -120,7 +124,7 @@ export function AppointmentDrawer({
       const st = formatTimeHm(parseTimeHm(initialTime))
       setStartTime(st)
       setEndTime(endTimeFromDuration(st, d))
-      setClientId('')
+      setClientId(initialClientId ?? '')
       setStaffId('')
       setServiceId('')
       setNotes('')
@@ -239,6 +243,44 @@ export function AppointmentDrawer({
     [staff]
   )
 
+  useEffect(() => {
+    if (!open || !date || !startTime || !endTime) return
+    const wc = validateAppointmentWindow(startTime, endTime)
+    if (!wc.ok) {
+      setStaffSlotOk({})
+      return
+    }
+    const ctrl = new AbortController()
+    const t = window.setTimeout(async () => {
+      try {
+        const qs = new URLSearchParams({ date, startTime, endTime })
+        const res = await fetch(`/api/staff/booking-availability?${qs}`, {
+          credentials: 'include',
+          signal: ctrl.signal,
+        })
+        const json = (await res.json()) as { staff?: Array<{ staffId: string; available: boolean }> }
+        if (!res.ok) return
+        const next: Record<string, boolean> = {}
+        for (const row of json.staff ?? []) {
+          next[row.staffId] = row.available
+        }
+        setStaffSlotOk(next)
+      } catch {
+        /* aborted */
+      }
+    }, 280)
+    return () => {
+      window.clearTimeout(t)
+      ctrl.abort()
+    }
+  }, [open, date, startTime, endTime])
+
+  useEffect(() => {
+    if (staffId && staffSlotOk[staffId] === false) {
+      setStaffId('')
+    }
+  }, [staffSlotOk, staffId])
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('fa-IR').format(price) + ' تومان'
   }
@@ -276,11 +318,15 @@ export function AppointmentDrawer({
                     <SelectValue placeholder="انتخاب پرسنل" />
                   </SelectTrigger>
                   <SelectContent>
-                    {staff.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.name}
-                      </SelectItem>
-                    ))}
+                    {staffRoleOnly.map((member) => {
+                      const unavailable = staffSlotOk[member.id] === false
+                      return (
+                        <SelectItem key={member.id} value={member.id} disabled={unavailable}>
+                          {member.name}
+                          {unavailable ? ' (خارج از برنامه)' : ''}
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
               </Field>

@@ -31,6 +31,7 @@ export interface Client {
   phone: string
   notes?: string
   createdAt: Date
+  tags?: ClientTag[]
 }
 
 export interface Appointment {
@@ -83,6 +84,90 @@ export interface StaffSchedule {
   active: boolean
   createdAt: Date
   updatedAt: Date
+}
+
+export interface ClientTag {
+  id: string
+  salonId: string
+  clientId: string
+  label: string
+  color: string
+  createdAt: Date
+}
+
+export type FollowUpReason = 'inactive' | 'no-show' | 'new-client' | 'vip' | 'manual'
+export type FollowUpStatus = 'open' | 'reviewed' | 'dismissed'
+
+export interface ClientFollowUp {
+  id: string
+  salonId: string
+  clientId: string
+  reason: FollowUpReason
+  status: FollowUpStatus
+  dueDate: string
+  createdAt: Date
+  updatedAt: Date
+  reviewedAt: Date | null
+}
+
+export interface ClientSummary {
+  client: Client
+  tags: ClientTag[]
+  upcomingAppointment: AppointmentWithDetails | null
+  history: AppointmentWithDetails[]
+  stats: {
+    completedCount: number
+    cancelledCount: number
+    noShowCount: number
+    estimatedSpend: number
+    lastVisitDate: string | null
+    favoriteServiceName: string | null
+    lastStaffName: string | null
+    totalCompletedVisits: number
+  }
+  openFollowUps: ClientFollowUp[]
+}
+
+export interface TodayAttentionItem {
+  id: string
+  type: 'soon' | 'overdue' | 'no-show-risk' | 'first-time' | 'vip'
+  title: string
+  detail: string
+  appointmentId?: string
+  clientId?: string
+  priority: number
+}
+
+export interface TodayData {
+  date: string
+  counts: Record<Appointment['status'], number>
+  appointments: AppointmentWithDetails[]
+  attentionItems: TodayAttentionItem[]
+  staffLoad: Array<{
+    staffId: string
+    staffName: string
+    appointmentCount: number
+    bookedMinutes: number
+  }>
+  openSlots: Array<{
+    staffId: string
+    staffName: string
+    ranges: Array<{ startTime: string; endTime: string }>
+  }>
+}
+
+export interface RetentionItem {
+  id: string
+  client: Client
+  reason: FollowUpReason
+  status: FollowUpStatus
+  dueDate: string
+  lastVisitDate: string | null
+  lastServiceName: string | null
+  completedCount: number
+  estimatedSpend: number
+  noShowCount: number
+  suggestedReason: string
 }
 
 export const SERVICE_CATEGORIES = {

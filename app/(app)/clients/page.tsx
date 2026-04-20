@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { ClientDrawer } from '@/components/clients/client-drawer'
 import { useAuth } from '@/components/auth-provider'
 import { ClientsSkeleton } from '@/components/skeletons/clients-skeleton'
@@ -109,6 +110,12 @@ export default function ClientsPage() {
               <div
                 key={client.id}
                 className="flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted/50"
+                role="button"
+                tabIndex={0}
+                onClick={() => router.push(`/clients/${client.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') router.push(`/clients/${client.id}`)
+                }}
               >
                 <Avatar className="h-10 w-10">
                   <AvatarFallback className="bg-primary/8 text-primary text-sm font-medium">
@@ -122,15 +129,32 @@ export default function ClientsPage() {
                     <Phone className="h-3 w-3" />
                     {client.phone}
                   </p>
+                  {client.tags && client.tags.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {client.tags.slice(0, 3).map((tag) => (
+                        <Badge key={tag.id} variant="outline" className="text-[10px] px-1.5 py-0">
+                          {tag.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon-sm" className="touch-manipulation shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="touch-manipulation shrink-0"
+                      onClick={(event) => event.stopPropagation()}
+                    >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
+                  <DropdownMenuContent align="start" onClick={(event) => event.stopPropagation()}>
+                    <DropdownMenuItem onClick={() => router.push(`/clients/${client.id}`)}>
+                      پروفایل
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleEditClient(client)}>
                       ویرایش
                     </DropdownMenuItem>

@@ -9,6 +9,7 @@ import {
   getServiceById,
   getScheduleOverlapFlags,
   staffMayPerformService,
+  checkStaffAvailabilityForAppointment,
 } from '@/lib/db'
 import { isBlockingAppointmentStatus, SCHEDULE_CONFLICT_CODES } from '@/lib/appointment-conflict'
 import {
@@ -153,6 +154,20 @@ export async function PATCH(
       typeof status === 'string' ? (status as Appointment['status']) : existing.status
 
     if (isBlockingAppointmentStatus(resolvedStatus)) {
+      const availability = await checkStaffAvailabilityForAppointment(
+        user.salonId,
+        checkStaffId,
+        checkDate,
+        effectiveStart,
+        endTime
+      )
+      if (!availability.ok) {
+        return NextResponse.json(
+          { error: availability.error, code: availability.code },
+          { status: 409 }
+        )
+      }
+
       const overlaps = await getScheduleOverlapFlags(
         user.salonId,
         checkStaffId,

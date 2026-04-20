@@ -7,6 +7,7 @@ import {
   getServiceById,
   getScheduleOverlapFlags,
   staffMayPerformService,
+  checkStaffAvailabilityForAppointment,
 } from '@/lib/db'
 import { SCHEDULE_CONFLICT_CODES } from '@/lib/appointment-conflict'
 import type { Appointment, AppointmentWithDetails } from '@/lib/types'
@@ -126,6 +127,20 @@ export async function POST(request: Request) {
     const windowCheck = validateAppointmentWindow(startTime, endTime)
     if (!windowCheck.ok) {
       return NextResponse.json({ error: windowCheck.error }, { status: 400 })
+    }
+
+    const availability = await checkStaffAvailabilityForAppointment(
+      user.salonId,
+      staffId,
+      date,
+      startTime,
+      endTime
+    )
+    if (!availability.ok) {
+      return NextResponse.json(
+        { error: availability.error, code: availability.code },
+        { status: 409 }
+      )
     }
 
     const overlaps = await getScheduleOverlapFlags(

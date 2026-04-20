@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   getServiceById: vi.fn(),
   getScheduleOverlapFlags: vi.fn(),
   staffMayPerformService: vi.fn(),
+  checkStaffAvailabilityForAppointment: vi.fn(),
   sendWebPushToUser: vi.fn(),
   isWebPushConfigured: vi.fn(),
 }))
@@ -46,6 +47,7 @@ vi.mock('@/lib/db', () => ({
   getServiceById: mocks.getServiceById,
   getScheduleOverlapFlags: mocks.getScheduleOverlapFlags,
   staffMayPerformService: mocks.staffMayPerformService,
+  checkStaffAvailabilityForAppointment: mocks.checkStaffAvailabilityForAppointment,
 }))
 
 vi.mock('@/lib/push', () => ({
@@ -85,6 +87,11 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.getTenantUser.mockResolvedValue(salonManager)
   mocks.isWebPushConfigured.mockReturnValue(false)
+  mocks.checkStaffAvailabilityForAppointment.mockResolvedValue({
+    ok: true,
+    source: 'business',
+    hours: { workingStart: '09:00', workingEnd: '19:00', slotDurationMinutes: 30 },
+  })
 })
 
 describe('tenant isolation route checks', () => {
