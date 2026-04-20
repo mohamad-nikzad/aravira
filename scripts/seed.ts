@@ -704,28 +704,30 @@ async function main() {
   const staffA = staffUsersOrdered[0]
   const staffB = staffUsersOrdered[1]
 
-  if (staffA) {
-    await db
-      .insert(staffSchedules)
-      .values([
-        {
+  /** Full-week hours so calendar bookings on any weekday match E2E + demo (UTC weekday from YYYY-MM-DD). */
+  const primaryWeek = [0, 1, 2, 3, 4, 5, 6] as const
+  for (const member of [staffA, staffB].filter(Boolean) as NonNullable<typeof staffA>[]) {
+    for (const dayOfWeek of primaryWeek) {
+      await db
+        .insert(staffSchedules)
+        .values({
           salonId: primarySalon.id,
-          staffId: staffA.id,
-          dayOfWeek: 0,
-          workingStart: '10:00',
-          workingEnd: '16:00',
-          active: true,
-        },
-        {
-          salonId: primarySalon.id,
-          staffId: staffA.id,
-          dayOfWeek: 1,
+          staffId: member.id,
+          dayOfWeek,
           workingStart: '09:00',
-          workingEnd: '17:00',
+          workingEnd: '18:00',
           active: true,
-        },
-      ])
-      .onConflictDoNothing()
+        })
+        .onConflictDoUpdate({
+          target: [staffSchedules.salonId, staffSchedules.staffId, staffSchedules.dayOfWeek],
+          set: {
+            active: true,
+            workingStart: '09:00',
+            workingEnd: '18:00',
+            updatedAt: new Date(),
+          },
+        })
+    }
   }
 
   const hairService = allServices.find((s) => s.name === 'کوتاهی مو')

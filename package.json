@@ -23,7 +23,12 @@
     "db:seed": "bun --env-file=.env.local --env-file=.env.database.dev scripts/seed.ts",
     "db:seed:multitenant": "bun --env-file=.env.local --env-file=.env.database.multitenant scripts/seed.ts",
     "db:seed:main": "bun --env-file=.env.local --env-file=.env.database.main scripts/seed.ts",
-    "test": "bunx vitest run"
+    "test": "bunx vitest run",
+    "test:e2e": "bunx playwright test",
+    "test:e2e:ui": "bunx playwright test --ui",
+    "test:e2e:headed": "bunx playwright test --headed",
+    "test:e2e:debug": "bunx playwright test --debug",
+    "test:e2e:system-chrome": "PLAYWRIGHT_SYSTEM_BROWSER=chrome bunx playwright test"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.20",
@@ -89,6 +94,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/node": "^22",
     "@types/react": "^19",
