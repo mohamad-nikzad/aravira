@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   Drawer,
   DrawerContent,
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
-import { User, Service, Client } from '@/lib/types'
+import { User, Service, Client, AppointmentWithDetails } from '@/lib/types'
 import {
   autoPickServiceForStaff,
   eligibleServicesForStaff,
@@ -58,7 +58,7 @@ interface AppointmentDrawerProps {
   staff: User[]
   services: Service[]
   clients: Client[]
-  onSuccess: () => void
+  onSuccess: (appointment: AppointmentWithDetails) => void
   onClientsChanged?: () => void
 }
 
@@ -96,6 +96,23 @@ export function AppointmentDrawer({
     setLocalClients(clients)
   }, [clients])
 
+  const resetFormForInitialSlot = useCallback(() => {
+    const defaultDuration = 45
+    const st = formatTimeHm(parseTimeHm(initialTime))
+
+    durationRef.current = defaultDuration
+    setDurationMinutes(defaultDuration)
+    setDate(initialDate)
+    setStartTime(st)
+    setEndTime(endTimeFromDuration(st, defaultDuration))
+    setClientId(initialClientId ?? '')
+    setStaffId('')
+    setServiceId('')
+    setNotes('')
+    setError('')
+    setLocalClients(clients)
+  }, [clients, initialClientId, initialDate, initialTime])
+
   const applyDuration = (mins: number) => {
     const clamped = Math.min(
       APPOINTMENT_DURATION_BOUNDS.max,
@@ -117,22 +134,19 @@ export function AppointmentDrawer({
 
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {
-      const d = 45
-      durationRef.current = d
-      setDurationMinutes(d)
-      setDate(initialDate)
-      const st = formatTimeHm(parseTimeHm(initialTime))
-      setStartTime(st)
-      setEndTime(endTimeFromDuration(st, d))
-      setClientId(initialClientId ?? '')
-      setStaffId('')
-      setServiceId('')
-      setNotes('')
-      setError('')
-      setLocalClients(clients)
+      resetFormForInitialSlot()
     }
     onOpenChange(isOpen)
   }
+
+  const wasOpenRef = useRef(open)
+
+  useEffect(() => {
+    if (open && !wasOpenRef.current) {
+      resetFormForInitialSlot()
+    }
+    wasOpenRef.current = open
+  }, [open, resetFormForInitialSlot])
 
   useEffect(() => {
     if (!open) return
@@ -221,7 +235,13 @@ export function AppointmentDrawer({
         return
       }
 
-      onSuccess()
+      if (!data.appointment) {
+        setError('پاسخ ثبت نوبت کامل نبود')
+        setLoading(false)
+        return
+      }
+
+      onSuccess(data.appointment)
     } catch {
       setError('خطایی رخ داد')
     } finally {
