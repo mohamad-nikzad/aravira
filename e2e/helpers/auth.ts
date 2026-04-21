@@ -22,16 +22,25 @@ export async function login(page: Page, phone: string, password: string) {
   if (!loginRes.ok()) {
     throw new Error(`Login API ${loginRes.status()}: ${await loginRes.text()}`)
   }
-  await page.waitForURL(/\/calendar/, { timeout: 30_000 })
+  await page.waitForURL(/\/(dashboard|calendar)/, { timeout: 30_000 })
+}
+
+export async function loginManagerExpectsDashboard(page: Page) {
+  await login(page, SEEDED_MANAGER.phone, SEEDED_MANAGER.password)
+  await expect(page).toHaveURL(/\/dashboard/)
+  await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible()
 }
 
 export async function loginManagerExpectsCalendar(page: Page) {
-  await login(page, SEEDED_MANAGER.phone, SEEDED_MANAGER.password)
+  await loginManagerExpectsDashboard(page)
+  await page.getByRole('link', { name: 'تقویم' }).click()
+  await expect(page).toHaveURL(/\/calendar/)
   await expect(page.locator('.calendar-header-gradient')).toBeVisible()
 }
 
 export async function loginStaffExpectsCalendar(page: Page) {
   await login(page, SEEDED_STAFF.phone, SEEDED_STAFF.password)
+  await expect(page).toHaveURL(/\/calendar/)
 }
 
 export async function logoutFromSettings(page: Page) {

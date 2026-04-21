@@ -1,7 +1,9 @@
-import nextVitals from 'eslint-config-next/core-web-vitals'
+import baseConfig from '@repo/eslint-config/base'
+import nextConfig from '@repo/eslint-config/next'
 
 const config = [
-  ...nextVitals,
+  ...baseConfig,
+  ...nextConfig,
   {
     ignores: [
       '.next/**',
@@ -11,10 +13,20 @@ const config = [
       '.vercel/**',
       'node_modules/**',
       'tsconfig.tsbuildinfo',
-      'bun.lock',
       'public/sw.js',
       'public/icons/**',
     ],
+  },
+  {
+    files: ['apps/**/*.{ts,tsx,js,jsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: ['../../apps/*', '../*/app/*'],
+        },
+      ],
+    },
   },
   {
     rules: {

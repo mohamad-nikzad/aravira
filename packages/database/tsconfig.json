@@ -1,0 +1,12 @@
+{
+  "extends": "@repo/typescript-config/base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@repo/salon-core": ["../salon-core/src/index.ts"],
+      "@repo/salon-core/*": ["../salon-core/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "drizzle.config.ts"],
+  "exclude": ["node_modules", "dist"]
+}

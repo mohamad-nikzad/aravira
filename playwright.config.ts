@@ -3,10 +3,10 @@ import { defineConfig, devices } from '@playwright/test'
 /**
  * E2E runs against a real Next dev server + Postgres (seeded salon).
  *
- * - Start the app first: `bun run dev` (needs `.env.local` + `.env.database.dev`), then:
- *   `bun run test:e2e`
+ * - Start the app first: `pnpm dev:app` (needs root `.env.local` + `.env.database.dev`), then:
+ *   `pnpm test:e2e`
  * - Or let Playwright start it (same env files must exist):
- *   `bun run test:e2e` with E2E_SKIP_SERVER unset.
+ *   `pnpm test:e2e` with E2E_SKIP_SERVER unset.
  * - Point elsewhere: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3001 bun run test:e2e`
  *
  * **Use a browser already on your machine (skip `playwright install chromium`):**
@@ -48,7 +48,7 @@ export default defineConfig({
   webServer: process.env.E2E_SKIP_SERVER
     ? undefined
     : {
-        command: 'bun run dev',
+        command: 'pnpm dev:app',
         url: 'http://localhost:3000',
         reuseExistingServer: !process.env.CI,
         timeout: 180_000,

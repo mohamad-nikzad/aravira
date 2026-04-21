@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import {
+  loginManagerExpectsDashboard,
   loginManagerExpectsCalendar,
   loginStaffExpectsCalendar,
   logoutFromSettings,
@@ -40,11 +41,16 @@ test.describe('Critical salon journeys', () => {
     })
   })
 
-  test('03 — Manager logs in and lands on calendar', async ({ page }) => {
+  test('03 — Manager logs in, lands on dashboard, and can open calendar', async ({ page }) => {
     await test.step('Authenticate manager', async () => {
-      await loginManagerExpectsCalendar(page)
+      await loginManagerExpectsDashboard(page)
+    })
+    await test.step('Dashboard counters load', async () => {
+      await expect(page.getByText('نوبت‌های امروز')).toBeVisible()
     })
     await test.step('Calendar chrome', async () => {
+      await page.getByRole('link', { name: 'تقویم' }).click()
+      await expect(page).toHaveURL(/\/calendar/)
       await expect(page.getByRole('button', { name: 'ماه' })).toBeVisible()
       await expect(page.getByLabel('نوبت جدید')).toBeVisible()
     })
@@ -67,7 +73,7 @@ test.describe('Critical salon journeys', () => {
   test('05 — Manager can walk primary navigation', async ({ page }) => {
     await test.step('Manager login', async () => {
       await page.context().clearCookies()
-      await loginManagerExpectsCalendar(page)
+      await loginManagerExpectsDashboard(page)
     })
     await test.step('Today', async () => {
       await page.getByRole('link', { name: 'امروز' }).click()

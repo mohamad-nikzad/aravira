@@ -1,0 +1,25 @@
+{
+  "name": "@repo/salon-core",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*",
+    "./styles.css": "./styles/globals.css"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json --noEmit false --emitDeclarationOnly --declaration --outDir dist",
+    "lint": "eslint .",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "pnpm run test:unit",
+    "test:unit": "vitest run",
+    "boundaries": "eslint . --max-warnings=0"
+  },
+  "dependencies": {
+    "date-fns": "4.1.0"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "@repo/database",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./appointments": "./src/appointments.ts",
+    "./auth-users": "./src/auth-users.ts",
+    "./clients": "./src/clients.ts",
+    "./dashboard": "./src/dashboard.ts",
+    "./onboarding": "./src/onboarding.ts",
+    "./push": "./src/push.ts",
+    "./retention": "./src/retention.ts",
+    "./services": "./src/services.ts",
+    "./settings": "./src/settings.ts",
+    "./staff": "./src/staff.ts",
+    "./client": "./src/client.ts",
+    "./config": "./src/config.ts",
+    "./keys": "./src/keys.ts",
+    "./schema": "./src/schema.ts"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json --noEmit false --emitDeclarationOnly --declaration --outDir dist",
+    "lint": "eslint .",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "boundaries": "eslint . --max-warnings=0",
+    "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
+    "db:push": "drizzle-kit push --config=drizzle.config.ts",
+    "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
+    "db:seed": "tsx src/seed.ts"
+  },
+  "dependencies": {
+    "@repo/salon-core": "workspace:*",
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "^0.39.3",
+    "postgres": "^3.4.5",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22"
+  }
+}
