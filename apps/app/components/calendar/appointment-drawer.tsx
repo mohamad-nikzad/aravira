@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@repo/ui/select'
 import { Spinner } from '@repo/ui/spinner'
+import { ChevronDown } from 'lucide-react'
 import { User, Service, Client, AppointmentWithDetails } from '@repo/salon-core/types'
 import {
   autoPickServiceForStaff,
@@ -306,20 +307,19 @@ export function AppointmentDrawer({
     return new Intl.NumberFormat('fa-IR').format(price) + ' تومان'
   }
 
+  const durationLabel = `${toPersianDigits(durationMinutes)} دقیقه`
+  const endTimeLabel = toPersianDigits(endTime)
+
   return (
     <Drawer open={open} onOpenChange={handleOpenChange}>
-      <DrawerContent>
-        <DrawerHeader>
+      <DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[96dvh]">
+        <DrawerHeader className="pb-3">
           <DrawerTitle>نوبت جدید</DrawerTitle>
-          <DrawerDescription>
-            مدت زمان پیشنهادی از روی خدمت انتخابی پر می‌شود. چند نوبت هم‌زمان فقط وقتی مجاز است
-            که پرسنل و مشتری با نوبت‌های هم‌پوشان فرق کنند؛ در غیر این صورت پیام خطا نشان داده
-            می‌شود.
-          </DrawerDescription>
+          <DrawerDescription>خدمت، پرسنل و زمان نوبت را انتخاب کنید.</DrawerDescription>
         </DrawerHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-auto px-4">
-          <FieldGroup>
+        <form onSubmit={handleSubmit} className="min-h-0 flex-1 overflow-auto px-4 pb-4">
+          <FieldGroup className="gap-4">
             <Field>
               <FieldLabel>مشتری</FieldLabel>
               <ClientPicker
@@ -331,7 +331,7 @@ export function AppointmentDrawer({
             </Field>
 
             {/* Nested column so staff always stacks above service (stable in RTL / flex layouts). */}
-            <div className="flex min-w-0 flex-col gap-7">
+            <div className="flex min-w-0 flex-col gap-4">
               <Field>
                 <FieldLabel>پرسنل</FieldLabel>
                 <Select value={staffId || undefined} onValueChange={handleStaffChange} required>
@@ -405,58 +405,75 @@ export function AppointmentDrawer({
               </Field>
             </div>
 
-            <Field>
-              <FieldLabel>مدت (دقیقه)</FieldLabel>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {DURATION_PRESETS.map((m) => (
-                  <Button
-                    key={m}
-                    type="button"
-                    size="sm"
-                    variant={durationMinutes === m ? 'default' : 'outline'}
-                    onClick={() => applyDuration(m)}
-                  >
-                    {new Intl.NumberFormat('fa-IR').format(m)}
-                  </Button>
-                ))}
-              </div>
-              <Input
-                id="duration"
-                type="text"
-                inputMode="numeric"
-                value={toPersianDigits(durationMinutes)}
-                onChange={(e) => {
-                  const v = parseLocalizedInt(e.target.value, durationMinutes)
-                  if (!Number.isFinite(v)) return
-                  applyDuration(v)
-                }}
-                dir="rtl"
-                className="text-right tabular-nums"
-              />
-            </Field>
+            <details className="group rounded-lg border border-border/70 bg-muted/25">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-medium touch-manipulation [&::-webkit-details-marker]:hidden">
+                <span>جزئیات زمان و توضیحات</span>
+                <span className="flex min-w-0 items-center gap-2 text-xs font-normal text-muted-foreground">
+                  <span className="tabular-nums" dir="ltr">
+                    {endTimeLabel}
+                  </span>
+                  <span className="truncate">{durationLabel}</span>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+                  />
+                </span>
+              </summary>
+              <FieldGroup className="gap-4 border-t border-border/60 px-3 py-4">
+                <Field>
+                  <FieldLabel>مدت (دقیقه)</FieldLabel>
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {DURATION_PRESETS.map((m) => (
+                      <Button
+                        key={m}
+                        type="button"
+                        size="sm"
+                        variant={durationMinutes === m ? 'default' : 'outline'}
+                        onClick={() => applyDuration(m)}
+                      >
+                        {new Intl.NumberFormat('fa-IR').format(m)}
+                      </Button>
+                    ))}
+                  </div>
+                  <Input
+                    id="duration"
+                    type="text"
+                    inputMode="numeric"
+                    value={toPersianDigits(durationMinutes)}
+                    onChange={(e) => {
+                      const v = parseLocalizedInt(e.target.value, durationMinutes)
+                      if (!Number.isFinite(v)) return
+                      applyDuration(v)
+                    }}
+                    dir="rtl"
+                    className="text-right tabular-nums"
+                  />
+                </Field>
 
-            <Field>
-              <FieldLabel htmlFor="end-time">پایان</FieldLabel>
-              <TimePicker
-                id="end-time"
-                value={endTime}
-                onChange={applyEndTime}
-                label="ساعت پایان"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                تغییر پایان، مدت را هم‌زمان به‌روز می‌کند.
-              </p>
-            </Field>
+                <Field>
+                  <FieldLabel htmlFor="end-time">پایان</FieldLabel>
+                  <TimePicker
+                    id="end-time"
+                    value={endTime}
+                    onChange={applyEndTime}
+                    label="ساعت پایان"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    تغییر پایان، مدت را هم‌زمان به‌روز می‌کند.
+                  </p>
+                </Field>
 
-            <Field>
-              <FieldLabel htmlFor="notes">توضیحات (اختیاری)</FieldLabel>
-              <Input
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="توضیحات اضافی…"
-              />
-            </Field>
+                <Field>
+                  <FieldLabel htmlFor="notes">توضیحات (اختیاری)</FieldLabel>
+                  <Input
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="توضیحات اضافی…"
+                  />
+                </Field>
+              </FieldGroup>
+            </details>
 
             {error && <FieldError>{error}</FieldError>}
           </FieldGroup>

@@ -234,7 +234,7 @@ test.describe('Critical salon journeys', () => {
 
     await test.step('Select service then staff (ماساژ + سارا — seed has fewer massage rows for Sara than busy hair slots)', async () => {
       const drawer = page.getByRole('dialog', { name: 'نوبت جدید' })
-      const staffServiceTriggers = drawer.locator('.flex.min-w-0.flex-col.gap-7').locator('[data-slot="select-trigger"]')
+      const staffServiceTriggers = drawer.locator('[data-slot="select-trigger"]')
       await staffServiceTriggers.nth(1).click()
       await page.getByRole('option', { name: /ماساژ سوئدی/ }).first().click()
       await staffServiceTriggers.nth(0).click()

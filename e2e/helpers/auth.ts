@@ -33,7 +33,7 @@ export async function loginManagerExpectsToday(page: Page) {
 
 export async function loginManagerExpectsCalendar(page: Page) {
   await loginManagerExpectsToday(page)
-  await page.getByRole('link', { name: 'تقویم' }).click()
+  await page.getByRole('navigation').getByRole('link', { name: 'تقویم' }).click()
   await expect(page).toHaveURL(/\/calendar/)
   await expect(page.locator('.calendar-header-gradient')).toBeVisible()
 }
