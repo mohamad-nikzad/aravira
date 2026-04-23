@@ -116,7 +116,7 @@ export function StaffServicesDrawer({
 
   return (
     <Drawer open={open} onOpenChange={handleOpenChange}>
-      <DrawerContent className="box-border flex min-h-0 max-h-[80vh] w-full flex-col overflow-hidden">
+      <DrawerContent className="box-border flex min-h-0 max-h-[80lvh] w-full flex-col overflow-hidden">
         <DrawerHeader className="shrink-0 text-start md:text-start">
           <DrawerTitle className="text-start">خدمات مجاز</DrawerTitle>
           <DrawerDescription className="text-start text-pretty leading-relaxed">

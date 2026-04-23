@@ -312,7 +312,7 @@ export function AppointmentDrawer({
 
   return (
     <Drawer open={open} onOpenChange={handleOpenChange}>
-      <DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[96dvh]">
+      <DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[96lvh]">
         <DrawerHeader className="pb-3">
           <DrawerTitle>نوبت جدید</DrawerTitle>
           <DrawerDescription>خدمت، پرسنل و زمان نوبت را انتخاب کنید.</DrawerDescription>

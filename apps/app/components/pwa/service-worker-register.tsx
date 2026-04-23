@@ -4,9 +4,54 @@ import { useEffect, useRef } from 'react'
 import { ToastAction } from '@repo/ui/toast'
 import { toast } from '@repo/ui/use-toast'
 
+const NEXT_BUILD_ID_PATTERN = /"b":"([^"]+)"/
+
+function getBuildIdFromMarkup(markup: string) {
+  return markup.match(NEXT_BUILD_ID_PATTERN)?.[1] ?? null
+}
+
+function getCurrentBuildId() {
+  for (const script of Array.from(document.scripts)) {
+    const buildId = getBuildIdFromMarkup(script.textContent ?? '')
+    if (buildId) {
+      return buildId
+    }
+  }
+
+  return null
+}
+
+function getAssetSignatureFromDocument(documentToRead: Document) {
+  return Array.from(
+    documentToRead.querySelectorAll<HTMLScriptElement | HTMLLinkElement>(
+      'script[src^="/_next/static/"], link[href^="/_next/static/"]'
+    )
+  )
+    .map((element) => {
+      if (element instanceof HTMLScriptElement) {
+        return element.src
+      }
+
+      return element.href
+    })
+    .sort()
+    .join('|')
+}
+
+function getCurrentAssetSignature() {
+  return getAssetSignatureFromDocument(document)
+}
+
+function getAssetSignatureFromMarkup(markup: string) {
+  return getAssetSignatureFromDocument(
+    new DOMParser().parseFromString(markup, 'text/html')
+  )
+}
+
 export function ServiceWorkerRegister() {
   const refreshingRef = useRef(false)
   const updateToastIdRef = useRef<string | null>(null)
+  const appUpdateCheckInFlightRef = useRef(false)
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) {
@@ -29,8 +74,8 @@ export function ServiceWorkerRegister() {
 
     let registrationCleanup = () => {}
 
-    const promptForUpdate = (registration: ServiceWorkerRegistration) => {
-      if (!registration.waiting || updateToastIdRef.current) {
+    const promptForUpdate = (onUpdate: () => void) => {
+      if (updateToastIdRef.current) {
         return
       }
 
@@ -49,7 +94,7 @@ export function ServiceWorkerRegister() {
             altText="Update app"
             onClick={() => {
               updateToast.dismiss()
-              registration.waiting?.postMessage({ type: 'SKIP_WAITING' })
+              onUpdate()
             }}
           >
             به روز رسانی
@@ -59,6 +104,81 @@ export function ServiceWorkerRegister() {
 
       toastId = updateToast.id
       updateToastIdRef.current = toastId
+    }
+
+    const promptForServiceWorkerUpdate = (
+      registration: ServiceWorkerRegistration
+    ) => {
+      if (!registration.waiting) {
+        return
+      }
+
+      promptForUpdate(() => {
+        registration.waiting?.postMessage({ type: 'SKIP_WAITING' })
+      })
+    }
+
+    const promptForAppShellUpdate = () => {
+      promptForUpdate(() => {
+        refreshingRef.current = true
+        window.location.reload()
+      })
+    }
+
+    const checkForAppShellUpdate = async () => {
+      if (appUpdateCheckInFlightRef.current) {
+        return
+      }
+
+      appUpdateCheckInFlightRef.current = true
+
+      try {
+        const response = await fetch(
+          `${window.location.pathname}${window.location.search}`,
+          {
+            cache: 'no-store',
+            credentials: 'include',
+            headers: {
+              Accept: 'text/html',
+              'Cache-Control': 'no-cache',
+            },
+          }
+        )
+
+        if (
+          !response.ok ||
+          !response.headers.get('content-type')?.includes('text/html')
+        ) {
+          return
+        }
+
+        const nextMarkup = await response.text()
+        const currentBuildId = getCurrentBuildId()
+        const nextBuildId = getBuildIdFromMarkup(nextMarkup)
+
+        if (currentBuildId && nextBuildId) {
+          if (currentBuildId !== nextBuildId) {
+            promptForAppShellUpdate()
+          }
+
+          return
+        }
+
+        const currentAssetSignature = getCurrentAssetSignature()
+        const nextAssetSignature = getAssetSignatureFromMarkup(nextMarkup)
+
+        if (
+          currentAssetSignature &&
+          nextAssetSignature &&
+          currentAssetSignature !== nextAssetSignature
+        ) {
+          promptForAppShellUpdate()
+        }
+      } catch {
+        /* ignore transient update check failures */
+      } finally {
+        appUpdateCheckInFlightRef.current = false
+      }
     }
 
     const handleControllerChange = () => {
@@ -76,9 +196,10 @@ export function ServiceWorkerRegister() {
       .register('/sw.js', { scope: '/', updateViaCache: 'none' })
       .then((registration) => {
         const recheckForUpdates = () => {
+          void checkForAppShellUpdate()
           void registration.update().then(() => {
             if (registration.waiting && navigator.serviceWorker.controller) {
-              promptForUpdate(registration)
+              promptForServiceWorkerUpdate(registration)
             }
           })
         }
@@ -101,7 +222,7 @@ export function ServiceWorkerRegister() {
               newWorker.state === 'installed' &&
               navigator.serviceWorker.controller
             ) {
-              promptForUpdate(registration)
+              promptForServiceWorkerUpdate(registration)
             }
           }
 
@@ -109,7 +230,7 @@ export function ServiceWorkerRegister() {
         }
 
         if (registration.waiting && navigator.serviceWorker.controller) {
-          promptForUpdate(registration)
+          promptForServiceWorkerUpdate(registration)
         }
 
         registration.addEventListener('updatefound', handleUpdateFound)

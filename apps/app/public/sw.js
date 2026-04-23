@@ -1,4 +1,4 @@
-const SW_VERSION = '2026-04-23-v1'
+const SW_VERSION = '2026-04-23-v2'
 const STATIC_CACHE_NAME = `aravira-static-${SW_VERSION}`
 const NAVIGATION_CACHE_NAME = `aravira-pages-${SW_VERSION}`
 const MEDIA_CACHE_NAME = `aravira-media-${SW_VERSION}`

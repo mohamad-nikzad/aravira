@@ -184,7 +184,7 @@ export function InstallPrompt() {
 
   return (
     <Drawer open={open} onOpenChange={handleOpenChange} dismissible={!isPending}>
-      <DrawerContent className="max-h-[88vh] rounded-t-[28px] border-border/70 bg-background/98 backdrop-blur">
+      <DrawerContent className="max-h-[88lvh] rounded-t-[28px] border-border/70 bg-background/98 backdrop-blur">
         <DrawerHeader className="text-start">
           <div className="mb-3 flex items-center gap-3">
             <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/12 text-primary">
