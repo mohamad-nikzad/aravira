@@ -38,6 +38,7 @@ import {
   ManagerTodaySkeleton,
   StaffTodaySkeleton,
 } from '@/components/skeletons/today-skeleton'
+import { getNextOpenSlot } from './next-open-slot'
 
 async function fetcher<T>(url: string) {
   return fetchJsonOrThrow<T>(url)
@@ -118,6 +119,22 @@ function summarizeOpenRanges(ranges: Array<{ startTime: string; endTime: string 
   }
 
   return `${primary} · ${toPersianDigits(ranges.length - 1)} بازه دیگر`
+}
+
+function summarizeNextOpenSlot(slot: ReturnType<typeof getNextOpenSlot>) {
+  if (!slot) {
+    return 'بازه آزاد دیگری ندارد'
+  }
+
+  const primary = slot.startsNow
+    ? `از الان تا ${formatPersianTime(slot.endTime)}`
+    : `${formatPersianTime(slot.startTime)} تا ${formatPersianTime(slot.endTime)}`
+
+  if (slot.additionalRanges === 0) {
+    return primary
+  }
+
+  return `${primary} · ${toPersianDigits(slot.additionalRanges)} بازه دیگر`
 }
 
 function groupAttentionItems(items: TodayAttentionItem[]) {
@@ -717,7 +734,28 @@ function StaffTodayView({
   const nextAppointment =
     activeTodayAppointments.find((appointment) => appointment.startTime > clockHm) ?? null
 
-  const ownOpenRanges = todayData?.openSlots[0]?.ranges ?? []
+  const todayOpenRanges = todayData?.openSlots[0]?.ranges ?? []
+  const tomorrowOpenRanges = tomorrowData?.openSlots[0]?.ranges ?? []
+  const nextOpenSlot = useMemo(
+    () =>
+      getNextOpenSlot({
+        todayRanges: todayOpenRanges,
+        tomorrowRanges: tomorrowOpenRanges,
+        clockHm,
+      }),
+    [clockHm, todayOpenRanges, tomorrowOpenRanges]
+  )
+  const checkingTomorrowOpenSlots = useMemo(
+    () =>
+      !getNextOpenSlot({
+        todayRanges: todayOpenRanges,
+        tomorrowRanges: [],
+        clockHm,
+      }) &&
+      tomorrowLoading &&
+      !tomorrowData,
+    [clockHm, todayOpenRanges, tomorrowData, tomorrowLoading]
+  )
   const todayBookedMinutes = bookedMinutesFor(
     todayAppointments.filter((appointment) => appointment.status !== 'cancelled')
   )
@@ -885,9 +923,18 @@ function StaffTodayView({
                 )}
 
                 <div className="rounded-2xl bg-muted/60 p-3 text-sm">
-                  <p className="font-medium">بازه آزاد بعدی</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">بازه آزاد بعدی</p>
+                    {nextOpenSlot ? (
+                      <Badge variant="outline" className="text-[10px]">
+                        {nextOpenSlot.dayLabel}
+                      </Badge>
+                    ) : null}
+                  </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {summarizeOpenRanges(ownOpenRanges)}
+                    {checkingTomorrowOpenSlots
+                      ? 'در حال بررسی اولین بازه آزاد...'
+                      : summarizeNextOpenSlot(nextOpenSlot)}
                   </p>
                 </div>
               </CardContent>
