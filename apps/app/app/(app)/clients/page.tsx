@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import useSWR from 'swr'
 import { Plus, Search, Phone, MoreHorizontal } from 'lucide-react'
 import { Button } from '@repo/ui/button'
@@ -16,6 +17,7 @@ import { Avatar, AvatarFallback } from '@repo/ui/avatar'
 import { Badge } from '@repo/ui/badge'
 import { ClientDrawer } from '@/components/clients/client-drawer'
 import { useAuth } from '@/components/auth-provider'
+import { displayPhone } from '@repo/salon-core/phone'
 import {
   NetworkStatusBanner,
   OfflineStateCard,
@@ -160,7 +162,7 @@ export default function ClientsPage() {
         <div className="relative">
           <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="جستجوی مشتری..."
+            placeholder="جستجوی مشتری…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pr-9 h-10 bg-muted/50 border-0"
@@ -179,46 +181,42 @@ export default function ClientsPage() {
         ) : (
           <div className="divide-y divide-border/50">
             {filteredClients.map((client) => (
-              <div
-                key={client.id}
-                className="flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted/50"
-                role="button"
-                tabIndex={0}
-                onClick={() => router.push(`/clients/${client.id}`)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') router.push(`/clients/${client.id}`)
-                }}
-              >
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary/8 text-primary text-sm font-medium">
-                    {getInitials(client.name)}
-                  </AvatarFallback>
-                </Avatar>
+              <div key={client.id} className="flex items-center gap-2 px-4 py-3">
+                <Link
+                  href={`/clients/${client.id}`}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl py-1 transition-colors active:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                >
+                  <Avatar className="h-11 w-11">
+                    <AvatarFallback className="bg-primary/8 text-primary text-sm font-medium">
+                      {getInitials(client.name)}
+                    </AvatarFallback>
+                  </Avatar>
 
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{client.name}</p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5" dir="ltr">
-                    <Phone className="h-3 w-3" />
-                    {client.phone}
-                  </p>
-                  {client.tags && client.tags.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {client.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag.id} variant="outline" className="text-[10px] px-1.5 py-0">
-                          {tag.label}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{client.name}</p>
+                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground" dir="ltr">
+                      <Phone className="h-3 w-3" />
+                      {displayPhone(client.phone)}
+                    </p>
+                    {client.tags && client.tags.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {client.tags.slice(0, 3).map((tag) => (
+                          <Badge key={tag.id} variant="outline" className="px-1.5 py-0 text-[10px]">
+                            {tag.label}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Link>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      className="touch-manipulation shrink-0"
-                      onClick={(event) => event.stopPropagation()}
+                      className="h-10 w-10 shrink-0 touch-manipulation"
+                      aria-label="گزینه‌های مشتری"
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>

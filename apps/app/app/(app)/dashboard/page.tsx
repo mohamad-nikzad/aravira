@@ -143,13 +143,21 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <header className="flex items-center gap-3 bg-card px-4 py-3 border-b border-border/50">
-        <Button variant="ghost" size="icon-sm" asChild className="touch-manipulation">
-          <Link href="/settings">
+      <header className="flex items-center gap-3 bg-card px-3 py-3 border-b border-border/50">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          asChild
+          className="h-10 w-10 shrink-0 rounded-2xl touch-manipulation"
+        >
+          <Link href="/settings" aria-label="بازگشت به بیشتر">
             <ArrowRight className="h-5 w-5" />
           </Link>
         </Button>
-        <h1 className="text-lg font-bold">داشبورد</h1>
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-bold">داشبورد</h1>
+          <p className="truncate text-xs text-muted-foreground">آمار و گزارش‌های سالن</p>
+        </div>
       </header>
 
       <div className="flex-1 overflow-auto p-4 space-y-4 pb-6">

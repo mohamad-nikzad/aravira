@@ -16,6 +16,7 @@ import { Badge } from '@repo/ui/badge'
 import { Field, FieldLabel, FieldGroup, FieldError } from '@repo/ui/field'
 import { Spinner } from '@repo/ui/spinner'
 import { Client } from '@repo/salon-core/types'
+import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
 
 const tagOptions = ['VIP', 'حساسیت', 'رنگ خاص', 'نیاز به پیگیری', 'بدقول'] as const
 
@@ -130,12 +131,12 @@ export function ClientDrawer({
               <Input
                 id="client-phone"
                 type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="۰۹۱۲..."
+                value={displayPhone(phone)}
+                onChange={(e) => setPhone(normalizePhone(e.target.value))}
+                placeholder="۰۹۱۲…"
                 required
                 dir="ltr"
-                className="text-left"
+                className="text-left tabular-nums"
               />
             </Field>
 
@@ -145,7 +146,7 @@ export function ClientDrawer({
                 id="client-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="یادداشت درباره این مشتری..."
+                placeholder="یادداشت درباره این مشتری…"
               />
             </Field>
 
@@ -177,7 +178,7 @@ export function ClientDrawer({
         <DrawerFooter>
           <Button onClick={handleSubmit} disabled={loading || !name || !phone} className="touch-manipulation">
             {loading && <Spinner className="ml-2" />}
-            {loading ? 'در حال ذخیره...' : isEditing ? 'ذخیره تغییرات' : 'افزودن مشتری'}
+            {loading ? 'در حال ذخیره…' : isEditing ? 'ذخیره تغییرات' : 'افزودن مشتری'}
           </Button>
           <DrawerClose asChild>
             <Button variant="outline">انصراف</Button>

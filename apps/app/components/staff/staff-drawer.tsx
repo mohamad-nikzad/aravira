@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@repo/ui/select'
 import { Spinner } from '@repo/ui/spinner'
+import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
 
 interface StaffDrawerProps {
   open: boolean
@@ -123,12 +124,12 @@ export function StaffDrawer({
               <Input
                 id="staff-phone"
                 type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="0912..."
+                value={displayPhone(phone)}
+                onChange={(e) => setPhone(normalizePhone(e.target.value))}
+                placeholder="۰۹۱۲…"
                 required
                 dir="ltr"
-                className="text-left"
+                className="text-left tabular-nums"
               />
             </Field>
 
@@ -175,7 +176,7 @@ export function StaffDrawer({
             className="touch-manipulation"
           >
             {loading && <Spinner className="ml-2" />}
-            {loading ? 'در حال افزودن...' : 'افزودن پرسنل'}
+            {loading ? 'در حال افزودن…' : 'افزودن پرسنل'}
           </Button>
           <DrawerClose asChild>
             <Button variant="outline">انصراف</Button>

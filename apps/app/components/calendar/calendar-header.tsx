@@ -54,7 +54,7 @@ export function CalendarHeader({
   }
 
   return (
-    <header className="calendar-header-gradient flex items-center gap-2 px-3 py-2 sm:px-4">
+    <header className="calendar-header-gradient safe-area-pt flex items-center gap-2 px-3 py-2 sm:px-4">
       <div className="flex items-center gap-0.5 shrink-0">
         <span className="text-base font-bold text-primary tracking-tight ml-1.5">آراویرا</span>
       </div>
@@ -71,14 +71,14 @@ export function CalendarHeader({
           size="icon-sm"
           onClick={() => navigate('prev')}
           type="button"
-          className="h-8 w-8 touch-manipulation"
+          className="h-11 w-11 rounded-2xl touch-manipulation"
         >
           <ChevronLeft className="h-4 w-4" />
           <span className="sr-only">قبلی</span>
         </Button>
         <button
           onClick={onToday}
-          className="px-2 py-1 text-xs font-semibold text-primary touch-manipulation rounded-md hover:bg-primary/8 transition-colors"
+          className="min-h-11 rounded-2xl px-3 py-2 text-sm font-semibold text-primary transition-colors touch-manipulation hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           type="button"
         >
           امروز
@@ -88,7 +88,7 @@ export function CalendarHeader({
           size="icon-sm"
           onClick={() => navigate('next')}
           type="button"
-          className="h-8 w-8 touch-manipulation"
+          className="h-11 w-11 rounded-2xl touch-manipulation"
         >
           <ChevronRight className="h-4 w-4" />
           <span className="sr-only">بعدی</span>

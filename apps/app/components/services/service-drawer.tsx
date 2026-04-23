@@ -22,6 +22,7 @@ import {
 } from '@repo/ui/select'
 import { Spinner } from '@repo/ui/spinner'
 import { Service, SERVICE_CATEGORIES, STAFF_COLORS } from '@repo/salon-core/types'
+import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
 
 interface ServiceDrawerProps {
   open: boolean
@@ -162,24 +163,24 @@ export function ServiceDrawer({
                 <FieldLabel htmlFor="svc-dur">مدت (دقیقه)</FieldLabel>
                 <Input
                   id="svc-dur"
-                  type="number"
-                  min={5}
-                  value={duration}
-                  onChange={(e) => setDuration(Number(e.target.value))}
-                  dir="ltr"
-                  className="text-left"
+                  type="text"
+                  inputMode="numeric"
+                  value={toPersianDigits(duration)}
+                  onChange={(e) => setDuration(Math.max(5, parseLocalizedInt(e.target.value, duration)))}
+                  dir="rtl"
+                  className="text-right tabular-nums"
                 />
               </Field>
               <Field>
                 <FieldLabel htmlFor="svc-price">قیمت (تومان)</FieldLabel>
                 <Input
                   id="svc-price"
-                  type="number"
-                  min={0}
-                  value={price}
-                  onChange={(e) => setPrice(Number(e.target.value))}
-                  dir="ltr"
-                  className="text-left"
+                  type="text"
+                  inputMode="numeric"
+                  value={toPersianDigits(price)}
+                  onChange={(e) => setPrice(Math.max(0, parseLocalizedInt(e.target.value, price)))}
+                  dir="rtl"
+                  className="text-right tabular-nums"
                 />
               </Field>
             </div>
@@ -226,7 +227,7 @@ export function ServiceDrawer({
             className="touch-manipulation"
           >
             {loading && <Spinner className="ml-2" />}
-            {loading ? '...' : isEditing ? 'ذخیره' : 'افزودن'}
+            {loading ? '…' : isEditing ? 'ذخیره' : 'افزودن'}
           </Button>
           <DrawerClose asChild>
             <Button variant="outline">انصراف</Button>

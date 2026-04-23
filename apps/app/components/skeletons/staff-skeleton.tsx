@@ -33,7 +33,7 @@ export function StaffSkeleton() {
         <div className="relative">
           <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="جستجوی پرسنل..."
+            placeholder="جستجوی پرسنل…"
             disabled
             className="pr-9 h-10 bg-muted/50 border-0"
           />

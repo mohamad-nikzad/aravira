@@ -31,6 +31,8 @@ import {
 import type { ClientSummary, FollowUpReason } from '@repo/salon-core/types'
 import { APPOINTMENT_STATUS } from '@repo/salon-core/types'
 import { formatJalaliFullDate } from '@repo/salon-core/jalali'
+import { displayPhone } from '@repo/salon-core/phone'
+import { formatPersianTime } from '@repo/salon-core/persian-digits'
 
 async function fetcher<T>(url: string) {
   return fetchJsonOrThrow<T>(url)
@@ -146,7 +148,7 @@ export default function ClientDetailPage() {
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-lg font-bold">{client.name}</h1>
           <p className="truncate text-xs text-muted-foreground" dir="ltr">
-            {client.phone}
+            {displayPhone(client.phone)}
           </p>
         </div>
         <Button
@@ -268,7 +270,7 @@ export default function ClientDetailPage() {
             <CardContent className="space-y-1 text-sm">
               <p>{formatJalaliFullDate(upcomingAppointment.date)}</p>
               <p className="text-muted-foreground" dir="ltr">
-                {upcomingAppointment.startTime} – {upcomingAppointment.endTime} ·{' '}
+                {formatPersianTime(upcomingAppointment.startTime)} – {formatPersianTime(upcomingAppointment.endTime)} ·{' '}
                 {upcomingAppointment.staff.name}
               </p>
               <p>{upcomingAppointment.service.name}</p>
@@ -325,7 +327,7 @@ export default function ClientDetailPage() {
                     <p className="text-xs text-muted-foreground">
                       {apt.service.name} · {apt.staff.name}{' '}
                       <span dir="ltr" className="ms-1">
-                        ({apt.startTime}–{apt.endTime})
+                        ({formatPersianTime(apt.startTime)}–{formatPersianTime(apt.endTime)})
                       </span>
                     </p>
                   </div>

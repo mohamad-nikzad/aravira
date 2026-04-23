@@ -19,6 +19,12 @@ import {
 } from '@repo/salon-core/appointment-time'
 import { getTenantUser, isManagerRole } from '@repo/auth/tenant'
 
+const STAFF_STATUS_UPDATES: ReadonlySet<Appointment['status']> = new Set([
+  'confirmed',
+  'completed',
+  'no-show',
+])
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -64,7 +70,7 @@ export async function PATCH(
 ) {
   try {
     const user = await getTenantUser()
-    if (!user || !isManagerRole(user.role)) {
+    if (!user) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
     }
 
@@ -85,6 +91,22 @@ export async function PATCH(
     const existing = await getAppointmentById(id, user.salonId)
     if (!existing) {
       return NextResponse.json({ error: 'نوبت یافت نشد' }, { status: 404 })
+    }
+
+    const isStatusOnlyPatch =
+      Object.keys(body).every((key) => key === 'status') &&
+      typeof status === 'string'
+
+    if (!isManagerRole(user.role)) {
+      const staffCanPatchOwnStatus =
+        user.role === 'staff' &&
+        existing.staffId === user.userId &&
+        isStatusOnlyPatch &&
+        STAFF_STATUS_UPDATES.has(status as Appointment['status'])
+
+      if (!staffCanPatchOwnStatus) {
+        return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
+      }
     }
 
     const effectiveStart = typeof startTime === 'string' ? startTime : existing.startTime

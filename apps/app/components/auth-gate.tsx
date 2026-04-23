@@ -40,7 +40,7 @@ function AppShellSkeleton() {
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="flex min-h-[52px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-1.5"
+              className="flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-1.5"
             >
               <Skeleton className="h-7 w-7 rounded-lg" />
               <Skeleton className="h-3 w-8 rounded" />

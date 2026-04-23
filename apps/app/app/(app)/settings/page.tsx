@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   LayoutDashboard,
   ListChecks,
+  UserRoundSearch,
 } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card'
@@ -20,6 +21,7 @@ import { Avatar, AvatarFallback } from '@repo/ui/avatar'
 import { Switch } from '@repo/ui/switch'
 import { Input } from '@repo/ui/input'
 import { Field, FieldLabel, FieldGroup } from '@repo/ui/field'
+import { TimePicker } from '@repo/ui/time-picker'
 import { useAuth } from '@/components/auth-provider'
 import { Spinner } from '@repo/ui/spinner'
 import { SettingsSkeleton } from '@/components/skeletons/settings-skeleton'
@@ -28,6 +30,8 @@ import { ServiceDrawer } from '@/components/services/service-drawer'
 import { Badge } from '@repo/ui/badge'
 import type { Service } from '@repo/salon-core/types'
 import { SERVICE_CATEGORIES } from '@repo/salon-core/types'
+import { displayPhone } from '@repo/salon-core/phone'
+import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
 
 const fetcher = (url: string) =>
   fetch(url, { credentials: 'include' }).then((res) => res.json())
@@ -117,7 +121,14 @@ export default function SettingsPage() {
   return (
     <div className="flex h-full flex-col bg-background">
       <header className="flex items-center gap-4 bg-card px-4 py-3 border-b border-border/50">
-        <h1 className="text-lg font-bold">تنظیمات</h1>
+        <div>
+          <h1 className="text-lg font-bold">{isManager ? 'بیشتر' : 'تنظیمات'}</h1>
+          {isManager && (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              مدیریت، گزارش‌ها و تنظیمات سالن
+            </p>
+          )}
+        </div>
       </header>
 
       <div className="flex-1 overflow-auto p-4 space-y-3">
@@ -131,7 +142,7 @@ export default function SettingsPage() {
             <div className="flex-1 min-w-0">
               <p className="font-semibold truncate">{user.name}</p>
               <p className="text-sm text-muted-foreground truncate" dir="ltr">
-                {user.phone}
+                {displayPhone(user.phone)}
               </p>
               <Badge variant="secondary" className="text-[10px] mt-1">
                 {user.role === 'manager' ? 'مدیر' : 'پرسنل'}
@@ -153,6 +164,15 @@ export default function SettingsPage() {
                   <span className="flex items-center gap-2">
                     <LayoutDashboard className="h-4 w-4" />
                     داشبورد و آمار
+                  </span>
+                  <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full justify-between touch-manipulation" asChild>
+                <Link href="/retention">
+                  <span className="flex items-center gap-2">
+                    <UserRoundSearch className="h-4 w-4" />
+                    پیگیری مشتریان
                   </span>
                   <ChevronLeft className="h-4 w-4 text-muted-foreground" />
                 </Link>
@@ -191,35 +211,30 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <Field>
                     <FieldLabel>شروع</FieldLabel>
-                    <Input
-                      type="time"
+                    <TimePicker
                       value={workingStart}
-                      onChange={(e) => setWorkingStart(e.target.value)}
-                      dir="ltr"
-                      className="h-10"
+                      onChange={setWorkingStart}
+                      label="ساعت شروع"
                     />
                   </Field>
                   <Field>
                     <FieldLabel>پایان</FieldLabel>
-                    <Input
-                      type="time"
+                    <TimePicker
                       value={workingEnd}
-                      onChange={(e) => setWorkingEnd(e.target.value)}
-                      dir="ltr"
-                      className="h-10"
+                      onChange={setWorkingEnd}
+                      label="ساعت پایان"
                     />
                   </Field>
                 </div>
                 <Field>
                   <FieldLabel>فاصله اسلات (دقیقه)</FieldLabel>
                   <Input
-                    type="number"
-                    min={5}
-                    step={5}
-                    value={slotMin}
-                    onChange={(e) => setSlotMin(Number(e.target.value))}
-                    dir="ltr"
-                    className="text-left h-10"
+                    type="text"
+                    inputMode="numeric"
+                    value={toPersianDigits(slotMin)}
+                    onChange={(e) => setSlotMin(Math.max(5, parseLocalizedInt(e.target.value, slotMin)))}
+                    dir="rtl"
+                    className="h-10 text-right tabular-nums"
                   />
                 </Field>
               </FieldGroup>
@@ -229,7 +244,7 @@ export default function SettingsPage() {
                 disabled={savingHours}
                 onClick={saveBusinessHours}
               >
-                {savingHours ? 'در حال ذخیره...' : 'ذخیره ساعات کاری'}
+                {savingHours ? 'در حال ذخیره…' : 'ذخیره ساعات کاری'}
               </Button>
             </CardContent>
           </Card>
@@ -264,7 +279,7 @@ export default function SettingsPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate text-sm">{s.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {SERVICE_CATEGORIES[s.category]?.label ?? s.category} · {s.duration} دقیقه
+                        {SERVICE_CATEGORIES[s.category]?.label ?? s.category} · {toPersianDigits(s.duration)} دقیقه
                       </p>
                     </div>
                     {!s.active && (
@@ -322,7 +337,7 @@ export default function SettingsPage() {
               ) : (
                 <LogOut className="ml-2 h-4 w-4" />
               )}
-              {loggingOut ? 'در حال خروج...' : 'خروج از حساب'}
+              {loggingOut ? 'در حال خروج…' : 'خروج از حساب'}
             </Button>
           </CardContent>
         </Card>

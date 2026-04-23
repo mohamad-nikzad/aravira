@@ -7,11 +7,15 @@ import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
 import { Field, FieldLabel, FieldError, FieldGroup } from '@repo/ui/field'
 import { Spinner } from '@repo/ui/spinner'
+import { homePathForRole } from '@/lib/navigation'
+import type { User } from '@repo/salon-core/types'
+import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
 
 export default function LoginPage() {
   const router = useRouter()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [phone, setPhone] = useState('')
   const showDemoCredentials = process.env.NODE_ENV !== 'production'
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -20,7 +24,7 @@ export default function LoginPage() {
     setLoading(true)
 
     const form = new FormData(e.currentTarget)
-    const phone = (form.get('phone') as string).trim()
+    const normalizedPhone = normalizePhone(phone)
     const password = form.get('password') as string
 
     try {
@@ -28,7 +32,7 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ phone, password }),
+        body: JSON.stringify({ phone: normalizedPhone, password }),
       })
 
       const data = await res.json()
@@ -39,7 +43,8 @@ export default function LoginPage() {
         return
       }
 
-      router.push('/dashboard')
+      const nextUser = data.user as User | undefined
+      router.push(nextUser ? homePathForRole(nextUser.role) : '/calendar')
       router.refresh()
     } catch {
       setError('خطایی رخ داد. لطفا دوباره تلاش کنید.')
@@ -85,12 +90,14 @@ export default function LoginPage() {
                   id="phone"
                   name="phone"
                   type="tel"
-                  placeholder="09xxxxxxxxx"
+                  value={displayPhone(phone)}
+                  onChange={(event) => setPhone(normalizePhone(event.target.value))}
+                  placeholder="مثلاً ۰۹۱۲۰۰۰۰۰۰۰"
                   autoComplete="username"
                   inputMode="numeric"
                   required
                   disabled={loading}
-                  className="text-left h-12 rounded-xl bg-muted/40 border-border/50 text-base"
+                  className="h-12 rounded-xl bg-muted/40 border-border/50 text-base text-left tabular-nums"
                   dir="ltr"
                 />
               </Field>
@@ -117,7 +124,7 @@ export default function LoginPage() {
                 disabled={loading}
               >
                 {loading ? <Spinner className="ml-2" /> : null}
-                {loading ? 'در حال ورود...' : 'ورود'}
+                {loading ? 'در حال ورود…' : 'ورود'}
               </Button>
             </FieldGroup>
           </form>
@@ -135,10 +142,10 @@ export default function LoginPage() {
             <p className="mb-2 text-xs font-medium text-muted-foreground">حساب‌های آزمایشی:</p>
             <div className="space-y-0.5">
               <p className="text-xs text-muted-foreground" dir="ltr">
-                مدیر: 09120000000
+                مدیر: {displayPhone('09120000000')}
               </p>
               <p className="text-xs text-muted-foreground" dir="ltr">
-                پرسنل: 09120000001، 09120000002
+                پرسنل: {displayPhone('09120000001')}، {displayPhone('09120000002')}
               </p>
               <p className="text-xs text-muted-foreground">رمز (همه): admin123</p>
             </div>

@@ -2,9 +2,11 @@
 
 import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import useSWR from 'swr'
 import {
   ArrowLeft,
+  ArrowRight,
   BriefcaseBusiness,
   CalendarPlus,
   Check,
@@ -22,6 +24,7 @@ import { Button } from '@repo/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card'
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field'
 import { Input } from '@repo/ui/input'
+import { TimePicker } from '@repo/ui/time-picker'
 import {
   Select,
   SelectContent,
@@ -33,6 +36,8 @@ import { Skeleton } from '@repo/ui/skeleton'
 import { Spinner } from '@repo/ui/spinner'
 import { cn } from '@repo/ui/utils'
 import { SERVICE_CATEGORIES, STAFF_COLORS, type Service } from '@repo/salon-core/types'
+import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
+import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
 
 type OnboardingStepKey =
   | 'profileConfirmed'
@@ -306,24 +311,20 @@ function BusinessHoursStep({
             <div className="grid grid-cols-2 gap-3">
               <Field>
                 <FieldLabel htmlFor="onboarding-working-start">شروع</FieldLabel>
-                <Input
+                <TimePicker
                   id="onboarding-working-start"
-                  type="time"
                   value={workingStart}
-                  onChange={(event) => setWorkingStart(event.target.value)}
-                  dir="ltr"
-                  className="h-11 text-left"
+                  onChange={setWorkingStart}
+                  label="ساعت شروع"
                 />
               </Field>
               <Field>
                 <FieldLabel htmlFor="onboarding-working-end">پایان</FieldLabel>
-                <Input
+                <TimePicker
                   id="onboarding-working-end"
-                  type="time"
                   value={workingEnd}
-                  onChange={(event) => setWorkingEnd(event.target.value)}
-                  dir="ltr"
-                  className="h-11 text-left"
+                  onChange={setWorkingEnd}
+                  label="ساعت پایان"
                 />
               </Field>
             </div>
@@ -331,13 +332,14 @@ function BusinessHoursStep({
               <FieldLabel htmlFor="onboarding-slot-duration">فاصله اسلات‌ها</FieldLabel>
               <Input
                 id="onboarding-slot-duration"
-                type="number"
-                min={5}
-                step={5}
-                value={slotDurationMinutes}
-                onChange={(event) => setSlotDurationMinutes(Number(event.target.value))}
+                type="text"
+                inputMode="numeric"
+                value={toPersianDigits(slotDurationMinutes)}
+                onChange={(event) =>
+                  setSlotDurationMinutes(Math.max(5, parseLocalizedInt(event.target.value, slotDurationMinutes)))
+                }
                 dir="ltr"
-                className="h-11 text-left"
+                className="h-11 text-left tabular-nums"
               />
               <FieldDescription>عدد به دقیقه است؛ مقدار رایج برای سالن‌ها ۳۰ دقیقه است.</FieldDescription>
             </Field>
@@ -451,25 +453,24 @@ function ServiceStep({
                 <FieldLabel htmlFor="onboarding-service-duration">مدت</FieldLabel>
                 <Input
                   id="onboarding-service-duration"
-                  type="number"
-                  min={5}
-                  step={5}
-                  value={duration}
-                  onChange={(event) => setDuration(Number(event.target.value))}
-                  dir="ltr"
-                  className="h-11 text-left"
+                  type="text"
+                  inputMode="numeric"
+                  value={toPersianDigits(duration)}
+                  onChange={(event) => setDuration(Math.max(5, parseLocalizedInt(event.target.value, duration)))}
+                  dir="rtl"
+                  className="h-11 text-right tabular-nums"
                 />
               </Field>
               <Field>
                 <FieldLabel htmlFor="onboarding-service-price">قیمت</FieldLabel>
                 <Input
                   id="onboarding-service-price"
-                  type="number"
-                  min={0}
-                  value={price}
-                  onChange={(event) => setPrice(Number(event.target.value))}
-                  dir="ltr"
-                  className="h-11 text-left"
+                  type="text"
+                  inputMode="numeric"
+                  value={toPersianDigits(price)}
+                  onChange={(event) => setPrice(Math.max(0, parseLocalizedInt(event.target.value, price)))}
+                  dir="rtl"
+                  className="h-11 text-right tabular-nums"
                 />
               </Field>
             </div>
@@ -582,12 +583,12 @@ function StaffStep({
               <Input
                 id="onboarding-staff-phone"
                 type="tel"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                placeholder="09120000000"
+                value={displayPhone(phone)}
+                onChange={(event) => setPhone(normalizePhone(event.target.value))}
+                placeholder="۰۹۱۲۰۰۰۰۰۰۰"
                 inputMode="numeric"
-                dir="ltr"
-                className="h-11 text-left"
+                dir="rtl"
+                className="h-11 text-right tabular-nums"
                 required
               />
             </Field>
@@ -720,6 +721,18 @@ export default function OnboardingPage() {
       <header className="border-b border-border/50 bg-card px-4 py-4">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
+            {!appLocked && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                asChild
+                className="h-10 w-10 shrink-0 rounded-2xl touch-manipulation"
+              >
+                <Link href="/settings" aria-label="بازگشت به بیشتر">
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
+              </Button>
+            )}
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
               <ListChecks className="h-5 w-5 text-primary" />
             </div>

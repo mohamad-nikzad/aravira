@@ -1,11 +1,11 @@
 /** Normalize phone for storage and unique lookup (digits only, Persian/Arabic → Latin). */
+import { toLatinDigits, toPersianDigits } from './persian-digits'
+
 export function normalizePhone(input: string): string {
-  let s = input.trim()
-  s = s.replace(/[\u06F0-\u06F9]/g, (ch) => String(ch.charCodeAt(0) - 0x06f0))
-  s = s.replace(/[\u0660-\u0669]/g, (ch) => String(ch.charCodeAt(0) - 0x0660))
+  const s = toLatinDigits(input.trim())
   return s.replace(/\D/g, '')
 }
 
 export function displayPhone(normalized: string): string {
-  return normalized
+  return toPersianDigits(normalized)
 }

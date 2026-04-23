@@ -16,6 +16,7 @@ import { Checkbox } from '@repo/ui/checkbox'
 import { Switch } from '@repo/ui/switch'
 import { Spinner } from '@repo/ui/spinner'
 import { User, Service, SERVICE_CATEGORIES } from '@repo/salon-core/types'
+import { toPersianDigits } from '@repo/salon-core/persian-digits'
 import { cn } from '@repo/ui/utils'
 
 interface StaffServicesDrawerProps {
@@ -185,7 +186,7 @@ export function StaffServicesDrawer({
                         >
                           <span className="min-w-0 flex-1 leading-snug">
                             {svc.name}
-                            <span className="text-muted-foreground text-xs"> · {svc.duration} دقیقه</span>
+                            <span className="text-muted-foreground text-xs"> · {toPersianDigits(svc.duration)} دقیقه</span>
                           </span>
                           <Checkbox
                             className="mt-0.5 shrink-0"
@@ -212,7 +213,7 @@ export function StaffServicesDrawer({
             className="touch-manipulation"
           >
             {loading && <Spinner className="ml-2" />}
-            {loading ? 'در حال ذخیره...' : 'ذخیره'}
+            {loading ? 'در حال ذخیره…' : 'ذخیره'}
           </Button>
           <DrawerClose asChild>
             <Button variant="outline" type="button">

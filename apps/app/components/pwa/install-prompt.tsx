@@ -227,7 +227,7 @@ export function InstallPrompt() {
               disabled={isPending}
               className="h-12 rounded-2xl text-base font-semibold touch-manipulation"
             >
-              {isPending ? 'در حال آماده سازي...' : 'نصب برنامه'}
+              {isPending ? 'در حال آماده‌سازی…' : 'نصب برنامه'}
             </Button>
           ) : (
             <DrawerClose asChild>

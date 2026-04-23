@@ -48,6 +48,8 @@ import { ClientPicker } from '@/components/calendar/client-picker'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
 import { TimePicker } from '@repo/ui/time-picker'
 import { formatJalaliFullDate } from '@repo/salon-core/jalali'
+import { displayPhone } from '@repo/salon-core/phone'
+import { formatPersianTime, parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
 
 function formatTomans(price: number) {
   return `${new Intl.NumberFormat('fa-IR').format(price)} تومان`
@@ -62,6 +64,7 @@ interface AppointmentDetailDrawerProps {
   onSuccess: (change: AppointmentDetailChange) => void
   onClientsChanged?: () => void
   readOnly?: boolean
+  canChangeStatus?: boolean
 }
 
 type AppointmentDetailChange =
@@ -77,6 +80,7 @@ export function AppointmentDetailDrawer({
   onSuccess,
   onClientsChanged,
   readOnly = false,
+  canChangeStatus = !readOnly,
 }: AppointmentDetailDrawerProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -394,12 +398,12 @@ export function AppointmentDetailDrawer({
                       {Object.entries(servicesByCategory).map(([category, categoryServices]) => (
                         <div key={category}>
                           <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                            {SERVICE_CATEGORIES[category as keyof typeof SERVICE_CATEGORIES]?.label ||
+                              {SERVICE_CATEGORIES[category as keyof typeof SERVICE_CATEGORIES]?.label ||
                               category}
                           </div>
                           {categoryServices.map((service) => (
                             <SelectItem key={service.id} value={service.id}>
-                              {service.name} · پیشنهاد {service.duration} دقیقه —{' '}
+                              {service.name} · پیشنهاد {toPersianDigits(service.duration)} دقیقه —{' '}
                               {formatTomans(service.price)}
                             </SelectItem>
                           ))}
@@ -439,18 +443,16 @@ export function AppointmentDetailDrawer({
                 <FieldLabel htmlFor="edit-duration">مدت (دقیقه)</FieldLabel>
                 <Input
                   id="edit-duration"
-                  type="number"
-                  min={APPOINTMENT_DURATION_BOUNDS.min}
-                  max={APPOINTMENT_DURATION_BOUNDS.max}
-                  step={5}
-                  value={durationMinutes}
+                  type="text"
+                  inputMode="numeric"
+                  value={toPersianDigits(durationMinutes)}
                   onChange={(e) => {
-                    const v = Number(e.target.value)
+                    const v = parseLocalizedInt(e.target.value, durationMinutes)
                     if (!Number.isFinite(v)) return
                     applyDuration(v)
                   }}
-                  dir="ltr"
-                  className="text-left"
+                  dir="rtl"
+                  className="text-right tabular-nums"
                 />
               </Field>
 
@@ -486,7 +488,7 @@ export function AppointmentDetailDrawer({
                   id="edit-notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="یادداشت درباره این نوبت..."
+                  placeholder="یادداشت درباره این نوبت…"
                 />
               </Field>
 
@@ -511,13 +513,11 @@ export function AppointmentDetailDrawer({
               <div className="flex items-center gap-3 text-sm">
                 <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span dir="ltr" className="text-right">
-                  {format(parseISO(`2000-01-01T${appointment.startTime}`), 'HH:mm')} —{' '}
-                  {format(parseISO(`2000-01-01T${appointment.endTime}`), 'HH:mm')}
+                  {formatPersianTime(format(parseISO(`2000-01-01T${appointment.startTime}`), 'HH:mm'))} —{' '}
+                  {formatPersianTime(format(parseISO(`2000-01-01T${appointment.endTime}`), 'HH:mm'))}
                   <span className="text-muted-foreground mr-1">
                     (
-                    {new Intl.NumberFormat('fa-IR').format(
-                      durationMinutesFromRange(appointment.startTime, appointment.endTime)
-                    )}{' '}
+                    {toPersianDigits(durationMinutesFromRange(appointment.startTime, appointment.endTime))}{' '}
                     دقیقه)
                   </span>
                 </span>
@@ -532,7 +532,7 @@ export function AppointmentDetailDrawer({
                 <div className="flex items-center gap-3 text-sm">
                   <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <a href={`tel:${appointment.client.phone}`} className="text-primary hover:underline">
-                    {appointment.client.phone}
+                    {displayPhone(appointment.client.phone)}
                   </a>
                 </div>
               )}
@@ -544,32 +544,37 @@ export function AppointmentDetailDrawer({
               )}
             </div>
 
-            {!readOnly && appointment.status === 'scheduled' && (
+            {canChangeStatus && appointment.status === 'scheduled' && (
               <div className="flex gap-2">
                 <Button
                   size="sm"
                   variant="outline"
+                  className="min-h-10 touch-manipulation"
                   onClick={() => handleStatusChange('confirmed')}
                   disabled={loading}
                 >
                   تایید نوبت
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleStatusChange('cancelled')}
-                  disabled={loading}
-                >
-                  لغو
-                </Button>
+                {!readOnly && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="min-h-10 touch-manipulation"
+                    onClick={() => handleStatusChange('cancelled')}
+                    disabled={loading}
+                  >
+                    لغو
+                  </Button>
+                )}
               </div>
             )}
 
-            {!readOnly && appointment.status === 'confirmed' && (
+            {canChangeStatus && appointment.status === 'confirmed' && (
               <div className="flex gap-2">
                 <Button
                   size="sm"
                   variant="outline"
+                  className="min-h-10 touch-manipulation"
                   onClick={() => handleStatusChange('completed')}
                   disabled={loading}
                 >
@@ -578,6 +583,7 @@ export function AppointmentDetailDrawer({
                 <Button
                   size="sm"
                   variant="outline"
+                  className="min-h-10 touch-manipulation"
                   onClick={() => handleStatusChange('no-show')}
                   disabled={loading}
                 >
@@ -601,7 +607,7 @@ export function AppointmentDetailDrawer({
             <>
               <Button onClick={handleUpdate} disabled={loading}>
                 {loading && <Spinner className="mr-2" />}
-                {loading ? 'در حال ذخیره...' : 'ذخیره تغییرات'}
+                {loading ? 'در حال ذخیره…' : 'ذخیره تغییرات'}
               </Button>
               <Button
                 variant="outline"

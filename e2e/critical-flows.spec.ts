@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
-  loginManagerExpectsDashboard,
   loginManagerExpectsCalendar,
+  loginManagerExpectsToday,
   loginStaffExpectsCalendar,
   logoutFromSettings,
   SEEDED_MANAGER,
@@ -41,12 +41,12 @@ test.describe('Critical salon journeys', () => {
     })
   })
 
-  test('03 — Manager logs in, lands on dashboard, and can open calendar', async ({ page }) => {
+  test('03 — Manager logs in, lands on today, and can open calendar', async ({ page }) => {
     await test.step('Authenticate manager', async () => {
-      await loginManagerExpectsDashboard(page)
+      await loginManagerExpectsToday(page)
     })
-    await test.step('Dashboard counters load', async () => {
-      await expect(page.getByText('نوبت‌های امروز')).toBeVisible()
+    await test.step('Today operations load', async () => {
+      await expect(page.getByText('نوبت‌های فعال')).toBeVisible()
     })
     await test.step('Calendar chrome', async () => {
       await page.getByRole('link', { name: 'تقویم' }).click()
@@ -73,10 +73,9 @@ test.describe('Critical salon journeys', () => {
   test('05 — Manager can walk primary navigation', async ({ page }) => {
     await test.step('Manager login', async () => {
       await page.context().clearCookies()
-      await loginManagerExpectsDashboard(page)
+      await loginManagerExpectsToday(page)
     })
     await test.step('Today', async () => {
-      await page.getByRole('link', { name: 'امروز' }).click()
       await expect(page.getByRole('heading', { name: 'امروز' })).toBeVisible()
     })
     await test.step('Clients', async () => {
@@ -84,14 +83,15 @@ test.describe('Critical salon journeys', () => {
       await expect(page.getByRole('heading', { name: 'مشتریان' })).toBeVisible()
     })
     await test.step('Retention', async () => {
-      await page.getByRole('link', { name: 'پیگیری' }).click()
+      await page.getByRole('link', { name: 'بیشتر' }).click()
+      await page.getByRole('link', { name: 'پیگیری مشتریان' }).click()
       await expect(page.getByRole('heading', { name: 'پیگیری مشتریان' })).toBeVisible()
     })
-    await test.step('Settings', async () => {
-      await page.getByRole('link', { name: 'تنظیمات' }).click()
-      await expect(page.getByRole('heading', { name: 'تنظیمات' })).toBeVisible()
+    await test.step('More hub', async () => {
+      await page.getByRole('link', { name: 'بیشتر' }).click()
+      await expect(page.getByRole('heading', { name: 'بیشتر' })).toBeVisible()
     })
-    await test.step('Dashboard from settings', async () => {
+    await test.step('Dashboard from more hub', async () => {
       await page.getByRole('link', { name: 'داشبورد و آمار' }).click()
       await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible()
     })
@@ -105,7 +105,7 @@ test.describe('Critical salon journeys', () => {
     await loginManagerExpectsCalendar(page)
     await page.getByRole('link', { name: 'مشتریان' }).click()
     await test.step('Type search query', async () => {
-      await page.getByPlaceholder('جستجوی مشتری...').fill('دمو')
+      await page.getByPlaceholder('جستجوی مشتری…').fill('دمو')
     })
     await test.step('Still see demo rows', async () => {
       await expect(page.getByText('دمو VIP امروز')).toBeVisible()
@@ -141,7 +141,7 @@ test.describe('Critical salon journeys', () => {
     })
     await test.step('Profile header', async () => {
       await expect(page.getByRole('heading', { name: 'دمو VIP امروز' })).toBeVisible()
-      await expect(page.getByText('09129900104')).toBeVisible()
+      await expect(page.getByText('۰۹۱۲۹۹۰۰۱۰۴')).toBeVisible()
     })
     await test.step('Back to list', async () => {
       await page.getByRole('link', { name: 'بازگشت' }).click()
@@ -228,8 +228,8 @@ test.describe('Critical salon journeys', () => {
 
     await test.step('Select client', async () => {
       await page.getByRole('button', { name: /انتخاب مشتری/ }).click()
-      await page.locator('input[placeholder="جستجو نام یا شماره..."]').fill('09129900102')
-      await page.getByRole('button', { name: /09129900102/ }).click()
+      await page.locator('input[placeholder="جستجو نام یا شماره…"]').fill('09129900102')
+      await page.getByRole('button', { name: /۰۹۱۲۹۹۰۰۱۰۲/ }).click()
     })
 
     await test.step('Select service then staff (ماساژ + سارا — seed has fewer massage rows for Sara than busy hair slots)', async () => {
@@ -283,7 +283,8 @@ test.describe('Critical salon journeys', () => {
 
   test('16 — Retention queue loads and can mark reviewed', async ({ page }) => {
     await loginManagerExpectsCalendar(page)
-    await page.getByRole('link', { name: 'پیگیری' }).click()
+    await page.getByRole('link', { name: 'بیشتر' }).click()
+    await page.getByRole('link', { name: 'پیگیری مشتریان' }).click()
     await test.step('List or empty state', async () => {
       const empty = page.getByText('موردی در صف نیست.')
       const card = page.getByRole('button', { name: 'بررسی شد' }).first()
@@ -301,7 +302,8 @@ test.describe('Critical salon journeys', () => {
 
   test('17 — Retention: “نوبت” deep-link opens calendar with booking drawer', async ({ page }) => {
     await loginManagerExpectsCalendar(page)
-    await page.getByRole('link', { name: 'پیگیری' }).click()
+    await page.getByRole('link', { name: 'بیشتر' }).click()
+    await page.getByRole('link', { name: 'پیگیری مشتریان' }).click()
     const book = page.getByRole('link', { name: 'نوبت' }).first()
     if (!(await book.isVisible().catch(() => false))) {
       return
@@ -318,7 +320,7 @@ test.describe('Critical salon journeys', () => {
 
   test('18 — Settings: save business hours and sign out', async ({ page }) => {
     await loginManagerExpectsCalendar(page)
-    await page.getByRole('link', { name: 'تنظیمات' }).click()
+    await page.getByRole('link', { name: 'بیشتر' }).click()
     await test.step('PATCH business hours', async () => {
       const waitSave = page.waitForResponse(
         (r) => r.url().includes('/api/settings/business') && r.request().method() === 'PATCH'
@@ -334,11 +336,11 @@ test.describe('Critical salon journeys', () => {
 
   test('19 — Staff directory: open weekly schedule drawer', async ({ page }) => {
     await loginManagerExpectsCalendar(page)
-    await page.getByRole('link', { name: 'تنظیمات' }).click()
+    await page.getByRole('link', { name: 'بیشتر' }).click()
     await page.getByRole('link', { name: 'پرسنل و نقش‌ها' }).click()
     await expect(page.getByRole('heading', { name: 'پرسنل' })).toBeVisible()
     await test.step('Open schedule for first staff row', async () => {
-      const scheduleBtn = page.getByRole('button', { name: 'ساعت' }).first()
+      const scheduleBtn = page.getByRole('button', { name: /تنظیم ساعت کاری/ }).first()
       await scheduleBtn.click()
     })
     await test.step('Drawer title', async () => {

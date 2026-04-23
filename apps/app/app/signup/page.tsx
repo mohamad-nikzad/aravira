@@ -7,6 +7,7 @@ import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field'
 import { Spinner } from '@repo/ui/spinner'
+import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
 
 function makeSlug(value: string): string {
   const slug = value
@@ -25,6 +26,7 @@ export default function SignupPage() {
   const [salonName, setSalonName] = useState('')
   const [slug, setSlug] = useState('salon')
   const [slugEdited, setSlugEdited] = useState(false)
+  const [managerPhone, setManagerPhone] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -51,7 +53,7 @@ export default function SignupPage() {
           salonName,
           slug,
           managerName: String(form.get('managerName') ?? '').trim(),
-          managerPhone: String(form.get('managerPhone') ?? '').trim(),
+          managerPhone: normalizePhone(managerPhone),
           password: String(form.get('password') ?? ''),
         }),
       })
@@ -147,13 +149,15 @@ export default function SignupPage() {
                   id="managerPhone"
                   name="managerPhone"
                   type="tel"
-                  placeholder="09120000000"
+                  value={displayPhone(managerPhone)}
+                  onChange={(e) => setManagerPhone(normalizePhone(e.target.value))}
+                  placeholder="۰۹۱۲۰۰۰۰۰۰۰"
                   autoComplete="username"
                   inputMode="numeric"
                   required
                   disabled={loading}
                   dir="ltr"
-                  className="h-12 rounded-lg bg-muted/40 text-left"
+                  className="h-12 rounded-lg bg-muted/40 text-left tabular-nums"
                 />
               </Field>
 
@@ -179,7 +183,7 @@ export default function SignupPage() {
                 disabled={loading}
               >
                 {loading ? <Spinner className="ml-2" /> : null}
-                {loading ? 'در حال ساخت...' : 'ساخت سالن'}
+                {loading ? 'در حال ساخت…' : 'ساخت سالن'}
               </Button>
             </FieldGroup>
           </form>

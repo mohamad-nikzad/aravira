@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
-import { Phone, CalendarPlus, Check, X } from 'lucide-react'
+import { ArrowRight, Phone, CalendarPlus, Check, X } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Badge } from '@repo/ui/badge'
 import { Card, CardContent } from '@repo/ui/card'
 import { Spinner } from '@repo/ui/spinner'
 import { useAuth } from '@/components/auth-provider'
 import type { FollowUpReason, RetentionItem } from '@repo/salon-core/types'
+import { displayPhone } from '@repo/salon-core/phone'
+import { toPersianDigits } from '@repo/salon-core/persian-digits'
 
 const fetcher = (url: string) =>
   fetch(url, { credentials: 'include' }).then((res) => res.json())
@@ -69,11 +71,23 @@ export default function RetentionPage() {
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <header className="border-b border-border/50 bg-card px-4 py-3">
-        <h1 className="text-lg font-bold">پیگیری مشتریان</h1>
-        <p className="mt-1 text-xs text-muted-foreground">
-          لیست بر اساس داده واقعی نوبت‌ها ساخته می‌شود؛ پیام خودکار ارسال نمی‌شود.
-        </p>
+      <header className="flex items-start gap-3 border-b border-border/50 bg-card px-3 py-3">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          asChild
+          className="h-10 w-10 shrink-0 rounded-2xl touch-manipulation"
+        >
+          <Link href="/settings" aria-label="بازگشت به بیشتر">
+            <ArrowRight className="h-5 w-5" />
+          </Link>
+        </Button>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-lg font-bold">پیگیری مشتریان</h1>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            لیست بر اساس داده واقعی نوبت‌ها ساخته می‌شود؛ پیام خودکار ارسال نمی‌شود.
+          </p>
+        </div>
       </header>
 
       <div className="flex-1 overflow-auto p-4 space-y-3">
@@ -92,7 +106,7 @@ export default function RetentionPage() {
                     <p className="font-semibold">{item.client.name}</p>
                     <p className="text-xs text-muted-foreground" dir="ltr">
                       <Phone className="me-1 inline h-3 w-3" />
-                      {item.client.phone}
+                      {displayPhone(item.client.phone)}
                     </p>
                   </div>
                   <Badge variant="outline" className="shrink-0 text-[10px]">
@@ -106,7 +120,7 @@ export default function RetentionPage() {
                   <div>
                     <span className="block text-[10px]">آخرین مراجعه</span>
                     <span className="font-medium text-foreground" dir="ltr">
-                      {item.lastVisitDate ?? '—'}
+                      {item.lastVisitDate ? toPersianDigits(item.lastVisitDate) : '—'}
                     </span>
                   </div>
                   <div>

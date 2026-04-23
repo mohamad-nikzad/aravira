@@ -198,7 +198,7 @@ export function SalonFullCalendar({
         >
           <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground">
             <span className="calendar-refresh-dot" aria-hidden="true" />
-            <span>در حال به‌روزرسانی تقویم...</span>
+            <span>در حال به‌روزرسانی تقویم…</span>
           </div>
           <div className="calendar-refresh-bar mt-2 h-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
             <span />

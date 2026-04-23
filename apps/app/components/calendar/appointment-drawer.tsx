@@ -38,6 +38,7 @@ import {
 import { ClientPicker } from '@/components/calendar/client-picker'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
 import { TimePicker } from '@repo/ui/time-picker'
+import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
 
 const CATEGORY_LABELS: Record<string, string> = {
   hair: 'مو',
@@ -369,7 +370,7 @@ export function AppointmentDrawer({
                         </div>
                         {categoryServices.map((service) => (
                           <SelectItem key={service.id} value={service.id}>
-                            {service.name} · پیشنهاد {service.duration} دقیقه — {formatPrice(service.price)}
+                            {service.name} · پیشنهاد {toPersianDigits(service.duration)} دقیقه — {formatPrice(service.price)}
                           </SelectItem>
                         ))}
                       </div>
@@ -421,18 +422,16 @@ export function AppointmentDrawer({
               </div>
               <Input
                 id="duration"
-                type="number"
-                min={APPOINTMENT_DURATION_BOUNDS.min}
-                max={APPOINTMENT_DURATION_BOUNDS.max}
-                step={5}
-                value={durationMinutes}
+                type="text"
+                inputMode="numeric"
+                value={toPersianDigits(durationMinutes)}
                 onChange={(e) => {
-                  const v = Number(e.target.value)
+                  const v = parseLocalizedInt(e.target.value, durationMinutes)
                   if (!Number.isFinite(v)) return
                   applyDuration(v)
                 }}
-                dir="ltr"
-                className="text-left"
+                dir="rtl"
+                className="text-right tabular-nums"
               />
             </Field>
 
@@ -455,7 +454,7 @@ export function AppointmentDrawer({
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="توضیحات اضافی..."
+                placeholder="توضیحات اضافی…"
               />
             </Field>
 
@@ -466,7 +465,7 @@ export function AppointmentDrawer({
         <DrawerFooter>
           <Button onClick={handleSubmit} disabled={loading || !clientId || !serviceId || !staffId}>
             {loading && <Spinner className="ml-2" />}
-            {loading ? 'در حال ثبت...' : 'ثبت نوبت'}
+            {loading ? 'در حال ثبت…' : 'ثبت نوبت'}
           </Button>
           <DrawerClose asChild>
             <Button variant="outline">انصراف</Button>

@@ -16,6 +16,7 @@ import { Field, FieldLabel, FieldError } from '@repo/ui/field'
 import { TimePicker } from '@repo/ui/time-picker'
 import { Spinner } from '@repo/ui/spinner'
 import type { BusinessHours, StaffSchedule, User } from '@repo/salon-core/types'
+import { formatPersianTime } from '@repo/salon-core/persian-digits'
 
 const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then((res) => res.json())
 
@@ -152,7 +153,7 @@ export function StaffScheduleDrawer({
             <div className="text-sm">
               <p className="font-medium">ساعت سالن</p>
               <p className="text-xs text-muted-foreground" dir="ltr">
-                {businessHours?.workingStart ?? '09:00'} - {businessHours?.workingEnd ?? '19:00'}
+                {formatPersianTime(businessHours?.workingStart ?? '09:00')} - {formatPersianTime(businessHours?.workingEnd ?? '19:00')}
               </p>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={useSalonHours}>
@@ -211,7 +212,7 @@ export function StaffScheduleDrawer({
         <DrawerFooter>
           <Button onClick={handleSave} disabled={saving || isLoading}>
             {saving && <Spinner className="ml-2" />}
-            {saving ? 'در حال ذخیره...' : 'ذخیره برنامه کاری'}
+            {saving ? 'در حال ذخیره…' : 'ذخیره برنامه کاری'}
           </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             بستن

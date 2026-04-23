@@ -80,7 +80,12 @@ function CalendarPageContent() {
   const { user } = useAuth()
   const isOnline = useNetworkStatus()
   const isManager = user?.role === 'manager'
-  const [view, setView] = useState<CalendarView>('week')
+  const [view, setView] = useState<CalendarView>(() => {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches) {
+      return 'day'
+    }
+    return 'week'
+  })
   const [navDate, setNavDate] = useState(() => new Date())
   const [titleAnchor, setTitleAnchor] = useState(() => new Date())
   const [range, setRange] = useState<{ start: string; end: string } | null>(null)
@@ -403,14 +408,16 @@ function CalendarPageContent() {
         onRetry={handleRetry}
       />
 
-      <div className="flex items-center gap-2 border-b border-border/50 bg-card/80 px-3 py-1.5 sm:px-4">
-        <div className="flex items-center rounded-lg bg-muted/70 p-0.5">
+      <div className="flex flex-col gap-2 border-b border-border/50 bg-card/90 px-3 py-2 sm:flex-row sm:items-center sm:px-4">
+        <div className="scrollbar-hide flex w-full shrink-0 items-center overflow-x-auto rounded-2xl bg-muted/70 p-0.5 sm:w-auto">
           {VIEW_OPTIONS.map((opt) => (
             <button
               key={opt.value}
+              type="button"
               onClick={() => setView(opt.value)}
+              aria-pressed={view === opt.value}
               className={cn(
-                'rounded-md px-3 py-1.5 text-[11px] font-semibold transition-all touch-manipulation',
+                'min-h-10 rounded-xl px-3 text-xs font-semibold transition-[background-color,color,box-shadow] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30',
                 view === opt.value
                   ? 'bg-card text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
@@ -422,8 +429,13 @@ function CalendarPageContent() {
         </div>
 
         {isManager && staff.length > 0 && (
-          <div className="flex-1 overflow-hidden">
-            <StaffFilter staff={staff} selectedIds={selectedStaffIds} onToggle={handleStaffToggle} />
+          <div className="w-full overflow-hidden sm:flex-1">
+            <StaffFilter
+              staff={staff}
+              selectedIds={selectedStaffIds}
+              onToggle={handleStaffToggle}
+              onClear={() => setSelectedStaffIds([])}
+            />
           </div>
         )}
       </div>
@@ -479,6 +491,7 @@ function CalendarPageContent() {
         services={services}
         clients={clients}
         readOnly={!isManager || !isOnline}
+        canChangeStatus={isOnline}
         onSuccess={handleAppointmentChanged}
         onClientsChanged={() => mutateClients()}
       />

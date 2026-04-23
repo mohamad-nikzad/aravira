@@ -7,6 +7,7 @@ import { Button } from '@repo/ui/button'
 import { Spinner } from '@repo/ui/spinner'
 import { cn } from '@repo/ui/utils'
 import { Client } from '@repo/salon-core/types'
+import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
 
 interface ClientPickerProps {
   clients: Client[]
@@ -37,16 +38,18 @@ export function ClientPicker({
   const filtered = useMemo(() => {
     if (!query.trim()) return clients
     const q = query.trim().toLowerCase()
+    const phoneQuery = normalizePhone(q)
     return clients.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.phone.includes(q)
+      (c) => c.name.toLowerCase().includes(q) || c.phone.includes(phoneQuery)
     )
   }, [clients, query])
 
   const hasExactMatch = useMemo(() => {
     if (!query.trim()) return true
     const q = query.trim().toLowerCase()
+    const phoneQuery = normalizePhone(q)
     return clients.some(
-      (c) => c.name.toLowerCase() === q || c.phone === q.replace(/\s/g, '')
+      (c) => c.name.toLowerCase() === q || c.phone === phoneQuery
     )
   }, [clients, query])
 
@@ -88,9 +91,9 @@ export function ClientPicker({
 
   const startAdding = () => {
     const q = query.trim()
-    const looksLikePhone = /^[\d۰-۹\s+()-]{4,}$/.test(q)
+    const looksLikePhone = /^[\d۰-۹٠-٩\s+()-]{4,}$/.test(q)
     setNewName(looksLikePhone ? '' : q)
-    setNewPhone(looksLikePhone ? q.replace(/[^\d۰-۹+]/g, '') : '')
+    setNewPhone(looksLikePhone ? normalizePhone(q) : '')
     setSaveError('')
     setMode('adding')
   }
@@ -153,8 +156,8 @@ export function ClientPicker({
       >
         <span className="truncate">
           {selectedClient
-            ? `${selectedClient.name} · ${selectedClient.phone}`
-            : 'انتخاب مشتری...'}
+            ? `${selectedClient.name} · ${displayPhone(selectedClient.phone)}`
+            : 'انتخاب مشتری…'}
         </span>
         <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
       </button>
@@ -171,7 +174,7 @@ export function ClientPicker({
               ref={searchRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="جستجو نام یا شماره..."
+              placeholder="جستجو نام یا شماره…"
               className="flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-muted-foreground"
               autoComplete="off"
             />
@@ -201,7 +204,7 @@ export function ClientPicker({
                 >
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate text-[13px]">{client.name}</p>
-                    <p className="text-[11px] text-muted-foreground" dir="ltr">{client.phone}</p>
+                    <p className="text-[11px] text-muted-foreground" dir="ltr">{displayPhone(client.phone)}</p>
                   </div>
                   {client.id === value && (
                     <Check className="h-4 w-4 shrink-0 text-primary" />
@@ -259,17 +262,16 @@ export function ClientPicker({
             onChange={(e) => setNewName(e.target.value)}
             placeholder="نام مشتری"
             className="h-10"
-            autoFocus
           />
 
           <Input
-            value={newPhone}
-            onChange={(e) => setNewPhone(e.target.value)}
-            placeholder="شماره تماس (09...)"
+            value={displayPhone(newPhone)}
+            onChange={(e) => setNewPhone(normalizePhone(e.target.value))}
+            placeholder="شماره تماس (۰۹…)"
             type="tel"
             inputMode="numeric"
             dir="ltr"
-            className="h-10 text-left"
+            className="h-10 text-left tabular-nums"
           />
 
           {saveError && (
@@ -284,7 +286,7 @@ export function ClientPicker({
             onClick={handleSaveNew}
           >
             {saving ? <Spinner className="ml-1.5 h-3.5 w-3.5" /> : <Plus className="ml-1.5 h-3.5 w-3.5" />}
-            {saving ? 'در حال ذخیره...' : 'ذخیره و انتخاب'}
+            {saving ? 'در حال ذخیره…' : 'ذخیره و انتخاب'}
           </Button>
         </div>
       )}

@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import useSWR from 'swr'
-import { Plus, Search, Phone, Shield, User as UserIcon, ListChecks, Clock3 } from 'lucide-react'
+import { ArrowRight, Plus, Search, Phone, Shield, User as UserIcon, ListChecks, Clock3 } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
 import { Avatar, AvatarFallback } from '@repo/ui/avatar'
@@ -15,6 +16,7 @@ import { useAuth } from '@/components/auth-provider'
 import { StaffSkeleton } from '@/components/skeletons/staff-skeleton'
 import { User } from '@repo/salon-core/types'
 import { cn } from '@repo/ui/utils'
+import { displayPhone } from '@repo/salon-core/phone'
 
 const fetcher = (url: string) =>
   fetch(url, { credentials: 'include' }).then((res) => res.json())
@@ -90,8 +92,23 @@ export default function StaffPage() {
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <header className="flex items-center justify-between gap-4 bg-card px-4 py-3 border-b border-border/50">
-        <h1 className="text-lg font-bold">پرسنل</h1>
+      <header className="flex items-center justify-between gap-3 bg-card px-3 py-3 border-b border-border/50">
+        <div className="flex min-w-0 items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            asChild
+            className="h-10 w-10 shrink-0 rounded-2xl touch-manipulation"
+          >
+            <Link href="/settings" aria-label="بازگشت به بیشتر">
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+          </Button>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-bold">پرسنل</h1>
+            <p className="truncate text-xs text-muted-foreground">نقش‌ها، خدمات و ساعت کاری</p>
+          </div>
+        </div>
         <Button size="sm" onClick={handleAddStaff} className="gap-1.5 touch-manipulation">
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">پرسنل جدید</span>
@@ -102,7 +119,7 @@ export default function StaffPage() {
         <div className="relative">
           <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="جستجوی پرسنل..."
+            placeholder="جستجوی پرسنل…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pr-9 h-10 bg-muted/50 border-0"
@@ -144,7 +161,7 @@ export default function StaffPage() {
                   </div>
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5" dir="ltr">
                     <Phone className="h-3 w-3" />
-                    {member.phone}
+                    {displayPhone(member.phone)}
                   </p>
                 </div>
 
@@ -155,6 +172,7 @@ export default function StaffPage() {
                       variant="outline"
                       size="sm"
                       className="touch-manipulation gap-1"
+                      aria-label={`تنظیم ساعت کاری ${member.name}`}
                       onClick={() => setScheduleStaff(member)}
                     >
                       <Clock3 className="h-4 w-4" />
@@ -165,6 +183,7 @@ export default function StaffPage() {
                       variant="outline"
                       size="sm"
                       className="touch-manipulation gap-1"
+                      aria-label={`تنظیم خدمات ${member.name}`}
                       onClick={() => setServicesStaff(member)}
                     >
                       <ListChecks className="h-4 w-4" />

@@ -23,6 +23,7 @@ import {
 import type { AppointmentWithDetails, TodayData } from '@repo/salon-core/types'
 import { APPOINTMENT_STATUS } from '@repo/salon-core/types'
 import { formatJalaliFullDate } from '@repo/salon-core/jalali'
+import { formatPersianTime } from '@repo/salon-core/persian-digits'
 import { cn } from '@repo/ui/utils'
 
 async function fetcher<T>(url: string) {
@@ -222,7 +223,7 @@ export default function TodayPage() {
                         <div>
                           <p className="font-semibold">{apt.client.name}</p>
                           <p className="text-xs text-muted-foreground" dir="ltr">
-                            {apt.startTime} – {apt.endTime} · {apt.staff.name}
+                            {formatPersianTime(apt.startTime)} – {formatPersianTime(apt.endTime)} · {apt.staff.name}
                           </p>
                           <p className="text-xs text-muted-foreground">{apt.service.name}</p>
                         </div>
@@ -312,7 +313,7 @@ export default function TodayPage() {
                         <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground" dir="ltr">
                           {slot.ranges.map((r, i) => (
                             <li key={i}>
-                              {r.startTime} – {r.endTime}
+                              {formatPersianTime(r.startTime)} – {formatPersianTime(r.endTime)}
                             </li>
                           ))}
                         </ul>
@@ -332,7 +333,7 @@ export default function TodayPage() {
                   {grouped.rest.map((apt) => (
                     <div key={apt.id} className="flex items-center justify-between gap-2 text-sm">
                       <span className="truncate">
-                        {apt.client.name} · {apt.startTime}
+                        {apt.client.name} · {formatPersianTime(apt.startTime)}
                       </span>
                       <Badge variant="outline" className={cn('shrink-0 text-[10px]', APPOINTMENT_STATUS[apt.status].color)}>
                         {APPOINTMENT_STATUS[apt.status].label}
