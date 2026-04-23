@@ -13,6 +13,7 @@ import {
 import { Button } from '@repo/ui/button'
 import { Switch } from '@repo/ui/switch'
 import { Field, FieldLabel, FieldError } from '@repo/ui/field'
+import { Skeleton } from '@repo/ui/skeleton'
 import { TimePicker } from '@repo/ui/time-picker'
 import { Spinner } from '@repo/ui/spinner'
 import type { BusinessHours, StaffSchedule, User } from '@repo/salon-core/types'
@@ -51,6 +52,34 @@ function defaultRows(hours?: BusinessHours): ScheduleDraft[] {
     workingStart: hours?.workingStart ?? '09:00',
     workingEnd: hours?.workingEnd ?? '19:00',
   }))
+}
+
+function StaffScheduleRowsSkeleton() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="rounded-lg border border-border/60 p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-3 w-28" />
+            </div>
+            <Skeleton className="h-6 w-10 rounded-full" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-10" />
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-10" />
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export function StaffScheduleDrawer({
@@ -162,9 +191,7 @@ export function StaffScheduleDrawer({
           </div>
 
           {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Spinner />
-            </div>
+            <StaffScheduleRowsSkeleton />
           ) : (
             rows.map((row) => {
               const label = days.find((day) => day.dayOfWeek === row.dayOfWeek)?.label

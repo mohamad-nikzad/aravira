@@ -20,6 +20,7 @@ const managerItems = [
 ] as const
 
 const staffItems = [
+  { href: '/today', label: 'امروز', icon: CalendarDays },
   { href: '/calendar', label: 'تقویم', icon: Calendar },
   { href: '/settings', label: 'تنظیمات', icon: Settings },
 ] as const

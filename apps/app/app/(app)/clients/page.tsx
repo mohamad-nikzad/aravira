@@ -48,7 +48,7 @@ export default function ClientsPage() {
 
   useEffect(() => {
     if (user && user.role !== 'manager') {
-      router.replace('/calendar')
+      router.replace('/today')
     }
   }, [user, router])
 

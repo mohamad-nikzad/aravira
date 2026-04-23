@@ -8,8 +8,8 @@ import { ArrowRight, Phone, CalendarPlus, Check, X } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Badge } from '@repo/ui/badge'
 import { Card, CardContent } from '@repo/ui/card'
-import { Spinner } from '@repo/ui/spinner'
 import { useAuth } from '@/components/auth-provider'
+import { RetentionSkeleton } from '@/components/skeletons/retention-skeleton'
 import type { FollowUpReason, RetentionItem } from '@repo/salon-core/types'
 import { displayPhone } from '@repo/salon-core/phone'
 import { toPersianDigits } from '@repo/salon-core/persian-digits'
@@ -41,7 +41,7 @@ export default function RetentionPage() {
 
   useEffect(() => {
     if (user && user.role !== 'manager') {
-      router.replace('/calendar')
+      router.replace('/today')
     }
   }, [user, router])
 
@@ -68,6 +68,7 @@ export default function RetentionPage() {
   }
 
   if (!user || user.role !== 'manager') return null
+  if (isLoading) return <RetentionSkeleton />
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -91,11 +92,7 @@ export default function RetentionPage() {
       </header>
 
       <div className="flex-1 overflow-auto p-4 space-y-3">
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Spinner className="h-8 w-8 text-primary" />
-          </div>
-        ) : items.length === 0 ? (
+        {items.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">موردی در صف نیست.</p>
         ) : (
           items.map((item) => (
