@@ -33,3 +33,10 @@ playwright/.cache/
 
 # Local brand/logo explorations
 _brand-ideas/*
+
+# Bubblewrap / Android TWA local artifacts
+android/twa/.gradle/
+android/twa/**/build/
+android/twa/*.jks
+android/twa/*.keystore
+android/twa/assetlinks.generated.json

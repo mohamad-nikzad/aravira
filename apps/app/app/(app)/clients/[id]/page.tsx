@@ -18,11 +18,11 @@ import { Badge } from '@repo/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card'
 import { ClientDrawer } from '@/components/clients/client-drawer'
 import { useAuth } from '@/components/auth-provider'
+import { ClientSummarySkeleton } from '@/components/skeletons/client-summary-skeleton'
 import {
   NetworkStatusBanner,
   OfflineStateCard,
 } from '@/components/pwa/offline-state'
-import { Spinner } from '@repo/ui/spinner'
 import {
   fetchJsonOrThrow,
   useNetworkStatus,
@@ -69,7 +69,7 @@ export default function ClientDetailPage() {
 
   useEffect(() => {
     if (user && user.role !== 'manager') {
-      router.replace('/calendar')
+      router.replace('/today')
     }
   }, [user, router])
 
@@ -91,11 +91,7 @@ export default function ClientDetailPage() {
   if (!user || user.role !== 'manager') return null
 
   if (isLoading && !data) {
-    return (
-      <div className="flex h-full items-center justify-center bg-background">
-        <Spinner className="h-8 w-8 text-primary" />
-      </div>
-    )
+    return <ClientSummarySkeleton />
   }
 
   if (error || !data) {

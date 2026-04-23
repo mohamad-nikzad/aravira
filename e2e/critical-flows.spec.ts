@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import {
   loginManagerExpectsCalendar,
   loginManagerExpectsToday,
-  loginStaffExpectsCalendar,
+  loginStaffExpectsToday,
   logoutFromSettings,
   SEEDED_MANAGER,
   SEEDED_STAFF,
@@ -46,27 +46,30 @@ test.describe('Critical salon journeys', () => {
       await loginManagerExpectsToday(page)
     })
     await test.step('Today operations load', async () => {
-      await expect(page.getByText('نوبت‌های فعال')).toBeVisible()
+      await expect(page.getByText('صف فعال امروز')).toBeVisible()
     })
     await test.step('Calendar chrome', async () => {
-      await page.getByRole('link', { name: 'تقویم' }).click()
+      await page.getByRole('navigation').getByRole('link', { name: 'تقویم' }).click()
       await expect(page).toHaveURL(/\/calendar/)
       await expect(page.getByRole('button', { name: 'ماه' })).toBeVisible()
       await expect(page.getByLabel('نوبت جدید')).toBeVisible()
     })
   })
 
-  test('04 — Staff session: calendar only, clients route blocked', async ({ page }) => {
+  test('04 — Staff session: dedicated home, clients route blocked', async ({ page }) => {
     await test.step('Login as staff', async () => {
       await page.context().clearCookies()
-      await loginStaffExpectsCalendar(page)
+      await loginStaffExpectsToday(page)
+    })
+    await test.step('Staff home shows personal agenda', async () => {
+      await expect(page.getByText('نوبت‌های امروز')).toBeVisible()
     })
     await test.step('No manager-only nav link', async () => {
       await expect(page.getByRole('navigation').getByRole('link', { name: 'مشتریان' })).toHaveCount(0)
     })
     await test.step('Deep link to clients redirects away', async () => {
       await page.goto('/clients')
-      await expect(page).toHaveURL(/\/calendar/)
+      await expect(page).toHaveURL(/\/today/)
     })
   })
 

@@ -1,15 +1,29 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import useSWR from 'swr'
+import { addDays, format, parseISO } from 'date-fns'
 import Link from 'next/link'
-import { AlertTriangle, CalendarDays, Clock, Users } from 'lucide-react'
+import useSWR from 'swr'
+import { AlertTriangle, CalendarDays, Clock, Plus, Users } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Badge } from '@repo/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
-import { Spinner } from '@repo/ui/spinner'
+import { Skeleton } from '@repo/ui/skeleton'
+import { cn } from '@repo/ui/utils'
+import { durationMinutesFromRange } from '@repo/salon-core/appointment-time'
+import { formatJalaliFullDate } from '@repo/salon-core/jalali'
+import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-digits'
+import type {
+  AppointmentWithDetails,
+  Client,
+  Service,
+  TodayAttentionItem,
+  TodayData,
+  User,
+} from '@repo/salon-core/types'
+import { APPOINTMENT_STATUS } from '@repo/salon-core/types'
+import { AppointmentDrawer } from '@/components/calendar/appointment-drawer'
 import { useAuth } from '@/components/auth-provider'
 import {
   NetworkStatusBanner,
@@ -20,48 +34,348 @@ import {
   useNetworkStatus,
   useOfflineSnapshot,
 } from '@/lib/pwa-client'
-import type { AppointmentWithDetails, TodayData } from '@repo/salon-core/types'
-import { APPOINTMENT_STATUS } from '@repo/salon-core/types'
-import { formatJalaliFullDate } from '@repo/salon-core/jalali'
-import { formatPersianTime } from '@repo/salon-core/persian-digits'
-import { cn } from '@repo/ui/utils'
+import {
+  ManagerTodaySkeleton,
+  StaffTodaySkeleton,
+} from '@/components/skeletons/today-skeleton'
 
 async function fetcher<T>(url: string) {
   return fetchJsonOrThrow<T>(url)
 }
 
-export default function TodayPage() {
-  const router = useRouter()
-  const { user } = useAuth()
-  const isOnline = useNetworkStatus()
-  const [date, setDate] = useState(
-    () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tehran' })
+type StaffResponse = {
+  staff: User[]
+}
+
+type ServicesResponse = {
+  services: Service[]
+}
+
+type ClientsResponse = {
+  clients: Client[]
+}
+
+type GroupedAttentionItem = {
+  id: string
+  title: string
+  detail: string
+  clientId?: string
+  priority: number
+  labels: string[]
+}
+
+const ACTIVE_STATUSES = new Set<AppointmentWithDetails['status']>(['scheduled', 'confirmed'])
+
+const ATTENTION_LABELS: Record<TodayAttentionItem['type'], string> = {
+  soon: 'نزدیک',
+  overdue: 'ثبت نتیجه',
+  'no-show-risk': 'بدقول',
+  'first-time': 'اولین مراجعه',
+  vip: 'VIP',
+}
+
+function tehranTodayDate() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tehran' })
+}
+
+function tehranCurrentHm() {
+  return new Date().toLocaleTimeString('en-GB', {
+    timeZone: 'Asia/Tehran',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+function nextIsoDate(date: string) {
+  return format(addDays(parseISO(date), 1), 'yyyy-MM-dd')
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat('fa-IR').format(value)
+}
+
+function sortAppointments(list: AppointmentWithDetails[]) {
+  return [...list].sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`))
+}
+
+function bookedMinutesFor(appointments: AppointmentWithDetails[]) {
+  return appointments.reduce(
+    (sum, appointment) => sum + durationMinutesFromRange(appointment.startTime, appointment.endTime),
+    0
   )
+}
+
+function summarizeOpenRanges(ranges: Array<{ startTime: string; endTime: string }>) {
+  if (ranges.length === 0) {
+    return 'بازه آزاد ندارد'
+  }
+
+  const first = ranges[0]
+  const primary = `${formatPersianTime(first.startTime)} تا ${formatPersianTime(first.endTime)}`
+  if (ranges.length === 1) {
+    return primary
+  }
+
+  return `${primary} · ${toPersianDigits(ranges.length - 1)} بازه دیگر`
+}
+
+function groupAttentionItems(items: TodayAttentionItem[]) {
+  const grouped = new Map<string, GroupedAttentionItem>()
+
+  for (const item of items) {
+    const key = item.appointmentId ?? item.clientId ?? item.id
+    const label = ATTENTION_LABELS[item.type]
+    const existing = grouped.get(key)
+
+    if (!existing) {
+      grouped.set(key, {
+        id: key,
+        title: item.title,
+        detail: item.detail,
+        clientId: item.clientId,
+        priority: item.priority,
+        labels: [label],
+      })
+      continue
+    }
+
+    if (!existing.labels.includes(label)) {
+      existing.labels.push(label)
+    }
+
+    if (item.priority < existing.priority) {
+      existing.priority = item.priority
+      existing.title = item.title
+      existing.detail = item.detail
+    }
+  }
+
+  return [...grouped.values()].sort((a, b) => a.priority - b.priority)
+}
+
+function StatCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string
+  value: string
+  hint?: string
+}) {
+  return (
+    <Card className="border-border/50 shadow-sm">
+      <CardContent className="space-y-1 py-4">
+        <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
+        <p className="text-2xl font-bold tracking-tight">{value}</p>
+        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      </CardContent>
+    </Card>
+  )
+}
+
+function AppointmentCard({
+  appointment,
+  meta,
+  tone = 'default',
+  children,
+}: {
+  appointment: AppointmentWithDetails
+  meta: string
+  tone?: 'default' | 'highlight'
+  children?: React.ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        'space-y-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm',
+        tone === 'highlight' && 'border-primary/30 bg-primary/5'
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <p className="truncate text-sm font-semibold">{appointment.client.name}</p>
+          <p className="text-xs text-muted-foreground">{appointment.service.name}</p>
+          <p className="text-xs text-muted-foreground" dir="ltr">
+            {formatPersianTime(appointment.startTime)} - {formatPersianTime(appointment.endTime)} · {meta}
+          </p>
+          {appointment.notes ? (
+            <p className="line-clamp-2 text-xs text-muted-foreground">{appointment.notes}</p>
+          ) : null}
+        </div>
+        <Badge
+          variant="outline"
+          className={cn('shrink-0 whitespace-nowrap text-[10px]', APPOINTMENT_STATUS[appointment.status].color)}
+        >
+          {APPOINTMENT_STATUS[appointment.status].label}
+        </Badge>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function AppointmentActionButtons({
+  appointment,
+  role,
+  savingId,
+  isOnline,
+  onPatchStatus,
+}: {
+  appointment: AppointmentWithDetails
+  role: 'manager' | 'staff'
+  savingId: string | null
+  isOnline: boolean
+  onPatchStatus: (appointmentId: string, status: AppointmentWithDetails['status']) => void
+}) {
+  const isSaving = savingId === appointment.id
+  const canActOnVisit = ACTIVE_STATUSES.has(appointment.status)
+
+  if (!canActOnVisit) {
+    return null
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {appointment.status === 'scheduled' ? (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 touch-manipulation text-xs"
+          disabled={isSaving || !isOnline}
+          onClick={() => onPatchStatus(appointment.id, 'confirmed')}
+        >
+          تایید
+        </Button>
+      ) : null}
+      <Button
+        size="sm"
+        className="h-8 touch-manipulation text-xs"
+        disabled={isSaving || !isOnline}
+        onClick={() => onPatchStatus(appointment.id, 'completed')}
+      >
+        انجام شد
+      </Button>
+      <Button
+        size="sm"
+        variant="secondary"
+        className="h-8 touch-manipulation text-xs"
+        disabled={isSaving || !isOnline}
+        onClick={() => onPatchStatus(appointment.id, 'no-show')}
+      >
+        غیبت
+      </Button>
+      {role === 'manager' ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 touch-manipulation text-xs text-destructive"
+          disabled={isSaving || !isOnline}
+          onClick={() => onPatchStatus(appointment.id, 'cancelled')}
+        >
+          لغو
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
+function ManagerTodayView({
+  date,
+  setDate,
+  data,
+  isLoading,
+  error,
+  snapshotUpdatedAt,
+  hasSnapshot,
+  isOnline,
+  mutateToday,
+  staff,
+  services,
+  clients,
+  onRefreshResources,
+}: {
+  date: string
+  setDate: (date: string) => void
+  data?: TodayData
+  isLoading: boolean
+  error: unknown
+  snapshotUpdatedAt?: string | null
+  hasSnapshot: boolean
+  isOnline: boolean
+  mutateToday: () => void
+  staff: User[]
+  services: Service[]
+  clients: Client[]
+  onRefreshResources: () => void
+}) {
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [showCreateDrawer, setShowCreateDrawer] = useState(false)
+  const createReady = staff.length > 0 && services.length > 0
 
-  useEffect(() => {
-    if (user && user.role !== 'manager') {
-      router.replace('/calendar')
-    }
-  }, [user, router])
+  const activeAppointments = useMemo(() => {
+    if (!data) return []
+    return sortAppointments(
+      data.appointments.filter((appointment) => ACTIVE_STATUSES.has(appointment.status))
+    )
+  }, [data])
 
-  const swrKey = user?.role === 'manager' ? `/api/today?date=${date}` : null
-  const {
-    data: liveData,
-    error,
-    isLoading,
-    mutate,
-  } = useSWR<TodayData>(swrKey, fetcher)
-  const snapshot = useOfflineSnapshot(
-    swrKey ? `today:${date}` : null,
-    liveData
+  const attentionItems = useMemo(
+    () => (data ? groupAttentionItems(data.attentionItems).slice(0, 5) : []),
+    [data]
   )
-  const data = liveData ?? snapshot?.data
 
-  const patchStatus = async (appointmentId: string, status: AppointmentWithDetails['status']) => {
-    if (!isOnline) {
-      return
-    }
+  const teamRows = useMemo(() => {
+    if (!data) return []
+    return data.staffLoad.map((row) => ({
+      ...row,
+      openSlotSummary: summarizeOpenRanges(
+        data.openSlots.find((slot) => slot.staffId === row.staffId)?.ranges ?? []
+      ),
+    }))
+  }, [data])
+
+  const totalAppointments = data
+    ? Object.values(data.counts).reduce((sum, count) => sum + count, 0)
+    : 0
+  const defaultCreateTime =
+    data?.openSlots
+      .flatMap((slot) => slot.ranges.map((range) => range.startTime))
+      .sort()[0] ?? '09:00'
+
+  const quickStats = [
+    {
+      label: 'کل نوبت‌ها',
+      value: formatNumber(totalAppointments),
+      hint: data ? formatJalaliFullDate(data.date) : '',
+    },
+    {
+      label: 'در صف امروز',
+      value: formatNumber(activeAppointments.length),
+      hint: 'رزرو شده و تایید شده',
+    },
+    {
+      label: 'انجام شده',
+      value: formatNumber(data?.counts.completed ?? 0),
+      hint: 'ثبت نتیجه شده',
+    },
+    {
+      label: 'لغو یا غیبت',
+      value: formatNumber((data?.counts.cancelled ?? 0) + (data?.counts['no-show'] ?? 0)),
+      hint: 'برای پیگیری سریع',
+    },
+  ]
+
+  const handleRetry = () => {
+    mutateToday()
+    onRefreshResources()
+  }
+
+  const handlePatchStatus = async (
+    appointmentId: string,
+    status: AppointmentWithDetails['status']
+  ) => {
+    if (!isOnline) return
 
     setSavingId(appointmentId)
     try {
@@ -71,39 +385,49 @@ export default function TodayPage() {
         credentials: 'include',
         body: JSON.stringify({ status }),
       })
-      if (res.ok) await mutate()
+      if (res.ok) {
+        mutateToday()
+      }
     } finally {
       setSavingId(null)
     }
   }
 
-  const grouped = useMemo(() => {
-    if (!data?.appointments) return { scheduled: [] as AppointmentWithDetails[], rest: [] as AppointmentWithDetails[] }
-    const scheduled: AppointmentWithDetails[] = []
-    const rest: AppointmentWithDetails[] = []
-    for (const apt of data.appointments) {
-      if (apt.status === 'scheduled' || apt.status === 'confirmed') scheduled.push(apt)
-      else rest.push(apt)
-    }
-    scheduled.sort((a, b) => a.startTime.localeCompare(b.startTime))
-    rest.sort((a, b) => `${b.date} ${b.startTime}`.localeCompare(`${a.date} ${a.startTime}`))
-    return { scheduled, rest }
-  }, [data?.appointments])
+  const handleAppointmentCreated = () => {
+    setShowCreateDrawer(false)
+    mutateToday()
+  }
 
-  if (!user || user.role !== 'manager') return null
+  if (!data && isLoading) {
+    return <ManagerTodaySkeleton />
+  }
 
   if (!data && !isLoading) {
     return (
       <div className="flex h-full flex-col bg-background">
         <header className="border-b border-border/50 bg-card px-4 py-3">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-primary" />
-              <h1 className="text-lg font-bold">امروز</h1>
+              <div>
+                <h1 className="text-lg font-bold">امروز</h1>
+                <p className="text-xs text-muted-foreground">نمای سریع سالن و نوبت‌ها</p>
+              </div>
             </div>
-            <Button variant="outline" size="sm" className="touch-manipulation" asChild>
-              <Link href="/calendar">تقویم</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                className="touch-manipulation gap-1"
+                disabled={!isOnline || !createReady}
+                onClick={() => setShowCreateDrawer(true)}
+              >
+                <Plus className="h-4 w-4" />
+                نوبت جدید
+              </Button>
+              <Button variant="outline" size="sm" className="touch-manipulation" asChild>
+                <Link href={`/calendar?date=${date}`}>تقویم</Link>
+              </Button>
+            </div>
           </div>
           <div className="mt-3">
             <JalaliDatePicker value={date} onChange={setDate} />
@@ -113,10 +437,10 @@ export default function TodayPage() {
         <NetworkStatusBanner
           routeLabel="نمای امروز"
           isOnline={isOnline}
-          hasSnapshot={Boolean(snapshot)}
-          snapshotUpdatedAt={snapshot?.updatedAt}
+          hasSnapshot={hasSnapshot}
+          snapshotUpdatedAt={snapshotUpdatedAt}
           hasError={Boolean(error)}
-          onRetry={() => void mutate()}
+          onRetry={handleRetry}
         />
 
         <OfflineStateCard
@@ -126,7 +450,344 @@ export default function TodayPage() {
               ? 'بارگذاری اطلاعات امروز کامل نشد. دوباره تلاش کنید.'
               : 'برای اولین بارگذاری این بخش باید دوباره به اینترنت متصل شوید.'
           }
-          onAction={() => void mutate()}
+          onAction={handleRetry}
+        />
+
+        <AppointmentDrawer
+          open={showCreateDrawer}
+          onOpenChange={setShowCreateDrawer}
+          initialDate={date}
+          initialTime={defaultCreateTime}
+          staff={staff}
+          services={services}
+          clients={clients}
+          onSuccess={handleAppointmentCreated}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-full flex-col bg-background">
+      <header className="border-b border-border/50 bg-card px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-5 w-5 text-primary" />
+            <div>
+              <h1 className="text-lg font-bold">امروز</h1>
+              <p className="text-xs text-muted-foreground">
+                {data ? formatJalaliFullDate(data.date) : 'در حال بارگذاری'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              className="touch-manipulation gap-1"
+              disabled={!isOnline || !createReady}
+              onClick={() => setShowCreateDrawer(true)}
+            >
+              <Plus className="h-4 w-4" />
+              نوبت جدید
+            </Button>
+            <Button variant="outline" size="sm" className="touch-manipulation" asChild>
+              <Link href={`/calendar?date=${date}`}>تقویم</Link>
+            </Button>
+          </div>
+        </div>
+        <div className="mt-3">
+          <JalaliDatePicker value={date} onChange={setDate} />
+        </div>
+      </header>
+
+      <NetworkStatusBanner
+        routeLabel="نمای امروز"
+        isOnline={isOnline}
+        hasSnapshot={hasSnapshot}
+        snapshotUpdatedAt={snapshotUpdatedAt}
+        hasError={Boolean(error)}
+        onRetry={handleRetry}
+      />
+
+      <div className="flex-1 overflow-auto p-4">
+        <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {quickStats.map((item) => (
+                <StatCard
+                  key={item.label}
+                  label={item.label}
+                  value={item.value}
+                  hint={item.hint}
+                />
+              ))}
+            </div>
+
+            {attentionItems.length > 0 ? (
+              <Card className="border-amber-200/70 bg-amber-50/70 shadow-sm dark:bg-amber-950/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <AlertTriangle className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+                    نیاز به توجه
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {attentionItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-border/50 bg-card/85 p-3 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 space-y-1">
+                          <p className="text-sm font-semibold">{item.title}</p>
+                          <p className="text-xs text-muted-foreground">{item.detail}</p>
+                        </div>
+                        <div className="flex flex-wrap justify-end gap-1">
+                          {item.labels.map((label) => (
+                            <Badge key={label} variant="secondary" className="text-[10px]">
+                              {label}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      {item.clientId ? (
+                        <Button variant="link" className="mt-1 h-auto p-0 text-xs" asChild>
+                          <Link href={`/clients/${item.clientId}`}>پروفایل مشتری</Link>
+                        </Button>
+                      ) : null}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ) : null}
+
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4" />
+                  صف فعال امروز
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {activeAppointments.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border/70 p-4 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      نوبت فعال برای این روز وجود ندارد.
+                    </p>
+                    <Button
+                      size="sm"
+                      className="mt-3 touch-manipulation gap-1"
+                      disabled={!isOnline || !createReady}
+                      onClick={() => setShowCreateDrawer(true)}
+                    >
+                      <Plus className="h-4 w-4" />
+                      افزودن نوبت
+                    </Button>
+                  </div>
+                ) : (
+                  activeAppointments.map((appointment) => (
+                    <AppointmentCard
+                      key={appointment.id}
+                      appointment={appointment}
+                      meta={appointment.staff.name}
+                    >
+                      <AppointmentActionButtons
+                        appointment={appointment}
+                        role="manager"
+                        savingId={savingId}
+                        isOnline={isOnline}
+                        onPatchStatus={handlePatchStatus}
+                      />
+                    </AppointmentCard>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Users className="h-4 w-4" />
+                  خلاصه تیم
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {teamRows.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">اطلاعاتی برای نمایش وجود ندارد.</p>
+                ) : (
+                  teamRows.map((row) => (
+                    <div
+                      key={row.staffId}
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 p-3 shadow-sm"
+                    >
+                      <div className="min-w-0 space-y-1">
+                        <p className="truncate text-sm font-semibold">{row.staffName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatNumber(row.appointmentCount)} نوبت · {formatNumber(row.bookedMinutes)} دقیقه
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="max-w-[52%] whitespace-normal text-right text-[10px]">
+                        {row.openSlotSummary}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
+      </div>
+
+      <AppointmentDrawer
+        open={showCreateDrawer}
+        onOpenChange={setShowCreateDrawer}
+        initialDate={date}
+        initialTime={defaultCreateTime}
+        staff={staff}
+        services={services}
+        clients={clients}
+        onSuccess={handleAppointmentCreated}
+        onClientsChanged={onRefreshResources}
+      />
+    </div>
+  )
+}
+
+function StaffTodayView({
+  todayDate,
+  tomorrowDate,
+  todayData,
+  tomorrowData,
+  todayLoading,
+  tomorrowLoading,
+  todayError,
+  tomorrowError,
+  todaySnapshotUpdatedAt,
+  tomorrowSnapshotUpdatedAt,
+  hasTodaySnapshot,
+  hasTomorrowSnapshot,
+  isOnline,
+  mutateToday,
+  mutateTomorrow,
+}: {
+  todayDate: string
+  tomorrowDate: string
+  todayData?: TodayData
+  tomorrowData?: TodayData
+  todayLoading: boolean
+  tomorrowLoading: boolean
+  todayError: unknown
+  tomorrowError: unknown
+  todaySnapshotUpdatedAt?: string | null
+  tomorrowSnapshotUpdatedAt?: string | null
+  hasTodaySnapshot: boolean
+  hasTomorrowSnapshot: boolean
+  isOnline: boolean
+  mutateToday: () => void
+  mutateTomorrow: () => void
+}) {
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [clockHm, setClockHm] = useState(() => tehranCurrentHm())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockHm(tehranCurrentHm()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const todayAppointments = useMemo(
+    () => sortAppointments(todayData?.appointments ?? []),
+    [todayData]
+  )
+  const tomorrowAppointments = useMemo(
+    () =>
+      sortAppointments(
+        (tomorrowData?.appointments ?? []).filter((appointment) => appointment.status !== 'cancelled')
+      ),
+    [tomorrowData]
+  )
+
+  const activeTodayAppointments = useMemo(
+    () => todayAppointments.filter((appointment) => ACTIVE_STATUSES.has(appointment.status)),
+    [todayAppointments]
+  )
+
+  const currentAppointment =
+    activeTodayAppointments.find(
+      (appointment) => appointment.startTime <= clockHm && appointment.endTime > clockHm
+    ) ?? null
+
+  const nextAppointment =
+    activeTodayAppointments.find((appointment) => appointment.startTime > clockHm) ?? null
+
+  const ownOpenRanges = todayData?.openSlots[0]?.ranges ?? []
+  const todayBookedMinutes = bookedMinutesFor(
+    todayAppointments.filter((appointment) => appointment.status !== 'cancelled')
+  )
+
+  const handleRetry = () => {
+    mutateToday()
+    mutateTomorrow()
+  }
+
+  const handlePatchStatus = async (
+    appointmentId: string,
+    status: AppointmentWithDetails['status']
+  ) => {
+    if (!isOnline) return
+
+    setSavingId(appointmentId)
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status }),
+      })
+      if (res.ok) {
+        mutateToday()
+      }
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  if (!todayData && todayLoading) {
+    return <StaffTodaySkeleton />
+  }
+
+  if (!todayData && !todayLoading) {
+    return (
+      <div className="flex h-full flex-col bg-background">
+        <header className="border-b border-border/50 bg-card px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" />
+              <div>
+                <h1 className="text-lg font-bold">امروز من</h1>
+                <p className="text-xs text-muted-foreground">مرور سریع نوبت‌های امروز و فردا</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" className="touch-manipulation" asChild>
+              <Link href={`/calendar?date=${todayDate}`}>تقویم</Link>
+            </Button>
+          </div>
+        </header>
+
+        <NetworkStatusBanner
+          routeLabel="برنامه من"
+          isOnline={isOnline}
+          hasSnapshot={hasTodaySnapshot || hasTomorrowSnapshot}
+          snapshotUpdatedAt={todaySnapshotUpdatedAt ?? tomorrowSnapshotUpdatedAt}
+          hasError={Boolean(todayError || tomorrowError)}
+          onRetry={handleRetry}
+        />
+
+        <OfflineStateCard
+          title="برنامه امروز فعلا در دسترس نیست"
+          description={
+            isOnline
+              ? 'بارگذاری برنامه شما کامل نشد. دوباره تلاش کنید.'
+              : 'برای اولین بارگذاری این بخش باید دوباره به اینترنت متصل شوید.'
+          }
+          onAction={handleRetry}
         />
       </div>
     )
@@ -138,214 +799,276 @@ export default function TodayPage() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-bold">امروز</h1>
+            <div>
+              <h1 className="text-lg font-bold">امروز من</h1>
+              <p className="text-xs text-muted-foreground">
+                {todayData ? formatJalaliFullDate(todayData.date) : formatJalaliFullDate(todayDate)} · اکنون {formatPersianTime(clockHm)}
+              </p>
+            </div>
           </div>
           <Button variant="outline" size="sm" className="touch-manipulation" asChild>
-            <Link href="/calendar">تقویم</Link>
+            <Link href={`/calendar?date=${todayDate}`}>تقویم</Link>
           </Button>
-        </div>
-        <div className="mt-3">
-          <JalaliDatePicker value={date} onChange={setDate} />
         </div>
       </header>
 
       <NetworkStatusBanner
-        routeLabel="نمای امروز"
+        routeLabel="برنامه من"
         isOnline={isOnline}
-        hasSnapshot={Boolean(snapshot)}
-        snapshotUpdatedAt={snapshot?.updatedAt}
-        hasError={Boolean(error)}
-        onRetry={() => void mutate()}
+        hasSnapshot={hasTodaySnapshot || hasTomorrowSnapshot}
+        snapshotUpdatedAt={todaySnapshotUpdatedAt ?? tomorrowSnapshotUpdatedAt}
+        hasError={Boolean(todayError || tomorrowError)}
+        onRetry={handleRetry}
       />
 
-      <div className="flex-1 space-y-3 overflow-auto p-4">
-        {!data ? (
-          <div className="flex justify-center py-12">
-            <Spinner className="h-8 w-8 text-primary" />
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-              {(Object.keys(data.counts) as Array<keyof typeof data.counts>).map((key) => (
-                <Card key={key} className="border-border/50">
-                  <CardContent className="py-3 text-center">
-                    <p className="text-[10px] text-muted-foreground">{APPOINTMENT_STATUS[key].label}</p>
-                    <p className="text-lg font-bold">{new Intl.NumberFormat('fa-IR').format(data.counts[key])}</p>
-                  </CardContent>
-                </Card>
-              ))}
+      <div className="flex-1 overflow-auto p-4">
+        <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatCard
+                label="کل امروز"
+                value={formatNumber(todayAppointments.length)}
+                hint="همه نوبت‌های ثبت شده"
+              />
+              <StatCard
+                label="در جریان"
+                value={formatNumber(activeTodayAppointments.length)}
+                hint="رزرو شده و تایید شده"
+              />
+              <StatCard
+                label="زمان رزرو"
+                value={formatNumber(todayBookedMinutes)}
+                hint="دقیقه کاری امروز"
+              />
+              <StatCard
+                label="فردا"
+                value={formatNumber(tomorrowAppointments.length)}
+                hint={tomorrowData ? formatJalaliFullDate(tomorrowData.date) : formatJalaliFullDate(tomorrowDate)}
+              />
             </div>
 
-            {data.attentionItems.length > 0 && (
-              <Card className="border-amber-200/60 bg-amber-50/50 dark:bg-amber-950/20">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <AlertTriangle className="h-4 w-4 text-amber-700 dark:text-amber-400" />
-                    نیاز به توجه
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {data.attentionItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-lg border border-border/50 bg-card/80 px-3 py-2 text-sm"
-                    >
-                      <p className="font-medium">{item.title}</p>
-                      <p className="text-xs text-muted-foreground">{item.detail}</p>
-                      {item.clientId && (
-                        <Button variant="link" className="h-auto p-0 text-xs" asChild>
-                          <Link href={`/clients/${item.clientId}`}>پروفایل مشتری</Link>
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            <Card className="border-border/50">
+            <Card className="border-border/50 shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <Clock className="h-4 w-4" />
-                  نوبت‌های فعال ({formatJalaliFullDate(data.date)})
+                  الان و بعدی
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {grouped.scheduled.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">نوبت فعالی برای این روز نیست.</p>
-                ) : (
-                  grouped.scheduled.map((apt) => (
-                    <div
-                      key={apt.id}
-                      className="rounded-xl border border-border/60 p-3 space-y-2"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="font-semibold">{apt.client.name}</p>
-                          <p className="text-xs text-muted-foreground" dir="ltr">
-                            {formatPersianTime(apt.startTime)} – {formatPersianTime(apt.endTime)} · {apt.staff.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{apt.service.name}</p>
-                        </div>
-                        <Badge variant="secondary" className="shrink-0 text-[10px]">
-                          {APPOINTMENT_STATUS[apt.status].label}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {apt.status === 'scheduled' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="touch-manipulation h-8 text-xs"
-                            disabled={savingId === apt.id || !isOnline}
-                            onClick={() => void patchStatus(apt.id, 'confirmed')}
-                          >
-                            تایید
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          className="touch-manipulation h-8 text-xs"
-                          disabled={savingId === apt.id || !isOnline}
-                          onClick={() => void patchStatus(apt.id, 'completed')}
-                        >
-                          انجام شد
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="touch-manipulation h-8 text-xs"
-                          disabled={savingId === apt.id || !isOnline}
-                          onClick={() => void patchStatus(apt.id, 'no-show')}
-                        >
-                          غیبت
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="touch-manipulation h-8 text-xs text-destructive"
-                          disabled={savingId === apt.id || !isOnline}
-                          onClick={() => void patchStatus(apt.id, 'cancelled')}
-                        >
-                          لغو
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/50">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <Users className="h-4 w-4" />
-                  بار کاری پرسنل
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {data.staffLoad.map((row) => (
-                  <div key={row.staffId} className="flex items-center justify-between border-b border-border/40 py-2 last:border-0">
-                    <span>{row.staffName}</span>
-                    <span className="text-muted-foreground" dir="ltr">
-                      {new Intl.NumberFormat('fa-IR').format(row.appointmentCount)} نوبت ·{' '}
-                      {new Intl.NumberFormat('fa-IR').format(row.bookedMinutes)} دقیقه
-                    </span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/50">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">اسلات‌های خالی</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                {data.openSlots.every((s) => s.ranges.length === 0) ? (
-                  <p className="text-muted-foreground">اسلات خالی قابل نمایش نیست (برنامه کاری یا نوبت‌ها).</p>
-                ) : (
-                  data.openSlots.map((slot) => (
-                    <div key={slot.staffId}>
-                      <p className="font-medium">{slot.staffName}</p>
-                      {slot.ranges.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">بدون بازه آزاد</p>
-                      ) : (
-                        <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground" dir="ltr">
-                          {slot.ranges.map((r, i) => (
-                            <li key={i}>
-                              {formatPersianTime(r.startTime)} – {formatPersianTime(r.endTime)}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            {grouped.rest.length > 0 && (
-              <Card className="border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">سایر وضعیت‌ها</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {grouped.rest.map((apt) => (
-                    <div key={apt.id} className="flex items-center justify-between gap-2 text-sm">
-                      <span className="truncate">
-                        {apt.client.name} · {formatPersianTime(apt.startTime)}
+                {currentAppointment ? (
+                  <div className="space-y-2 rounded-2xl border border-primary/30 bg-primary/5 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge className="bg-primary/12 text-primary hover:bg-primary/12">در حال انجام</Badge>
+                      <span className="text-xs text-muted-foreground" dir="ltr">
+                        {formatPersianTime(currentAppointment.startTime)} - {formatPersianTime(currentAppointment.endTime)}
                       </span>
-                      <Badge variant="outline" className={cn('shrink-0 text-[10px]', APPOINTMENT_STATUS[apt.status].color)}>
-                        {APPOINTMENT_STATUS[apt.status].label}
-                      </Badge>
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-          </>
-        )}
+                    <p className="text-sm font-semibold">{currentAppointment.client.name}</p>
+                    <p className="text-xs text-muted-foreground">{currentAppointment.service.name}</p>
+                  </div>
+                ) : nextAppointment ? (
+                  <div className="space-y-2 rounded-2xl border border-border/60 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge variant="secondary">بعدی</Badge>
+                      <span className="text-xs text-muted-foreground" dir="ltr">
+                        {formatPersianTime(nextAppointment.startTime)} - {formatPersianTime(nextAppointment.endTime)}
+                      </span>
+                    </div>
+                    <p className="text-sm font-semibold">{nextAppointment.client.name}</p>
+                    <p className="text-xs text-muted-foreground">{nextAppointment.service.name}</p>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-border/70 p-4 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      برای ادامه امروز نوبت فعالی باقی نمانده است.
+                    </p>
+                  </div>
+                )}
+
+                <div className="rounded-2xl bg-muted/60 p-3 text-sm">
+                  <p className="font-medium">بازه آزاد بعدی</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {summarizeOpenRanges(ownOpenRanges)}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">نوبت‌های امروز</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {todayAppointments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">برای امروز نوبتی ثبت نشده است.</p>
+                ) : (
+                  todayAppointments.map((appointment) => (
+                    <AppointmentCard
+                      key={appointment.id}
+                      appointment={appointment}
+                      meta={appointment.status === 'completed' ? 'انجام شده' : 'مشتری امروز'}
+                      tone={currentAppointment?.id === appointment.id ? 'highlight' : 'default'}
+                    >
+                      <AppointmentActionButtons
+                        appointment={appointment}
+                        role="staff"
+                        savingId={savingId}
+                        isOnline={isOnline}
+                        onPatchStatus={handlePatchStatus}
+                      />
+                    </AppointmentCard>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                <CardTitle className="text-sm">نگاه به فردا</CardTitle>
+                <Button variant="ghost" size="sm" className="h-8 touch-manipulation text-xs" asChild>
+                  <Link href={`/calendar?date=${tomorrowDate}`}>باز کردن در تقویم</Link>
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {!tomorrowData && tomorrowLoading ? (
+                  <div className="space-y-3">
+                    <div className="rounded-2xl border border-border/60 p-3 shadow-sm">
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-28" />
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-border/60 p-3 shadow-sm">
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-3 w-24" />
+                        <Skeleton className="h-3 w-28" />
+                      </div>
+                    </div>
+                  </div>
+                ) : tomorrowAppointments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">برای فردا هنوز نوبتی ثبت نشده است.</p>
+                ) : (
+                  tomorrowAppointments.map((appointment) => (
+                    <AppointmentCard
+                      key={appointment.id}
+                      appointment={appointment}
+                      meta="برنامه فردا"
+                    />
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
       </div>
     </div>
+  )
+}
+
+export default function TodayPage() {
+  const { user } = useAuth()
+  const isOnline = useNetworkStatus()
+  const initialToday = useMemo(() => tehranTodayDate(), [])
+  const [managerDate, setManagerDate] = useState(initialToday)
+
+  const managerKey = user?.role === 'manager' ? `/api/today?date=${managerDate}` : null
+  const {
+    data: managerLiveData,
+    error: managerError,
+    isLoading: managerLoading,
+    mutate: mutateManagerToday,
+  } = useSWR<TodayData>(managerKey, fetcher, { keepPreviousData: true })
+  const managerSnapshot = useOfflineSnapshot(
+    managerKey ? `today:manager:${managerDate}` : null,
+    managerLiveData
+  )
+
+  const {
+    data: staffDirectoryData,
+    mutate: mutateStaffDirectory,
+  } = useSWR<StaffResponse>(user?.role === 'manager' ? '/api/staff' : null, fetcher)
+  const {
+    data: servicesData,
+    mutate: mutateServices,
+  } = useSWR<ServicesResponse>(user?.role === 'manager' ? '/api/services' : null, fetcher)
+  const {
+    data: clientsData,
+    mutate: mutateClients,
+  } = useSWR<ClientsResponse>(user?.role === 'manager' ? '/api/clients' : null, fetcher)
+
+  const staffTodayDate = initialToday
+  const staffTomorrowDate = useMemo(() => nextIsoDate(initialToday), [initialToday])
+
+  const staffTodayKey = user?.role === 'staff' ? `/api/today?date=${staffTodayDate}` : null
+  const staffTomorrowKey = user?.role === 'staff' ? `/api/today?date=${staffTomorrowDate}` : null
+
+  const {
+    data: staffTodayLiveData,
+    error: staffTodayError,
+    isLoading: staffTodayLoading,
+    mutate: mutateStaffToday,
+  } = useSWR<TodayData>(staffTodayKey, fetcher)
+  const {
+    data: staffTomorrowLiveData,
+    error: staffTomorrowError,
+    isLoading: staffTomorrowLoading,
+    mutate: mutateStaffTomorrow,
+  } = useSWR<TodayData>(staffTomorrowKey, fetcher)
+
+  const staffTodaySnapshot = useOfflineSnapshot(
+    staffTodayKey ? `today:staff:${staffTodayDate}` : null,
+    staffTodayLiveData
+  )
+  const staffTomorrowSnapshot = useOfflineSnapshot(
+    staffTomorrowKey ? `today:staff:${staffTomorrowDate}` : null,
+    staffTomorrowLiveData
+  )
+
+  if (!user) {
+    return null
+  }
+
+  if (user.role === 'manager') {
+    return (
+      <ManagerTodayView
+        date={managerDate}
+        setDate={setManagerDate}
+        data={managerLiveData ?? managerSnapshot?.data}
+        isLoading={managerLoading}
+        error={managerError}
+        snapshotUpdatedAt={managerSnapshot?.updatedAt}
+        hasSnapshot={Boolean(managerSnapshot)}
+        isOnline={isOnline}
+        mutateToday={() => void mutateManagerToday()}
+        staff={staffDirectoryData?.staff ?? []}
+        services={servicesData?.services ?? []}
+        clients={clientsData?.clients ?? []}
+        onRefreshResources={() => {
+          void mutateStaffDirectory()
+          void mutateServices()
+          void mutateClients()
+        }}
+      />
+    )
+  }
+
+  return (
+    <StaffTodayView
+      todayDate={staffTodayDate}
+      tomorrowDate={staffTomorrowDate}
+      todayData={staffTodayLiveData ?? staffTodaySnapshot?.data}
+      tomorrowData={staffTomorrowLiveData ?? staffTomorrowSnapshot?.data}
+      todayLoading={staffTodayLoading}
+      tomorrowLoading={staffTomorrowLoading}
+      todayError={staffTodayError}
+      tomorrowError={staffTomorrowError}
+      todaySnapshotUpdatedAt={staffTodaySnapshot?.updatedAt}
+      tomorrowSnapshotUpdatedAt={staffTomorrowSnapshot?.updatedAt}
+      hasTodaySnapshot={Boolean(staffTodaySnapshot)}
+      hasTomorrowSnapshot={Boolean(staffTomorrowSnapshot)}
+      isOnline={isOnline}
+      mutateToday={() => void mutateStaffToday()}
+      mutateTomorrow={() => void mutateStaffTomorrow()}
+    />
   )
 }

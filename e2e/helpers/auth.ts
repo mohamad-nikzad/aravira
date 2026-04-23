@@ -38,9 +38,10 @@ export async function loginManagerExpectsCalendar(page: Page) {
   await expect(page.locator('.calendar-header-gradient')).toBeVisible()
 }
 
-export async function loginStaffExpectsCalendar(page: Page) {
+export async function loginStaffExpectsToday(page: Page) {
   await login(page, SEEDED_STAFF.phone, SEEDED_STAFF.password)
-  await expect(page).toHaveURL(/\/calendar/)
+  await expect(page).toHaveURL(/\/today/)
+  await expect(page.getByRole('heading', { name: 'امروز من' })).toBeVisible()
 }
 
 export async function logoutFromSettings(page: Page) {
