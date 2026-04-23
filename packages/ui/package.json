@@ -9,7 +9,6 @@
     "./postcss.config.mjs": "./postcss.config.mjs"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json --noEmit false --emitDeclarationOnly --declaration --outDir dist",
     "lint": "eslint .",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "boundaries": "eslint . --max-warnings=0"

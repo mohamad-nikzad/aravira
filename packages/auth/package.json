@@ -10,7 +10,6 @@
     "./tenant": "./src/tenant.ts"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json --noEmit false --emitDeclarationOnly --declaration --outDir dist",
     "lint": "eslint .",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "test": "pnpm run test:unit",
