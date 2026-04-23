@@ -11,6 +11,10 @@ import { StaffFilter } from '@/components/calendar/staff-filter'
 import { AppointmentDrawer } from '@/components/calendar/appointment-drawer'
 import { AppointmentDetailDrawer } from '@/components/calendar/appointment-detail-drawer'
 import {
+  NetworkStatusBanner,
+  OfflineStateCard,
+} from '@/components/pwa/offline-state'
+import {
   CalendarView,
   AppointmentWithDetails,
   User,
@@ -20,14 +24,36 @@ import {
   type BusinessHours,
 } from '@repo/salon-core/types'
 import { useAuth } from '@/components/auth-provider'
+import {
+  fetchJsonOrThrow,
+  useNetworkStatus,
+  useOfflineSnapshot,
+} from '@/lib/pwa-client'
 import { CalendarSkeleton } from '@/components/skeletons/calendar-skeleton'
 import { cn } from '@repo/ui/utils'
 
-const fetcher = (url: string) =>
-  fetch(url, { credentials: 'include' }).then((res) => res.json())
+async function fetcher<T>(url: string) {
+  return fetchJsonOrThrow<T>(url)
+}
 
 type AppointmentsResponse = {
   appointments: AppointmentWithDetails[]
+}
+
+type StaffResponse = {
+  staff: User[]
+}
+
+type ServicesResponse = {
+  services: Service[]
+}
+
+type ClientsResponse = {
+  clients: Client[]
+}
+
+type BusinessResponse = {
+  settings: BusinessHours | null
 }
 
 const VIEW_OPTIONS: { value: CalendarView; label: string }[] = [
@@ -52,6 +78,7 @@ function CalendarPageContent() {
   const router = useRouter()
   const pathname = usePathname()
   const { user } = useAuth()
+  const isOnline = useNetworkStatus()
   const isManager = user?.role === 'manager'
   const [view, setView] = useState<CalendarView>('week')
   const [navDate, setNavDate] = useState(() => new Date())
@@ -71,6 +98,7 @@ function CalendarPageContent() {
 
   const {
     data: appointmentsData,
+    error: appointmentsError,
     isLoading: appointmentsLoading,
     isValidating: appointmentsRefreshing,
     mutate: mutateAppointments,
@@ -79,21 +107,60 @@ function CalendarPageContent() {
     fetcher,
     { keepPreviousData: true }
   )
-  const { data: staffData } = useSWR(user ? '/api/staff' : null, fetcher)
-  const { data: servicesData } = useSWR(user ? '/api/services' : null, fetcher)
-  const { data: clientsData, mutate: mutateClients } = useSWR(user && isManager ? '/api/clients' : null, fetcher)
-  const { data: businessData } = useSWR(user ? '/api/settings/business' : null, fetcher)
+  const {
+    data: staffData,
+    mutate: mutateStaff,
+  } = useSWR<StaffResponse>(user ? '/api/staff' : null, fetcher)
+  const {
+    data: servicesData,
+    mutate: mutateServices,
+  } = useSWR<ServicesResponse>(user ? '/api/services' : null, fetcher)
+  const {
+    data: clientsData,
+    mutate: mutateClients,
+  } = useSWR<ClientsResponse>(user && isManager ? '/api/clients' : null, fetcher)
+  const {
+    data: businessData,
+    mutate: mutateBusiness,
+  } = useSWR<BusinessResponse>(user ? '/api/settings/business' : null, fetcher)
+
+  const appointmentsSnapshot = useOfflineSnapshot(
+    user ? `appointments:${startDate}:${endDate}` : null,
+    appointmentsData
+  )
+  const staffSnapshot = useOfflineSnapshot(user ? 'staff:list' : null, staffData)
+  const servicesSnapshot = useOfflineSnapshot(
+    user ? 'services:list' : null,
+    servicesData
+  )
+  const clientsSnapshot = useOfflineSnapshot(
+    user && isManager ? 'clients:list' : null,
+    clientsData
+  )
+  const businessSnapshot = useOfflineSnapshot(
+    user ? 'business:settings' : null,
+    businessData
+  )
+
+  const appointmentsSource = appointmentsData ?? appointmentsSnapshot?.data
+  const staffSource: StaffResponse | undefined = staffData ?? staffSnapshot?.data
+  const servicesSource: ServicesResponse | undefined =
+    servicesData ?? servicesSnapshot?.data
+  const clientsSource: ClientsResponse | undefined =
+    clientsData ?? clientsSnapshot?.data
+  const businessSource: BusinessResponse | undefined =
+    businessData ?? businessSnapshot?.data
 
   const appointments = useMemo<AppointmentWithDetails[]>(
-    () => appointmentsData?.appointments || [],
-    [appointmentsData]
+    () => appointmentsSource?.appointments || [],
+    [appointmentsSource]
   )
-  const staff: User[] = staffData?.staff || []
-  const services: Service[] = servicesData?.services || []
-  const clients = useMemo<Client[]>(() => clientsData?.clients ?? [], [clientsData])
+  const staff: User[] = staffSource?.staff || []
+  const services: Service[] = servicesSource?.services || []
+  const clients = useMemo<Client[]>(() => clientsSource?.clients ?? [], [clientsSource])
 
   const businessHours: BusinessHours = useMemo(() => {
-    const s = businessData?.settings
+    const s = businessSource?.settings
     if (s?.workingStart && s?.workingEnd && s?.slotDurationMinutes != null) {
       return {
         workingStart: s.workingStart,
@@ -106,7 +173,7 @@ function CalendarPageContent() {
       workingEnd: WORKING_HOURS.end,
       slotDurationMinutes: WORKING_HOURS.slotDuration,
     }
-  }, [businessData])
+  }, [businessSource])
 
   const filteredAppointments = useMemo(() => {
     if (!isManager || selectedStaffIds.length === 0) return appointments
@@ -114,6 +181,17 @@ function CalendarPageContent() {
   }, [appointments, selectedStaffIds, isManager])
 
   const clientIdParam = searchParams.get('clientId')
+  const appointmentIdParam = searchParams.get('appointmentId')
+  const dateParam = searchParams.get('date')
+
+  useEffect(() => {
+    if (!dateParam) return
+    const parsed = parseISO(dateParam)
+    if (Number.isNaN(parsed.getTime())) return
+    setNavDate(parsed)
+    setTitleAnchor(parsed)
+    setRange(null)
+  }, [dateParam])
 
   useEffect(() => {
     if (!isManager || !clientIdParam || clients.length === 0) return
@@ -124,6 +202,20 @@ function CalendarPageContent() {
     setShowCreateDrawer(true)
     router.replace(pathname, { scroll: false })
   }, [clientIdParam, clients, isManager, navDate, businessHours.workingStart, router, pathname])
+
+  useEffect(() => {
+    if (!appointmentIdParam || appointments.length === 0) return
+
+    const appointment = appointments.find((item) => item.id === appointmentIdParam)
+    if (!appointment) return
+
+    setSelectedAppointment(appointment)
+
+    const nextParams = new URLSearchParams(searchParams.toString())
+    nextParams.delete('appointmentId')
+    const nextQuery = nextParams.toString()
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false })
+  }, [appointmentIdParam, appointments, pathname, router, searchParams])
 
   const upsertAppointmentInCache = useCallback(
     (appointment: AppointmentWithDetails) => {
@@ -190,7 +282,7 @@ function CalendarPageContent() {
   }
 
   const handleAddAppointment = () => {
-    if (!isManager) return
+    if (!isManager || !isOnline) return
     setInitialClientIdForCreate(undefined)
     setCreateDate(format(navDate, 'yyyy-MM-dd'))
     setCreateTime(businessHours.workingStart)
@@ -199,13 +291,13 @@ function CalendarPageContent() {
 
   const handleSlotSelect = useCallback(
     (dateStr: string, timeStr: string) => {
-      if (!isManager) return
+      if (!isManager || !isOnline) return
       setInitialClientIdForCreate(undefined)
       setCreateDate(dateStr)
       setCreateTime(timeStr)
       setShowCreateDrawer(true)
     },
-    [isManager]
+    [isManager, isOnline]
   )
 
   const handleAppointmentClick = (appointment: AppointmentWithDetails) => {
@@ -238,11 +330,59 @@ function CalendarPageContent() {
     if (!open) setInitialClientIdForCreate(undefined)
   }
 
-  if (appointmentsLoading) {
+  const handleRetry = useCallback(() => {
+    void mutateAppointments()
+    void mutateStaff()
+    void mutateServices()
+    void mutateBusiness()
+    if (isManager) {
+      void mutateClients()
+    }
+  }, [
+    isManager,
+    mutateAppointments,
+    mutateBusiness,
+    mutateClients,
+    mutateServices,
+    mutateStaff,
+  ])
+
+  if (appointmentsLoading && !appointmentsSource) {
     return <CalendarSkeleton />
   }
 
   if (!user) return null
+
+  if (!appointmentsSource) {
+    return (
+      <div className="flex h-full flex-col bg-background">
+        <CalendarHeader
+          titleAnchor={titleAnchor}
+          navigationDate={navDate}
+          view={view}
+          onDateChange={setNavDate}
+          onToday={handleToday}
+        />
+        <NetworkStatusBanner
+          routeLabel="تقویم"
+          isOnline={isOnline}
+          hasSnapshot={Boolean(appointmentsSnapshot)}
+          snapshotUpdatedAt={appointmentsSnapshot?.updatedAt}
+          hasError={Boolean(appointmentsError)}
+          onRetry={handleRetry}
+        />
+        <OfflineStateCard
+          title="تقویم فعلا آماده نمایش نیست"
+          description={
+            isOnline
+              ? 'بارگذاری تقویم کامل نشد. یک بار دیگر تلاش کنید.'
+              : 'برای دیدن تقویم به اینترنت نیاز دارید، مگر این که قبلا همین بازه را باز کرده باشید.'
+          }
+          onAction={handleRetry}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="relative flex h-full flex-col bg-background">
@@ -252,6 +392,15 @@ function CalendarPageContent() {
         view={view}
         onDateChange={setNavDate}
         onToday={handleToday}
+      />
+
+      <NetworkStatusBanner
+        routeLabel="تقویم"
+        isOnline={isOnline}
+        hasSnapshot={Boolean(appointmentsSnapshot)}
+        snapshotUpdatedAt={appointmentsSnapshot?.updatedAt}
+        hasError={Boolean(appointmentsError)}
+        onRetry={handleRetry}
       />
 
       <div className="flex items-center gap-2 border-b border-border/50 bg-card/80 px-3 py-1.5 sm:px-4">
@@ -297,7 +446,11 @@ function CalendarPageContent() {
       {isManager && (
         <button
           onClick={handleAddAppointment}
-          className="absolute bottom-5 left-4 z-40 flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-lg shadow-primary/25 transition-all active:scale-[0.92] touch-manipulation"
+          disabled={!isOnline}
+          className={cn(
+            'absolute bottom-5 left-4 z-40 flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-lg shadow-primary/25 transition-all active:scale-[0.92] touch-manipulation',
+            !isOnline && 'cursor-not-allowed opacity-55 saturate-50'
+          )}
           aria-label="نوبت جدید"
         >
           <Plus className="h-6 w-6" strokeWidth={2.5} />
@@ -325,7 +478,7 @@ function CalendarPageContent() {
         staff={staff}
         services={services}
         clients={clients}
-        readOnly={!isManager}
+        readOnly={!isManager || !isOnline}
         onSuccess={handleAppointmentChanged}
         onClientsChanged={() => mutateClients()}
       />

@@ -3,6 +3,11 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { User } from '@repo/salon-core/types'
+import {
+  clearOfflineSnapshot,
+  readOfflineSnapshot,
+  writeOfflineSnapshot,
+} from '@/lib/pwa-client'
 
 interface AuthContextType {
   user: User | null
@@ -12,6 +17,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const SESSION_USER_CACHE_KEY = 'session-user'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -25,11 +31,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json()
         setUser(data.user)
+        writeOfflineSnapshot(SESSION_USER_CACHE_KEY, data.user)
       } else {
         setUser(null)
+        clearOfflineSnapshot(SESSION_USER_CACHE_KEY)
       }
     } catch {
-      setUser(null)
+      setUser(readOfflineSnapshot<User>(SESSION_USER_CACHE_KEY)?.data ?? null)
     } finally {
       setLoading(false)
     }
@@ -48,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
     setUser(null)
+    clearOfflineSnapshot(SESSION_USER_CACHE_KEY)
     router.push('/login')
   }
 

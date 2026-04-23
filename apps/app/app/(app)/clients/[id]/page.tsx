@@ -18,13 +18,23 @@ import { Badge } from '@repo/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card'
 import { ClientDrawer } from '@/components/clients/client-drawer'
 import { useAuth } from '@/components/auth-provider'
+import {
+  NetworkStatusBanner,
+  OfflineStateCard,
+} from '@/components/pwa/offline-state'
 import { Spinner } from '@repo/ui/spinner'
+import {
+  fetchJsonOrThrow,
+  useNetworkStatus,
+  useOfflineSnapshot,
+} from '@/lib/pwa-client'
 import type { ClientSummary, FollowUpReason } from '@repo/salon-core/types'
 import { APPOINTMENT_STATUS } from '@repo/salon-core/types'
 import { formatJalaliFullDate } from '@repo/salon-core/jalali'
 
-const fetcher = (url: string) =>
-  fetch(url, { credentials: 'include' }).then((res) => res.json())
+async function fetcher<T>(url: string) {
+  return fetchJsonOrThrow<T>(url)
+}
 
 function followReasonLabel(reason: FollowUpReason): string {
   switch (reason) {
@@ -52,6 +62,7 @@ export default function ClientDetailPage() {
   const router = useRouter()
   const id = typeof params.id === 'string' ? params.id : ''
   const { user } = useAuth()
+  const isOnline = useNetworkStatus()
   const [editOpen, setEditOpen] = useState(false)
 
   useEffect(() => {
@@ -60,14 +71,24 @@ export default function ClientDetailPage() {
     }
   }, [user, router])
 
-  const { data, error, isLoading, mutate } = useSWR<ClientSummary>(
+  const {
+    data: liveData,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR<ClientSummary>(
     user?.role === 'manager' && id ? `/api/clients/${id}/summary` : null,
     fetcher
   )
+  const snapshot = useOfflineSnapshot(
+    user?.role === 'manager' && id ? `clients:summary:${id}` : null,
+    liveData
+  )
+  const data = liveData ?? snapshot?.data
 
   if (!user || user.role !== 'manager') return null
 
-  if (isLoading || (!data && !error)) {
+  if (isLoading && !data) {
     return (
       <div className="flex h-full items-center justify-center bg-background">
         <Spinner className="h-8 w-8 text-primary" />
@@ -77,11 +98,37 @@ export default function ClientDetailPage() {
 
   if (error || !data) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 bg-background px-4">
-        <p className="text-sm text-muted-foreground">مشتری یافت نشد یا خطای بارگذاری رخ داد.</p>
-        <Button variant="outline" onClick={() => router.push('/clients')}>
-          بازگشت به لیست
-        </Button>
+      <div className="flex h-full flex-col bg-background">
+        <header className="flex items-center gap-3 border-b border-border/50 bg-card px-3 py-3">
+          <Button variant="ghost" size="icon-sm" className="shrink-0 touch-manipulation" asChild>
+            <Link href="/clients" aria-label="بازگشت">
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+          </Button>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-lg font-bold">پروفایل مشتری</h1>
+          </div>
+        </header>
+
+        <NetworkStatusBanner
+          routeLabel="پروفایل مشتری"
+          isOnline={isOnline}
+          hasSnapshot={Boolean(snapshot)}
+          snapshotUpdatedAt={snapshot?.updatedAt}
+          hasError={Boolean(error)}
+          onRetry={() => void mutate()}
+        />
+
+        <OfflineStateCard
+          title="پروفایل مشتری فعلا در دسترس نیست"
+          description={
+            isOnline
+              ? 'بارگذاری پروفایل کامل نشد یا این مشتری پیدا نشد.'
+              : 'برای باز کردن این پروفایل باید قبلا یک بار آن را با اینترنت دیده باشید.'
+          }
+          actionLabel="بازگشت به فهرست"
+          onAction={() => router.push('/clients')}
+        />
       </div>
     )
   }
@@ -105,6 +152,7 @@ export default function ClientDetailPage() {
         <Button
           variant="outline"
           size="sm"
+          disabled={!isOnline}
           className="touch-manipulation shrink-0 gap-1"
           onClick={() => setEditOpen(true)}
         >
@@ -112,6 +160,15 @@ export default function ClientDetailPage() {
           ویرایش
         </Button>
       </header>
+
+      <NetworkStatusBanner
+        routeLabel="پروفایل مشتری"
+        isOnline={isOnline}
+        hasSnapshot={Boolean(snapshot)}
+        snapshotUpdatedAt={snapshot?.updatedAt}
+        hasError={Boolean(error)}
+        onRetry={() => void mutate()}
+      />
 
       <div className="flex-1 space-y-3 overflow-auto p-4">
         <div className="flex flex-wrap gap-2">
@@ -121,12 +178,19 @@ export default function ClientDetailPage() {
               تماس
             </a>
           </Button>
-          <Button variant="secondary" className="touch-manipulation gap-1.5" asChild>
-            <Link href={`/calendar?clientId=${client.id}`}>
+          {isOnline ? (
+            <Button variant="secondary" className="touch-manipulation gap-1.5" asChild>
+              <Link href={`/calendar?clientId=${client.id}`}>
+                <CalendarPlus className="h-4 w-4" />
+                نوبت جدید
+              </Link>
+            </Button>
+          ) : (
+            <Button variant="secondary" className="touch-manipulation gap-1.5" disabled>
               <CalendarPlus className="h-4 w-4" />
               نوبت جدید
-            </Link>
-          </Button>
+            </Button>
+          )}
         </div>
 
         {tags.length > 0 && (

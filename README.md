@@ -34,20 +34,20 @@ Use a **split env** so you can switch Neon branches without editing secrets:
 - `.env.database.multitenant` — `DATABASE_URL` + `DATABASE_URL_DIRECT` for the multi-tenant MVP feature branch
 - `.env.database.main` — same for your **production** Neon branch
 
-Scripts (via Bun) load `.env.local` first, then the database file, so the database URLs always match the command you run:
+Scripts load `.env.local` first, then the database file, so the database URLs always match the command you run:
 
 ```bash
-bun install
-bun run db:push       # schema → dev branch (default)
-bun run db:seed       # seed dev branch
-bun run dev           # Next.js against dev branch
+pnpm install
+pnpm db:push          # schema -> dev branch (default)
+pnpm db:seed          # seed dev branch
+pnpm dev              # Next.js against both apps
 
-bun run db:migrate:multitenant  # checked-in migrations → multi-tenant feature branch
-bun run db:seed:multitenant     # seed multi-tenant feature branch
-bun run dev:multitenant         # Next.js against multi-tenant feature branch
+pnpm db:migrate:multitenant  # checked-in migrations -> multi-tenant feature branch
+pnpm db:seed:multitenant     # seed multi-tenant feature branch
 
-bun run dev:main      # Next.js against production branch (read/write — be careful)
-bun run db:push:main  # schema → production (use with care)
+pnpm dev:app          # manager app on port 3000
+pnpm dev:web          # marketing site on port 3001
+pnpm db:push:main     # schema -> production (use with care)
 ```
 
 ## Switching providers later
@@ -57,7 +57,7 @@ If you move to another provider or a VPS:
 1. Create a new PostgreSQL database.
 2. Update `DATABASE_URL`.
 3. Update `DATABASE_URL_DIRECT` if you want migrations/seeds to use a direct connection.
-4. Run `bun run db:push` or your preferred Drizzle migration flow.
-5. Seed if needed with `bun run db:seed`.
+4. Run `pnpm db:push` or your preferred Drizzle migration flow.
+5. Seed if needed with `pnpm db:seed`.
 
 No Neon-specific SDK is required by the app, so the code does not need to change just because the host changes.

@@ -5,6 +5,8 @@ import { Bell } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card'
 import { Switch } from '@repo/ui/switch'
 import { useToast } from '@repo/ui/use-toast'
+import { Badge } from '@repo/ui/badge'
+import { Alert, AlertDescription, AlertTitle } from '@repo/ui/alert'
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -19,12 +21,25 @@ function urlBase64ToUint8Array(base64String: string) {
 
 export function StaffPushSettings() {
   const { toast } = useToast()
+  const [isSupported, setIsSupported] = useState(false)
   const [serverReady, setServerReady] = useState(false)
   const [publicKey, setPublicKey] = useState<string | null>(null)
   const [enabled, setEnabled] = useState(false)
+  const [permission, setPermission] = useState<NotificationPermission>('default')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
+    const supported =
+      typeof window !== 'undefined' &&
+      'serviceWorker' in navigator &&
+      'PushManager' in window &&
+      'Notification' in window
+
+    setIsSupported(supported)
+    if (supported) {
+      setPermission(Notification.permission)
+    }
+
     let cancelled = false
     void (async () => {
       try {
@@ -45,9 +60,15 @@ export function StaffPushSettings() {
   }, [])
 
   const syncBrowserSubscription = useCallback(async () => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (
+      !('serviceWorker' in navigator) ||
+      !('PushManager' in window) ||
+      !('Notification' in window)
+    ) {
       return
     }
+
+    setPermission(Notification.permission)
     const reg = await navigator.serviceWorker.ready
     const sub = await reg.pushManager.getSubscription()
     setEnabled(!!sub)
@@ -70,18 +91,49 @@ export function StaffPushSettings() {
   }, [serverReady, publicKey])
 
   useEffect(() => {
-    if (!serverReady) return
+    if (!serverReady || !isSupported) return
     void syncBrowserSubscription()
-  }, [serverReady, syncBrowserSubscription])
+  }, [isSupported, serverReady, syncBrowserSubscription])
+
+  useEffect(() => {
+    if (!serverReady || !isSupported) return
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void syncBrowserSubscription()
+      }
+    }
+
+    window.addEventListener('focus', handleVisibilityChange)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('focus', handleVisibilityChange)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [isSupported, serverReady, syncBrowserSubscription])
 
   const handleToggle = async (next: boolean) => {
     if (!publicKey || busy) return
     setBusy(true)
     try {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      if (
+        !('serviceWorker' in navigator) ||
+        !('PushManager' in window) ||
+        !('Notification' in window)
+      ) {
         toast({
           title: 'پشتیبانی نمی‌شود',
           description: 'مرورگر یا دستگاه شما اعلان فشاری را پشتیبانی نمی‌کند.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      if (Notification.permission === 'denied' && next) {
+        toast({
+          title: 'اجازه اعلان مسدود است',
+          description: 'اجازه اعلان را از تنظیمات مرورگر یا دستگاه دوباره فعال کنید.',
           variant: 'destructive',
         })
         return
@@ -107,6 +159,7 @@ export function StaffPushSettings() {
       }
 
       const perm = await Notification.requestPermission()
+      setPermission(perm)
       if (perm !== 'granted') {
         toast({
           title: 'اجازه داده نشد',
@@ -162,14 +215,25 @@ export function StaffPushSettings() {
     }
   }
 
-  if (!serverReady) {
-    return null
-  }
+  const status = !serverReady
+    ? { label: 'سرور آماده نیست', tone: 'secondary' as const }
+    : !isSupported
+      ? { label: 'این دستگاه پشتیبانی نمی‌کند', tone: 'secondary' as const }
+      : enabled
+        ? { label: 'فعال', tone: 'default' as const }
+        : permission === 'denied'
+          ? { label: 'اجازه مسدود شده', tone: 'destructive' as const }
+          : { label: 'غیرفعال', tone: 'secondary' as const }
 
   return (
     <Card className="border-border/50">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium text-muted-foreground">اعلان نوبت</CardTitle>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="text-sm font-medium text-muted-foreground">اعلان نوبت</CardTitle>
+          <Badge variant={status.tone === 'default' ? 'default' : 'secondary'}>
+            {status.label}
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center justify-between gap-3">
@@ -185,11 +249,51 @@ export function StaffPushSettings() {
           </div>
           <Switch
             checked={enabled}
-            disabled={busy}
+            disabled={busy || !serverReady || !isSupported}
             onCheckedChange={(v) => void handleToggle(v)}
             className="shrink-0"
           />
         </div>
+
+        {!serverReady ? (
+          <Alert className="border-border/60 bg-muted/40">
+            <Bell className="h-4 w-4" />
+            <AlertTitle>اعلان برای این سرور هنوز پیکربندی نشده است</AlertTitle>
+            <AlertDescription>
+              تا وقتی کلیدهای اعلان روی سرور تنظیم نشوند، این گزینه فعال نخواهد شد.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {serverReady && !isSupported ? (
+          <Alert className="border-border/60 bg-muted/40">
+            <Bell className="h-4 w-4" />
+            <AlertTitle>اعلان روی این دستگاه در دسترس نیست</AlertTitle>
+            <AlertDescription>
+              مرورگر فعلی از Push Notification پشتیبانی نمی‌کند. Chrome یا Safari نصب‌شده را امتحان کنید.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {serverReady && isSupported && permission === 'denied' ? (
+          <Alert variant="destructive">
+            <Bell className="h-4 w-4" />
+            <AlertTitle>اجازه اعلان مسدود شده است</AlertTitle>
+            <AlertDescription>
+              برای دریافت نوبت‌های جدید، اجازه اعلان را از تنظیمات مرورگر یا دستگاه دوباره فعال کنید.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {serverReady && isSupported && permission !== 'denied' && !enabled ? (
+          <Alert className="border-primary/20 bg-primary/5">
+            <Bell className="h-4 w-4 text-primary" />
+            <AlertTitle>هنوز اشتراک اعلان ثبت نشده است</AlertTitle>
+            <AlertDescription>
+              پس از روشن کردن این گزینه، اعلان‌های نوبت جدید شما را مستقیم به همان روز در تقویم می‌برند.
+            </AlertDescription>
+          </Alert>
+        ) : null}
       </CardContent>
     </Card>
   )

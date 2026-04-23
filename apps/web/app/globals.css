@@ -92,7 +92,8 @@
   --color-staff-3: var(--staff-3);
   --color-staff-4: var(--staff-4);
   --color-staff-5: var(--staff-5);
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: var(--font-vazirmatn), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
   --font-mono: ui-monospace, 'SFMono-Regular', 'SF Mono', Consolas, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -137,7 +138,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
   }
 }
 

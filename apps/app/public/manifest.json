@@ -2,14 +2,18 @@
   "name": "آراویرا - سامانه مدیریت نوبت‌دهی",
   "short_name": "آراویرا",
   "description": "سامانه مدیریت نوبت‌دهی آراویرا",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "portrait",
   "background_color": "#f8f5f2",
   "theme_color": "#9B3636",
   "dir": "rtl",
   "lang": "fa",
   "categories": ["business", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -64,7 +68,20 @@
       "purpose": "maskable"
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "/screenshots/manifest-calendar.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "label": "نمای تقویم و برنامه روزانه آراویرا"
+    },
+    {
+      "src": "/screenshots/manifest-clients.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "label": "نمای مشتریان و پیگیری‌های سالن در آراویرا"
+    }
+  ],
   "shortcuts": [
     {
       "name": "تقویم",
@@ -81,6 +98,17 @@
       "name": "مشتریان",
       "short_name": "مشتریان",
       "url": "/clients",
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "امروز",
+      "short_name": "امروز",
+      "url": "/today",
       "icons": [
         {
           "src": "/icons/icon-96x96.png",

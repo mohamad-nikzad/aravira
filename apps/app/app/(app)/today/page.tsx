@@ -11,17 +11,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
 import { Spinner } from '@repo/ui/spinner'
 import { useAuth } from '@/components/auth-provider'
+import {
+  NetworkStatusBanner,
+  OfflineStateCard,
+} from '@/components/pwa/offline-state'
+import {
+  fetchJsonOrThrow,
+  useNetworkStatus,
+  useOfflineSnapshot,
+} from '@/lib/pwa-client'
 import type { AppointmentWithDetails, TodayData } from '@repo/salon-core/types'
 import { APPOINTMENT_STATUS } from '@repo/salon-core/types'
 import { formatJalaliFullDate } from '@repo/salon-core/jalali'
 import { cn } from '@repo/ui/utils'
 
-const fetcher = (url: string) =>
-  fetch(url, { credentials: 'include' }).then((res) => res.json())
+async function fetcher<T>(url: string) {
+  return fetchJsonOrThrow<T>(url)
+}
 
 export default function TodayPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const isOnline = useNetworkStatus()
   const [date, setDate] = useState(
     () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tehran' })
   )
@@ -34,9 +45,23 @@ export default function TodayPage() {
   }, [user, router])
 
   const swrKey = user?.role === 'manager' ? `/api/today?date=${date}` : null
-  const { data, isLoading, mutate } = useSWR<TodayData>(swrKey, fetcher)
+  const {
+    data: liveData,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR<TodayData>(swrKey, fetcher)
+  const snapshot = useOfflineSnapshot(
+    swrKey ? `today:${date}` : null,
+    liveData
+  )
+  const data = liveData ?? snapshot?.data
 
   const patchStatus = async (appointmentId: string, status: AppointmentWithDetails['status']) => {
+    if (!isOnline) {
+      return
+    }
+
     setSavingId(appointmentId)
     try {
       const res = await fetch(`/api/appointments/${appointmentId}`, {
@@ -66,6 +91,46 @@ export default function TodayPage() {
 
   if (!user || user.role !== 'manager') return null
 
+  if (!data && !isLoading) {
+    return (
+      <div className="flex h-full flex-col bg-background">
+        <header className="border-b border-border/50 bg-card px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" />
+              <h1 className="text-lg font-bold">امروز</h1>
+            </div>
+            <Button variant="outline" size="sm" className="touch-manipulation" asChild>
+              <Link href="/calendar">تقویم</Link>
+            </Button>
+          </div>
+          <div className="mt-3">
+            <JalaliDatePicker value={date} onChange={setDate} />
+          </div>
+        </header>
+
+        <NetworkStatusBanner
+          routeLabel="نمای امروز"
+          isOnline={isOnline}
+          hasSnapshot={Boolean(snapshot)}
+          snapshotUpdatedAt={snapshot?.updatedAt}
+          hasError={Boolean(error)}
+          onRetry={() => void mutate()}
+        />
+
+        <OfflineStateCard
+          title="نمای امروز فعلا در دسترس نیست"
+          description={
+            isOnline
+              ? 'بارگذاری اطلاعات امروز کامل نشد. دوباره تلاش کنید.'
+              : 'برای اولین بارگذاری این بخش باید دوباره به اینترنت متصل شوید.'
+          }
+          onAction={() => void mutate()}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full flex-col bg-background">
       <header className="border-b border-border/50 bg-card px-4 py-3">
@@ -83,8 +148,17 @@ export default function TodayPage() {
         </div>
       </header>
 
+      <NetworkStatusBanner
+        routeLabel="نمای امروز"
+        isOnline={isOnline}
+        hasSnapshot={Boolean(snapshot)}
+        snapshotUpdatedAt={snapshot?.updatedAt}
+        hasError={Boolean(error)}
+        onRetry={() => void mutate()}
+      />
+
       <div className="flex-1 space-y-3 overflow-auto p-4">
-        {isLoading || !data ? (
+        {!data ? (
           <div className="flex justify-center py-12">
             <Spinner className="h-8 w-8 text-primary" />
           </div>
@@ -162,7 +236,7 @@ export default function TodayPage() {
                             size="sm"
                             variant="outline"
                             className="touch-manipulation h-8 text-xs"
-                            disabled={savingId === apt.id}
+                            disabled={savingId === apt.id || !isOnline}
                             onClick={() => void patchStatus(apt.id, 'confirmed')}
                           >
                             تایید
@@ -171,7 +245,7 @@ export default function TodayPage() {
                         <Button
                           size="sm"
                           className="touch-manipulation h-8 text-xs"
-                          disabled={savingId === apt.id}
+                          disabled={savingId === apt.id || !isOnline}
                           onClick={() => void patchStatus(apt.id, 'completed')}
                         >
                           انجام شد
@@ -180,7 +254,7 @@ export default function TodayPage() {
                           size="sm"
                           variant="secondary"
                           className="touch-manipulation h-8 text-xs"
-                          disabled={savingId === apt.id}
+                          disabled={savingId === apt.id || !isOnline}
                           onClick={() => void patchStatus(apt.id, 'no-show')}
                         >
                           غیبت
@@ -189,7 +263,7 @@ export default function TodayPage() {
                           size="sm"
                           variant="ghost"
                           className="touch-manipulation h-8 text-xs text-destructive"
-                          disabled={savingId === apt.id}
+                          disabled={savingId === apt.id || !isOnline}
                           onClick={() => void patchStatus(apt.id, 'cancelled')}
                         >
                           لغو

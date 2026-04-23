@@ -1,5 +1,6 @@
 import { AuthProvider } from '@/components/auth-provider'
 import { AuthGate } from '@/components/auth-gate'
+import { SwrProvider } from '@/components/swr-provider'
 
 export default function AppLayout({
   children,
@@ -7,10 +8,12 @@ export default function AppLayout({
   children: React.ReactNode
 }) {
   return (
-    <AuthProvider>
-      <div className="flex h-dvh flex-col overflow-hidden">
-        <AuthGate>{children}</AuthGate>
-      </div>
-    </AuthProvider>
+    <SwrProvider>
+      <AuthProvider>
+        <div className="flex h-dvh flex-col overflow-hidden">
+          <AuthGate>{children}</AuthGate>
+        </div>
+      </AuthProvider>
+    </SwrProvider>
   )
 }

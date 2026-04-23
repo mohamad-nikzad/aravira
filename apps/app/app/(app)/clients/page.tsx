@@ -16,15 +16,30 @@ import { Avatar, AvatarFallback } from '@repo/ui/avatar'
 import { Badge } from '@repo/ui/badge'
 import { ClientDrawer } from '@/components/clients/client-drawer'
 import { useAuth } from '@/components/auth-provider'
+import {
+  NetworkStatusBanner,
+  OfflineStateCard,
+} from '@/components/pwa/offline-state'
 import { ClientsSkeleton } from '@/components/skeletons/clients-skeleton'
+import {
+  fetchJsonOrThrow,
+  useNetworkStatus,
+  useOfflineSnapshot,
+} from '@/lib/pwa-client'
 import { Client } from '@repo/salon-core/types'
 
-const fetcher = (url: string) =>
-  fetch(url, { credentials: 'include' }).then((res) => res.json())
+async function fetcher<T>(url: string) {
+  return fetchJsonOrThrow<T>(url)
+}
+
+type ClientsResponse = {
+  clients: Client[]
+}
 
 export default function ClientsPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const isOnline = useNetworkStatus()
   const [search, setSearch] = useState('')
   const [showDrawer, setShowDrawer] = useState(false)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
@@ -35,7 +50,15 @@ export default function ClientsPage() {
     }
   }, [user, router])
 
-  const { data, isLoading: clientsLoading, mutate } = useSWR(user?.role === 'manager' ? '/api/clients' : null, fetcher)
+  const swrKey = user?.role === 'manager' ? '/api/clients' : null
+  const {
+    data: liveData,
+    error,
+    isLoading: clientsLoading,
+    mutate,
+  } = useSWR<ClientsResponse>(swrKey, fetcher)
+  const snapshot = useOfflineSnapshot(swrKey ? 'clients:list' : null, liveData)
+  const data = liveData ?? snapshot?.data
   const clients: Client[] = data?.clients || []
 
   const filteredClients = clients.filter(
@@ -45,11 +68,13 @@ export default function ClientsPage() {
   )
 
   const handleAddClient = () => {
+    if (!isOnline) return
     setSelectedClient(null)
     setShowDrawer(true)
   }
 
   const handleEditClient = (client: Client) => {
+    if (!isOnline) return
     setSelectedClient(client)
     setShowDrawer(true)
   }
@@ -68,21 +93,68 @@ export default function ClientsPage() {
       .slice(0, 2)
   }
 
-  if (clientsLoading) {
+  if (clientsLoading && !data) {
     return <ClientsSkeleton />
   }
 
   if (!user || user.role !== 'manager') return null
 
+  if (!data && !clientsLoading) {
+    return (
+      <div className="flex h-full flex-col bg-background">
+        <header className="flex items-center justify-between gap-4 border-b border-border/50 bg-card px-4 py-3">
+          <h1 className="text-lg font-bold">مشتریان</h1>
+          <Button size="sm" disabled className="gap-1.5 touch-manipulation">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">مشتری جدید</span>
+          </Button>
+        </header>
+
+        <NetworkStatusBanner
+          routeLabel="فهرست مشتریان"
+          isOnline={isOnline}
+          hasSnapshot={Boolean(snapshot)}
+          snapshotUpdatedAt={snapshot?.updatedAt}
+          hasError={Boolean(error)}
+          onRetry={() => void mutate()}
+        />
+
+        <OfflineStateCard
+          title="فهرست مشتریان فعلا بارگذاری نشده است"
+          description={
+            isOnline
+              ? 'دریافت فهرست مشتریان کامل نشد. دوباره تلاش کنید.'
+              : 'برای اولین بارگذاری مشتریان باید دوباره به اینترنت متصل شوید.'
+          }
+          onAction={() => void mutate()}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full flex-col bg-background">
       <header className="flex items-center justify-between gap-4 bg-card px-4 py-3 border-b border-border/50">
         <h1 className="text-lg font-bold">مشتریان</h1>
-        <Button size="sm" onClick={handleAddClient} className="gap-1.5 touch-manipulation">
+        <Button
+          size="sm"
+          onClick={handleAddClient}
+          disabled={!isOnline}
+          className="gap-1.5 touch-manipulation"
+        >
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">مشتری جدید</span>
         </Button>
       </header>
+
+      <NetworkStatusBanner
+        routeLabel="فهرست مشتریان"
+        isOnline={isOnline}
+        hasSnapshot={Boolean(snapshot)}
+        snapshotUpdatedAt={snapshot?.updatedAt}
+        hasError={Boolean(error)}
+        onRetry={() => void mutate()}
+      />
 
       <div className="bg-card px-4 pb-3">
         <div className="relative">
@@ -155,7 +227,7 @@ export default function ClientsPage() {
                     <DropdownMenuItem onClick={() => router.push(`/clients/${client.id}`)}>
                       پروفایل
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleEditClient(client)}>
+                    <DropdownMenuItem disabled={!isOnline} onClick={() => handleEditClient(client)}>
                       ویرایش
                     </DropdownMenuItem>
                     {client.phone && (

@@ -191,7 +191,8 @@ export async function POST(request: Request) {
       void sendWebPushToUser(staffId, {
         title: 'نوبت جدید برای شما',
         body: `${client.name} — ${service.name}، ${date} ساعت ${startTime}`,
-        url: '/calendar',
+        url: `/calendar?date=${date}&appointmentId=${appointment.id}`,
+        tag: `appointment-${appointment.id}`,
       })
     }
 

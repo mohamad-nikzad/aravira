@@ -13,6 +13,20 @@ export function ServiceWorkerRegister() {
       return
     }
 
+    if (process.env.NODE_ENV !== 'production') {
+      void (async () => {
+        const registrations = await navigator.serviceWorker.getRegistrations()
+        await Promise.all(registrations.map((registration) => registration.unregister()))
+
+        if ('caches' in window) {
+          const cacheNames = await window.caches.keys()
+          await Promise.all(cacheNames.map((cacheName) => window.caches.delete(cacheName)))
+        }
+      })()
+
+      return
+    }
+
     let registrationCleanup = () => {}
 
     const promptForUpdate = (registration: ServiceWorkerRegistration) => {
@@ -59,7 +73,7 @@ export function ServiceWorkerRegister() {
     navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange)
 
     navigator.serviceWorker
-      .register('/sw.js', { scope: '/' })
+      .register('/sw.js', { scope: '/', updateViaCache: 'none' })
       .then((registration) => {
         const recheckForUpdates = () => {
           void registration.update().then(() => {
@@ -101,12 +115,14 @@ export function ServiceWorkerRegister() {
         registration.addEventListener('updatefound', handleUpdateFound)
         window.addEventListener('focus', recheckForUpdates)
         document.addEventListener('visibilitychange', handleVisibilityChange)
+        const updateInterval = window.setInterval(recheckForUpdates, 10 * 60 * 1000)
         recheckForUpdates()
 
         registrationCleanup = () => {
           registration.removeEventListener('updatefound', handleUpdateFound)
           window.removeEventListener('focus', recheckForUpdates)
           document.removeEventListener('visibilitychange', handleVisibilityChange)
+          window.clearInterval(updateInterval)
         }
       })
       .catch(() => {})
