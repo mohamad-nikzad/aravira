@@ -3,49 +3,17 @@
 import { useEffect, useRef } from 'react'
 import { ToastAction } from '@repo/ui/toast'
 import { toast } from '@repo/ui/use-toast'
-
-const NEXT_BUILD_ID_PATTERN = /"b":"([^"]+)"/
-
-function getBuildIdFromMarkup(markup: string) {
-  return markup.match(NEXT_BUILD_ID_PATTERN)?.[1] ?? null
-}
+import { extractNextBuildId } from '@/lib/pwa-build-id'
 
 function getCurrentBuildId() {
   for (const script of Array.from(document.scripts)) {
-    const buildId = getBuildIdFromMarkup(script.textContent ?? '')
+    const buildId = extractNextBuildId(script.textContent ?? '')
     if (buildId) {
       return buildId
     }
   }
 
   return null
-}
-
-function getAssetSignatureFromDocument(documentToRead: Document) {
-  return Array.from(
-    documentToRead.querySelectorAll<HTMLScriptElement | HTMLLinkElement>(
-      'script[src^="/_next/static/"], link[href^="/_next/static/"]'
-    )
-  )
-    .map((element) => {
-      if (element instanceof HTMLScriptElement) {
-        return element.src
-      }
-
-      return element.href
-    })
-    .sort()
-    .join('|')
-}
-
-function getCurrentAssetSignature() {
-  return getAssetSignatureFromDocument(document)
-}
-
-function getAssetSignatureFromMarkup(markup: string) {
-  return getAssetSignatureFromDocument(
-    new DOMParser().parseFromString(markup, 'text/html')
-  )
 }
 
 export function ServiceWorkerRegister() {
@@ -154,24 +122,9 @@ export function ServiceWorkerRegister() {
 
         const nextMarkup = await response.text()
         const currentBuildId = getCurrentBuildId()
-        const nextBuildId = getBuildIdFromMarkup(nextMarkup)
+        const nextBuildId = extractNextBuildId(nextMarkup)
 
-        if (currentBuildId && nextBuildId) {
-          if (currentBuildId !== nextBuildId) {
-            promptForAppShellUpdate()
-          }
-
-          return
-        }
-
-        const currentAssetSignature = getCurrentAssetSignature()
-        const nextAssetSignature = getAssetSignatureFromMarkup(nextMarkup)
-
-        if (
-          currentAssetSignature &&
-          nextAssetSignature &&
-          currentAssetSignature !== nextAssetSignature
-        ) {
+        if (currentBuildId && nextBuildId && currentBuildId !== nextBuildId) {
           promptForAppShellUpdate()
         }
       } catch {

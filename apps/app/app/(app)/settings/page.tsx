@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
+import { useTheme } from 'next-themes'
 import {
   LogOut,
   Moon,
@@ -38,8 +39,9 @@ const fetcher = (url: string) =>
 
 export default function SettingsPage() {
   const { user, logout } = useAuth()
+  const { theme, setTheme } = useTheme()
   const [loggingOut, setLoggingOut] = useState(false)
-  const [darkMode, setDarkMode] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   const [showServiceDrawer, setShowServiceDrawer] = useState(false)
   const [selectedService, setSelectedService] = useState<Service | null>(null)
@@ -66,6 +68,10 @@ export default function SettingsPage() {
     setSlotMin(s.slotDurationMinutes)
   }, [bizData])
 
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const services: Service[] = svcData?.services || []
 
   const handleLogout = async () => {
@@ -74,12 +80,7 @@ export default function SettingsPage() {
   }
 
   const toggleDarkMode = (enabled: boolean) => {
-    setDarkMode(enabled)
-    if (enabled) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
+    setTheme(enabled ? 'dark' : 'light')
   }
 
   const getInitials = (name: string) => {
@@ -117,6 +118,7 @@ export default function SettingsPage() {
   if (!user) return null
 
   const isManager = user.role === 'manager'
+  const darkMode = mounted ? theme === 'dark' : false
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -319,7 +321,7 @@ export default function SettingsPage() {
                 )}
                 <span className="text-sm">حالت تاریک</span>
               </div>
-              <Switch checked={darkMode} onCheckedChange={toggleDarkMode} />
+              <Switch checked={darkMode} disabled={!mounted} onCheckedChange={toggleDarkMode} />
             </div>
           </CardContent>
         </Card>

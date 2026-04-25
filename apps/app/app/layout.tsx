@@ -3,6 +3,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Vazirmatn } from 'next/font/google'
 import { InstallPrompt } from '@/components/pwa/install-prompt'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
+import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@repo/ui/toaster'
 import './globals.css'
 
@@ -62,13 +63,21 @@ export default function RootLayout({
   const isProduction = process.env.NODE_ENV === 'production'
 
   return (
-    <html lang="fa" dir="rtl" className={vazirmatn.variable}>
+    <html lang="fa" dir="rtl" className={vazirmatn.variable} suppressHydrationWarning>
       <body className="min-h-dvh bg-background font-sans antialiased">
-        {children}
-        {isProduction && <InstallPrompt />}
-        <ServiceWorkerRegister />
-        <Toaster />
-        {isProduction && <Analytics />}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          disableTransitionOnChange
+          storageKey="aravira-theme"
+        >
+          {children}
+          {isProduction && <InstallPrompt />}
+          <ServiceWorkerRegister />
+          <Toaster />
+          {isProduction && <Analytics />}
+        </ThemeProvider>
       </body>
     </html>
   )

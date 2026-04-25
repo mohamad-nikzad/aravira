@@ -142,6 +142,7 @@ export function StaffPushSettings() {
       const reg = await navigator.serviceWorker.ready
 
       if (!next) {
+        setEnabled(false)
         const sub = await reg.pushManager.getSubscription()
         if (sub) {
           const endpoint = sub.endpoint
@@ -153,7 +154,6 @@ export function StaffPushSettings() {
           })
           await sub.unsubscribe()
         }
-        setEnabled(false)
         toast({ title: 'اعلان خاموش شد' })
         return
       }
@@ -169,15 +169,20 @@ export function StaffPushSettings() {
         return
       }
 
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
-      })
+      const existingSub = await reg.pushManager.getSubscription()
+      const sub =
+        existingSub ??
+        (await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        }))
 
       const json = sub.toJSON()
       if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
         throw new Error('Invalid subscription')
       }
+
+      setEnabled(true)
 
       const res = await fetch('/api/push/subscribe', {
         method: 'POST',
@@ -196,8 +201,6 @@ export function StaffPushSettings() {
         const err = await res.json().catch(() => ({}))
         throw new Error((err as { error?: string }).error || 'subscribe failed')
       }
-
-      setEnabled(true)
       toast({
         title: 'اعلان فعال شد',
         description: 'وقتی مدیر برای شما نوبت ثبت کند، اعلان دریافت می‌کنید.',
