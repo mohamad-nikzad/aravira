@@ -19,17 +19,17 @@ export const viewport: Viewport = {
   initialScale: 1,
   colorScheme: 'light dark',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f8f5f2' },
-    { media: '(prefers-color-scheme: dark)', color: '#272019' },
+    { media: '(prefers-color-scheme: light)', color: '#f8eff0' },
+    { media: '(prefers-color-scheme: dark)', color: '#1f171b' },
   ],
   viewportFit: 'cover',
   interactiveWidget: 'resizes-content',
 }
 
 export const metadata: Metadata = {
-  title: 'آراویرا',
-  description: 'سامانه مدیریت نوبت‌دهی آراویرا',
-  applicationName: 'آراویرا',
+  title: 'سالورا',
+  description: 'سامانه مدیریت هوشمند نوبت‌دهی سالورا',
+  applicationName: 'سالورا',
   manifest: '/manifest.json',
   icons: {
     icon: [
@@ -40,11 +40,11 @@ export const metadata: Metadata = {
     shortcut: ['/favicon.ico'],
   },
   category: 'business',
-  keywords: ['آراویرا', 'نوبت دهی سالن', 'مدیریت سالن', 'آرایشگاه', 'PWA'],
+  keywords: ['سالورا', 'Saloora', 'نوبت دهی سالن', 'مدیریت سالن', 'آرایشگاه', 'PWA'],
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'آراویرا',
+    title: 'سالورا',
   },
   formatDetection: {
     telephone: false,

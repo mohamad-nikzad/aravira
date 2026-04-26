@@ -345,7 +345,7 @@ export default function SettingsPage() {
         </Card>
 
         <div className="text-center pt-4 pb-2">
-          <p className="text-xs font-medium text-muted-foreground/60">آراویرا</p>
+          <p className="text-xs font-medium text-muted-foreground/60">سالورا</p>
           <p className="text-[10px] text-muted-foreground/40">نسخه ۱.۰.۰</p>
         </div>
       </div>

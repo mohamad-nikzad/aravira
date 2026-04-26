@@ -5,8 +5,11 @@ export function CalendarSkeleton() {
     <div className="relative flex h-full flex-col bg-background">
       {/* CalendarHeader */}
       <header className="calendar-header-gradient flex items-center gap-2 px-3 py-2 sm:px-4">
-        <div className="flex items-center gap-0.5 shrink-0">
-          <span className="text-base font-bold text-primary tracking-tight ml-1.5">آراویرا</span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Skeleton className="size-8 rounded-xl" />
+          <span className="hidden text-base font-bold text-primary tracking-tight ml-1 min-[430px]:inline">
+            سالورا
+          </span>
         </div>
         <div className="flex-1 min-w-0 text-center">
           <Skeleton className="h-[18px] w-32 mx-auto" />

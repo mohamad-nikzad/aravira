@@ -191,7 +191,7 @@ export function InstallPrompt() {
               {variant === 'ios' ? <Share className="size-5" /> : <Download className="size-5" />}
             </div>
             <div className="space-y-1">
-              <DrawerTitle className="text-lg">نصب آراویرا روی موبایل</DrawerTitle>
+              <DrawerTitle className="text-lg">نصب سالورا روی موبایل</DrawerTitle>
               <DrawerDescription className="text-sm leading-6">
                 بعد از استفاده روزانه، نصبش کنيد تا سريع تر و تمام صفحه در دسترس باشد.
               </DrawerDescription>
@@ -208,7 +208,7 @@ export function InstallPrompt() {
               <ol className="space-y-2 text-sm leading-6 text-muted-foreground">
                 <li>در Safari پايين صفحه روي دکمه اشتراک گذاري بزنيد.</li>
                 <li>گزينه Add to Home Screen را انتخاب کنيد.</li>
-                <li>در مرحله آخر روي Add بزنيد تا آراويرا مثل يک اپ باز شود.</li>
+                <li>در مرحله آخر روي Add بزنيد تا سالورا مثل يک اپ باز شود.</li>
               </ol>
             ) : (
               <ul className="space-y-2 text-sm leading-6 text-muted-foreground">

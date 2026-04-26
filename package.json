@@ -26,15 +26,18 @@
     "db:studio:main": "DATABASE_ENV_FILE=.env.database.main pnpm --filter @repo/database db:studio",
     "db:seed": "DATABASE_ENV_FILE=.env.database.dev pnpm --filter @repo/database db:seed",
     "db:seed:multitenant": "DATABASE_ENV_FILE=.env.database.multitenant pnpm --filter @repo/database db:seed",
-    "db:seed:main": "DATABASE_ENV_FILE=.env.database.main pnpm --filter @repo/database db:seed"
+    "db:seed:main": "DATABASE_ENV_FILE=.env.database.main pnpm --filter @repo/database db:seed",
+    "brand:icons": "node scripts/generate-saloora-icons.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
     "drizzle-kit": "^0.30.4",
     "eslint": "^9",
     "eslint-config-next": "^16.2.4",
-    "turbo": "^2.5.8",
+    "pwa-asset-generator": "^8.1.4",
+    "sharp": "^0.34.5",
     "tsx": "^4.19.2",
+    "turbo": "^2.5.8",
     "typescript": "5.7.3",
     "vitest": "^3.0.5"
   }

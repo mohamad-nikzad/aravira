@@ -8,6 +8,7 @@ import { Input } from '@repo/ui/input'
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field'
 import { Spinner } from '@repo/ui/spinner'
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
+import { SalooraMark } from '@/components/brand/saloora-logo'
 
 function makeSlug(value: string): string {
   const slug = value
@@ -77,22 +78,14 @@ export default function SignupPage() {
     <main className="flex min-h-dvh items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-[#9B3636]">
-            <svg viewBox="-250 -310 500 540" className="h-11 w-11" aria-label="آراویرا">
-              <circle cx="-120" cy="120" r="75" fill="none" stroke="white" strokeWidth="40" />
-              <circle cx="120" cy="120" r="75" fill="none" stroke="white" strokeWidth="40" />
-              <path d="M-68,62 L-30,-10 L80,-260 C85,-272 75,-280 65,-275 L-18,2 Z" fill="white" />
-              <path d="M68,62 L30,-10 L-80,-260 C-85,-272 -75,-280 -65,-275 L18,2 Z" fill="white" />
-              <circle cx="0" cy="10" r="22" fill="#9B3636" stroke="white" strokeWidth="12" />
-            </svg>
-          </div>
+          <SalooraMark className="mx-auto mb-4 size-16 rounded-2xl" priority />
           <h1 className="text-2xl font-black tracking-tight text-foreground">ساخت سالن جدید</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            سالن خود را بسازید و نوبت‌ها را مدیریت کنید
+            سالن خود را در سالورا بسازید و نوبت‌ها را مدیریت کنید
           </p>
         </div>
 
-        <div className="rounded-lg border border-border/60 bg-card p-5 shadow-sm">
+        <div className="rounded-lg border border-border/60 bg-card/95 p-5 shadow-sm">
           <form onSubmit={handleSubmit}>
             <FieldGroup className="gap-5">
               <Field>

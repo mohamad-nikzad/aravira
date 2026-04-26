@@ -10,6 +10,7 @@ import { Spinner } from '@repo/ui/spinner'
 import { homePathForRole } from '@/lib/navigation'
 import type { User } from '@repo/salon-core/types'
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
+import { SalooraMark } from '@/components/brand/saloora-logo'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -57,26 +58,19 @@ export default function LoginPage() {
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.03]"
         style={{
-          backgroundImage: 'radial-gradient(circle at 30% 20%, var(--primary) 0%, transparent 50%), radial-gradient(circle at 70% 80%, var(--primary) 0%, transparent 50%)',
+          backgroundImage:
+            'radial-gradient(circle at 30% 20%, var(--saloora-rose) 0%, transparent 50%), radial-gradient(circle at 70% 80%, var(--primary) 0%, transparent 50%)',
         }}
       />
 
       <div className="relative w-full max-w-sm">
         <div className="mb-10 text-center">
-          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#9B3636]">
-            <svg viewBox="-250 -310 500 540" className="h-14 w-14" aria-label="آراویرا">
-              <circle cx="-120" cy="120" r="75" fill="none" stroke="white" strokeWidth="40"/>
-              <circle cx="120" cy="120" r="75" fill="none" stroke="white" strokeWidth="40"/>
-              <path d="M-68,62 L-30,-10 L80,-260 C85,-272 75,-280 65,-275 L-18,2 Z" fill="white"/>
-              <path d="M68,62 L30,-10 L-80,-260 C-85,-272 -75,-280 -65,-275 L18,2 Z" fill="white"/>
-              <circle cx="0" cy="10" r="22" fill="#9B3636" stroke="white" strokeWidth="12"/>
-            </svg>
-          </div>
-          <h1 className="text-3xl font-black text-foreground tracking-tight">آراویرا</h1>
-          <p className="mt-2 text-sm text-muted-foreground">سامانه مدیریت نوبت‌دهی</p>
+          <SalooraMark className="mx-auto mb-5 size-20 rounded-[1.65rem]" priority />
+          <h1 className="text-3xl font-black text-foreground tracking-tight">سالورا</h1>
+          <p className="mt-2 text-sm text-muted-foreground">مدیریت هوشمند سالن زیبایی</p>
         </div>
 
-        <div className="rounded-2xl border border-border/40 bg-card p-6 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-card/95 p-6 shadow-sm">
           <div className="mb-6 text-center">
             <h2 className="text-base font-semibold text-foreground">خوش آمدید</h2>
             <p className="mt-1 text-sm text-muted-foreground">برای ادامه وارد شوید</p>

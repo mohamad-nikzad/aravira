@@ -1,4 +1,4 @@
-const SW_VERSION = '2026-04-23-v2'
+const SW_VERSION = '2026-04-26-v1'
 const STATIC_CACHE_NAME = `aravira-static-${SW_VERSION}`
 const NAVIGATION_CACHE_NAME = `aravira-pages-${SW_VERSION}`
 const MEDIA_CACHE_NAME = `aravira-media-${SW_VERSION}`
@@ -59,7 +59,7 @@ function getRouteLabel(pathname) {
   if (pathname.startsWith('/staff')) return 'پرسنل'
   if (pathname.startsWith('/login')) return 'ورود'
   if (pathname.startsWith('/signup')) return 'ثبت‌نام'
-  return 'آراویرا'
+  return 'سالورا'
 }
 
 function createOfflineDocument(pathname) {
@@ -76,8 +76,8 @@ function createOfflineDocument(pathname) {
       :root {
         color-scheme: light;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: #f8f5f2;
-        color: #2d1f1a;
+        background: #f8eff0;
+        color: #6b3a4a;
       }
       body {
         margin: 0;
@@ -87,15 +87,15 @@ function createOfflineDocument(pathname) {
         justify-content: center;
         padding: 24px;
         background:
-          radial-gradient(circle at top, rgba(155, 54, 54, 0.08), transparent 45%),
-          #f8f5f2;
+          radial-gradient(circle at top, rgba(189, 92, 110, 0.12), transparent 45%),
+          #f8eff0;
       }
       .card {
         width: min(100%, 420px);
         border-radius: 24px;
-        border: 1px solid rgba(45, 31, 26, 0.08);
+        border: 1px solid rgba(107, 58, 74, 0.12);
         background: rgba(255, 255, 255, 0.92);
-        box-shadow: 0 18px 40px rgba(45, 31, 26, 0.08);
+        box-shadow: 0 18px 40px rgba(107, 58, 74, 0.1);
         padding: 24px;
         text-align: right;
       }
@@ -106,13 +106,13 @@ function createOfflineDocument(pathname) {
       p {
         margin: 0;
         line-height: 1.8;
-        color: rgba(45, 31, 26, 0.78);
+        color: rgba(107, 58, 74, 0.78);
       }
       button {
         margin-top: 18px;
         border: 0;
         border-radius: 16px;
-        background: #9b3636;
+        background: #6b3a4a;
         color: white;
         font: inherit;
         padding: 12px 18px;
@@ -163,7 +163,7 @@ self.addEventListener('activate', (event) => {
 })
 
 self.addEventListener('push', (event) => {
-  let payload = { title: 'آراویرا', body: '', url: '/calendar', tag: 'general' }
+  let payload = { title: 'سالورا', body: '', url: '/calendar', tag: 'general' }
   try {
     if (event.data) {
       const parsed = event.data.json()
