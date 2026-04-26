@@ -15,7 +15,7 @@ import {
 } from '@repo/ui/drawer'
 
 const FIRST_VISIT_KEY = 'aravira-pwa-first-visit'
-const DISMISSED_KEY = 'aravira-pwa-install-dismissed-v1'
+const DISMISSED_KEY = 'aravira-pwa-install-dismissed-v2'
 const VALUE_MOMENT_KEY = 'aravira-pwa-install-qualified-v1'
 const AUTO_OPENED_KEY = 'aravira-pwa-install-auto-opened-v1'
 
@@ -100,7 +100,7 @@ export function InstallPrompt() {
 
     window.localStorage.setItem(FIRST_VISIT_KEY, '1')
 
-    if (wasDismissed || !hasValueMoment) {
+    if (!hasValueMoment) {
       return
     }
 
@@ -124,7 +124,7 @@ export function InstallPrompt() {
       startTransition(() => {
         setVariant('installable')
         setIsSupported(true)
-        if (shouldAutoOpenRef.current) {
+        if (!wasDismissed && shouldAutoOpenRef.current) {
           window.localStorage.setItem(AUTO_OPENED_KEY, '1')
           setOpen(true)
         }
@@ -133,7 +133,7 @@ export function InstallPrompt() {
 
     const handleAppInstalled = () => {
       deferredPromptRef.current = null
-      persistDismissal()
+      window.localStorage.removeItem(DISMISSED_KEY)
       setOpen(false)
     }
 
@@ -169,10 +169,14 @@ export function InstallPrompt() {
 
     try {
       await deferredPrompt.prompt()
-      await deferredPrompt.userChoice
+      const choice = await deferredPrompt.userChoice
       deferredPromptRef.current = null
-      persistDismissal()
-      setOpen(false)
+      if (choice.outcome === 'accepted') {
+        window.localStorage.removeItem(DISMISSED_KEY)
+        setOpen(false)
+      } else {
+        persistDismissal()
+      }
     } finally {
       setIsPending(false)
     }
