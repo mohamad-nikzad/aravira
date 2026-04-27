@@ -18,6 +18,8 @@ import { Spinner } from '@repo/ui/spinner'
 import { User, Service, SERVICE_CATEGORIES } from '@repo/salon-core/types'
 import { toPersianDigits } from '@repo/salon-core/persian-digits'
 import { cn } from '@repo/ui/utils'
+import { DataClientHttpError } from '@repo/data-client'
+import { useManagerDataClient } from '@/components/manager-data-client-provider'
 
 interface StaffServicesDrawerProps {
   open: boolean
@@ -34,6 +36,7 @@ export function StaffServicesDrawer({
   services,
   onSuccess,
 }: StaffServicesDrawerProps) {
+  const dc = useManagerDataClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [unrestricted, setUnrestricted] = useState(true)
@@ -85,25 +88,22 @@ export function StaffServicesDrawer({
       return
     }
 
+    if (!dc) {
+      setError('اتصال داده برقرار نیست')
+      return
+    }
     setLoading(true)
     try {
-      const res = await fetch(`/api/staff/${staff.id}/services`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          serviceIds: unrestricted ? null : [...selected],
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'ذخیره نشد')
-        setLoading(false)
-        return
-      }
+      await dc.staff.setServiceIds(staff.id, unrestricted ? null : [...selected])
       onSuccess()
-    } catch {
-      setError('خطایی رخ داد')
+    } catch (err) {
+      const msg =
+        err instanceof DataClientHttpError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'خطایی رخ داد'
+      setError(msg)
     } finally {
       setLoading(false)
     }
@@ -139,7 +139,7 @@ export function StaffServicesDrawer({
               Always stack (no side-by-side row): RTL + Switch dir="ltr" in a flex row
               causes min-width bugs and horizontal overflow on mobile.
             */}
-            <div className="w-full min-w-0 max-w-full overflow-hidden rounded-lg border border-border/60 bg-muted/30 p-4">
+            <div className="w-full min-w-0 max-w-full overflow-hidden rounded-lg border border-border bg-card p-4">
               <div className="flex w-full min-w-0 max-w-full flex-col gap-3">
                 <div className="w-full min-w-0 max-w-full space-y-1.5">
                   <p
@@ -168,7 +168,7 @@ export function StaffServicesDrawer({
             </div>
 
             {!unrestricted && (
-              <div className="flex w-full min-w-0 max-w-full flex-col gap-4 overflow-hidden rounded-lg border border-border/60 bg-muted/20 p-3">
+              <div className="flex w-full min-w-0 max-w-full flex-col gap-4 overflow-hidden rounded-lg border border-border bg-card p-3">
                 {Object.entries(servicesByCategory).map(([category, list]) => (
                   <div key={category} className="min-w-0">
                     <p className="mb-2 text-xs font-medium text-muted-foreground">

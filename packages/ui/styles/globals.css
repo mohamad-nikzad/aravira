@@ -66,14 +66,14 @@
   --primary-foreground: oklch(0.216 0.015 346.8);
   --secondary: oklch(0.456 0.089 4);
   --secondary-foreground: var(--saloora-mist);
-  --muted: oklch(0.381 0.016 148.9);
+  --muted: color-mix(in oklch, var(--card) 78%, var(--foreground) 22%);
   --muted-foreground: oklch(0.807 0.051 0.8);
   --accent: oklch(0.456 0.089 4);
   --accent-foreground: var(--saloora-mist);
   --destructive: oklch(0.5 0.18 25);
   --destructive-foreground: oklch(0.95 0 0);
-  --border: oklch(0.381 0.016 148.9);
-  --input: oklch(0.381 0.016 148.9);
+  --border: oklch(0.335 0.028 345);
+  --input: oklch(0.335 0.028 345);
   --ring: var(--saloora-rose);
   --chart-1: oklch(0.807 0.051 0.8);
   --chart-2: var(--saloora-rose);
@@ -86,7 +86,7 @@
   --sidebar-primary-foreground: oklch(0.216 0.015 346.8);
   --sidebar-accent: oklch(0.456 0.089 4);
   --sidebar-accent-foreground: var(--saloora-mist);
-  --sidebar-border: oklch(0.381 0.016 148.9);
+  --sidebar-border: oklch(0.335 0.028 345);
   --sidebar-ring: var(--saloora-rose);
   --staff-1: var(--saloora-rose);
   --staff-2: oklch(0.55 0.07 270);
@@ -395,10 +395,6 @@
 }
 
 .salon-fullcalendar .fc-list-day-cushion {
-  background: var(--muted);
+  background: var(--fc-neutral-bg-color);
 }
 
-.dark .salon-fullcalendar .fc {
-  --fc-page-bg-color: transparent;
-  --fc-neutral-bg-color: var(--muted);
-}

@@ -8,6 +8,8 @@ import { Spinner } from '@repo/ui/spinner'
 import { cn } from '@repo/ui/utils'
 import { Client } from '@repo/salon-core/types'
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
+import { DataClientHttpError } from '@repo/data-client'
+import { useManagerDataClient } from '@/components/manager-data-client-provider'
 
 interface ClientPickerProps {
   clients: Client[]
@@ -24,6 +26,7 @@ export function ClientPicker({
   onChange,
   onClientCreated,
 }: ClientPickerProps) {
+  const dataClient = useManagerDataClient()
   const [mode, setMode] = useState<PickerMode>('closed')
   const [query, setQuery] = useState('')
   const [newName, setNewName] = useState('')
@@ -109,24 +112,34 @@ export function ClientPicker({
     setSaveError('')
 
     try {
-      const res = await fetch('/api/clients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
+      let created: Client
+      if (dataClient) {
+        created = await dataClient.clients.create({
           name: newName.trim(),
           phone: newPhone.trim(),
-        }),
-      })
+        })
+        void dataClient.sync.processPending()
+      } else {
+        const res = await fetch('/api/clients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            name: newName.trim(),
+            phone: newPhone.trim(),
+          }),
+        })
 
-      const data = await res.json()
+        const data = await res.json()
 
-      if (!res.ok) {
-        setSaveError(data.error || 'خطا در ثبت مشتری')
-        return
+        if (!res.ok) {
+          setSaveError(data.error || 'خطا در ثبت مشتری')
+          return
+        }
+
+        created = data.client as Client
       }
 
-      const created: Client = data.client
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur()
       }
@@ -136,8 +149,10 @@ export function ClientPicker({
       setQuery('')
       setNewName('')
       setNewPhone('')
-    } catch {
-      setSaveError('خطایی رخ داد')
+    } catch (err) {
+      setSaveError(
+        err instanceof DataClientHttpError ? err.message : 'خطایی رخ داد'
+      )
     } finally {
       setSaving(false)
     }

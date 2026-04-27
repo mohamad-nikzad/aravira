@@ -9,6 +9,7 @@ import {
   staffMayPerformService,
   checkStaffAvailabilityForAppointment,
 } from '@repo/database/appointments'
+import { isClientProvidedEntityId } from '@repo/database/clients'
 import { SCHEDULE_CONFLICT_CODES } from '@repo/salon-core/appointment-conflict'
 import type { Appointment, AppointmentWithDetails } from '@repo/salon-core/types'
 import { endTimeFromDuration, validateAppointmentWindow } from '@repo/salon-core/appointment-time'
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
       endTime: endTimeRaw,
       durationMinutes,
       notes,
+      id: requestedAppointmentId,
     } = body
 
     if (!clientId || !staffId || !serviceId || !date || !startTime) {
@@ -180,6 +182,7 @@ export async function POST(request: Request) {
         endTime,
         status: 'scheduled',
         notes,
+        ...(isClientProvidedEntityId(requestedAppointmentId) ? { id: requestedAppointmentId } : {}),
       },
       user.salonId,
       user.userId

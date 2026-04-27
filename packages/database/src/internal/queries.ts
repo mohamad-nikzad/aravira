@@ -379,21 +379,22 @@ export async function getServiceById(id: string, salonId: string): Promise<Servi
 }
 
 export async function createService(
-  input: Omit<Service, 'id' | 'active'> & { active?: boolean; salonId: string }
+  input: Omit<Service, 'id' | 'active'> & { active?: boolean; salonId: string; id?: string }
 ): Promise<Service> {
   const db = getDb()
-  const [row] = await db
-    .insert(services)
-    .values({
-      salonId: input.salonId,
-      name: input.name,
-      category: input.category,
-      duration: input.duration,
-      price: input.price,
-      color: input.color,
-      active: input.active ?? true,
-    })
-    .returning()
+  const values: typeof services.$inferInsert = {
+    salonId: input.salonId,
+    name: input.name,
+    category: input.category,
+    duration: input.duration,
+    price: input.price,
+    color: input.color,
+    active: input.active ?? true,
+  }
+  if (isClientProvidedEntityId(input.id)) {
+    values.id = input.id
+  }
+  const [row] = await db.insert(services).values(values).returning()
   return rowToService(row)
 }
 
@@ -451,20 +452,29 @@ export async function getClientById(id: string, salonId: string): Promise<Client
   return row ? rowToClient(row) : undefined
 }
 
+/** Accepts caller-provided UUIDs for offline-first clients (must be a valid UUID v4 string). */
+export function isClientProvidedEntityId(id: string | undefined): id is string {
+  return (
+    typeof id === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+  )
+}
+
 export async function createClient(
-  input: Omit<Client, 'id' | 'createdAt'> & { salonId: string }
+  input: Omit<Client, 'id' | 'createdAt'> & { salonId: string; id?: string }
 ): Promise<Client> {
   const db = getDb()
   const normalized = normalizePhone(input.phone)
-  const [row] = await db
-    .insert(clients)
-    .values({
-      salonId: input.salonId,
-      name: input.name,
-      phone: normalized,
-      notes: input.notes,
-    })
-    .returning()
+  const values: typeof clients.$inferInsert = {
+    salonId: input.salonId,
+    name: input.name,
+    phone: normalized,
+    notes: input.notes,
+  }
+  if (isClientProvidedEntityId(input.id)) {
+    values.id = input.id
+  }
+  const [row] = await db.insert(clients).values(values).returning()
   return rowToClient(row)
 }
 
@@ -640,26 +650,27 @@ export async function getAppointmentById(
 }
 
 export async function createAppointment(
-  apt: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>,
+  apt: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'> & { id?: string },
   salonId: string,
   createdByUserId?: string
 ): Promise<Appointment> {
   const db = getDb()
-  const [row] = await db
-    .insert(appointments)
-    .values({
-      salonId,
-      clientId: apt.clientId,
-      staffId: apt.staffId,
-      serviceId: apt.serviceId,
-      date: apt.date,
-      startTime: apt.startTime,
-      endTime: apt.endTime,
-      status: apt.status,
-      notes: apt.notes,
-      createdByUserId: createdByUserId ?? null,
-    })
-    .returning()
+  const values: typeof appointments.$inferInsert = {
+    salonId,
+    clientId: apt.clientId,
+    staffId: apt.staffId,
+    serviceId: apt.serviceId,
+    date: apt.date,
+    startTime: apt.startTime,
+    endTime: apt.endTime,
+    status: apt.status,
+    notes: apt.notes,
+    createdByUserId: createdByUserId ?? null,
+  }
+  if (isClientProvidedEntityId(apt.id)) {
+    values.id = apt.id
+  }
+  const [row] = await db.insert(appointments).values(values).returning()
   return rowToAppointment(row)
 }
 

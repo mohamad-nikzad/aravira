@@ -56,7 +56,7 @@
   --primary-foreground: oklch(0.12 0 0);
   --secondary: oklch(0.24 0.015 45);
   --secondary-foreground: oklch(0.88 0.01 60);
-  --muted: oklch(0.24 0.01 45);
+  --muted: color-mix(in oklch, var(--card) 78%, var(--foreground) 22%);
   --muted-foreground: oklch(0.6 0.02 45);
   --accent: oklch(0.28 0.02 45);
   --accent-foreground: oklch(0.88 0.01 60);
@@ -360,10 +360,5 @@
 }
 
 .salon-fullcalendar .fc-list-day-cushion {
-  background: var(--muted);
-}
-
-.dark .salon-fullcalendar .fc {
-  --fc-page-bg-color: transparent;
-  --fc-neutral-bg-color: var(--muted);
+  background: var(--fc-neutral-bg-color);
 }

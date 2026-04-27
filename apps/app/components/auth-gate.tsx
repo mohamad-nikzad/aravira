@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import { useAuth } from '@/components/auth-provider'
 import { BottomNav } from '@/components/bottom-nav'
+import { ManagerDataClientProvider } from '@/components/manager-data-client-provider'
 import { Skeleton } from '@repo/ui/skeleton'
 
 type OnboardingStatus = {
@@ -83,7 +84,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className="flex-1 min-h-0">{children}</div>
+      <ManagerDataClientProvider>{children}</ManagerDataClientProvider>
       {!managerSetupLocked && <BottomNav />}
     </>
   )

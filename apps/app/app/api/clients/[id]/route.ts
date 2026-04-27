@@ -56,7 +56,10 @@ export async function PATCH(
     console.error('Update client error:', error)
     const msg = error instanceof Error ? error.message : ''
     if (msg.includes('unique') || msg.includes('duplicate')) {
-      return NextResponse.json({ error: 'این شماره تماس برای این سالن قبلاً ثبت شده است' }, { status: 409 })
+      return NextResponse.json(
+        { error: 'این شماره تماس برای این سالن قبلاً ثبت شده است', code: 'duplicate-phone' },
+        { status: 409 }
+      )
     }
     return NextResponse.json({ error: 'خطای سرور. لطفاً دوباره تلاش کنید.' }, { status: 500 })
   }

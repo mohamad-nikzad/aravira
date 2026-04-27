@@ -23,6 +23,8 @@ import {
 import { Spinner } from '@repo/ui/spinner'
 import { Service, SERVICE_CATEGORIES, STAFF_COLORS } from '@repo/salon-core/types'
 import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
+import { DataClientHttpError } from '@repo/data-client'
+import { useManagerDataClient } from '@/components/manager-data-client-provider'
 
 interface ServiceDrawerProps {
   open: boolean
@@ -37,6 +39,7 @@ export function ServiceDrawer({
   service,
   onSuccess,
 }: ServiceDrawerProps) {
+  const dc = useManagerDataClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -72,53 +75,41 @@ export function ServiceDrawer({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    if (!dc) {
+      setError('اتصال داده برقرار نیست')
+      return
+    }
     setLoading(true)
 
     try {
       if (isEditing) {
-        const res = await fetch(`/api/services/${service.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            name,
-            category,
-            duration,
-            price,
-            color,
-            active,
-          }),
+        await dc.services.update(service.id, {
+          name,
+          category,
+          duration,
+          price,
+          color,
+          active,
         })
-        const data = await res.json()
-        if (!res.ok) {
-          setError(data.error || 'ذخیره نشد')
-          setLoading(false)
-          return
-        }
       } else {
-        const res = await fetch('/api/services', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            name,
-            category,
-            duration,
-            price,
-            color,
-            active,
-          }),
+        await dc.services.create({
+          name,
+          category,
+          duration,
+          price,
+          color,
+          active,
         })
-        const data = await res.json()
-        if (!res.ok) {
-          setError(data.error || 'افزودن نشد')
-          setLoading(false)
-          return
-        }
       }
       onSuccess()
-    } catch {
-      setError('خطایی رخ داد')
+    } catch (err) {
+      const msg =
+        err instanceof DataClientHttpError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'خطایی رخ داد'
+      setError(msg)
     } finally {
       setLoading(false)
     }

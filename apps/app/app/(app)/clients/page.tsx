@@ -23,11 +23,8 @@ import {
   OfflineStateCard,
 } from '@/components/pwa/offline-state'
 import { ClientsSkeleton } from '@/components/skeletons/clients-skeleton'
-import {
-  fetchJsonOrThrow,
-  useNetworkStatus,
-  useOfflineSnapshot,
-} from '@/lib/pwa-client'
+import { fetchJsonOrThrow, useNetworkStatus } from '@/lib/pwa-client'
+import { useClientsListIndexedDbSources } from '@/lib/use-clients-indexeddb'
 import { Client } from '@repo/salon-core/types'
 
 async function fetcher<T>(url: string) {
@@ -59,8 +56,8 @@ export default function ClientsPage() {
     isLoading: clientsLoading,
     mutate,
   } = useSWR<ClientsResponse>(swrKey, fetcher)
-  const snapshot = useOfflineSnapshot(swrKey ? 'clients:list' : null, liveData)
-  const data = liveData ?? snapshot?.data
+  const idb = useClientsListIndexedDbSources(user?.role === 'manager', isOnline, liveData)
+  const data = idb.data ?? liveData
   const clients: Client[] = data?.clients || []
 
   const filteredClients = clients.filter(
@@ -70,13 +67,11 @@ export default function ClientsPage() {
   )
 
   const handleAddClient = () => {
-    if (!isOnline) return
     setSelectedClient(null)
     setShowDrawer(true)
   }
 
   const handleEditClient = (client: Client) => {
-    if (!isOnline) return
     setSelectedClient(client)
     setShowDrawer(true)
   }
@@ -95,13 +90,13 @@ export default function ClientsPage() {
       .slice(0, 2)
   }
 
-  if (clientsLoading && !data) {
+  if ((clientsLoading || idb.idbLoading) && !data) {
     return <ClientsSkeleton />
   }
 
   if (!user || user.role !== 'manager') return null
 
-  if (!data && !clientsLoading) {
+  if (!data && !clientsLoading && !idb.idbLoading) {
     return (
       <div className="flex h-full flex-col bg-background">
         <header className="flex items-center justify-between gap-4 border-b border-border/50 bg-card px-4 py-3">
@@ -115,8 +110,8 @@ export default function ClientsPage() {
         <NetworkStatusBanner
           routeLabel="فهرست مشتریان"
           isOnline={isOnline}
-          hasSnapshot={Boolean(snapshot)}
-          snapshotUpdatedAt={snapshot?.updatedAt}
+          hasSnapshot={idb.hasSnapshot}
+          snapshotUpdatedAt={idb.snapshotUpdatedAt}
           hasError={Boolean(error)}
           onRetry={() => void mutate()}
         />
@@ -138,12 +133,7 @@ export default function ClientsPage() {
     <div className="flex h-full flex-col bg-background">
       <header className="flex items-center justify-between gap-4 bg-card px-4 py-3 border-b border-border/50">
         <h1 className="text-lg font-bold">مشتریان</h1>
-        <Button
-          size="sm"
-          onClick={handleAddClient}
-          disabled={!isOnline}
-          className="gap-1.5 touch-manipulation"
-        >
+        <Button size="sm" onClick={handleAddClient} className="gap-1.5 touch-manipulation">
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">مشتری جدید</span>
         </Button>
@@ -152,8 +142,8 @@ export default function ClientsPage() {
       <NetworkStatusBanner
         routeLabel="فهرست مشتریان"
         isOnline={isOnline}
-        hasSnapshot={Boolean(snapshot)}
-        snapshotUpdatedAt={snapshot?.updatedAt}
+        hasSnapshot={idb.hasSnapshot}
+        snapshotUpdatedAt={idb.snapshotUpdatedAt}
         hasError={Boolean(error)}
         onRetry={() => void mutate()}
       />
@@ -225,7 +215,7 @@ export default function ClientsPage() {
                     <DropdownMenuItem onClick={() => router.push(`/clients/${client.id}`)}>
                       پروفایل
                     </DropdownMenuItem>
-                    <DropdownMenuItem disabled={!isOnline} onClick={() => handleEditClient(client)}>
+                    <DropdownMenuItem onClick={() => handleEditClient(client)}>
                       ویرایش
                     </DropdownMenuItem>
                     {client.phone && (

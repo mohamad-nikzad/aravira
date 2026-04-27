@@ -23,11 +23,8 @@ import {
   NetworkStatusBanner,
   OfflineStateCard,
 } from '@/components/pwa/offline-state'
-import {
-  fetchJsonOrThrow,
-  useNetworkStatus,
-  useOfflineSnapshot,
-} from '@/lib/pwa-client'
+import { fetchJsonOrThrow, useNetworkStatus } from '@/lib/pwa-client'
+import { useClientSummaryIndexedDbSources } from '@/lib/use-clients-indexeddb'
 import type { ClientSummary, FollowUpReason } from '@repo/salon-core/types'
 import { APPOINTMENT_STATUS } from '@repo/salon-core/types'
 import { formatJalaliFullDate } from '@repo/salon-core/jalali'
@@ -82,15 +79,17 @@ export default function ClientDetailPage() {
     user?.role === 'manager' && id ? `/api/clients/${id}/summary` : null,
     fetcher
   )
-  const snapshot = useOfflineSnapshot(
-    user?.role === 'manager' && id ? `clients:summary:${id}` : null,
+  const idb = useClientSummaryIndexedDbSources(
+    user?.role === 'manager',
+    isOnline,
+    id,
     liveData
   )
-  const data = liveData ?? snapshot?.data
+  const data = idb.data ?? liveData
 
   if (!user || user.role !== 'manager') return null
 
-  if (isLoading && !data) {
+  if ((isLoading || idb.idbLoading) && !data) {
     return <ClientSummarySkeleton />
   }
 
@@ -111,8 +110,8 @@ export default function ClientDetailPage() {
         <NetworkStatusBanner
           routeLabel="پروفایل مشتری"
           isOnline={isOnline}
-          hasSnapshot={Boolean(snapshot)}
-          snapshotUpdatedAt={snapshot?.updatedAt}
+          hasSnapshot={idb.hasSnapshot}
+          snapshotUpdatedAt={idb.snapshotUpdatedAt}
           hasError={Boolean(error)}
           onRetry={() => void mutate()}
         />
@@ -150,7 +149,6 @@ export default function ClientDetailPage() {
         <Button
           variant="outline"
           size="sm"
-          disabled={!isOnline}
           className="touch-manipulation shrink-0 gap-1"
           onClick={() => setEditOpen(true)}
         >
@@ -162,8 +160,8 @@ export default function ClientDetailPage() {
       <NetworkStatusBanner
         routeLabel="پروفایل مشتری"
         isOnline={isOnline}
-        hasSnapshot={Boolean(snapshot)}
-        snapshotUpdatedAt={snapshot?.updatedAt}
+          hasSnapshot={idb.hasSnapshot}
+          snapshotUpdatedAt={idb.snapshotUpdatedAt}
         hasError={Boolean(error)}
         onRetry={() => void mutate()}
       />

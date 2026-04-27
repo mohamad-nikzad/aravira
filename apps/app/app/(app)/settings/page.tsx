@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import useSWR from 'swr'
 import { useTheme } from 'next-themes'
 import {
   LogOut,
@@ -24,6 +23,10 @@ import { Input } from '@repo/ui/input'
 import { Field, FieldLabel, FieldGroup } from '@repo/ui/field'
 import { TimePicker } from '@repo/ui/time-picker'
 import { useAuth } from '@/components/auth-provider'
+import {
+  useBumpOfflineData,
+  useManagerDataClient,
+} from '@/components/manager-data-client-provider'
 import { Spinner } from '@repo/ui/spinner'
 import { SettingsSkeleton } from '@/components/skeletons/settings-skeleton'
 import { StaffPushSettings } from '@/components/pwa/staff-push-settings'
@@ -34,45 +37,63 @@ import { SERVICE_CATEGORIES } from '@repo/salon-core/types'
 import { displayPhone } from '@repo/salon-core/phone'
 import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
 
-const fetcher = (url: string) =>
-  fetch(url, { credentials: 'include' }).then((res) => res.json())
-
 export default function SettingsPage() {
   const { user, logout } = useAuth()
   const { theme, setTheme } = useTheme()
+  const dc = useManagerDataClient()
+  const bumpOfflineData = useBumpOfflineData()
   const [loggingOut, setLoggingOut] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   const [showServiceDrawer, setShowServiceDrawer] = useState(false)
   const [selectedService, setSelectedService] = useState<Service | null>(null)
 
-  const { data: bizData, mutate: mutateBiz } = useSWR(
-    user?.role === 'manager' ? '/api/settings/business' : null,
-    fetcher
-  )
-  const { data: svcData, mutate: mutateSvc } = useSWR(
-    user?.role === 'manager' ? '/api/services?all=1' : null,
-    fetcher
-  )
-
   const [workingStart, setWorkingStart] = useState('09:00')
   const [workingEnd, setWorkingEnd] = useState('19:00')
   const [slotMin, setSlotMin] = useState(30)
   const [savingHours, setSavingHours] = useState(false)
+  const [services, setServices] = useState<Service[]>([])
+  const [managerDataReady, setManagerDataReady] = useState(false)
 
   useEffect(() => {
-    const s = bizData?.settings
-    if (!s) return
-    setWorkingStart(s.workingStart)
-    setWorkingEnd(s.workingEnd)
-    setSlotMin(s.slotDurationMinutes)
-  }, [bizData])
+    if (!dc || user?.role !== 'manager') {
+      setManagerDataReady(true)
+      return
+    }
+    let cancelled = false
+    void dc.businessSettings.get().then((s) => {
+      if (cancelled || !s) return
+      setWorkingStart(s.workingStart)
+      setWorkingEnd(s.workingEnd)
+      setSlotMin(s.slotDurationMinutes)
+    })
+    const unsubBiz = dc.businessSettings.subscribe((s) => {
+      if (cancelled || !s) return
+      setWorkingStart(s.workingStart)
+      setWorkingEnd(s.workingEnd)
+      setSlotMin(s.slotDurationMinutes)
+    })
+    void dc.services
+      .list({ includeInactive: true })
+      .then((list) => {
+        if (!cancelled) setServices(list)
+      })
+      .finally(() => {
+        if (!cancelled) setManagerDataReady(true)
+      })
+    const unsubSvc = dc.services.subscribe((list) => {
+      if (!cancelled) setServices(list)
+    })
+    return () => {
+      cancelled = true
+      unsubBiz()
+      unsubSvc()
+    }
+  }, [dc, user?.role])
 
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  const services: Service[] = svcData?.services || []
 
   const handleLogout = async () => {
     setLoggingOut(true)
@@ -92,25 +113,21 @@ export default function SettingsPage() {
   }
 
   const saveBusinessHours = async () => {
+    if (!dc) return
     setSavingHours(true)
     try {
-      const res = await fetch('/api/settings/business', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          workingStart,
-          workingEnd,
-          slotDurationMinutes: slotMin,
-        }),
+      await dc.businessSettings.update({
+        workingStart,
+        workingEnd,
+        slotDurationMinutes: slotMin,
       })
-      if (res.ok) await mutateBiz()
+      bumpOfflineData()
     } finally {
       setSavingHours(false)
     }
   }
 
-  const settingsDataLoading = user?.role === 'manager' && !bizData && !svcData
+  const settingsDataLoading = user?.role === 'manager' && (!dc || !managerDataReady)
   if (settingsDataLoading) {
     return <SettingsSkeleton />
   }
@@ -361,7 +378,7 @@ export default function SettingsPage() {
           onSuccess={() => {
             setShowServiceDrawer(false)
             setSelectedService(null)
-            mutateSvc()
+            bumpOfflineData()
           }}
         />
       )}

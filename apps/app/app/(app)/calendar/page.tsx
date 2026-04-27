@@ -24,11 +24,8 @@ import {
   type BusinessHours,
 } from '@repo/salon-core/types'
 import { useAuth } from '@/components/auth-provider'
-import {
-  fetchJsonOrThrow,
-  useNetworkStatus,
-  useOfflineSnapshot,
-} from '@/lib/pwa-client'
+import { fetchJsonOrThrow, useNetworkStatus } from '@/lib/pwa-client'
+import { useCalendarIndexedDbSources } from '@/lib/use-calendar-indexeddb-sources'
 import { CalendarSkeleton } from '@/components/skeletons/calendar-skeleton'
 import { cn } from '@repo/ui/utils'
 
@@ -129,32 +126,32 @@ function CalendarPageContent() {
     mutate: mutateBusiness,
   } = useSWR<BusinessResponse>(user ? '/api/settings/business' : null, fetcher)
 
-  const appointmentsSnapshot = useOfflineSnapshot(
-    user ? `appointments:${startDate}:${endDate}` : null,
-    appointmentsData
-  )
-  const staffSnapshot = useOfflineSnapshot(user ? 'staff:list' : null, staffData)
-  const servicesSnapshot = useOfflineSnapshot(
-    user ? 'services:list' : null,
-    servicesData
-  )
-  const clientsSnapshot = useOfflineSnapshot(
-    user && isManager ? 'clients:list' : null,
-    clientsData
-  )
-  const businessSnapshot = useOfflineSnapshot(
-    user ? 'business:settings' : null,
-    businessData
+  const indexedDbLive = useMemo(
+    () => ({
+      appointmentsData,
+      staffData,
+      servicesData,
+      clientsData,
+      businessData,
+    }),
+    [appointmentsData, staffData, servicesData, clientsData, businessData]
   )
 
-  const appointmentsSource = appointmentsData ?? appointmentsSnapshot?.data
-  const staffSource: StaffResponse | undefined = staffData ?? staffSnapshot?.data
-  const servicesSource: ServicesResponse | undefined =
-    servicesData ?? servicesSnapshot?.data
-  const clientsSource: ClientsResponse | undefined =
-    clientsData ?? clientsSnapshot?.data
-  const businessSource: BusinessResponse | undefined =
-    businessData ?? businessSnapshot?.data
+  const idb = useCalendarIndexedDbSources(
+    Boolean(user),
+    isOnline,
+    isManager,
+    startDate,
+    endDate,
+    indexedDbLive
+  )
+
+  const appointmentsSource = idb.appointments ?? appointmentsData
+  const staffSource: StaffResponse | undefined = idb.staff ?? staffData
+  const servicesSource: ServicesResponse | undefined = idb.services ?? servicesData
+  const clientsSource: ClientsResponse | undefined = idb.clients ?? clientsData
+  const businessSource: BusinessResponse | undefined = idb.business ?? businessData
+  const idbCalendarLoading = idb.offlineMeta.idbLoading
 
   const appointments = useMemo<AppointmentWithDetails[]>(
     () => appointmentsSource?.appointments || [],
@@ -287,7 +284,7 @@ function CalendarPageContent() {
   }
 
   const handleAddAppointment = () => {
-    if (!isManager || !isOnline) return
+    if (!isManager) return
     setInitialClientIdForCreate(undefined)
     setCreateDate(format(navDate, 'yyyy-MM-dd'))
     setCreateTime(businessHours.workingStart)
@@ -296,13 +293,13 @@ function CalendarPageContent() {
 
   const handleSlotSelect = useCallback(
     (dateStr: string, timeStr: string) => {
-      if (!isManager || !isOnline) return
+      if (!isManager) return
       setInitialClientIdForCreate(undefined)
       setCreateDate(dateStr)
       setCreateTime(timeStr)
       setShowCreateDrawer(true)
     },
-    [isManager, isOnline]
+    [isManager]
   )
 
   const handleAppointmentClick = (appointment: AppointmentWithDetails) => {
@@ -352,7 +349,7 @@ function CalendarPageContent() {
     mutateStaff,
   ])
 
-  if (appointmentsLoading && !appointmentsSource) {
+  if ((appointmentsLoading || idbCalendarLoading) && !appointmentsSource) {
     return <CalendarSkeleton />
   }
 
@@ -371,8 +368,8 @@ function CalendarPageContent() {
         <NetworkStatusBanner
           routeLabel="تقویم"
           isOnline={isOnline}
-          hasSnapshot={Boolean(appointmentsSnapshot)}
-          snapshotUpdatedAt={appointmentsSnapshot?.updatedAt}
+          hasSnapshot={!isOnline && idb.offlineMeta.loaded}
+          snapshotUpdatedAt={idb.offlineMeta.appointmentsUpdatedAt}
           hasError={Boolean(appointmentsError)}
           onRetry={handleRetry}
         />
@@ -381,7 +378,7 @@ function CalendarPageContent() {
           description={
             isOnline
               ? 'بارگذاری تقویم کامل نشد. یک بار دیگر تلاش کنید.'
-              : 'برای دیدن تقویم به اینترنت نیاز دارید، مگر این که قبلا همین بازه را باز کرده باشید.'
+              : 'برای دیدن تقویم به اینترنت نیاز دارید، مگر این که قبلاً همین بازه را با همین حساب باز کرده باشید.'
           }
           onAction={handleRetry}
         />
@@ -402,8 +399,8 @@ function CalendarPageContent() {
       <NetworkStatusBanner
         routeLabel="تقویم"
         isOnline={isOnline}
-        hasSnapshot={Boolean(appointmentsSnapshot)}
-        snapshotUpdatedAt={appointmentsSnapshot?.updatedAt}
+        hasSnapshot={!isOnline && idb.offlineMeta.loaded}
+        snapshotUpdatedAt={idb.offlineMeta.appointmentsUpdatedAt}
         hasError={Boolean(appointmentsError)}
         onRetry={handleRetry}
       />
@@ -458,11 +455,7 @@ function CalendarPageContent() {
       {isManager && (
         <button
           onClick={handleAddAppointment}
-          disabled={!isOnline}
-          className={cn(
-            'absolute bottom-5 left-4 z-40 flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-lg shadow-primary/25 transition-all active:scale-[0.92] touch-manipulation',
-            !isOnline && 'cursor-not-allowed opacity-55 saturate-50'
-          )}
+          className="absolute bottom-5 left-4 z-40 flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-lg shadow-primary/25 transition-all active:scale-[0.92] touch-manipulation"
           aria-label="نوبت جدید"
         >
           <Plus className="h-6 w-6" strokeWidth={2.5} />
@@ -490,8 +483,8 @@ function CalendarPageContent() {
         staff={staff}
         services={services}
         clients={clients}
-        readOnly={!isManager || !isOnline}
-        canChangeStatus={isOnline}
+        readOnly={!isManager}
+        canChangeStatus={isManager}
         onSuccess={handleAppointmentChanged}
         onClientsChanged={() => mutateClients()}
       />

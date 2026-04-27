@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getAllServices, createService } from '@repo/database/services'
+import { isClientProvidedEntityId } from '@repo/database/clients'
 import type { Service } from '@repo/salon-core/types'
 import { getTenantUser, isManagerRole } from '@repo/auth/tenant'
 
@@ -28,10 +29,14 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { name, category, duration, price, color, active } = body
+    const { name, category, duration, price, color, active, id } = body
 
     if (!name || !category || duration == null || price == null || !color) {
       return NextResponse.json({ error: 'فیلدهای الزامی ناقص است' }, { status: 400 })
+    }
+
+    if (id !== undefined && id !== null && !isClientProvidedEntityId(String(id))) {
+      return NextResponse.json({ error: 'شناسه خدمت نامعتبر است' }, { status: 400 })
     }
 
     const service = await createService({
@@ -42,6 +47,7 @@ export async function POST(request: Request) {
       color,
       active: active !== false,
       salonId: user.salonId,
+      ...(isClientProvidedEntityId(String(id)) ? { id: String(id) } : {}),
     })
 
     return NextResponse.json({ service })

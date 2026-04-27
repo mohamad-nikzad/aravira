@@ -17,6 +17,8 @@ import { Field, FieldLabel, FieldGroup, FieldError } from '@repo/ui/field'
 import { Spinner } from '@repo/ui/spinner'
 import { Client } from '@repo/salon-core/types'
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
+import { DataClientHttpError } from '@repo/data-client'
+import { useManagerDataClient } from '@/components/manager-data-client-provider'
 
 const tagOptions = ['VIP', 'حساسیت', 'رنگ خاص', 'نیاز به پیگیری', 'بدقول'] as const
 
@@ -33,6 +35,7 @@ export function ClientDrawer({
   client,
   onSuccess,
 }: ClientDrawerProps) {
+  const dataClient = useManagerDataClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -66,7 +69,28 @@ export function ClientDrawer({
     setLoading(true)
 
     try {
-      const url = isEditing ? `/api/clients/${client.id}` : '/api/clients'
+      if (dataClient) {
+        if (isEditing && client) {
+          await dataClient.clients.update(client.id, {
+            name,
+            phone,
+            notes: notes || undefined,
+            tags,
+          })
+        } else {
+          await dataClient.clients.create({
+            name,
+            phone,
+            notes: notes || undefined,
+            tags,
+          })
+        }
+        void dataClient.sync.processPending()
+        onSuccess()
+        return
+      }
+
+      const url = isEditing ? `/api/clients/${client?.id}` : '/api/clients'
       const method = isEditing ? 'PATCH' : 'POST'
 
       const res = await fetch(url, {
@@ -90,8 +114,12 @@ export function ClientDrawer({
       }
 
       onSuccess()
-    } catch {
-      setError('خطایی رخ داد. لطفاً دوباره تلاش کنید.')
+    } catch (err) {
+      if (dataClient && err instanceof DataClientHttpError) {
+        setError(err.message)
+      } else {
+        setError('خطایی رخ داد. لطفاً دوباره تلاش کنید.')
+      }
     } finally {
       setLoading(false)
     }

@@ -1,4 +1,5 @@
 export {
+  isClientProvidedEntityId,
   createClient,
   createClientFollowUp,
   getAllClients,

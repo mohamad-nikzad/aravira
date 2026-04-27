@@ -21,6 +21,7 @@
     "@fullcalendar/react": "^6.1.20",
     "@fullcalendar/timegrid": "^6.1.20",
     "@repo/auth": "workspace:*",
+    "@repo/data-client": "workspace:*",
     "@repo/database": "workspace:*",
     "@repo/salon-core": "workspace:*",
     "@repo/ui": "workspace:*",

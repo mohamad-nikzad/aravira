@@ -45,11 +45,20 @@ import {
   validateAppointmentWindow,
 } from '@repo/salon-core/appointment-time'
 import { ClientPicker } from '@/components/calendar/client-picker'
+import { useManagerDataClient } from '@/components/manager-data-client-provider'
+import { DataClientHttpError } from '@repo/data-client'
+import { useNetworkStatus } from '@/lib/pwa-client'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
 import { TimePicker } from '@repo/ui/time-picker'
 import { formatJalaliFullDate } from '@repo/salon-core/jalali'
 import { displayPhone } from '@repo/salon-core/phone'
 import { formatPersianTime, parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
+
+type StatusActionState = {
+  status: AppointmentWithDetails['status']
+  mode: 'saving' | 'saved' | 'queued'
+  message: string
+} | null
 
 function formatTomans(price: number) {
   return `${new Intl.NumberFormat('fa-IR').format(price)} تومان`
@@ -82,8 +91,11 @@ export function AppointmentDetailDrawer({
   readOnly = false,
   canChangeStatus = !readOnly,
 }: AppointmentDetailDrawerProps) {
+  const dataClient = useManagerDataClient()
+  const isOnline = useNetworkStatus()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [statusAction, setStatusAction] = useState<StatusActionState>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -113,6 +125,7 @@ export function AppointmentDetailDrawer({
     setEditingAppointmentId(null)
     setShowDeleteConfirm(false)
     setError('')
+    setStatusAction(null)
   }, [appointment?.id])
 
   const applyDuration = (mins: number) => {
@@ -140,6 +153,7 @@ export function AppointmentDetailDrawer({
       setEditingAppointmentId(null)
       setShowDeleteConfirm(false)
       setError('')
+      setStatusAction(null)
     } else {
       setLocalClients(clients)
     }
@@ -220,6 +234,23 @@ export function AppointmentDetailDrawer({
 
     setLoading(true)
     try {
+      if (dataClient) {
+        const updated = await dataClient.appointments.update(appointment.id, {
+          clientId,
+          staffId,
+          serviceId,
+          date,
+          startTime,
+          endTime,
+          durationMinutes,
+          status: status as AppointmentWithDetails['status'],
+          notes: notes || undefined,
+        })
+        void dataClient.sync.processPending()
+        onSuccess({ type: 'updated', appointment: updated })
+        return
+      }
+
       const res = await fetch(`/api/appointments/${appointment.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -252,8 +283,12 @@ export function AppointmentDetailDrawer({
       }
 
       onSuccess({ type: 'updated', appointment: data.appointment })
-    } catch {
-      setError('خطایی رخ داد. لطفاً دوباره تلاش کنید.')
+    } catch (err) {
+      setError(
+        err instanceof DataClientHttpError
+          ? err.message
+          : 'خطایی رخ داد. لطفاً دوباره تلاش کنید.'
+      )
     } finally {
       setLoading(false)
     }
@@ -265,6 +300,13 @@ export function AppointmentDetailDrawer({
     setLoading(true)
 
     try {
+      if (dataClient) {
+        await dataClient.appointments.remove(appointment.id)
+        void dataClient.sync.processPending()
+        onSuccess({ type: 'deleted', id: appointment.id })
+        return
+      }
+
       const res = await fetch(`/api/appointments/${appointment.id}`, {
         method: 'DELETE',
         credentials: 'include',
@@ -278,8 +320,12 @@ export function AppointmentDetailDrawer({
       }
 
       onSuccess({ type: 'deleted', id: appointment.id })
-    } catch {
-      setError('خطایی رخ داد. لطفاً دوباره تلاش کنید.')
+    } catch (err) {
+      setError(
+        err instanceof DataClientHttpError
+          ? err.message
+          : 'خطایی رخ داد. لطفاً دوباره تلاش کنید.'
+      )
     } finally {
       setLoading(false)
     }
@@ -288,9 +334,32 @@ export function AppointmentDetailDrawer({
   const handleStatusChange = async (newStatus: string) => {
     if (!appointment) return
     setError('')
+    const nextStatus = newStatus as AppointmentWithDetails['status']
+    setStatusAction({
+      status: nextStatus,
+      mode: 'saving',
+      message: 'در حال ثبت وضعیت...',
+    })
     setLoading(true)
 
     try {
+      if (dataClient) {
+        const updated = await dataClient.appointments.updateStatus(
+          appointment.id,
+          nextStatus
+        )
+        void dataClient.sync.processPending()
+        setStatusAction({
+          status: nextStatus,
+          mode: isOnline ? 'saved' : 'queued',
+          message: isOnline
+            ? 'وضعیت نوبت ثبت شد.'
+            : 'وضعیت نوبت آفلاین ثبت شد و بعدا همگام می‌شود.',
+        })
+        onSuccess({ type: 'updated', appointment: updated })
+        return
+      }
+
       const res = await fetch(`/api/appointments/${appointment.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -302,19 +371,31 @@ export function AppointmentDetailDrawer({
 
       if (!res.ok) {
         setError(data.error || 'تغییر وضعیت انجام نشد')
+        setStatusAction(null)
         setLoading(false)
         return
       }
 
       if (!data.appointment) {
         setError('پاسخ تغییر وضعیت کامل نبود')
+        setStatusAction(null)
         setLoading(false)
         return
       }
 
+      setStatusAction({
+        status: nextStatus,
+        mode: 'saved',
+        message: 'وضعیت نوبت ثبت شد.',
+      })
       onSuccess({ type: 'updated', appointment: data.appointment })
-    } catch {
-      setError('خطایی رخ داد. لطفاً دوباره تلاش کنید.')
+    } catch (err) {
+      setError(
+        err instanceof DataClientHttpError
+          ? err.message
+          : 'خطایی رخ داد. لطفاً دوباره تلاش کنید.'
+      )
+      setStatusAction(null)
     } finally {
       setLoading(false)
     }
@@ -545,7 +626,7 @@ export function AppointmentDetailDrawer({
             </div>
 
             {canChangeStatus && appointment.status === 'scheduled' && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
                   variant="outline"
@@ -553,6 +634,9 @@ export function AppointmentDetailDrawer({
                   onClick={() => handleStatusChange('confirmed')}
                   disabled={loading}
                 >
+                  {statusAction?.mode === 'saving' && statusAction.status === 'confirmed' && (
+                    <Spinner className="ml-2 size-3.5" />
+                  )}
                   تایید نوبت
                 </Button>
                 {!readOnly && (
@@ -563,6 +647,9 @@ export function AppointmentDetailDrawer({
                     onClick={() => handleStatusChange('cancelled')}
                     disabled={loading}
                   >
+                    {statusAction?.mode === 'saving' && statusAction.status === 'cancelled' && (
+                      <Spinner className="ml-2 size-3.5" />
+                    )}
                     لغو
                   </Button>
                 )}
@@ -570,7 +657,7 @@ export function AppointmentDetailDrawer({
             )}
 
             {canChangeStatus && appointment.status === 'confirmed' && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
                   variant="outline"
@@ -578,6 +665,9 @@ export function AppointmentDetailDrawer({
                   onClick={() => handleStatusChange('completed')}
                   disabled={loading}
                 >
+                  {statusAction?.mode === 'saving' && statusAction.status === 'completed' && (
+                    <Spinner className="ml-2 size-3.5" />
+                  )}
                   انجام شد
                 </Button>
                 <Button
@@ -587,9 +677,25 @@ export function AppointmentDetailDrawer({
                   onClick={() => handleStatusChange('no-show')}
                   disabled={loading}
                 >
+                  {statusAction?.mode === 'saving' && statusAction.status === 'no-show' && (
+                    <Spinner className="ml-2 size-3.5" />
+                  )}
                   غیبت
                 </Button>
               </div>
+            )}
+
+            {statusAction && statusAction.mode !== 'saving' && (
+              <p
+                className={cn(
+                  'rounded-xl border px-3 py-2 text-xs',
+                  statusAction.mode === 'queued'
+                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-100'
+                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-100'
+                )}
+              >
+                {statusAction.message}
+              </p>
             )}
 
             {error && <p className="text-sm text-destructive">{error}</p>}

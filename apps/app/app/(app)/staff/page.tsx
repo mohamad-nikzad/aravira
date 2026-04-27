@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import useSWR from 'swr'
 import { ArrowRight, Plus, Search, Phone, Shield, User as UserIcon, ListChecks, Clock3 } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
@@ -13,21 +12,23 @@ import { StaffDrawer } from '@/components/staff/staff-drawer'
 import { StaffServicesDrawer } from '@/components/staff/staff-services-drawer'
 import { StaffScheduleDrawer } from '@/components/staff/staff-schedule-drawer'
 import { useAuth } from '@/components/auth-provider'
+import { useManagerDataClient } from '@/components/manager-data-client-provider'
 import { StaffSkeleton } from '@/components/skeletons/staff-skeleton'
-import { User } from '@repo/salon-core/types'
+import type { Service, User } from '@repo/salon-core/types'
 import { cn } from '@repo/ui/utils'
 import { displayPhone } from '@repo/salon-core/phone'
-
-const fetcher = (url: string) =>
-  fetch(url, { credentials: 'include' }).then((res) => res.json())
 
 export default function StaffPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const dc = useManagerDataClient()
   const [search, setSearch] = useState('')
   const [showDrawer, setShowDrawer] = useState(false)
   const [servicesStaff, setServicesStaff] = useState<User | null>(null)
   const [scheduleStaff, setScheduleStaff] = useState<User | null>(null)
+  const [staff, setStaff] = useState<User[]>([])
+  const [servicesList, setServicesList] = useState<Service[]>([])
+  const [staffLoading, setStaffLoading] = useState(true)
 
   useEffect(() => {
     if (user && user.role !== 'manager') {
@@ -35,10 +36,36 @@ export default function StaffPage() {
     }
   }, [user, router])
 
-  const { data, isLoading: staffLoading, mutate } = useSWR(user?.role === 'manager' ? '/api/staff' : null, fetcher)
-  const { data: servicesData } = useSWR(user?.role === 'manager' ? '/api/services' : null, fetcher)
-  const staff: User[] = data?.staff || []
-  const servicesList = servicesData?.services || []
+  useEffect(() => {
+    if (!dc || user?.role !== 'manager') {
+      setStaffLoading(false)
+      return
+    }
+    let cancelled = false
+    setStaffLoading(true)
+    void dc.staff
+      .list()
+      .then((list) => {
+        if (!cancelled) setStaff(list)
+      })
+      .finally(() => {
+        if (!cancelled) setStaffLoading(false)
+      })
+    const unsub = dc.staff.subscribe((list) => {
+      if (!cancelled) setStaff(list)
+    })
+    void dc.services.list().then((list) => {
+      if (!cancelled) setServicesList(list)
+    })
+    const unsubSvc = dc.services.subscribe((list) => {
+      if (!cancelled) setServicesList(list)
+    })
+    return () => {
+      cancelled = true
+      unsub()
+      unsubSvc()
+    }
+  }, [dc, user?.role])
 
   const filteredStaff = staff.filter(
     (member) =>
@@ -52,17 +79,17 @@ export default function StaffPage() {
 
   const handleSuccess = () => {
     setShowDrawer(false)
-    mutate()
+    void dc?.staff.refresh()
   }
 
   const handleServicesSuccess = () => {
     setServicesStaff(null)
-    mutate()
+    void dc?.staff.refresh()
   }
 
   const handleScheduleSuccess = () => {
     setScheduleStaff(null)
-    mutate()
+    void dc?.staff.refresh()
   }
 
   const getInitials = (name: string) => {

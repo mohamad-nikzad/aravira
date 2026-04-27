@@ -37,6 +37,9 @@ import {
   validateAppointmentWindow,
 } from '@repo/salon-core/appointment-time'
 import { ClientPicker } from '@/components/calendar/client-picker'
+import { useManagerDataClient } from '@/components/manager-data-client-provider'
+import { DataClientHttpError } from '@repo/data-client'
+import { useNetworkStatus } from '@/lib/pwa-client'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
 import { TimePicker } from '@repo/ui/time-picker'
 import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
@@ -76,6 +79,8 @@ export function AppointmentDrawer({
   onSuccess,
   onClientsChanged,
 }: AppointmentDrawerProps) {
+  const dataClient = useManagerDataClient()
+  const isOnline = useNetworkStatus()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -213,6 +218,22 @@ export function AppointmentDrawer({
     setLoading(true)
 
     try {
+      if (dataClient) {
+        const created = await dataClient.appointments.create({
+          clientId,
+          staffId,
+          serviceId,
+          date,
+          startTime,
+          endTime,
+          durationMinutes,
+          notes: notes || undefined,
+        })
+        void dataClient.sync.processPending()
+        onSuccess(created)
+        return
+      }
+
       const res = await fetch('/api/appointments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -244,8 +265,8 @@ export function AppointmentDrawer({
       }
 
       onSuccess(data.appointment)
-    } catch {
-      setError('خطایی رخ داد')
+    } catch (err) {
+      setError(err instanceof DataClientHttpError ? err.message : 'خطایی رخ داد')
     } finally {
       setLoading(false)
     }
@@ -266,7 +287,7 @@ export function AppointmentDrawer({
   )
 
   useEffect(() => {
-    if (!open || !date || !startTime || !endTime) return
+    if (!open || !date || !startTime || !endTime || !isOnline) return
     const wc = validateAppointmentWindow(startTime, endTime)
     if (!wc.ok) {
       setStaffSlotOk({})
@@ -295,7 +316,7 @@ export function AppointmentDrawer({
       window.clearTimeout(t)
       ctrl.abort()
     }
-  }, [open, date, startTime, endTime])
+  }, [open, date, startTime, endTime, isOnline])
 
   useEffect(() => {
     if (staffId && staffSlotOk[staffId] === false) {
@@ -405,7 +426,7 @@ export function AppointmentDrawer({
               </Field>
             </div>
 
-            <details className="group rounded-lg border border-border/70 bg-muted/25">
+            <details className="group rounded-lg border border-border bg-card">
               <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-medium touch-manipulation [&::-webkit-details-marker]:hidden">
                 <span>جزئیات زمان و توضیحات</span>
                 <span className="flex min-w-0 items-center gap-2 text-xs font-normal text-muted-foreground">

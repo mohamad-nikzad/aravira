@@ -16,6 +16,7 @@ next.user-config.*
 # Common ignores
 node_modules
 dist/
+**/dist-portability/
 .next/
 .turbo/
 *.tsbuildinfo

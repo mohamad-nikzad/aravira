@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import useSWR from 'swr'
+import { useEffect, useState } from 'react'
 import {
   Drawer,
   DrawerContent,
@@ -18,8 +17,8 @@ import { TimePicker } from '@repo/ui/time-picker'
 import { Spinner } from '@repo/ui/spinner'
 import type { BusinessHours, StaffSchedule, User } from '@repo/salon-core/types'
 import { formatPersianTime } from '@repo/salon-core/persian-digits'
-
-const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then((res) => res.json())
+import { DataClientHttpError } from '@repo/data-client'
+import { useManagerDataClient } from '@/components/manager-data-client-provider'
 
 const days = [
   { dayOfWeek: 6, label: 'شنبه' },
@@ -88,41 +87,43 @@ export function StaffScheduleDrawer({
   staff,
   onSuccess,
 }: StaffScheduleDrawerProps) {
+  const dc = useManagerDataClient()
   const [rows, setRows] = useState<ScheduleDraft[]>(defaultRows())
+  const [salonHours, setSalonHours] = useState<BusinessHours | null>(null)
+  const [bundleLoading, setBundleLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const { data, isLoading, mutate } = useSWR<{
-    schedule: StaffSchedule[]
-    businessHours: BusinessHours
-  }>(open && staff ? `/api/staff/${staff.id}/schedule` : null, fetcher)
-
-  const businessHours = data?.businessHours
-
-  const scheduleByDay = useMemo(() => {
-    const map = new Map<number, StaffSchedule>()
-    for (const row of data?.schedule ?? []) map.set(row.dayOfWeek, row)
-    return map
-  }, [data?.schedule])
-
   useEffect(() => {
-    if (!open) return
-    const base = defaultRows(businessHours)
-    setRows(
-      base.map((row) => {
-        const saved = scheduleByDay.get(row.dayOfWeek)
-        return saved
-          ? {
-              dayOfWeek: saved.dayOfWeek,
-              active: saved.active,
-              workingStart: saved.workingStart,
-              workingEnd: saved.workingEnd,
-            }
-          : row
-      })
-    )
+    if (!open || !staff || !dc) return
+    let cancelled = false
     setError('')
-  }, [businessHours, open, scheduleByDay])
+    setBundleLoading(true)
+    void dc.staff.getScheduleBundle(staff.id).then((bundle) => {
+      if (cancelled) return
+      setBundleLoading(false)
+      if (!bundle) return
+      setSalonHours(bundle.businessHours)
+      const map = new Map(bundle.schedule.map((r) => [r.dayOfWeek, r]))
+      const base = defaultRows(bundle.businessHours)
+      setRows(
+        base.map((row) => {
+          const saved = map.get(row.dayOfWeek)
+          return saved
+            ? {
+                dayOfWeek: saved.dayOfWeek,
+                active: saved.active,
+                workingStart: saved.workingStart,
+                workingEnd: saved.workingEnd,
+              }
+            : row
+        })
+      )
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [open, staff, dc])
 
   const updateRow = (dayOfWeek: number, patch: Partial<ScheduleDraft>) => {
     setRows((current) =>
@@ -131,37 +132,32 @@ export function StaffScheduleDrawer({
   }
 
   const useSalonHours = () => {
-    if (!businessHours) return
+    if (!salonHours) return
     setRows((current) =>
       current.map((row) => ({
         ...row,
-        workingStart: businessHours.workingStart,
-        workingEnd: businessHours.workingEnd,
+        workingStart: salonHours.workingStart,
+        workingEnd: salonHours.workingEnd,
       }))
     )
   }
 
   const handleSave = async () => {
-    if (!staff) return
+    if (!staff || !dc) return
     setSaving(true)
     setError('')
 
     try {
-      const res = await fetch(`/api/staff/${staff.id}/schedule`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ schedule: rows }),
-      })
-      const payload = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setError(payload.error || 'ذخیره برنامه کاری انجام نشد')
-        return
-      }
-      await mutate()
+      await dc.staff.setSchedule(staff.id, rows)
       onSuccess()
-    } catch {
-      setError('خطایی رخ داد. لطفاً دوباره تلاش کنید.')
+    } catch (err) {
+      const msg =
+        err instanceof DataClientHttpError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'خطایی رخ داد. لطفاً دوباره تلاش کنید.'
+      setError(msg)
     } finally {
       setSaving(false)
     }
@@ -182,7 +178,8 @@ export function StaffScheduleDrawer({
             <div className="text-sm">
               <p className="font-medium">ساعت سالن</p>
               <p className="text-xs text-muted-foreground" dir="ltr">
-                {formatPersianTime(businessHours?.workingStart ?? '09:00')} - {formatPersianTime(businessHours?.workingEnd ?? '19:00')}
+                {formatPersianTime(salonHours?.workingStart ?? '09:00')} -{' '}
+                {formatPersianTime(salonHours?.workingEnd ?? '19:00')}
               </p>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={useSalonHours}>
@@ -190,7 +187,7 @@ export function StaffScheduleDrawer({
             </Button>
           </div>
 
-          {isLoading ? (
+          {bundleLoading ? (
             <StaffScheduleRowsSkeleton />
           ) : (
             rows.map((row) => {
@@ -237,7 +234,7 @@ export function StaffScheduleDrawer({
         </div>
 
         <DrawerFooter>
-          <Button onClick={handleSave} disabled={saving || isLoading}>
+          <Button onClick={handleSave} disabled={saving || bundleLoading}>
             {saving && <Spinner className="ml-2" />}
             {saving ? 'در حال ذخیره…' : 'ذخیره برنامه کاری'}
           </Button>

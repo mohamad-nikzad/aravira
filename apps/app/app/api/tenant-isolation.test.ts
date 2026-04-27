@@ -33,11 +33,19 @@ vi.mock('@repo/auth/tenant', () => ({
   isManagerRole: (role: string) => role === 'manager',
 }))
 
+function isClientProvidedEntityId(id: string | undefined): id is string {
+  return (
+    typeof id === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+  )
+}
+
 vi.mock('@repo/database/clients', () => ({
   getAllClients: mocks.getAllClients,
   createClient: mocks.createClient,
   updateClient: mocks.updateClient,
   getClientById: mocks.getClientById,
+  isClientProvidedEntityId,
 }))
 
 vi.mock('@repo/database/services', () => ({

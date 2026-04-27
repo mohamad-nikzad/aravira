@@ -8,6 +8,7 @@ import { AlertTriangle, CalendarDays, Clock, Plus, Users } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Badge } from '@repo/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card'
+import { Spinner } from '@repo/ui/spinner'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
 import { Skeleton } from '@repo/ui/skeleton'
 import { cn } from '@repo/ui/utils'
@@ -24,16 +25,14 @@ import type {
 } from '@repo/salon-core/types'
 import { APPOINTMENT_STATUS } from '@repo/salon-core/types'
 import { AppointmentDrawer } from '@/components/calendar/appointment-drawer'
+import { useManagerDataClient } from '@/components/manager-data-client-provider'
 import { useAuth } from '@/components/auth-provider'
 import {
   NetworkStatusBanner,
   OfflineStateCard,
 } from '@/components/pwa/offline-state'
-import {
-  fetchJsonOrThrow,
-  useNetworkStatus,
-  useOfflineSnapshot,
-} from '@/lib/pwa-client'
+import { fetchJsonOrThrow, useNetworkStatus, useOfflineSnapshot } from '@/lib/pwa-client'
+import { useManagerTodayIndexedDbSources } from '@/lib/use-manager-today-indexeddb'
 import {
   ManagerTodaySkeleton,
   StaffTodaySkeleton,
@@ -66,6 +65,13 @@ type GroupedAttentionItem = {
 }
 
 const ACTIVE_STATUSES = new Set<AppointmentWithDetails['status']>(['scheduled', 'confirmed'])
+
+type StatusActionFeedback = {
+  appointmentId: string
+  status: AppointmentWithDetails['status']
+  mode: 'saving' | 'saved' | 'queued' | 'error'
+  message: string
+} | null
 
 const ATTENTION_LABELS: Record<TodayAttentionItem['type'], string> = {
   soon: 'نزدیک',
@@ -235,65 +241,106 @@ function AppointmentCard({
 function AppointmentActionButtons({
   appointment,
   role,
-  savingId,
+  feedback,
   isOnline,
   onPatchStatus,
 }: {
   appointment: AppointmentWithDetails
   role: 'manager' | 'staff'
-  savingId: string | null
+  feedback: StatusActionFeedback
   isOnline: boolean
   onPatchStatus: (appointmentId: string, status: AppointmentWithDetails['status']) => void
 }) {
-  const isSaving = savingId === appointment.id
+  const currentFeedback = feedback?.appointmentId === appointment.id ? feedback : null
+  const isSaving = currentFeedback?.mode === 'saving'
   const canActOnVisit = ACTIVE_STATUSES.has(appointment.status)
+  const networkBlocked = !isOnline && role === 'staff'
 
   if (!canActOnVisit) {
     return null
   }
 
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {appointment.status === 'scheduled' ? (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5">
+        {appointment.status === 'scheduled' ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 touch-manipulation text-xs"
+            disabled={isSaving || networkBlocked}
+            onClick={() => onPatchStatus(appointment.id, 'confirmed')}
+          >
+            {isSaving && currentFeedback?.status === 'confirmed' && <Spinner className="ml-1.5 size-3" />}
+            تایید
+          </Button>
+        ) : null}
         <Button
           size="sm"
-          variant="outline"
           className="h-8 touch-manipulation text-xs"
-          disabled={isSaving || !isOnline}
-          onClick={() => onPatchStatus(appointment.id, 'confirmed')}
+          disabled={isSaving || networkBlocked}
+          onClick={() => onPatchStatus(appointment.id, 'completed')}
         >
-          تایید
+          {isSaving && currentFeedback?.status === 'completed' && <Spinner className="ml-1.5 size-3" />}
+          انجام شد
         </Button>
-      ) : null}
-      <Button
-        size="sm"
-        className="h-8 touch-manipulation text-xs"
-        disabled={isSaving || !isOnline}
-        onClick={() => onPatchStatus(appointment.id, 'completed')}
-      >
-        انجام شد
-      </Button>
-      <Button
-        size="sm"
-        variant="secondary"
-        className="h-8 touch-manipulation text-xs"
-        disabled={isSaving || !isOnline}
-        onClick={() => onPatchStatus(appointment.id, 'no-show')}
-      >
-        غیبت
-      </Button>
-      {role === 'manager' ? (
         <Button
           size="sm"
-          variant="ghost"
-          className="h-8 touch-manipulation text-xs text-destructive"
-          disabled={isSaving || !isOnline}
-          onClick={() => onPatchStatus(appointment.id, 'cancelled')}
+          variant="secondary"
+          className="h-8 touch-manipulation text-xs"
+          disabled={isSaving || networkBlocked}
+          onClick={() => onPatchStatus(appointment.id, 'no-show')}
         >
-          لغو
+          {isSaving && currentFeedback?.status === 'no-show' && <Spinner className="ml-1.5 size-3" />}
+          غیبت
         </Button>
-      ) : null}
+        {role === 'manager' ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 touch-manipulation text-xs text-destructive"
+            disabled={isSaving || networkBlocked}
+            onClick={() => onPatchStatus(appointment.id, 'cancelled')}
+          >
+            {isSaving && currentFeedback?.status === 'cancelled' && <Spinner className="ml-1.5 size-3" />}
+            لغو
+          </Button>
+        ) : null}
+      </div>
+      {currentFeedback && currentFeedback.mode !== 'saving' && (
+        <p
+          className={cn(
+            'rounded-xl border px-2.5 py-1.5 text-xs',
+            currentFeedback.mode === 'error'
+              ? 'border-destructive/30 bg-destructive/10 text-destructive'
+              : currentFeedback.mode === 'queued'
+                ? 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-100'
+                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-100'
+          )}
+        >
+          {currentFeedback.message}
+        </p>
+      )}
     </div>
+  )
+}
+
+function StatusFeedbackBanner({ feedback }: { feedback: StatusActionFeedback }) {
+  if (!feedback || feedback.mode === 'saving') return null
+
+  return (
+    <p
+      className={cn(
+        'rounded-2xl border px-3 py-2 text-xs shadow-sm',
+        feedback.mode === 'error'
+          ? 'border-destructive/30 bg-destructive/10 text-destructive'
+          : feedback.mode === 'queued'
+            ? 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-100'
+            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-100'
+      )}
+    >
+      {feedback.message}
+    </p>
   )
 }
 
@@ -326,7 +373,8 @@ function ManagerTodayView({
   clients: Client[]
   onRefreshResources: () => void
 }) {
-  const [savingId, setSavingId] = useState<string | null>(null)
+  const dataClient = useManagerDataClient()
+  const [statusFeedback, setStatusFeedback] = useState<StatusActionFeedback>(null)
   const [showCreateDrawer, setShowCreateDrawer] = useState(false)
   const createReady = staff.length > 0 && services.length > 0
 
@@ -392,21 +440,59 @@ function ManagerTodayView({
     appointmentId: string,
     status: AppointmentWithDetails['status']
   ) => {
-    if (!isOnline) return
+    if (!isOnline && !dataClient) return
 
-    setSavingId(appointmentId)
+    setStatusFeedback({
+      appointmentId,
+      status,
+      mode: 'saving',
+      message: 'در حال ثبت وضعیت...',
+    })
     try {
+      if (dataClient) {
+        await dataClient.appointments.updateStatus(appointmentId, status)
+        void dataClient.sync.processPending()
+        setStatusFeedback({
+          appointmentId,
+          status,
+          mode: isOnline ? 'saved' : 'queued',
+          message: isOnline
+            ? 'وضعیت ثبت شد.'
+            : 'آفلاین ثبت شد و بعدا همگام می‌شود.',
+        })
+        mutateToday()
+        return
+      }
       const res = await fetch(`/api/appointments/${appointmentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ status }),
       })
-      if (res.ok) {
-        mutateToday()
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}))
+        setStatusFeedback({
+          appointmentId,
+          status,
+          mode: 'error',
+          message: typeof payload.error === 'string' ? payload.error : 'تغییر وضعیت انجام نشد.',
+        })
+        return
       }
-    } finally {
-      setSavingId(null)
+      setStatusFeedback({
+        appointmentId,
+        status,
+        mode: 'saved',
+        message: 'وضعیت ثبت شد.',
+      })
+      mutateToday()
+    } catch (err) {
+      setStatusFeedback({
+        appointmentId,
+        status,
+        mode: 'error',
+        message: err instanceof Error ? err.message : 'خطایی رخ داد. دوباره تلاش کنید.',
+      })
     }
   }
 
@@ -435,7 +521,7 @@ function ManagerTodayView({
               <Button
                 size="sm"
                 className="touch-manipulation gap-1"
-                disabled={!isOnline || !createReady}
+                disabled={(!isOnline && !dataClient) || !createReady}
                 onClick={() => setShowCreateDrawer(true)}
               >
                 <Plus className="h-4 w-4" />
@@ -501,7 +587,7 @@ function ManagerTodayView({
             <Button
               size="sm"
               className="touch-manipulation gap-1"
-              disabled={!isOnline || !createReady}
+              disabled={(!isOnline && !dataClient) || !createReady}
               onClick={() => setShowCreateDrawer(true)}
             >
               <Plus className="h-4 w-4" />
@@ -528,6 +614,8 @@ function ManagerTodayView({
 
       <div className="flex-1 overflow-auto p-4">
         <div className="space-y-4">
+            <StatusFeedbackBanner feedback={statusFeedback} />
+
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {quickStats.map((item) => (
                 <StatCard
@@ -593,7 +681,7 @@ function ManagerTodayView({
                     <Button
                       size="sm"
                       className="mt-3 touch-manipulation gap-1"
-                      disabled={!isOnline || !createReady}
+                      disabled={(!isOnline && !dataClient) || !createReady}
                       onClick={() => setShowCreateDrawer(true)}
                     >
                       <Plus className="h-4 w-4" />
@@ -610,7 +698,7 @@ function ManagerTodayView({
                       <AppointmentActionButtons
                         appointment={appointment}
                         role="manager"
-                        savingId={savingId}
+                        feedback={statusFeedback}
                         isOnline={isOnline}
                         onPatchStatus={handlePatchStatus}
                       />
@@ -701,7 +789,7 @@ function StaffTodayView({
   mutateToday: () => void
   mutateTomorrow: () => void
 }) {
-  const [savingId, setSavingId] = useState<string | null>(null)
+  const [statusFeedback, setStatusFeedback] = useState<StatusActionFeedback>(null)
   const [clockHm, setClockHm] = useState(() => tehranCurrentHm())
 
   useEffect(() => {
@@ -769,9 +857,22 @@ function StaffTodayView({
     appointmentId: string,
     status: AppointmentWithDetails['status']
   ) => {
-    if (!isOnline) return
+    if (!isOnline) {
+      setStatusFeedback({
+        appointmentId,
+        status,
+        mode: 'error',
+        message: 'برای تغییر وضعیت باید آنلاین باشید.',
+      })
+      return
+    }
 
-    setSavingId(appointmentId)
+    setStatusFeedback({
+      appointmentId,
+      status,
+      mode: 'saving',
+      message: 'در حال ثبت وضعیت...',
+    })
     try {
       const res = await fetch(`/api/appointments/${appointmentId}`, {
         method: 'PATCH',
@@ -779,11 +880,30 @@ function StaffTodayView({
         credentials: 'include',
         body: JSON.stringify({ status }),
       })
-      if (res.ok) {
-        mutateToday()
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}))
+        setStatusFeedback({
+          appointmentId,
+          status,
+          mode: 'error',
+          message: typeof payload.error === 'string' ? payload.error : 'تغییر وضعیت انجام نشد.',
+        })
+        return
       }
-    } finally {
-      setSavingId(null)
+      setStatusFeedback({
+        appointmentId,
+        status,
+        mode: 'saved',
+        message: 'وضعیت ثبت شد.',
+      })
+      mutateToday()
+    } catch (err) {
+      setStatusFeedback({
+        appointmentId,
+        status,
+        mode: 'error',
+        message: err instanceof Error ? err.message : 'خطایی رخ داد. دوباره تلاش کنید.',
+      })
     }
   }
 
@@ -861,6 +981,8 @@ function StaffTodayView({
 
       <div className="flex-1 overflow-auto p-4">
         <div className="space-y-4">
+            <StatusFeedbackBanner feedback={statusFeedback} />
+
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <StatCard
                 label="کل امروز"
@@ -958,7 +1080,7 @@ function StaffTodayView({
                       <AppointmentActionButtons
                         appointment={appointment}
                         role="staff"
-                        savingId={savingId}
+                        feedback={statusFeedback}
                         isOnline={isOnline}
                         onPatchStatus={handlePatchStatus}
                       />
@@ -1025,11 +1147,6 @@ export default function TodayPage() {
     isLoading: managerLoading,
     mutate: mutateManagerToday,
   } = useSWR<TodayData>(managerKey, fetcher, { keepPreviousData: true })
-  const managerSnapshot = useOfflineSnapshot(
-    managerKey ? `today:manager:${managerDate}` : null,
-    managerLiveData
-  )
-
   const {
     data: staffDirectoryData,
     mutate: mutateStaffDirectory,
@@ -1071,25 +1188,36 @@ export default function TodayPage() {
     staffTomorrowLiveData
   )
 
+  const managerIdb = useManagerTodayIndexedDbSources(
+    user?.role === 'manager',
+    isOnline,
+    managerDate,
+    managerLiveData,
+    staffDirectoryData?.staff,
+    servicesData?.services,
+    clientsData?.clients
+  )
+
   if (!user) {
     return null
   }
 
   if (user.role === 'manager') {
+    const managerDisplayData = managerIdb.todayData ?? managerLiveData
     return (
       <ManagerTodayView
         date={managerDate}
         setDate={setManagerDate}
-        data={managerLiveData ?? managerSnapshot?.data}
-        isLoading={managerLoading}
+        data={managerDisplayData}
+        isLoading={(managerLoading || managerIdb.idbLoading) && !managerDisplayData}
         error={managerError}
-        snapshotUpdatedAt={managerSnapshot?.updatedAt}
-        hasSnapshot={Boolean(managerSnapshot)}
+        snapshotUpdatedAt={managerIdb.snapshotUpdatedAt}
+        hasSnapshot={managerIdb.hasSnapshot}
         isOnline={isOnline}
         mutateToday={() => void mutateManagerToday()}
-        staff={staffDirectoryData?.staff ?? []}
-        services={servicesData?.services ?? []}
-        clients={clientsData?.clients ?? []}
+        staff={managerIdb.staff}
+        services={managerIdb.services}
+        clients={managerIdb.clients}
         onRefreshResources={() => {
           void mutateStaffDirectory()
           void mutateServices()
