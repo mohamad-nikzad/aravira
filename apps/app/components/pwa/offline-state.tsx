@@ -2,9 +2,8 @@
 
 import { RefreshCw, Wifi, WifiOff } from 'lucide-react'
 import { Button } from '@repo/ui/button'
-import { Alert, AlertDescription, AlertTitle } from '@repo/ui/alert'
 import { Card, CardContent } from '@repo/ui/card'
-import { formatSnapshotAge } from '@/lib/pwa-client'
+import { cn } from '@repo/ui/utils'
 
 type NetworkStatusBannerProps = {
   routeLabel: string
@@ -23,74 +22,44 @@ export function NetworkStatusBanner({
   hasError = false,
   onRetry,
 }: NetworkStatusBannerProps) {
-  const snapshotAge = formatSnapshotAge(snapshotUpdatedAt)
-
   if (isOnline && !hasError) {
     return null
   }
 
-  if (!isOnline && hasSnapshot) {
-    return (
-      <Alert className="rounded-none border-x-0 border-t-0 border-amber-300/60 bg-amber-50/80 text-amber-950 dark:bg-amber-950/25 dark:text-amber-100">
-        <WifiOff className="text-amber-700 dark:text-amber-300" />
-        <AlertTitle>اتصال اینترنت قطع شده است</AlertTitle>
-        <AlertDescription className="text-amber-900/85 dark:text-amber-100/85">
-          <p>
-            {routeLabel} با آخرین داده ذخیره شده نمایش داده می‌شود
-            {snapshotAge ? `، همگام‌سازی ${snapshotAge}` : ''}.
-          </p>
-          {onRetry ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-2 h-8 border-amber-300/70 bg-transparent text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-100 dark:hover:bg-amber-900/40"
-              onClick={onRetry}
-            >
-              تلاش دوباره
-            </Button>
-          ) : null}
-        </AlertDescription>
-      </Alert>
-    )
-  }
-
-  if (!isOnline) {
-    return (
-      <Alert variant="destructive" className="rounded-none border-x-0 border-t-0">
-        <WifiOff />
-        <AlertTitle>این بخش بدون اینترنت در دسترس نیست</AlertTitle>
-        <AlertDescription>
-          <p>برای بارگذاری {routeLabel} باید دوباره به اینترنت متصل شوید.</p>
-        </AlertDescription>
-      </Alert>
-    )
-  }
+  const message = !isOnline
+    ? hasSnapshot
+      ? `${routeLabel} در حالت آفلاین نمایش داده می‌شود.`
+      : `برای مشاهده ${routeLabel} باید آنلاین باشید.`
+    : hasSnapshot
+      ? `${routeLabel} موقتا با داده ذخیره شده نمایش داده می‌شود.`
+      : `بارگذاری ${routeLabel} کامل نشد.`
 
   return (
-    <Alert className="rounded-none border-x-0 border-t-0 border-primary/20 bg-primary/5">
-      <Wifi className="text-primary" />
-      <AlertTitle>بارگذاری زنده کامل نشد</AlertTitle>
-      <AlertDescription>
-        <p>
-          {hasSnapshot
-            ? `${routeLabel} فعلا با آخرین داده ذخیره شده نمایش داده می‌شود.`
-            : `بارگذاری ${routeLabel} کامل نشد. دوباره تلاش کنید.`}
-        </p>
-        {onRetry ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-2 h-8"
-            onClick={onRetry}
-          >
-            <RefreshCw className="ml-1 h-3.5 w-3.5" />
-            تازه‌سازی
-          </Button>
-        ) : null}
-      </AlertDescription>
-    </Alert>
+    <div
+      className={cn(
+        'flex items-center justify-between gap-2 border-b px-3 py-2 text-xs sm:text-sm',
+        !isOnline
+          ? 'border-amber-400/35 bg-amber-50/80 text-amber-950 dark:bg-amber-950/25 dark:text-amber-100'
+          : 'border-primary/20 bg-primary/5 text-foreground'
+      )}
+      role="status"
+      aria-live="polite"
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        {!isOnline ? (
+          <WifiOff className="size-4 shrink-0 text-amber-700 dark:text-amber-300" />
+        ) : (
+          <Wifi className="size-4 shrink-0 text-primary" />
+        )}
+        <p className="truncate">{message}</p>
+      </div>
+      {onRetry ? (
+        <Button type="button" variant="ghost" size="sm" className="h-7 shrink-0 px-2 text-xs" onClick={onRetry}>
+          <RefreshCw className="ml-1 size-3.5" />
+          تلاش دوباره
+        </Button>
+      ) : null}
+    </div>
   )
 }
 

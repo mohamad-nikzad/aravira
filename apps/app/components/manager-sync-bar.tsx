@@ -125,25 +125,13 @@ export function ManagerSyncBar() {
             <span className="size-2 shrink-0 rounded-full bg-primary/80" aria-hidden />
           )}
           <span className="min-w-0 truncate">
-            {state.authBlocked && (
-              <span className="font-medium text-amber-900 dark:text-amber-100">
-                همگام‌سازی متوقف شد (ورود دوباره لازم است).{' '}
-              </span>
-            )}
-            {state.needsReviewCount > 0 && (
-              <span className="font-medium text-amber-900 dark:text-amber-100">
-                {state.needsReviewCount} مورد نیاز به بررسی.{' '}
-              </span>
-            )}
-            {state.pendingCount > 0 && (
-              <span>
-                {state.pendingCount} تغییر در انتظار ارسال
-                {state.isSyncing ? '…' : '.'}
-              </span>
-            )}
-            {!state.pendingCount && !state.needsReviewCount && !state.authBlocked && state.isSyncing && (
-              <span>در حال همگام‌سازی…</span>
-            )}
+            {state.authBlocked
+              ? 'همگام‌سازی متوقف شده است؛ لطفا دوباره وارد شوید.'
+              : state.needsReviewCount > 0
+                ? 'برخی تغییرات نیاز به بررسی دارند.'
+                : state.pendingCount > 0
+                  ? 'در حالت آفلاین ثبت شده و با اتصال اینترنت تکمیل می‌شود.'
+                  : 'در حال همگام‌سازی…'}
           </span>
         </button>
         <div className="flex shrink-0 items-center gap-1">
@@ -163,18 +151,22 @@ export function ManagerSyncBar() {
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto">
           <SheetHeader className="text-start">
-            <SheetTitle>وضعیت همگام‌سازی</SheetTitle>
+            <SheetTitle>جزئیات همگام‌سازی</SheetTitle>
             <SheetDescription className="text-start">
               آخرین ارسال موفق: {formatLastSync(state.lastSyncAt)}
             </SheetDescription>
           </SheetHeader>
 
           <div className="mt-4 space-y-3 px-1 pb-6">
-            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-              <span>در انتظار: {state.pendingCount}</span>
-              <span>نیاز به بررسی: {state.needsReviewCount}</span>
-              {state.authBlocked && <span className="text-amber-800 dark:text-amber-200">ورود منقضی شده</span>}
-            </div>
+            <p className="text-sm text-muted-foreground">
+              {state.authBlocked
+                ? 'همگام‌سازی به دلیل اتمام ورود متوقف شده است.'
+                : state.needsReviewCount > 0
+                  ? 'برخی تغییرات نیاز به بررسی دستی دارند.'
+                  : state.pendingCount > 0
+                    ? 'تغییرات محلی ذخیره شده‌اند و با اتصال اینترنت ارسال می‌شوند.'
+                    : 'همه چیز همگام است.'}
+            </p>
 
             {reviewItems.length === 0 ? (
               <p className="text-sm text-muted-foreground">موردی برای بازبینی ثبت نشده است.</p>
