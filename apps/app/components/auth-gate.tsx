@@ -57,9 +57,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
-  const { data, isLoading: onboardingLoading } = useSWR<{ onboarding: OnboardingStatus }>(
+  const { data, isLoading: onboardingLoading, error: onboardingError } = useSWR<{ onboarding: OnboardingStatus }>(
     user?.role === 'manager' ? '/api/onboarding' : null,
-    fetcher
+    fetcher,
+    {
+      shouldRetryOnError: false,
+    }
   )
 
   const onboarding = data?.onboarding
@@ -67,6 +70,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     user?.role === 'manager' &&
     !!onboarding &&
     (!onboarding.steps.servicesAdded || !onboarding.steps.staffAdded)
+  const isOffline = typeof navigator !== 'undefined' && !navigator.onLine
+  const canBypassOnboardingGateOffline =
+    user?.role === 'manager' && isOffline && !onboarding && !!onboardingError
 
   useEffect(() => {
     if (managerSetupLocked && pathname !== '/onboarding') {
@@ -74,7 +80,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [managerSetupLocked, pathname, router])
 
-  if (loading || (user?.role === 'manager' && (onboardingLoading || !data?.onboarding))) {
+  if (
+    loading ||
+    (user?.role === 'manager' &&
+      !canBypassOnboardingGateOffline &&
+      (onboardingLoading || !data?.onboarding))
+  ) {
     return <AppShellSkeleton />
   }
 
