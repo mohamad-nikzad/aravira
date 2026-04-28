@@ -1,4 +1,4 @@
-const SW_VERSION = '2026-04-26-v1'
+const SW_VERSION = '2026-04-28-v2'
 const STATIC_CACHE_NAME = `aravira-static-${SW_VERSION}`
 const NAVIGATION_CACHE_NAME = `aravira-pages-${SW_VERSION}`
 const MEDIA_CACHE_NAME = `aravira-media-${SW_VERSION}`
@@ -17,6 +17,19 @@ const PRECACHE_ASSETS = [
   '/icons/icon-maskable-192x192.png',
   '/icons/icon-maskable-512x512.png',
   '/logo.png',
+  '/offline-launch.html',
+]
+
+const NAVIGATION_FALLBACK_PATHS = [
+  '/calendar',
+  '/today',
+  '/clients',
+  '/dashboard',
+  '/settings',
+  '/staff',
+  '/retention',
+  '/login',
+  '/',
 ]
 
 function isSameOrigin(url) {
@@ -133,6 +146,22 @@ function createOfflineDocument(pathname) {
   )
 }
 
+async function findNavigationFallback(navigationCache, currentPathname) {
+  const candidatePaths = [currentPathname, ...NAVIGATION_FALLBACK_PATHS]
+  const seen = new Set()
+
+  for (const path of candidatePaths) {
+    if (!path || seen.has(path)) continue
+    seen.add(path)
+
+    const req = new Request(path, { method: 'GET' })
+    const hit = await navigationCache.match(req, { ignoreSearch: true })
+    if (hit) return hit
+  }
+
+  return null
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
@@ -244,8 +273,14 @@ self.addEventListener('fetch', (event) => {
 
           return response
         } catch {
-          const cached = await navigationCache.match(request)
-          return cached ?? createOfflineDocument(url.pathname)
+          const cached = await navigationCache.match(request, { ignoreSearch: true })
+          if (cached) return cached
+
+          const fallback = await findNavigationFallback(navigationCache, url.pathname)
+          if (fallback) return fallback
+
+          const offlineLaunch = await caches.match('/offline-launch.html')
+          return offlineLaunch ?? createOfflineDocument(url.pathname)
         }
       })()
     )

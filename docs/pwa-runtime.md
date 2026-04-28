@@ -4,7 +4,9 @@
 
 - Service worker versioning is explicit in `apps/app/public/sw.js` via `SW_VERSION`.
 - The service worker only precaches install-critical assets such as icons, manifest, and launcher imagery.
+- A tiny static offline launch page (`/offline-launch.html`) is also precached to guarantee a stable cold-start fallback.
 - HTML navigations are `network-first`, then fall back to a same-version cached page when one exists.
+- If the current route is not cached yet, the service worker falls back to any cached manager route (calendar/today/clients/etc.) before showing the offline launch page.
 - Dynamic app code is no longer cached by the service worker. We rely on the browser and Next.js asset hashing instead of a broad SW cache-first policy.
 - Media assets are served with a stale-while-revalidate style cache for faster repeat loads without risking stale JS bundles.
 

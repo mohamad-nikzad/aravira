@@ -25,7 +25,7 @@ import type {
 } from '@repo/salon-core/types'
 import { APPOINTMENT_STATUS } from '@repo/salon-core/types'
 import { AppointmentDrawer } from '@/components/calendar/appointment-drawer'
-import { useManagerDataClient } from '@/components/manager-data-client-provider'
+import { useBumpOfflineData, useManagerDataClient } from '@/components/manager-data-client-provider'
 import { useAuth } from '@/components/auth-provider'
 import {
   NetworkStatusBanner,
@@ -374,6 +374,7 @@ function ManagerTodayView({
   onRefreshResources: () => void
 }) {
   const dataClient = useManagerDataClient()
+  const bumpOfflineData = useBumpOfflineData()
   const [statusFeedback, setStatusFeedback] = useState<StatusActionFeedback>(null)
   const [showCreateDrawer, setShowCreateDrawer] = useState(false)
   const createReady = staff.length > 0 && services.length > 0
@@ -452,6 +453,7 @@ function ManagerTodayView({
       if (dataClient) {
         await dataClient.appointments.updateStatus(appointmentId, status)
         void dataClient.sync.processPending()
+        bumpOfflineData()
         setStatusFeedback({
           appointmentId,
           status,
@@ -498,6 +500,7 @@ function ManagerTodayView({
 
   const handleAppointmentCreated = () => {
     setShowCreateDrawer(false)
+    bumpOfflineData()
     mutateToday()
   }
 
