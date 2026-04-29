@@ -3,4 +3,5 @@ export {
   deletePushSubscriptionForUser,
   getPushSubscriptionsForUser,
   upsertPushSubscription,
-} from './internal/queries'
+  type PushSubscriptionKeys,
+} from './internal/push-queries'

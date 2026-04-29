@@ -1,15 +1,25 @@
 export {
-  checkStaffAvailabilityForAppointment,
   createAppointment,
   deleteAppointment,
   getAppointmentById,
   getAppointmentsByDateRange,
-  getClientById,
   getAppointmentsWithDetailsByDateRange,
   getClientAppointmentsWithDetails,
   getScheduleOverlapFlags,
-  getServiceById,
-  getUserById,
-  staffMayPerformService,
   updateAppointment,
-} from './internal/queries'
+} from './internal/appointment-queries'
+
+export {
+  getClientById,
+} from './internal/client-queries'
+
+export {
+  getServiceById,
+} from './internal/service-queries'
+
+export {
+  checkStaffAvailabilityForAppointment,
+  staffMayPerformService,
+} from './internal/staff-queries'
+
+export { getUserById } from './internal/user-queries'

@@ -1,1 +1,1 @@
-export { getRetentionQueue } from './internal/queries'
+export { getRetentionQueue } from './internal/retention-queries'

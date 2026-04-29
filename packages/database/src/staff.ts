@@ -1,15 +1,15 @@
 export {
-  createUser,
-  getBusinessSettings,
   getAllStaff,
   getStaffBookingAvailabilityForSlot,
   getStaffScheduleForDay,
   getStaffScheduleForDayAnyStatus,
   getStaffSchedules,
-  getUserById,
   getUserWithServiceIds,
   setStaffSchedules,
   setStaffServiceIds,
   staffMayPerformService,
-  validateActiveServiceIds,
-} from './internal/queries'
+} from './internal/staff-queries'
+
+export { createUser, getUserById } from './internal/user-queries'
+export { getBusinessSettings } from './internal/settings-queries'
+export { validateActiveServiceIds } from './internal/service-queries'

@@ -3,4 +3,4 @@ export {
   updateOnboardingState,
   type OnboardingAction,
   type OnboardingStatus,
-} from './internal/queries'
+} from './internal/onboarding-queries'

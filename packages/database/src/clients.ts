@@ -1,14 +1,17 @@
 export {
   isClientProvidedEntityId,
   createClient,
-  createClientFollowUp,
   getAllClients,
   getClientById,
-  getClientFollowUps,
-  getClientSummary,
   getClientTags,
   getClientTagsForClients,
   setClientTags,
   updateClient,
+} from './internal/client-queries'
+
+export {
+  createClientFollowUp,
+  getClientFollowUps,
+  getClientSummary,
   updateClientFollowUpStatus,
-} from './internal/queries'
+} from './internal/client-followup-queries'

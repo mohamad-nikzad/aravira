@@ -1,7 +1,7 @@
 import { and, count, eq, gte, lte, ne, sql } from 'drizzle-orm'
 import { appointments, clients, services, users } from './schema'
 import { getDb } from './client'
-import { getTodayData } from './internal/queries'
+import { getTodayData } from './internal/today-queries'
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10)

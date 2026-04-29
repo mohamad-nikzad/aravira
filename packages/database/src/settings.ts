@@ -1,5 +1,6 @@
 export {
   getBusinessSettings,
-  getEffectiveBusinessHours,
   updateBusinessSettings,
-} from './internal/queries'
+} from './internal/settings-queries'
+
+export { getEffectiveBusinessHours } from './internal/staff-queries'

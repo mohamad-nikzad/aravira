@@ -3,4 +3,4 @@ export {
   getUserById,
   getUserByPhone,
   getUserWithPasswordByPhone,
-} from './internal/queries'
+} from './internal/user-queries'

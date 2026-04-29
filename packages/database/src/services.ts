@@ -4,4 +4,4 @@ export {
   getServiceById,
   updateService,
   validateActiveServiceIds,
-} from './internal/queries'
+} from './internal/service-queries'
