@@ -8,6 +8,7 @@ import { createListenerSet } from '../listeners'
 import type { MutationQueuePort } from '../mutation-queue'
 import { newOfflineEntityId } from '../offline-entity-id'
 import { defaultIsOnline, type OnlineStatusReader } from '../online-status'
+import { projectListWithPendingPatches } from '../offline-projection'
 
 const COLLECTION = 'staff'
 const KEY_LIST = 'list'
@@ -96,34 +97,20 @@ export function createStaffModule(
   }
 
   async function mergeStaffOverlay(base: User[]): Promise<User[]> {
-    if (!mutationQueue) return base
-    const pending = await mutationQueue.listForLocalOverlay()
-    const byId = new Map(base.map((u) => [u.id, { ...u }]))
-    for (const m of pending) {
-      if (m.entityType !== 'staff_services') continue
-      const p = m.payload as { staffId: string; serviceIds: string[] | null }
-      const prev = byId.get(p.staffId)
-      if (prev) byId.set(p.staffId, { ...prev, serviceIds: p.serviceIds })
-    }
-    return [...byId.values()]
+    return projectListWithPendingPatches({
+      mutationQueue,
+      base,
+      entityType: 'staff_services',
+      entityId: (user) => user.id,
+      apply: (user, row) => {
+        const payload = row.payload as { serviceIds: string[] | null }
+        return { ...user, serviceIds: payload.serviceIds }
+      },
+    })
   }
 
   async function mergeHydrateFromServer(serverStaff: User[]) {
-    if (!mutationQueue) {
-      await persistList(serverStaff)
-      return
-    }
-    const pending = await mutationQueue.listForLocalOverlay()
-    const byId = new Map(serverStaff.map((u) => [u.id, u]))
-    for (const m of pending) {
-      if (m.entityType !== 'staff_services') continue
-      const p = m.payload as { staffId: string; serviceIds: string[] | null }
-      const serverUser = byId.get(p.staffId)
-      if (serverUser) {
-        byId.set(p.staffId, { ...serverUser, serviceIds: p.serviceIds })
-      }
-    }
-    await persistList([...byId.values()])
+    await persistList(await mergeStaffOverlay(serverStaff))
   }
 
   async function fetchList(): Promise<User[]> {

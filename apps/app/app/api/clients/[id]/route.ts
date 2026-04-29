@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server'
 import { getClientById, getClientTags, setClientTags, updateClient } from '@repo/database/clients'
-import { getTenantUser, isManagerRole } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant'
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getTenantUser()
-    if (!user || !isManagerRole(user.role)) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
-    }
+    const tenant = await getTenantManagerRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const { id } = await params
     const client = await getClientById(id, user.salonId)
@@ -32,10 +31,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getTenantUser()
-    if (!user || !isManagerRole(user.role)) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
-    }
+    const tenant = await getTenantManagerRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const { id } = await params
     const body = await request.json()

@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server'
 import { getDashboardData } from '@repo/database/dashboard'
-import { getTenantUser, isManagerRole } from '@repo/auth/tenant'
+import { getTenantRequest } from '@repo/auth/tenant'
 
 export async function GET() {
   try {
-    const user = await getTenantUser()
-    if (!user || !isManagerRole(user.role)) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
-    }
+    const tenant = await getTenantRequest('view_dashboard')
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const dashboard = await getDashboardData(user.salonId)
     return NextResponse.json(dashboard)

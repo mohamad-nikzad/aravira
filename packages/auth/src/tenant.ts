@@ -1,5 +1,6 @@
 import { getCurrentUser } from './auth'
 import type { UserRole } from '@repo/salon-core/types'
+import { forbidden, unauthorized } from './authz'
 
 export type TenantUser = {
   userId: string
@@ -17,6 +18,10 @@ export type TenantPermission =
   | 'manage_appointments'
   | 'view_dashboard'
   | 'view_own_appointments'
+
+export type TenantRequest =
+  | { ok: true; user: TenantUser }
+  | { ok: false; response: ReturnType<typeof unauthorized> }
 
 const rolePermissions: Record<UserRole, ReadonlySet<TenantPermission>> = {
   manager: new Set([
@@ -66,4 +71,21 @@ export async function requireTenantManager(): Promise<TenantUser> {
     throw new Error('FORBIDDEN')
   }
   return user
+}
+
+export async function getTenantRequest(
+  permission?: TenantPermission
+): Promise<TenantRequest> {
+  const user = await getTenantUser()
+  if (!user) {
+    return { ok: false, response: unauthorized() }
+  }
+  if (permission && !hasTenantPermission(user.role, permission)) {
+    return { ok: false, response: forbidden() }
+  }
+  return { ok: true, user }
+}
+
+export function getTenantManagerRequest(): Promise<TenantRequest> {
+  return getTenantRequest('manage_settings')
 }

@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getTodayData } from '@repo/database/dashboard'
-import { getTenantUser } from '@repo/auth/tenant'
+import { getTenantRequest } from '@repo/auth/tenant'
 import { salonTodayYmd } from '@repo/salon-core/salon-local-time'
 
 export async function GET(request: Request) {
   try {
-    const user = await getTenantUser()
-    if (!user) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
-    }
+    const tenant = await getTenantRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date') || salonTodayYmd()

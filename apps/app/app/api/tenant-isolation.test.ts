@@ -10,26 +10,30 @@ import { GET as listAppointments, POST as createAppointmentRoute } from '@/app/a
 
 const mocks = vi.hoisted(() => ({
   getTenantUser: vi.fn(),
+  getTenantRequest: vi.fn(),
+  getTenantManagerRequest: vi.fn(),
   getAllClients: vi.fn(),
   createClient: vi.fn(),
   updateClient: vi.fn(),
   updateService: vi.fn(),
-  getAppointmentsByDateRange: vi.fn(),
+  getAppointmentsWithDetailsByDateRange: vi.fn(),
   createAppointment: vi.fn(),
   getAppointmentById: vi.fn(),
+  getAppointmentWithDetailsById: vi.fn(),
   deleteAppointment: vi.fn(),
   getClientById: vi.fn(),
   getUserById: vi.fn(),
   getServiceById: vi.fn(),
-  getScheduleOverlapFlags: vi.fn(),
-  staffMayPerformService: vi.fn(),
-  checkStaffAvailabilityForAppointment: vi.fn(),
+  validateCreateAppointmentIntake: vi.fn(),
+  validateUpdateAppointmentIntake: vi.fn(),
   sendWebPushToUser: vi.fn(),
   isWebPushConfigured: vi.fn(),
 }))
 
 vi.mock('@repo/auth/tenant', () => ({
   getTenantUser: mocks.getTenantUser,
+  getTenantRequest: mocks.getTenantRequest,
+  getTenantManagerRequest: mocks.getTenantManagerRequest,
   isManagerRole: (role: string) => role === 'manager',
 }))
 
@@ -54,16 +58,16 @@ vi.mock('@repo/database/services', () => ({
 }))
 
 vi.mock('@repo/database/appointments', () => ({
-  getAppointmentsByDateRange: mocks.getAppointmentsByDateRange,
+  getAppointmentsWithDetailsByDateRange: mocks.getAppointmentsWithDetailsByDateRange,
   createAppointment: mocks.createAppointment,
   getAppointmentById: mocks.getAppointmentById,
+  getAppointmentWithDetailsById: mocks.getAppointmentWithDetailsById,
   deleteAppointment: mocks.deleteAppointment,
   getClientById: mocks.getClientById,
   getUserById: mocks.getUserById,
   getServiceById: mocks.getServiceById,
-  getScheduleOverlapFlags: mocks.getScheduleOverlapFlags,
-  staffMayPerformService: mocks.staffMayPerformService,
-  checkStaffAvailabilityForAppointment: mocks.checkStaffAvailabilityForAppointment,
+  validateCreateAppointmentIntake: mocks.validateCreateAppointmentIntake,
+  validateUpdateAppointmentIntake: mocks.validateUpdateAppointmentIntake,
 }))
 
 vi.mock('@/lib/push', () => ({
@@ -102,11 +106,54 @@ async function readJson(response: Response) {
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.getTenantUser.mockResolvedValue(salonManager)
+  mocks.getTenantRequest.mockImplementation(async (permission?: string) => {
+    const user = await mocks.getTenantUser()
+    if (!user) {
+      return {
+        ok: false,
+        response: new Response(JSON.stringify({ error: 'دسترسی غیرمجاز' }), { status: 401 }),
+      }
+    }
+    if (permission && user.role !== 'manager' && permission !== 'view_own_appointments') {
+      return {
+        ok: false,
+        response: new Response(JSON.stringify({ error: 'دسترسی غیرمجاز' }), { status: 403 }),
+      }
+    }
+    return { ok: true, user }
+  })
+  mocks.getTenantManagerRequest.mockImplementation(async () => {
+    const user = await mocks.getTenantUser()
+    if (!user) {
+      return {
+        ok: false,
+        response: new Response(JSON.stringify({ error: 'دسترسی غیرمجاز' }), { status: 401 }),
+      }
+    }
+    if (user.role !== 'manager') {
+      return {
+        ok: false,
+        response: new Response(JSON.stringify({ error: 'دسترسی غیرمجاز' }), { status: 403 }),
+      }
+    }
+    return { ok: true, user }
+  })
   mocks.isWebPushConfigured.mockReturnValue(false)
-  mocks.checkStaffAvailabilityForAppointment.mockResolvedValue({
+  mocks.validateCreateAppointmentIntake.mockResolvedValue({
     ok: true,
-    source: 'business',
-    hours: { workingStart: '09:00', workingEnd: '19:00', slotDurationMinutes: 30 },
+    command: {
+      clientId: 'client-a',
+      staffId: 'staff-a',
+      serviceId: 'service-a',
+      date: '2026-04-18',
+      startTime: '09:00',
+      endTime: '09:45',
+      status: 'scheduled',
+      notes: undefined,
+    },
+    client: { id: 'client-a', salonId: 'salon-a', name: 'Client A' },
+    staff: { id: 'staff-a', salonId: 'salon-a', role: 'staff' },
+    service: { id: 'service-a', name: 'Cut', active: true, duration: 45 },
   })
 })
 
@@ -183,14 +230,14 @@ describe('tenant isolation route checks', () => {
 
   it('staff lists only their own appointments in their salon', async () => {
     mocks.getTenantUser.mockResolvedValue(salonStaff)
-    mocks.getAppointmentsByDateRange.mockResolvedValue([])
+    mocks.getAppointmentsWithDetailsByDateRange.mockResolvedValue([])
 
     const response = await listAppointments(
       new Request('http://test.local/api/appointments?startDate=2026-04-01&endDate=2026-04-30')
     )
 
     expect(response.status).toBe(200)
-    expect(mocks.getAppointmentsByDateRange).toHaveBeenCalledWith(
+    expect(mocks.getAppointmentsWithDetailsByDateRange).toHaveBeenCalledWith(
       'salon-a',
       '2026-04-01',
       '2026-04-30',
@@ -200,7 +247,7 @@ describe('tenant isolation route checks', () => {
 
   it('staff cannot view another salon appointment by id', async () => {
     mocks.getTenantUser.mockResolvedValue(salonStaff)
-    mocks.getAppointmentById.mockResolvedValue(undefined)
+    mocks.getAppointmentWithDetailsById.mockResolvedValue(undefined)
 
     const response = await getAppointmentRoute(
       new Request('http://test.local/api/appointments/appointment-b'),
@@ -208,12 +255,12 @@ describe('tenant isolation route checks', () => {
     )
 
     expect(response.status).toBe(404)
-    expect(mocks.getAppointmentById).toHaveBeenCalledWith('appointment-b', 'salon-a')
+    expect(mocks.getAppointmentWithDetailsById).toHaveBeenCalledWith('appointment-b', 'salon-a')
   })
 
   it('staff cannot view another staff member appointment in the same salon', async () => {
     mocks.getTenantUser.mockResolvedValue(salonStaff)
-    mocks.getAppointmentById.mockResolvedValue({
+    mocks.getAppointmentWithDetailsById.mockResolvedValue({
       id: 'appointment-a2',
       staffId: 'staff-a2',
       clientId: 'client-a',
@@ -233,19 +280,6 @@ describe('tenant isolation route checks', () => {
   })
 
   it('checks appointment conflicts inside the authenticated salon only', async () => {
-    mocks.getServiceById.mockResolvedValue({
-      id: 'service-a',
-      name: 'Cut',
-      active: true,
-      duration: 45,
-    })
-    mocks.getUserById.mockResolvedValue({ id: 'staff-a', salonId: 'salon-a', role: 'staff' })
-    mocks.getClientById.mockResolvedValue({ id: 'client-a', salonId: 'salon-a', name: 'Client A' })
-    mocks.staffMayPerformService.mockResolvedValue(true)
-    mocks.getScheduleOverlapFlags.mockResolvedValue({
-      staffConflict: false,
-      clientConflict: false,
-    })
     mocks.createAppointment.mockResolvedValue({
       id: 'appointment-a',
       clientId: 'client-a',
@@ -269,13 +303,17 @@ describe('tenant isolation route checks', () => {
     )
 
     expect(response.status).toBe(200)
-    expect(mocks.getScheduleOverlapFlags).toHaveBeenCalledWith(
-      'salon-a',
-      'staff-a',
-      'client-a',
-      '2026-04-18',
-      '09:00',
-      '09:45'
-    )
+    expect(mocks.validateCreateAppointmentIntake).toHaveBeenCalledWith({
+      salonId: 'salon-a',
+      clientId: 'client-a',
+      staffId: 'staff-a',
+      serviceId: 'service-a',
+      date: '2026-04-18',
+      startTime: '09:00',
+      endTime: undefined,
+      durationMinutes: undefined,
+      notes: undefined,
+      requestedAppointmentId: undefined,
+    })
   })
 })

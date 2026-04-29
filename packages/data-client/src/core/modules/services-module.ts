@@ -7,6 +7,7 @@ import { createListenerSet } from '../listeners'
 import type { MutationQueuePort } from '../mutation-queue'
 import { newOfflineEntityId } from '../offline-entity-id'
 import { defaultIsOnline, type OnlineStatusReader } from '../online-status'
+import { projectListWithPendingEntities } from '../offline-projection'
 
 const COLLECTION = 'services'
 
@@ -82,30 +83,20 @@ export function createServicesModule(
   }
 
   async function mergeHydrateListFromServer(serverServices: Service[], includeInactive: boolean) {
-    if (!mutationQueue) {
-      await persistList(includeInactive, serverServices)
-      return
-    }
-    const pending = await mutationQueue.listForLocalOverlay()
-    const pendingIds = new Set(
-      pending.filter((p) => p.entityType === 'service').map((p) => p.entityId)
-    )
-    const byId = new Map(serverServices.map((s) => [s.id, s]))
-
-    for (const id of pendingIds) {
-      const local = await storage.get<Service>(COLLECTION, `id:${id}`)
-      if (local) {
-        byId.set(id, local)
-        continue
-      }
-      const createRow = pending.find((p) => p.entityId === id && p.operation === 'create')
-      if (createRow) {
-        const pay = createRow.payload as { service?: Service }
-        if (pay.service) byId.set(id, pay.service)
-      }
-    }
-
-    await persistList(includeInactive, [...byId.values()])
+    const projected = await projectListWithPendingEntities({
+      storage,
+      mutationQueue,
+      base: serverServices,
+      entityType: 'service',
+      entityId: (service) => service.id,
+      localKey: (id) => `id:${id}`,
+      collection: COLLECTION,
+      payloadItem: (payload) => {
+        const pay = payload as { service?: Service }
+        return pay.service ?? null
+      },
+    })
+    await persistList(includeInactive, projected)
   }
 
   async function list(includeInactive = false): Promise<Service[]> {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { updateClientFollowUpStatus } from '@repo/database/clients'
 import type { FollowUpStatus } from '@repo/salon-core/types'
-import { getTenantUser, isManagerRole } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant'
 
 const allowedStatuses = new Set<FollowUpStatus>(['open', 'reviewed', 'dismissed'])
 
@@ -10,10 +10,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getTenantUser()
-    if (!user || !isManagerRole(user.role)) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
-    }
+    const tenant = await getTenantManagerRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const body = await request.json()
     if (!allowedStatuses.has(body.status)) {

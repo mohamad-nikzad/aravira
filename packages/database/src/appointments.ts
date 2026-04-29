@@ -2,12 +2,18 @@ export {
   createAppointment,
   deleteAppointment,
   getAppointmentById,
+  getAppointmentWithDetailsById,
   getAppointmentsByDateRange,
   getAppointmentsWithDetailsByDateRange,
   getClientAppointmentsWithDetails,
   getScheduleOverlapFlags,
   updateAppointment,
 } from './internal/appointment-queries'
+
+export {
+  validateCreateAppointmentIntake,
+  validateUpdateAppointmentIntake,
+} from './internal/appointment-intake'
 
 export {
   getClientById,

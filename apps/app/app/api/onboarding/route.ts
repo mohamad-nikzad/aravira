@@ -1,15 +1,14 @@
 import { NextResponse } from 'next/server'
 import { getOnboardingStatus, updateOnboardingState, type OnboardingAction } from '@repo/database/onboarding'
-import { getTenantUser, isManagerRole } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant'
 
 const actions = new Set<OnboardingAction>(['confirm-profile', 'complete', 'skip', 'reopen'])
 
 export async function GET() {
   try {
-    const user = await getTenantUser()
-    if (!user || !isManagerRole(user.role)) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
-    }
+    const tenant = await getTenantManagerRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const onboarding = await getOnboardingStatus(user.salonId)
     return NextResponse.json({ onboarding })
@@ -21,10 +20,9 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const user = await getTenantUser()
-    if (!user || !isManagerRole(user.role)) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
-    }
+    const tenant = await getTenantManagerRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const body = await request.json()
     const action = String(body.action ?? '') as OnboardingAction

@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server'
 import { isWebPushConfigured } from '@/lib/push'
-import { getTenantUser } from '@repo/auth/tenant'
+import { getTenantRequest } from '@repo/auth/tenant'
 
 export async function GET() {
   try {
-    const user = await getTenantUser()
-    if (!user) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
-    }
+    const tenant = await getTenantRequest()
+    if (!tenant.ok) return tenant.response
 
     const configured = isWebPushConfigured()
     const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null

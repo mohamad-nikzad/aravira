@@ -84,6 +84,29 @@ export async function getClientAppointmentsWithDetails(
   return rows.map(attachAppointmentDetails)
 }
 
+export async function getAppointmentWithDetailsById(
+  id: string,
+  salonId: string
+): Promise<AppointmentWithDetails | undefined> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      appointment: appointments,
+      client: clients,
+      staff: users,
+      service: services,
+    })
+    .from(appointments)
+    .innerJoin(clients, and(eq(appointments.clientId, clients.id), eq(clients.salonId, salonId)))
+    .innerJoin(users, and(eq(appointments.staffId, users.id), eq(users.salonId, salonId)))
+    .innerJoin(services, and(eq(appointments.serviceId, services.id), eq(services.salonId, salonId)))
+    .where(and(eq(appointments.id, id), eq(appointments.salonId, salonId)))
+    .limit(1)
+
+  const row = rows[0]
+  return row ? attachAppointmentDetails(row) : undefined
+}
+
 export async function getAppointmentById(
   id: string,
   salonId: string

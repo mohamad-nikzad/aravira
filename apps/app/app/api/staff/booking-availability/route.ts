@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getStaffBookingAvailabilityForSlot } from '@repo/database/staff'
 import { validateAppointmentWindow } from '@repo/salon-core/appointment-time'
-import { getTenantUser, isManagerRole } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant'
 
 export async function GET(request: Request) {
   try {
-    const user = await getTenantUser()
-    if (!user || !isManagerRole(user.role)) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
-    }
+    const tenant = await getTenantManagerRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date')

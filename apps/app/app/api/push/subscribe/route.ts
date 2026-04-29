@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { upsertPushSubscription, deletePushSubscriptionForUser } from '@repo/database/push'
 import { isWebPushConfigured } from '@/lib/push'
-import { getTenantUser } from '@repo/auth/tenant'
+import { getTenantRequest } from '@repo/auth/tenant'
 
 const subscribeBody = z.object({
   subscription: z.object({
@@ -24,10 +24,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'اعلان فشاری پیکربندی نشده است' }, { status: 503 })
     }
 
-    const user = await getTenantUser()
-    if (!user) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
-    }
+    const tenant = await getTenantRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const json = await request.json()
     const parsed = subscribeBody.safeParse(json)
@@ -51,10 +50,9 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const user = await getTenantUser()
-    if (!user) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
-    }
+    const tenant = await getTenantRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const json = await request.json()
     const parsed = unsubscribeBody.safeParse(json)

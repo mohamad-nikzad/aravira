@@ -2,14 +2,13 @@ import { NextResponse } from 'next/server'
 import { getAllServices, createService } from '@repo/database/services'
 import { isClientProvidedEntityId } from '@repo/database/clients'
 import type { Service } from '@repo/salon-core/types'
-import { getTenantUser, isManagerRole } from '@repo/auth/tenant'
+import { getTenantManagerRequest, getTenantRequest, isManagerRole } from '@repo/auth/tenant'
 
 export async function GET(request: Request) {
   try {
-    const user = await getTenantUser()
-    if (!user) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
-    }
+    const tenant = await getTenantRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const { searchParams } = new URL(request.url)
     const all = searchParams.get('all') === '1' && isManagerRole(user.role)
@@ -23,10 +22,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await getTenantUser()
-    if (!user || !isManagerRole(user.role)) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
-    }
+    const tenant = await getTenantManagerRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const body = await request.json()
     const { name, category, duration, price, color, active, id } = body

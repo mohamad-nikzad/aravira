@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClientFollowUp, getClientById } from '@repo/database/clients'
 import type { FollowUpReason } from '@repo/salon-core/types'
-import { getTenantUser, isManagerRole } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant'
 
 const allowedReasons = new Set<FollowUpReason>([
   'inactive',
@@ -16,10 +16,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getTenantUser()
-    if (!user || !isManagerRole(user.role)) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
-    }
+    const tenant = await getTenantManagerRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const { id } = await params
     const client = await getClientById(id, user.salonId)

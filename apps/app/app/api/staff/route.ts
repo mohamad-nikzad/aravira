@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getAllStaff, createUser } from '@repo/database/staff'
 import { STAFF_COLORS } from '@repo/salon-core/types'
-import { getTenantUser, isManagerRole } from '@repo/auth/tenant'
+import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant'
 
 export async function GET() {
   try {
-    const user = await getTenantUser()
-    if (!user) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 })
-    }
+    const tenant = await getTenantRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const staff = await getAllStaff(user.salonId)
     return NextResponse.json({ staff })
@@ -20,10 +19,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const user = await getTenantUser()
-    if (!user || !isManagerRole(user.role)) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
-    }
+    const tenant = await getTenantManagerRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const body = await request.json()
     const { password, name, role, phone } = body

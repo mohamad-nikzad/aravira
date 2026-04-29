@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server'
 import { getRetentionQueue } from '@repo/database/retention'
-import { getTenantUser, isManagerRole } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant'
 
 export async function GET() {
   try {
-    const user = await getTenantUser()
-    if (!user || !isManagerRole(user.role)) {
-      return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 })
-    }
+    const tenant = await getTenantManagerRequest()
+    if (!tenant.ok) return tenant.response
+    const { user } = tenant
 
     const items = await getRetentionQueue(user.salonId)
     return NextResponse.json({ items })
