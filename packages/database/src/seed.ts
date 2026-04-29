@@ -8,6 +8,7 @@ import { drizzle } from 'drizzle-orm/postgres-js'
 import { and, asc, count, eq, inArray, like } from 'drizzle-orm'
 import postgres from 'postgres'
 import { getDatabaseUrl } from './config'
+import { addDaysYmd, salonCurrentHm, salonTodayYmd } from '@repo/salon-core/salon-local-time'
 import * as schema from './schema'
 import {
   appointments,
@@ -34,23 +35,11 @@ function formatDate(d: Date) {
 }
 
 function salonYmdTehran(): string {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tehran' })
-}
-
-function addDaysYmd(ymd: string, deltaDays: number): string {
-  const [y, m, d] = ymd.split('-').map(Number)
-  const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
-  dt.setUTCDate(dt.getUTCDate() + deltaDays)
-  return dt.toISOString().slice(0, 10)
+  return salonTodayYmd()
 }
 
 function currentHmTehran(): string {
-  return new Date().toLocaleTimeString('en-GB', {
-    timeZone: 'Asia/Tehran',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
+  return salonCurrentHm()
 }
 
 function hmToMinutes(hm: string): number {

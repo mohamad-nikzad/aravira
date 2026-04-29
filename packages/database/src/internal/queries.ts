@@ -33,6 +33,7 @@ import type {
   FollowUpStatus,
 } from '@repo/salon-core/types'
 import { normalizePhone } from '@repo/salon-core/phone'
+import { addDaysYmd, salonCurrentHm, salonHmAfterMinutes, salonTodayYmd } from '@repo/salon-core/salon-local-time'
 import { detectScheduleOverlaps } from '@repo/salon-core/appointment-conflict'
 import {
   dayOfWeekFromDate,
@@ -144,32 +145,8 @@ function attachDetails(row: {
   }
 }
 
-function dateAddDays(date: string, days: number): string {
-  const d = new Date(`${date}T00:00:00Z`)
-  d.setUTCDate(d.getUTCDate() + days)
-  return d.toISOString().slice(0, 10)
-}
-
 function todayIsoDate() {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function currentHmInTehran() {
-  return new Date().toLocaleTimeString('en-GB', {
-    timeZone: 'Asia/Tehran',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-}
-
-function twoHoursLaterHmInTehran() {
-  return new Date(Date.now() + 2 * 60 * 60 * 1000).toLocaleTimeString('en-GB', {
-    timeZone: 'Asia/Tehran',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
+  return salonTodayYmd()
 }
 
 function monthBounds(date = new Date()) {
@@ -1030,7 +1007,7 @@ export async function getTodayData(
   date = todayIsoDate(),
   staffIdFilter?: string
 ): Promise<TodayData> {
-  const salonListToday = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tehran' })
+  const salonListToday = salonTodayYmd()
   const useLiveClock = date === salonListToday
 
   const appointmentsForDay = await getAppointmentsWithDetailsByDateRange(
@@ -1065,8 +1042,8 @@ export async function getTodayData(
     historyByClient.set(apt.clientId, list)
   }
 
-  const current = useLiveClock ? currentHmInTehran() : ''
-  const plusTwo = useLiveClock ? twoHoursLaterHmInTehran() : ''
+  const current = useLiveClock ? salonCurrentHm() : ''
+  const plusTwo = useLiveClock ? salonHmAfterMinutes(120) : ''
   const attentionItems: TodayAttentionItem[] = []
   for (const apt of appointmentsForDay) {
     const clientHistory = historyByClient.get(apt.clientId) ?? []
@@ -1201,7 +1178,7 @@ export async function getTodayData(
 export async function getRetentionQueue(salonId: string): Promise<RetentionItem[]> {
   const db = getDb()
   const today = todayIsoDate()
-  const inactiveCutoff = dateAddDays(today, -60)
+  const inactiveCutoff = addDaysYmd(today, -60)
   const [clientRows, appointmentRows, existingRows] = await Promise.all([
     getAllClients(salonId),
     getAppointmentsWithDetailsByDateRange(salonId, '1900-01-01', today),

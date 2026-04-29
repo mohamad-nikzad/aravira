@@ -55,6 +55,28 @@ export type MutationQueuePort = {
   runAtomically<T>(fn: (queue: MutationQueuePort, storage: LocalDataPort) => Promise<T>): Promise<T>
 }
 
+function payloadRecord(payload: unknown): Record<string, unknown> {
+  return payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? (payload as Record<string, unknown>)
+    : {}
+}
+
+function mergePatchPayloads(
+  currentPayload: unknown,
+  nextPayload: unknown
+): Record<string, unknown> {
+  const current = payloadRecord(currentPayload)
+  const next = payloadRecord(nextPayload)
+  const currentPatch = payloadRecord(current.patch)
+  const nextPatch = payloadRecord(next.patch)
+
+  return {
+    ...current,
+    ...next,
+    patch: { ...currentPatch, ...nextPatch },
+  }
+}
+
 export class KvMutationQueue implements MutationQueuePort {
   constructor(private readonly storage: LocalDataPort) {}
 
@@ -116,9 +138,7 @@ export class KvMutationQueue implements MutationQueuePort {
           r.operation === 'update'
       )
       if (row) {
-        const a = (row.payload as { patch?: Record<string, unknown> }).patch ?? {}
-        const b = (partial.payload as { patch?: Record<string, unknown> }).patch ?? {}
-        await this.save({ ...row, payload: { patch: { ...a, ...b } } })
+        await this.save({ ...row, payload: mergePatchPayloads(row.payload, partial.payload) })
         return row.id
       }
     }
@@ -155,11 +175,9 @@ export class KvMutationQueue implements MutationQueuePort {
           r.entityType === 'service' && r.entityId === partial.entityId && r.operation === 'update'
       )
       if (row) {
-        const a = (row.payload as { patch?: Record<string, unknown> }).patch ?? {}
-        const b = (partial.payload as { patch?: Record<string, unknown> }).patch ?? {}
         await this.save({
           ...row,
-          payload: { ...(row.payload as Record<string, unknown>), patch: { ...a, ...b } },
+          payload: mergePatchPayloads(row.payload, partial.payload),
         })
         return row.id
       }

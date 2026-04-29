@@ -82,7 +82,7 @@ export function useClientsListIndexedDbSources(
       hasSnapshot: true,
       idbLoading: false,
     }
-  }, [enabled, client, isOnline, live, repo, idbLoading])
+  }, [enabled, client, isOnline, live, repo])
 }
 
 export function useClientSummaryIndexedDbSources(
@@ -167,5 +167,5 @@ export function useClientSummaryIndexedDbSources(
       hasSnapshot: repo.summary != null,
       idbLoading: false,
     }
-  }, [enabled, client, isOnline, live, repo, idbLoading])
+  }, [enabled, client, isOnline, live, repo])
 }

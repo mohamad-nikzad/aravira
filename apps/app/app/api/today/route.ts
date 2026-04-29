@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getTodayData } from '@repo/database/dashboard'
 import { getTenantUser } from '@repo/auth/tenant'
-
-/** Calendar day for default "today" views; matches typical salon locale (Asia/Tehran). */
-function defaultListDate() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tehran' })
-}
+import { salonTodayYmd } from '@repo/salon-core/salon-local-time'
 
 export async function GET(request: Request) {
   try {
@@ -15,7 +11,7 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url)
-    const date = searchParams.get('date') || defaultListDate()
+    const date = searchParams.get('date') || salonTodayYmd()
     const staffFilter = user.role === 'staff' ? user.userId : undefined
     const today = await getTodayData(user.salonId, date, staffFilter)
 

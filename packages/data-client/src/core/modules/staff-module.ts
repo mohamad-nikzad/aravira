@@ -7,6 +7,7 @@ import { DataClientHttpError } from '../../ports/http-transport'
 import { createListenerSet } from '../listeners'
 import type { MutationQueuePort } from '../mutation-queue'
 import { newOfflineEntityId } from '../offline-entity-id'
+import { defaultIsOnline, type OnlineStatusReader } from '../online-status'
 
 const COLLECTION = 'staff'
 const KEY_LIST = 'list'
@@ -33,7 +34,7 @@ export type StaffScheduleBundle = {
 
 export interface StaffModuleDeps {
   mutationQueue?: MutationQueuePort | null
-  isOnline?: () => boolean
+  isOnline?: OnlineStatusReader
   getSalonId?: () => Promise<string | null>
 }
 
@@ -83,7 +84,7 @@ export function createStaffModule(
   deps: StaffModuleDeps = {}
 ): StaffModule {
   const mutationQueue = deps.mutationQueue ?? null
-  const isOnline = deps.isOnline ?? (() => (typeof navigator === 'undefined' ? true : navigator.onLine))
+  const isOnline = deps.isOnline ?? defaultIsOnline
   const getSalonId = deps.getSalonId ?? (async () => null)
 
   const listeners = createListenerSet<User[]>()

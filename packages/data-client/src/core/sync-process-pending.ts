@@ -5,12 +5,7 @@ import { MUTATION_MAX_ATTEMPTS } from './mutation-queue'
 import { httpErrorCodeFromException, isAuthHttpError, isServerConflictError } from './sync-http-error'
 import { writeSyncAuthBlocked, writeSyncLastSuccessAt } from './sync-meta-keys'
 import { writeCacheTimestamp } from './cache-meta'
-
-const CLIENTS = 'clients'
-const APPOINTMENTS = 'appointments'
-const BUSINESS_SETTINGS = 'business_settings'
-const SERVICES = 'services'
-const STAFF = 'staff'
+import { LOCAL_COLLECTIONS } from './local-collections'
 
 type ClientDetailResponse = { client: unknown }
 type AppointmentOneResponse = { appointment: unknown }
@@ -130,8 +125,8 @@ async function applyOneMutation(input: {
       await transport.json<ClientDetailResponse>('POST', '/api/clients', {
         body: { ...p.input, id: p.id, tags: p.input.tags ?? [] },
       })
-      await storage.delete(CLIENTS, 'list')
-      await storage.delete(CLIENTS, `summary:${p.id}`)
+      await storage.delete(LOCAL_COLLECTIONS.clients, 'list')
+      await storage.delete(LOCAL_COLLECTIONS.clients, `summary:${p.id}`)
       return
     }
     if (row.operation === 'update') {
@@ -142,8 +137,8 @@ async function applyOneMutation(input: {
       await transport.json<ClientDetailResponse>('PATCH', `/api/clients/${p.id}`, {
         body: p.input,
       })
-      await storage.delete(CLIENTS, 'list')
-      await storage.delete(CLIENTS, `summary:${p.id}`)
+      await storage.delete(LOCAL_COLLECTIONS.clients, 'list')
+      await storage.delete(LOCAL_COLLECTIONS.clients, `summary:${p.id}`)
       return
     }
     return
@@ -158,7 +153,7 @@ async function applyOneMutation(input: {
       await transport.json<AppointmentOneResponse>('POST', '/api/appointments', {
         body: { ...p.createInput, id: p.id },
       })
-      await storage.clearCollection(APPOINTMENTS)
+      await storage.clearCollection(LOCAL_COLLECTIONS.appointments)
       return
     }
     if (row.operation === 'update') {
@@ -166,12 +161,12 @@ async function applyOneMutation(input: {
       await transport.json<AppointmentOneResponse>('PATCH', `/api/appointments/${p.id}`, {
         body: p.patch,
       })
-      await storage.clearCollection(APPOINTMENTS)
+      await storage.clearCollection(LOCAL_COLLECTIONS.appointments)
       return
     }
     if (row.operation === 'delete') {
       await transport.json<{ success: boolean }>('DELETE', `/api/appointments/${row.entityId}`)
-      await storage.clearCollection(APPOINTMENTS)
+      await storage.clearCollection(LOCAL_COLLECTIONS.appointments)
       return
     }
   }
@@ -184,8 +179,8 @@ async function applyOneMutation(input: {
       body: p.patch,
     })
     if (data.settings !== undefined) {
-      await storage.set(BUSINESS_SETTINGS, 'settings', data.settings)
-      await writeCacheTimestamp(storage, BUSINESS_SETTINGS, 'settings')
+      await storage.set(LOCAL_COLLECTIONS.businessSettings, 'settings', data.settings)
+      await writeCacheTimestamp(storage, LOCAL_COLLECTIONS.businessSettings, 'settings')
     }
     return
   }
@@ -196,9 +191,9 @@ async function applyOneMutation(input: {
       await transport.json<{ service: unknown }>('POST', '/api/services', {
         body: { ...p.body, id: p.id },
       })
-      await storage.delete(SERVICES, 'list')
-      await storage.delete(SERVICES, 'list:all')
-      await storage.delete(SERVICES, `id:${p.id}`)
+      await storage.delete(LOCAL_COLLECTIONS.services, 'list')
+      await storage.delete(LOCAL_COLLECTIONS.services, 'list:all')
+      await storage.delete(LOCAL_COLLECTIONS.services, `id:${p.id}`)
       return
     }
     if (row.operation === 'update') {
@@ -206,9 +201,9 @@ async function applyOneMutation(input: {
       await transport.json<{ service: unknown }>('PATCH', `/api/services/${p.id}`, {
         body: p.patch,
       })
-      await storage.delete(SERVICES, 'list')
-      await storage.delete(SERVICES, 'list:all')
-      await storage.delete(SERVICES, `id:${p.id}`)
+      await storage.delete(LOCAL_COLLECTIONS.services, 'list')
+      await storage.delete(LOCAL_COLLECTIONS.services, 'list:all')
+      await storage.delete(LOCAL_COLLECTIONS.services, `id:${p.id}`)
       return
     }
   }
@@ -218,7 +213,7 @@ async function applyOneMutation(input: {
     await transport.json<{ staff: unknown }>('PATCH', `/api/staff/${p.staffId}/services`, {
       body: { serviceIds: p.serviceIds },
     })
-    await storage.delete(STAFF, 'list')
+    await storage.delete(LOCAL_COLLECTIONS.staff, 'list')
     return
   }
 
@@ -230,7 +225,7 @@ async function applyOneMutation(input: {
     await transport.json<{ schedule: unknown }>('PUT', `/api/staff/${p.staffId}/schedule`, {
       body: { schedule: p.schedule },
     })
-    await storage.delete(STAFF, `schedule:${p.staffId}`)
+    await storage.delete(LOCAL_COLLECTIONS.staff, `schedule:${p.staffId}`)
     return
   }
 }

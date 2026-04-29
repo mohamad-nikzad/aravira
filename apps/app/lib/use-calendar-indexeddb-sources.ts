@@ -199,5 +199,5 @@ export function useCalendarIndexedDbSources(
         appointmentsUpdatedAt: repo.appointmentsUpdatedAt,
       },
     }
-  }, [enabled, client, isOnline, isManager, live, repo, idbLoading])
+  }, [enabled, client, isOnline, isManager, live, repo])
 }

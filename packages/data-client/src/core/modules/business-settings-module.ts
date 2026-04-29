@@ -5,6 +5,7 @@ import type { HttpTransportPort } from '../../ports/http-transport'
 import type { LocalDataPort } from '../../ports/local-data-port'
 import { createListenerSet } from '../listeners'
 import type { MutationQueuePort } from '../mutation-queue'
+import { defaultIsOnline, type OnlineStatusReader } from '../online-status'
 
 const COLLECTION = 'business_settings'
 const KEY_SETTINGS = 'settings'
@@ -19,7 +20,7 @@ export type BusinessSettingsUpdateInput = Partial<
 
 export interface BusinessSettingsModuleDeps {
   mutationQueue?: MutationQueuePort | null
-  isOnline?: () => boolean
+  isOnline?: OnlineStatusReader
 }
 
 export interface BusinessSettingsModule {
@@ -45,7 +46,7 @@ export function createBusinessSettingsModule(
   deps: BusinessSettingsModuleDeps = {}
 ): BusinessSettingsModule {
   const mutationQueue = deps.mutationQueue ?? null
-  const isOnline = deps.isOnline ?? (() => (typeof navigator === 'undefined' ? true : navigator.onLine))
+  const isOnline = deps.isOnline ?? defaultIsOnline
 
   const listeners = createListenerSet<BusinessHours | null>()
 

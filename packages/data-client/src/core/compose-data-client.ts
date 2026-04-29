@@ -9,6 +9,7 @@ import { createStaffModule, type StaffModule } from './modules/staff-module'
 import { createSyncModule, type SyncModule } from './modules/sync-module'
 import { createTodayModule, type TodayModule } from './modules/today-module'
 import { NotifyingMutationQueue, type MutationQueuePort } from './mutation-queue'
+import { defaultIsOnline, type OnlineStatusReader } from './online-status'
 
 export interface DataClient {
   session: SessionModule
@@ -21,15 +22,11 @@ export interface DataClient {
   sync: SyncModule
 }
 
-function defaultIsOnline() {
-  return typeof navigator === 'undefined' ? true : navigator.onLine
-}
-
 export function composeDataClient(input: {
   transport: HttpTransportPort
   storage: LocalDataPort
   mutationQueue?: MutationQueuePort | null
-  isOnline?: () => boolean
+  isOnline?: OnlineStatusReader
 }): DataClient {
   const { transport, storage } = input
   const innerQueue = input.mutationQueue ?? null

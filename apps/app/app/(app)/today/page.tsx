@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { addDays, format, parseISO } from 'date-fns'
 import Link from 'next/link'
 import useSWR from 'swr'
 import { AlertTriangle, CalendarDays, Clock, Plus, Users } from 'lucide-react'
@@ -15,6 +14,7 @@ import { cn } from '@repo/ui/utils'
 import { durationMinutesFromRange } from '@repo/salon-core/appointment-time'
 import { formatJalaliFullDate } from '@repo/salon-core/jalali'
 import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-digits'
+import { addDaysYmd, salonCurrentHm, salonTodayYmd } from '@repo/salon-core/salon-local-time'
 import type {
   AppointmentWithDetails,
   Client,
@@ -79,23 +79,6 @@ const ATTENTION_LABELS: Record<TodayAttentionItem['type'], string> = {
   'no-show-risk': 'بدقول',
   'first-time': 'اولین مراجعه',
   vip: 'VIP',
-}
-
-function tehranTodayDate() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tehran' })
-}
-
-function tehranCurrentHm() {
-  return new Date().toLocaleTimeString('en-GB', {
-    timeZone: 'Asia/Tehran',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-}
-
-function nextIsoDate(date: string) {
-  return format(addDays(parseISO(date), 1), 'yyyy-MM-dd')
 }
 
 function formatNumber(value: number) {
@@ -793,10 +776,10 @@ function StaffTodayView({
   mutateTomorrow: () => void
 }) {
   const [statusFeedback, setStatusFeedback] = useState<StatusActionFeedback>(null)
-  const [clockHm, setClockHm] = useState(() => tehranCurrentHm())
+  const [clockHm, setClockHm] = useState(() => salonCurrentHm())
 
   useEffect(() => {
-    const timer = window.setInterval(() => setClockHm(tehranCurrentHm()), 60_000)
+    const timer = window.setInterval(() => setClockHm(salonCurrentHm()), 60_000)
     return () => window.clearInterval(timer)
   }, [])
 
@@ -825,8 +808,8 @@ function StaffTodayView({
   const nextAppointment =
     activeTodayAppointments.find((appointment) => appointment.startTime > clockHm) ?? null
 
-  const todayOpenRanges = todayData?.openSlots[0]?.ranges ?? []
-  const tomorrowOpenRanges = tomorrowData?.openSlots[0]?.ranges ?? []
+  const todayOpenRanges = useMemo(() => todayData?.openSlots[0]?.ranges ?? [], [todayData])
+  const tomorrowOpenRanges = useMemo(() => tomorrowData?.openSlots[0]?.ranges ?? [], [tomorrowData])
   const nextOpenSlot = useMemo(
     () =>
       getNextOpenSlot({
@@ -1140,7 +1123,7 @@ function StaffTodayView({
 export default function TodayPage() {
   const { user } = useAuth()
   const isOnline = useNetworkStatus()
-  const initialToday = useMemo(() => tehranTodayDate(), [])
+  const initialToday = useMemo(() => salonTodayYmd(), [])
   const [managerDate, setManagerDate] = useState(initialToday)
 
   const managerKey = user?.role === 'manager' ? `/api/today?date=${managerDate}` : null
@@ -1164,7 +1147,7 @@ export default function TodayPage() {
   } = useSWR<ClientsResponse>(user?.role === 'manager' ? '/api/clients' : null, fetcher)
 
   const staffTodayDate = initialToday
-  const staffTomorrowDate = useMemo(() => nextIsoDate(initialToday), [initialToday])
+  const staffTomorrowDate = useMemo(() => addDaysYmd(initialToday, 1), [initialToday])
 
   const staffTodayKey = user?.role === 'staff' ? `/api/today?date=${staffTodayDate}` : null
   const staffTomorrowKey = user?.role === 'staff' ? `/api/today?date=${staffTomorrowDate}` : null

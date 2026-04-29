@@ -6,6 +6,7 @@ import { DataClientHttpError } from '../../ports/http-transport'
 import { createListenerSet } from '../listeners'
 import type { MutationQueuePort } from '../mutation-queue'
 import { newOfflineEntityId } from '../offline-entity-id'
+import { defaultIsOnline, type OnlineStatusReader } from '../online-status'
 
 const COLLECTION = 'services'
 
@@ -31,7 +32,7 @@ export type ServiceUpdateInput = Partial<
 
 export interface ServicesModuleDeps {
   mutationQueue?: MutationQueuePort | null
-  isOnline?: () => boolean
+  isOnline?: OnlineStatusReader
 }
 
 export interface ServicesModule {
@@ -51,7 +52,7 @@ export function createServicesModule(
   deps: ServicesModuleDeps = {}
 ): ServicesModule {
   const mutationQueue = deps.mutationQueue ?? null
-  const isOnline = deps.isOnline ?? (() => (typeof navigator === 'undefined' ? true : navigator.onLine))
+  const isOnline = deps.isOnline ?? defaultIsOnline
 
   const listeners = createListenerSet<Service[]>()
 

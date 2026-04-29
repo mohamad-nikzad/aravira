@@ -13,6 +13,7 @@ import { DataClientHttpError } from '../../ports/http-transport'
 import { createListenerSet } from '../listeners'
 import type { MutationQueuePort } from '../mutation-queue'
 import { newOfflineEntityId } from '../offline-entity-id'
+import { defaultIsOnline, type OnlineStatusReader } from '../online-status'
 
 const COLLECTION = 'appointments'
 
@@ -48,7 +49,7 @@ function rangeKey(startDate: string, endDate: string) {
 
 export type AppointmentsModuleDeps = {
   mutationQueue?: MutationQueuePort | null
-  isOnline?: () => boolean
+  isOnline?: OnlineStatusReader
 }
 
 export interface AppointmentsModule {
@@ -76,7 +77,7 @@ export function createAppointmentsModule(
   deps: AppointmentsModuleDeps = {}
 ): AppointmentsModule {
   const mutationQueue = deps.mutationQueue ?? null
-  const isOnline = deps.isOnline ?? (() => (typeof navigator === 'undefined' ? true : navigator.onLine))
+  const isOnline = deps.isOnline ?? defaultIsOnline
 
   const listeners = createListenerSet<{
     startDate: string

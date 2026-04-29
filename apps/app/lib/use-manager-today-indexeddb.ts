@@ -137,5 +137,5 @@ export function useManagerTodayIndexedDbSources(
       hasSnapshot: repo.data != null,
       idbLoading: false,
     }
-  }, [enabled, client, isOnline, liveToday, staffLive, servicesLive, clientsLive, repo, idbLoading])
+  }, [enabled, client, isOnline, liveToday, staffLive, servicesLive, clientsLive, repo])
 }

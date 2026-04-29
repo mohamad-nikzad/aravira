@@ -5,12 +5,7 @@ import { processPendingMutations } from '../sync-process-pending'
 import { readSyncAuthBlocked, readSyncLastSuccessAt } from '../sync-meta-keys'
 import type { HttpTransportPort } from '../../ports/http-transport'
 import type { LocalDataPort } from '../../ports/local-data-port'
-
-const CLIENTS = 'clients'
-const APPOINTMENTS = 'appointments'
-const BUSINESS_SETTINGS = 'business_settings'
-const SERVICES = 'services'
-const STAFF = 'staff'
+import { LOCAL_COLLECTIONS } from '../local-collections'
 
 export interface SyncState {
   pendingCount: number
@@ -43,20 +38,15 @@ export interface SyncModule {
 }
 
 function reviewTitle(row: MutationQueueRow): string {
-  const kind =
-    row.entityType === 'client'
-      ? 'مشتری'
-      : row.entityType === 'appointment'
-        ? 'نوبت'
-        : row.entityType === 'business_settings'
-          ? 'ساعات کاری'
-          : row.entityType === 'service'
-            ? 'خدمت'
-            : row.entityType === 'staff_services'
-              ? 'خدمات پرسنل'
-              : row.entityType === 'staff_schedule'
-                ? 'برنامه کاری'
-                : 'تغییر'
+  const kindByEntity: Record<MutationQueueRow['entityType'], string> = {
+    appointment: 'نوبت',
+    business_settings: 'ساعات کاری',
+    client: 'مشتری',
+    service: 'خدمت',
+    staff_schedule: 'برنامه کاری',
+    staff_services: 'خدمات پرسنل',
+  }
+  const kind = kindByEntity[row.entityType]
   const op =
     row.operation === 'create' ? 'ایجاد' : row.operation === 'update' ? 'ویرایش' : 'حذف'
   return `${op} ${kind}`
@@ -73,61 +63,61 @@ async function discardOne(input: {
   if (row.entityType === 'client') {
     if (row.operation === 'create') {
       const id = row.entityId
-      const list = (await storage.get<Client[]>(CLIENTS, 'list')) ?? []
+      const list = (await storage.get<Client[]>(LOCAL_COLLECTIONS.clients, 'list')) ?? []
       await storage.set(
-        CLIENTS,
+        LOCAL_COLLECTIONS.clients,
         'list',
         list.filter((c) => c.id !== id)
       )
-      await storage.delete(CLIENTS, `id:${id}`)
-      await storage.delete(CLIENTS, `summary:${id}`)
+      await storage.delete(LOCAL_COLLECTIONS.clients, `id:${id}`)
+      await storage.delete(LOCAL_COLLECTIONS.clients, `summary:${id}`)
     } else if (row.operation === 'update') {
-      await storage.delete(CLIENTS, `id:${row.entityId}`)
-      await storage.delete(CLIENTS, `summary:${row.entityId}`)
-      await storage.delete(CLIENTS, 'list')
+      await storage.delete(LOCAL_COLLECTIONS.clients, `id:${row.entityId}`)
+      await storage.delete(LOCAL_COLLECTIONS.clients, `summary:${row.entityId}`)
+      await storage.delete(LOCAL_COLLECTIONS.clients, 'list')
     }
     return
   }
 
   if (row.entityType === 'appointment') {
     if (row.operation === 'create') {
-      await storage.delete(APPOINTMENTS, `one:${row.entityId}`)
-      await storage.clearCollection(APPOINTMENTS)
+      await storage.delete(LOCAL_COLLECTIONS.appointments, `one:${row.entityId}`)
+      await storage.clearCollection(LOCAL_COLLECTIONS.appointments)
     } else if (row.operation === 'update') {
-      await storage.delete(APPOINTMENTS, `one:${row.entityId}`)
-      await storage.clearCollection(APPOINTMENTS)
+      await storage.delete(LOCAL_COLLECTIONS.appointments, `one:${row.entityId}`)
+      await storage.clearCollection(LOCAL_COLLECTIONS.appointments)
     } else if (row.operation === 'delete') {
-      await storage.clearCollection(APPOINTMENTS)
+      await storage.clearCollection(LOCAL_COLLECTIONS.appointments)
     }
     return
   }
 
   if (row.entityType === 'business_settings' && row.operation === 'update') {
-    await storage.delete(BUSINESS_SETTINGS, 'settings')
+    await storage.delete(LOCAL_COLLECTIONS.businessSettings, 'settings')
     return
   }
 
   if (row.entityType === 'service') {
     if (row.operation === 'create') {
       const id = row.entityId
-      await storage.delete(SERVICES, `id:${id}`)
-      await storage.delete(SERVICES, 'list')
-      await storage.delete(SERVICES, 'list:all')
+      await storage.delete(LOCAL_COLLECTIONS.services, `id:${id}`)
+      await storage.delete(LOCAL_COLLECTIONS.services, 'list')
+      await storage.delete(LOCAL_COLLECTIONS.services, 'list:all')
     } else if (row.operation === 'update') {
-      await storage.delete(SERVICES, 'list')
-      await storage.delete(SERVICES, 'list:all')
-      await storage.delete(SERVICES, `id:${row.entityId}`)
+      await storage.delete(LOCAL_COLLECTIONS.services, 'list')
+      await storage.delete(LOCAL_COLLECTIONS.services, 'list:all')
+      await storage.delete(LOCAL_COLLECTIONS.services, `id:${row.entityId}`)
     }
     return
   }
 
   if (row.entityType === 'staff_services' && row.operation === 'update') {
-    await storage.delete(STAFF, 'list')
+    await storage.delete(LOCAL_COLLECTIONS.staff, 'list')
     return
   }
 
   if (row.entityType === 'staff_schedule' && row.operation === 'update') {
-    await storage.delete(STAFF, `schedule:${row.entityId}`)
+    await storage.delete(LOCAL_COLLECTIONS.staff, `schedule:${row.entityId}`)
     return
   }
 }
