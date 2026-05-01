@@ -31,24 +31,33 @@ Use a **split env** so you can switch Neon branches without editing secrets:
 
 - `.env.local` — `JWT_SECRET`, VAPID keys, and anything else that is not branch-specific
 - `.env.database.dev` — `DATABASE_URL` + `DATABASE_URL_DIRECT` for your **dev** Neon branch
-- `.env.database.multitenant` — `DATABASE_URL` + `DATABASE_URL_DIRECT` for the multi-tenant MVP feature branch
 - `.env.database.main` — same for your **production** Neon branch
 
 Scripts load `.env.local` first, then the database file, so the database URLs always match the command you run:
 
 ```bash
 pnpm install
+pnpm db:check         # verify schema.ts matches checked-in migrations
 pnpm db:push          # schema -> dev branch (default)
 pnpm db:seed          # seed dev branch
 pnpm dev              # Next.js against both apps
-
-pnpm db:migrate:multitenant  # checked-in migrations -> multi-tenant feature branch
-pnpm db:seed:multitenant     # seed multi-tenant feature branch
 
 pnpm dev:app          # manager app on port 3000
 pnpm dev:web          # marketing site on port 3001
 pnpm db:push:main     # schema -> production (use with care)
 ```
+
+## Main branch database automation
+
+The repo can protect `main` in two ways:
+
+- `pnpm db:check` fails if `packages/database/src/schema.ts` changed without a matching checked-in migration.
+- `.github/workflows/main-db.yml` runs that check on pull requests and, on pushes to `main`, applies checked-in migrations to the main database with `pnpm --filter @repo/database db:migrate`.
+
+To enable the deploy step in GitHub Actions, set these repository secrets:
+
+- `DATABASE_URL_MAIN` — required
+- `DATABASE_URL_DIRECT_MAIN` — optional but recommended for migrations
 
 ## Switching providers later
 
