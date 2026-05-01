@@ -37,6 +37,7 @@ function formatLastSync(iso: string | null): string {
 }
 
 function reviewHref(item: SyncReviewItem): string {
+  if (item.href) return item.href
   if (item.entityType === 'client') return `/clients/${item.entityId}`
   if (item.entityType === 'appointment') return '/calendar'
   if (item.entityType === 'service' || item.entityType === 'business_settings') return '/settings'
@@ -45,6 +46,7 @@ function reviewHref(item: SyncReviewItem): string {
 }
 
 function reviewActionLabel(item: SyncReviewItem): string {
+  if (item.actionLabel) return item.actionLabel
   if (item.entityType === 'client' || item.entityType === 'appointment') return 'ویرایش و تلاش مجدد'
   if (item.entityType === 'service') return 'رفتن به خدمات'
   if (item.entityType === 'business_settings') return 'رفتن به تنظیمات'
@@ -183,6 +185,9 @@ export function ManagerSyncBar() {
                     )}
                     {item.lastError && (
                       <div className="mt-1 text-xs text-muted-foreground">{item.lastError}</div>
+                    )}
+                    {item.description && (
+                      <div className="mt-2 text-xs leading-5 text-foreground/80">{item.description}</div>
                     )}
                     <div className="mt-2 text-xs text-muted-foreground">
                       {item.reviewReason === 'max_attempts'

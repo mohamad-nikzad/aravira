@@ -5,7 +5,9 @@ import { PATCH as updateServiceRoute } from '@/app/api/services/[id]/route'
 import {
   DELETE as deleteAppointmentRoute,
   GET as getAppointmentRoute,
+  PATCH as updateAppointmentRoute,
 } from '@/app/api/appointments/[id]/route'
+import { POST as completePlaceholderClientRoute } from '@/app/api/appointments/[id]/complete-client/route'
 import { GET as listAppointments, POST as createAppointmentRoute } from '@/app/api/appointments/route'
 
 const mocks = vi.hoisted(() => ({
@@ -14,10 +16,16 @@ const mocks = vi.hoisted(() => ({
   getTenantManagerRequest: vi.fn(),
   getAllClients: vi.fn(),
   createClient: vi.fn(),
+  createPlaceholderClient: vi.fn(),
+  completePlaceholderAppointmentClient: vi.fn(),
+  cancelIncompletePlaceholderAppointment: vi.fn(),
+  cleanupPlaceholderAfterAppointmentMutation: vi.fn(),
+  deletePlaceholderClientIfOrphaned: vi.fn(),
   updateClient: vi.fn(),
   updateService: vi.fn(),
   getAppointmentsWithDetailsByDateRange: vi.fn(),
   createAppointment: vi.fn(),
+  updateAppointment: vi.fn(),
   getAppointmentById: vi.fn(),
   getAppointmentWithDetailsById: vi.fn(),
   deleteAppointment: vi.fn(),
@@ -47,6 +55,11 @@ function isClientProvidedEntityId(id: string | undefined): id is string {
 vi.mock('@repo/database/clients', () => ({
   getAllClients: mocks.getAllClients,
   createClient: mocks.createClient,
+  createPlaceholderClient: mocks.createPlaceholderClient,
+  completePlaceholderAppointmentClient: mocks.completePlaceholderAppointmentClient,
+  cancelIncompletePlaceholderAppointment: mocks.cancelIncompletePlaceholderAppointment,
+  cleanupPlaceholderAfterAppointmentMutation: mocks.cleanupPlaceholderAfterAppointmentMutation,
+  deletePlaceholderClientIfOrphaned: mocks.deletePlaceholderClientIfOrphaned,
   updateClient: mocks.updateClient,
   getClientById: mocks.getClientById,
   isClientProvidedEntityId,
@@ -60,6 +73,7 @@ vi.mock('@repo/database/services', () => ({
 vi.mock('@repo/database/appointments', () => ({
   getAppointmentsWithDetailsByDateRange: mocks.getAppointmentsWithDetailsByDateRange,
   createAppointment: mocks.createAppointment,
+  updateAppointment: mocks.updateAppointment,
   getAppointmentById: mocks.getAppointmentById,
   getAppointmentWithDetailsById: mocks.getAppointmentWithDetailsById,
   deleteAppointment: mocks.deleteAppointment,
@@ -151,9 +165,53 @@ beforeEach(() => {
       status: 'scheduled',
       notes: undefined,
     },
-    client: { id: 'client-a', salonId: 'salon-a', name: 'Client A' },
+    client: { id: 'client-a', salonId: 'salon-a', name: 'Client A', phone: '09120000010', isPlaceholder: false },
     staff: { id: 'staff-a', salonId: 'salon-a', role: 'staff' },
     service: { id: 'service-a', name: 'Cut', active: true, duration: 45 },
+  })
+  mocks.completePlaceholderAppointmentClient.mockResolvedValue({
+    ok: true,
+    outcome: 'completed',
+    appointment: {
+      id: 'appointment-a',
+      clientId: 'client-a',
+      staffId: 'staff-a',
+      serviceId: 'service-a',
+      date: '2026-04-18',
+      startTime: '09:00',
+      endTime: '09:45',
+      status: 'scheduled',
+      client: {
+        id: 'client-a',
+        name: 'Client A',
+        phone: '09120000010',
+        isPlaceholder: false,
+      },
+      staff: { id: 'staff-a', name: 'Staff A', role: 'staff' },
+      service: { id: 'service-a', name: 'Cut' },
+    },
+  })
+  mocks.validateUpdateAppointmentIntake.mockResolvedValue({
+    ok: true,
+    patch: {
+      clientId: 'client-a',
+      staffId: 'staff-a',
+      serviceId: 'service-a',
+      date: '2026-04-18',
+      startTime: '09:00',
+      endTime: '09:45',
+      status: 'scheduled',
+      notes: undefined,
+    },
+    client: { id: 'client-a', salonId: 'salon-a', name: 'Client A', phone: '09120000010', isPlaceholder: false },
+    staff: { id: 'staff-a', salonId: 'salon-a', role: 'staff' },
+    service: { id: 'service-a', name: 'Cut', active: true, duration: 45 },
+  })
+  mocks.cancelIncompletePlaceholderAppointment.mockResolvedValue({
+    ok: true,
+    appointmentDeleted: true,
+    placeholderDeleted: true,
+    clientId: 'placeholder-a',
   })
 })
 
@@ -314,6 +372,195 @@ describe('tenant isolation route checks', () => {
       durationMinutes: undefined,
       notes: undefined,
       requestedAppointmentId: undefined,
+    })
+  })
+
+  it('creates placeholder clients only inside the authenticated salon scope', async () => {
+    mocks.createPlaceholderClient.mockResolvedValue({
+      id: 'placeholder-a',
+      salonId: 'salon-a',
+      name: 'دوست سارا',
+      phone: null,
+      isPlaceholder: true,
+    })
+    mocks.createAppointment.mockResolvedValue({
+      id: 'appointment-a',
+      clientId: 'placeholder-a',
+      staffId: 'staff-a',
+      serviceId: 'service-a',
+      date: '2026-04-18',
+      startTime: '09:00',
+      endTime: '09:45',
+      status: 'scheduled',
+    })
+
+    const response = await createAppointmentRoute(
+      jsonRequest({
+        placeholderClient: { name: 'دوست سارا', notes: 'شماره را بعداً می‌گیرم' },
+        staffId: 'staff-a',
+        serviceId: 'service-a',
+        date: '2026-04-18',
+        startTime: '09:00',
+        salonId: 'salon-b',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(mocks.createPlaceholderClient).toHaveBeenCalledWith({
+      salonId: 'salon-a',
+      name: 'دوست سارا',
+      notes: 'شماره را بعداً می‌گیرم',
+    })
+    expect(mocks.validateCreateAppointmentIntake).toHaveBeenCalledWith({
+      salonId: 'salon-a',
+      clientId: 'placeholder-a',
+      staffId: 'staff-a',
+      serviceId: 'service-a',
+      date: '2026-04-18',
+      startTime: '09:00',
+      endTime: undefined,
+      durationMinutes: undefined,
+      notes: undefined,
+      requestedAppointmentId: undefined,
+    })
+  })
+
+  it('completes placeholder clients only inside the authenticated salon scope', async () => {
+    const response = await completePlaceholderClientRoute(
+      jsonRequest(
+        {
+          name: 'مشتری تکمیل‌شده',
+          phone: '09121234567',
+          notes: 'تکمیل شد',
+          reassignToExistingClientId: 'client-b',
+          salonId: 'salon-b',
+        },
+        'POST'
+      ),
+      { params: Promise.resolve({ id: 'appointment-a' }) }
+    )
+
+    expect(response.status).toBe(200)
+    expect(mocks.completePlaceholderAppointmentClient).toHaveBeenCalledWith({
+      salonId: 'salon-a',
+      appointmentId: 'appointment-a',
+      name: 'مشتری تکمیل‌شده',
+      phone: '09121234567',
+      notes: 'تکمیل شد',
+      reassignToExistingClientId: 'client-b',
+    })
+  })
+
+  it('switches appointment edit into placeholder mode only inside the authenticated salon scope', async () => {
+    mocks.getAppointmentById.mockResolvedValue({
+      id: 'appointment-a',
+      clientId: 'client-a',
+      staffId: 'staff-a',
+      serviceId: 'service-a',
+      date: '2026-04-18',
+      startTime: '09:00',
+      endTime: '09:45',
+      status: 'scheduled',
+    })
+    mocks.getClientById.mockResolvedValue({
+      id: 'client-a',
+      salonId: 'salon-a',
+      name: 'Client A',
+      phone: '09120000010',
+      isPlaceholder: false,
+    })
+    mocks.createPlaceholderClient.mockResolvedValue({
+      id: 'placeholder-a',
+      salonId: 'salon-a',
+      name: 'دوست سارا',
+      phone: null,
+      isPlaceholder: true,
+    })
+    mocks.updateAppointment.mockResolvedValue({
+      id: 'appointment-a',
+      clientId: 'placeholder-a',
+      staffId: 'staff-a',
+      serviceId: 'service-a',
+      date: '2026-04-18',
+      startTime: '09:00',
+      endTime: '09:45',
+      status: 'scheduled',
+    })
+
+    const response = await updateAppointmentRoute(
+      jsonRequest(
+        {
+          placeholderClient: { name: 'دوست سارا', notes: 'شماره بعداً' },
+          staffId: 'staff-a',
+          serviceId: 'service-a',
+          date: '2026-04-18',
+          startTime: '09:00',
+          salonId: 'salon-b',
+        },
+        'PATCH'
+      ),
+      { params: Promise.resolve({ id: 'appointment-a' }) }
+    )
+
+    expect(response.status).toBe(200)
+    expect(mocks.createPlaceholderClient).toHaveBeenCalledWith({
+      salonId: 'salon-a',
+      name: 'دوست سارا',
+      notes: 'شماره بعداً',
+    })
+    expect(mocks.validateUpdateAppointmentIntake).toHaveBeenCalledWith({
+      salonId: 'salon-a',
+      appointmentId: 'appointment-a',
+      existing: {
+        id: 'appointment-a',
+        clientId: 'client-a',
+        staffId: 'staff-a',
+        serviceId: 'service-a',
+        date: '2026-04-18',
+        startTime: '09:00',
+        endTime: '09:45',
+        status: 'scheduled',
+      },
+      body: expect.objectContaining({
+        clientId: 'placeholder-a',
+      }),
+    })
+  })
+
+  it('cancels incomplete placeholder bookings as cleanup inside the authenticated salon scope', async () => {
+    mocks.getAppointmentById.mockResolvedValue({
+      id: 'appointment-a',
+      clientId: 'placeholder-a',
+      staffId: 'staff-a',
+      serviceId: 'service-a',
+      date: '2026-04-18',
+      startTime: '09:00',
+      endTime: '09:45',
+      status: 'scheduled',
+    })
+    mocks.getClientById.mockResolvedValue({
+      id: 'placeholder-a',
+      salonId: 'salon-a',
+      name: 'دوست سارا',
+      phone: null,
+      isPlaceholder: true,
+    })
+
+    const response = await updateAppointmentRoute(
+      jsonRequest({ status: 'cancelled', salonId: 'salon-b' }, 'PATCH'),
+      { params: Promise.resolve({ id: 'appointment-a' }) }
+    )
+
+    expect(response.status).toBe(200)
+    expect(mocks.cancelIncompletePlaceholderAppointment).toHaveBeenCalledWith({
+      salonId: 'salon-a',
+      appointmentId: 'appointment-a',
+    })
+    expect(mocks.updateAppointment).not.toHaveBeenCalled()
+    await expect(readJson(response)).resolves.toMatchObject({
+      success: true,
+      removedAppointmentId: 'appointment-a',
+      cleanup: true,
     })
   })
 })

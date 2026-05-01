@@ -79,6 +79,7 @@ const ATTENTION_LABELS: Record<TodayAttentionItem['type'], string> = {
   'no-show-risk': 'بدقول',
   'first-time': 'اولین مراجعه',
   vip: 'VIP',
+  'incomplete-client': 'اطلاعات ناقص',
 }
 
 function formatNumber(value: number) {
@@ -200,7 +201,14 @@ function AppointmentCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
-          <p className="truncate text-sm font-semibold">{appointment.client.name}</p>
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-semibold">{appointment.client.name}</p>
+            {appointment.client.isPlaceholder ? (
+              <Badge variant="outline" className="shrink-0 border-amber-300 bg-amber-50 text-[10px] text-amber-800">
+                اطلاعات ناقص
+              </Badge>
+            ) : null}
+          </div>
           <p className="text-xs text-muted-foreground">{appointment.service.name}</p>
           <p className="text-xs text-muted-foreground" dir="ltr">
             {formatPersianTime(appointment.startTime)} - {formatPersianTime(appointment.endTime)} · {meta}
@@ -434,16 +442,21 @@ function ManagerTodayView({
     })
     try {
       if (dataClient) {
-        await dataClient.appointments.updateStatus(appointmentId, status)
+        const result = await dataClient.appointments.updateStatus(appointmentId, status)
         void dataClient.sync.processPending()
         bumpOfflineData()
         setStatusFeedback({
           appointmentId,
           status,
           mode: isOnline ? 'saved' : 'queued',
-          message: isOnline
-            ? 'وضعیت ثبت شد.'
-            : 'آفلاین ثبت شد و بعدا همگام می‌شود.',
+          message:
+            result.type === 'deleted'
+              ? isOnline
+                ? 'رزرو موقت لغو و حذف شد.'
+                : 'لغو رزرو موقت آفلاین ثبت شد و بعدا همگام می‌شود.'
+              : isOnline
+                ? 'وضعیت ثبت شد.'
+                : 'آفلاین ثبت شد و بعدا همگام می‌شود.',
         })
         mutateToday()
         return
@@ -464,11 +477,15 @@ function ManagerTodayView({
         })
         return
       }
+      const payload = await res.json().catch(() => ({}))
       setStatusFeedback({
         appointmentId,
         status,
         mode: 'saved',
-        message: 'وضعیت ثبت شد.',
+        message:
+          typeof payload.removedAppointmentId === 'string'
+            ? 'رزرو موقت لغو و حذف شد.'
+            : 'وضعیت ثبت شد.',
       })
       mutateToday()
     } catch (err) {
@@ -876,11 +893,15 @@ function StaffTodayView({
         })
         return
       }
+      const payload = await res.json().catch(() => ({}))
       setStatusFeedback({
         appointmentId,
         status,
         mode: 'saved',
-        message: 'وضعیت ثبت شد.',
+        message:
+          typeof payload.removedAppointmentId === 'string'
+            ? 'رزرو موقت لغو و حذف شد.'
+            : 'وضعیت ثبت شد.',
       })
       mutateToday()
     } catch (err) {

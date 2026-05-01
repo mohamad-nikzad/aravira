@@ -1,7 +1,12 @@
 import { DataClientHttpError } from '../ports/http-transport'
 
 /** Non-409 responses that should enter conflict review (machine codes only). */
-const SYNC_IMMEDIATE_CONFLICT_CODES = new Set(['staff-overlap', 'client-overlap', 'duplicate-phone'])
+const SYNC_IMMEDIATE_CONFLICT_CODES = new Set([
+  'staff-overlap',
+  'client-overlap',
+  'duplicate-phone',
+  'placeholder-reuse',
+])
 
 export function httpErrorCode(body: unknown): string | null {
   if (!body || typeof body !== 'object') return null

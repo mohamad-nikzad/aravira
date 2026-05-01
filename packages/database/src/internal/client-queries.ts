@@ -15,12 +15,20 @@ function mapTagsByClient(rows: ClientTag[]): Map<string, ClientTag[]> {
   return byClient
 }
 
-export async function getAllClients(salonId: string): Promise<Client[]> {
+export async function getAllClients(
+  salonId: string,
+  options: { includePlaceholders?: boolean } = {}
+): Promise<Client[]> {
   const db = getDb()
   const rows = await db
     .select()
     .from(clients)
-    .where(eq(clients.salonId, salonId))
+    .where(
+      and(
+        eq(clients.salonId, salonId),
+        options.includePlaceholders ? undefined : eq(clients.isPlaceholder, false)
+      )
+    )
     .orderBy(asc(clients.name))
   if (rows.length === 0) return []
 
@@ -48,6 +56,21 @@ export async function getClientById(id: string, salonId: string): Promise<Client
   return row ? rowToClient(row) : undefined
 }
 
+export async function getClientByPhone(
+  phone: string,
+  salonId: string
+): Promise<Client | undefined> {
+  const db = getDb()
+  const normalized = normalizePhone(phone)
+  const rows = await db
+    .select()
+    .from(clients)
+    .where(and(eq(clients.salonId, salonId), eq(clients.phone, normalized)))
+    .limit(1)
+  const row = rows[0]
+  return row ? rowToClient(row) : undefined
+}
+
 /** Accepts caller-provided UUIDs for offline-first entities (must be a valid UUID v4 string). */
 export function isClientProvidedEntityId(id: string | undefined): id is string {
   return (
@@ -57,14 +80,21 @@ export function isClientProvidedEntityId(id: string | undefined): id is string {
 }
 
 export async function createClient(
-  input: Omit<Client, 'id' | 'createdAt'> & { salonId: string; id?: string }
+  input: {
+    salonId: string
+    id?: string
+    name: string
+    phone?: string | null
+    notes?: string
+    isPlaceholder?: boolean
+  }
 ): Promise<Client> {
   const db = getDb()
-  const normalized = normalizePhone(input.phone)
   const values: typeof clients.$inferInsert = {
     salonId: input.salonId,
     name: input.name,
-    phone: normalized,
+    phone: input.phone ? normalizePhone(input.phone) : null,
+    isPlaceholder: input.isPlaceholder ?? false,
     notes: input.notes,
   }
   if (isClientProvidedEntityId(input.id)) {
@@ -77,13 +107,14 @@ export async function createClient(
 export async function updateClient(
   id: string,
   salonId: string,
-  data: Partial<Omit<Client, 'id' | 'createdAt'>>
+  data: Partial<Pick<Client, 'name' | 'phone' | 'notes' | 'isPlaceholder'>>
 ): Promise<Client | undefined> {
   const db = getDb()
   const patch: Partial<typeof clients.$inferInsert> = {}
   if (data.name !== undefined) patch.name = data.name
-  if (data.phone !== undefined) patch.phone = normalizePhone(data.phone)
+  if (data.phone !== undefined) patch.phone = data.phone ? normalizePhone(data.phone) : null
   if (data.notes !== undefined) patch.notes = data.notes
+  if (data.isPlaceholder !== undefined) patch.isPlaceholder = data.isPlaceholder
 
   const [row] = await db
     .update(clients)
@@ -91,6 +122,15 @@ export async function updateClient(
     .where(and(eq(clients.id, id), eq(clients.salonId, salonId)))
     .returning()
   return row ? rowToClient(row) : undefined
+}
+
+export async function deleteClient(id: string, salonId: string): Promise<boolean> {
+  const db = getDb()
+  const deleted = await db
+    .delete(clients)
+    .where(and(eq(clients.id, id), eq(clients.salonId, salonId)))
+    .returning({ id: clients.id })
+  return deleted.length > 0
 }
 
 const tagColors: Record<string, string> = {

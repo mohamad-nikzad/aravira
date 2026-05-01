@@ -24,6 +24,10 @@ export type SyncReviewItem = {
   lastError: string | null
   conflictCode: string | null
   reviewReason: NonNullable<MutationQueueRow['reviewReason']>
+  action?: string
+  description?: string
+  href?: string
+  actionLabel?: string
 }
 
 export interface SyncModule {
@@ -49,7 +53,90 @@ function reviewTitle(row: MutationQueueRow): string {
   const kind = kindByEntity[row.entityType]
   const op =
     row.operation === 'create' ? 'ایجاد' : row.operation === 'update' ? 'ویرایش' : 'حذف'
+
+  if (row.entityType === 'appointment' && row.operation === 'update') {
+    const payload = row.payload as { action?: string }
+    if (payload.action === 'complete_placeholder_client') {
+      return 'تکمیل اطلاعات مشتری موقت'
+    }
+    if (payload.action === 'cancel_incomplete_placeholder') {
+      return 'لغو رزرو مشتری موقت'
+    }
+  }
+
   return `${op} ${kind}`
+}
+
+function appointmentReviewFields(row: MutationQueueRow): Pick<
+  SyncReviewItem,
+  'action' | 'description' | 'href' | 'actionLabel'
+> {
+  if (row.entityType !== 'appointment') return {}
+
+  const payload = row.payload as {
+    action?: string
+    appointment?: { id?: string; date?: string }
+    reviewMetadata?: {
+      action?: string
+      appointmentId?: string
+      appointmentDate?: string
+    }
+  }
+  const appointmentId = payload.reviewMetadata?.appointmentId ?? payload.appointment?.id ?? row.entityId
+  const appointmentDate = payload.reviewMetadata?.appointmentDate ?? payload.appointment?.date
+  const href =
+    appointmentId && appointmentDate
+      ? `/calendar?date=${appointmentDate}&appointmentId=${appointmentId}`
+      : '/calendar'
+  const action = payload.reviewMetadata?.action ?? payload.action
+
+  if (row.conflictCode === 'duplicate-phone') {
+    return {
+      action,
+      description:
+        'این شماره تماس قبلاً برای مشتری دیگری ثبت شده است. نوبت را از تقویم باز کنید و در تکمیل مشتری، گزینه انتقال به مشتری موجود را انتخاب کنید.',
+      href,
+      actionLabel: 'باز کردن نوبت در تقویم',
+    }
+  }
+
+  if (row.conflictCode === 'placeholder-reuse') {
+    return {
+      action,
+      description:
+        'این مشتری موقت قبلاً به نوبت دیگری وصل شده است. نوبت را باز کنید و یک مشتری عادی انتخاب کنید یا برای این نوبت مشتری موقت تازه بسازید.',
+      href,
+      actionLabel: 'بررسی نوبت در تقویم',
+    }
+  }
+
+  if (payload.action === 'cancel_incomplete_placeholder') {
+    return {
+      action,
+      description:
+        'حذف رزرو موقت روی سرور تایید نشد. نوبت را از تقویم باز کنید و دوباره وضعیت آن را بررسی یا لغو کنید.',
+      href,
+      actionLabel: 'باز کردن نوبت در تقویم',
+    }
+  }
+
+  if (payload.action === 'complete_placeholder_client') {
+    return {
+      action,
+      description:
+        row.reviewReason === 'max_attempts'
+          ? 'تکمیل اطلاعات این مشتری چند بار ناموفق مانده است. نوبت را باز کنید و اطلاعات مشتری را دوباره بررسی کنید.'
+          : 'سرور تکمیل اطلاعات این مشتری موقت را نپذیرفت. نوبت را باز کنید و اطلاعات ثبت‌شده را دوباره بررسی کنید.',
+      href,
+      actionLabel: 'باز کردن نوبت در تقویم',
+    }
+  }
+
+  return {
+    action,
+    href,
+    actionLabel: 'باز کردن در تقویم',
+  }
 }
 
 async function discardOne(input: {
@@ -81,11 +168,30 @@ async function discardOne(input: {
 
   if (row.entityType === 'appointment') {
     if (row.operation === 'create') {
+      const payload = row.payload as { localPlaceholderClientId?: string }
+      if (payload.localPlaceholderClientId) {
+        await storage.delete(LOCAL_COLLECTIONS.clients, `id:${payload.localPlaceholderClientId}`)
+        await storage.delete(LOCAL_COLLECTIONS.clients, `summary:${payload.localPlaceholderClientId}`)
+      }
       await storage.delete(LOCAL_COLLECTIONS.appointments, `one:${row.entityId}`)
       await storage.clearCollection(LOCAL_COLLECTIONS.appointments)
+      await storage.delete(LOCAL_COLLECTIONS.clients, 'list')
     } else if (row.operation === 'update') {
+      const payload = row.payload as {
+        localPlaceholderClientId?: string
+        action?: string
+        appointment?: { client?: { id: string } }
+      }
+      if (payload.localPlaceholderClientId) {
+        await storage.delete(LOCAL_COLLECTIONS.clients, `id:${payload.localPlaceholderClientId}`)
+        await storage.delete(LOCAL_COLLECTIONS.clients, `summary:${payload.localPlaceholderClientId}`)
+      }
+      if (payload.action === 'complete_placeholder_client' && payload.appointment?.client?.id) {
+        await storage.delete(LOCAL_COLLECTIONS.clients, `summary:${payload.appointment.client.id}`)
+      }
       await storage.delete(LOCAL_COLLECTIONS.appointments, `one:${row.entityId}`)
       await storage.clearCollection(LOCAL_COLLECTIONS.appointments)
+      await storage.delete(LOCAL_COLLECTIONS.clients, 'list')
     } else if (row.operation === 'delete') {
       await storage.clearCollection(LOCAL_COLLECTIONS.appointments)
     }
@@ -168,6 +274,7 @@ export function createSyncModule(input: {
         lastError: r.lastError,
         conflictCode: r.conflictCode ?? null,
         reviewReason: r.reviewReason ?? 'server_conflict',
+        ...appointmentReviewFields(r),
       }))
     },
 

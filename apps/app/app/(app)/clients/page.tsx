@@ -63,7 +63,7 @@ export default function ClientsPage() {
   const filteredClients = clients.filter(
     (client) =>
       client.name.toLowerCase().includes(search.toLowerCase()) ||
-      client.phone.includes(search)
+      (client.phone ?? '').includes(search)
   )
 
   const handleAddClient = () => {

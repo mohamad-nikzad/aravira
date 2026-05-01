@@ -21,7 +21,10 @@ export type { ClientsModule, ClientCreateInput, ClientUpdateInput } from './core
 export type {
   AppointmentsModule,
   AppointmentCreateInput,
+  AppointmentCompletePlaceholderClientInput,
+  AppointmentMutationResult,
   AppointmentUpdateInput,
+  PlaceholderClientDraft,
 } from './core/modules/appointments-module'
 export type { TodayModule } from './core/modules/today-module'
 export type { SyncModule, SyncReviewItem, SyncState } from './core/modules/sync-module'

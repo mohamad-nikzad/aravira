@@ -50,7 +50,7 @@ export function ClientDrawer({
     if (open) {
       if (client) {
         setName(client.name)
-        setPhone(client.phone)
+        setPhone(client.phone ?? '')
         setNotes(client.notes || '')
         setTags(client.tags?.map((tag) => tag.label) ?? [])
       } else {

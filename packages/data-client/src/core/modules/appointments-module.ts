@@ -6,6 +6,7 @@ import {
   endTimeFromDuration,
   validateAppointmentWindow,
 } from '@repo/salon-core'
+import { normalizePhone } from '@repo/salon-core'
 import { readCacheTimestamp, writeCacheTimestamp } from '../cache-meta'
 import type { HttpTransportPort } from '../../ports/http-transport'
 import type { LocalDataPort } from '../../ports/local-data-port'
@@ -14,14 +15,30 @@ import { createListenerSet } from '../listeners'
 import type { MutationQueuePort } from '../mutation-queue'
 import { newOfflineEntityId } from '../offline-entity-id'
 import { defaultIsOnline, type OnlineStatusReader } from '../online-status'
+import { LOCAL_COLLECTIONS } from '../local-collections'
 
 const COLLECTION = 'appointments'
 
 type AppointmentsListResponse = { appointments: AppointmentWithDetails[] }
 type AppointmentOneResponse = { appointment: AppointmentWithDetails }
+type AppointmentMutationResponse = {
+  appointment?: AppointmentWithDetails
+  removedAppointmentId?: string
+  cleanup?: boolean
+}
+type AppointmentCompletePlaceholderResponse = {
+  appointment: AppointmentWithDetails
+  outcome: 'completed' | 'reassigned'
+}
+
+export type PlaceholderClientDraft = {
+  name: string
+  notes?: string
+}
 
 export type AppointmentCreateInput = {
-  clientId: string
+  clientId?: string
+  placeholderClient?: PlaceholderClientDraft
   staffId: string
   serviceId: string
   date: string
@@ -33,6 +50,7 @@ export type AppointmentCreateInput = {
 
 export type AppointmentUpdateInput = {
   clientId?: string
+  placeholderClient?: PlaceholderClientDraft
   staffId?: string
   serviceId?: string
   date?: string
@@ -42,6 +60,17 @@ export type AppointmentUpdateInput = {
   status?: Appointment['status']
   notes?: string
 }
+
+export type AppointmentCompletePlaceholderClientInput = {
+  name: string
+  phone: string
+  notes?: string
+  reassignToExistingClientId?: string
+}
+
+export type AppointmentMutationResult =
+  | { type: 'updated'; appointment: AppointmentWithDetails }
+  | { type: 'deleted'; id: string }
 
 function rangeKey(startDate: string, endDate: string) {
   return `range:${startDate}:${endDate}`
@@ -63,8 +92,12 @@ export interface AppointmentsModule {
   ): Promise<void>
   rangeLastSyncedAt(startDate: string, endDate: string): Promise<string | null>
   create(input: AppointmentCreateInput): Promise<AppointmentWithDetails>
-  update(id: string, input: AppointmentUpdateInput): Promise<AppointmentWithDetails>
-  updateStatus(id: string, status: Appointment['status']): Promise<AppointmentWithDetails>
+  update(id: string, input: AppointmentUpdateInput): Promise<AppointmentMutationResult>
+  completePlaceholderClient(
+    id: string,
+    input: AppointmentCompletePlaceholderClientInput
+  ): Promise<AppointmentWithDetails>
+  updateStatus(id: string, status: Appointment['status']): Promise<AppointmentMutationResult>
   remove(id: string): Promise<void>
   subscribe(
     fn: (range: { startDate: string; endDate: string; appointments: AppointmentWithDetails[] }) => void
@@ -138,9 +171,9 @@ export function createAppointmentsModule(
     const overlay = new Map<string, AppointmentWithDetails>()
     for (const m of pending) {
       if (m.entityType !== 'appointment') continue
-      if (m.operation === 'delete') deleted.add(m.entityId)
-      if (m.operation === 'create' || m.operation === 'update') {
-        const pay = m.payload as { appointment?: AppointmentWithDetails }
+      const pay = m.payload as { appointment?: AppointmentWithDetails; removeAppointment?: boolean }
+      if (m.operation === 'delete' || pay.removeAppointment) deleted.add(m.entityId)
+      if ((m.operation === 'create' || m.operation === 'update') && !pay.removeAppointment) {
         const apt = pay.appointment
         if (apt && apt.date >= startDate && apt.date <= endDate) overlay.set(apt.id, apt)
       }
@@ -177,6 +210,20 @@ export function createAppointmentsModule(
     return null
   }
 
+  async function resolveStaffLocal(staffId: string): Promise<User | null> {
+    const staffList = (await storage.get<User[]>('staff', 'list')) ?? []
+    return staffList.find((staff) => staff.id === staffId) ?? null
+  }
+
+  async function resolveClientLocal(clientId: string): Promise<Client | null> {
+    const clients = (await storage.get<Client[]>(LOCAL_COLLECTIONS.clients, 'list')) ?? []
+    return (
+      clients.find((client) => client.id === clientId) ??
+      (await storage.get<Client>(LOCAL_COLLECTIONS.clients, `id:${clientId}`)) ??
+      null
+    )
+  }
+
   async function resolveClientStaffService(
     clientId: string,
     staffId: string,
@@ -189,6 +236,53 @@ export function createAppointmentsModule(
     const service = await resolveServiceLocal(serviceId)
     if (!client || !staff || !service) return null
     return { client, staff, service }
+  }
+
+  async function updateClientListRecord(
+    txStorage: LocalDataPort,
+    client: Client,
+    includeInList: boolean
+  ) {
+    await txStorage.set(LOCAL_COLLECTIONS.clients, `id:${client.id}`, client)
+    const currentList = (await txStorage.get<Client[]>(LOCAL_COLLECTIONS.clients, 'list')) ?? []
+    const without = currentList.filter((item) => item.id !== client.id)
+    if (includeInList) {
+      await txStorage.set(LOCAL_COLLECTIONS.clients, 'list', [client, ...without])
+      await writeCacheTimestamp(txStorage, LOCAL_COLLECTIONS.clients, 'list')
+    } else if (without.length !== currentList.length) {
+      await txStorage.set(LOCAL_COLLECTIONS.clients, 'list', without)
+      await writeCacheTimestamp(txStorage, LOCAL_COLLECTIONS.clients, 'list')
+    }
+  }
+
+  async function removeClientListRecord(txStorage: LocalDataPort, clientId: string) {
+    await txStorage.delete(LOCAL_COLLECTIONS.clients, `id:${clientId}`)
+    const currentList = (await txStorage.get<Client[]>(LOCAL_COLLECTIONS.clients, 'list')) ?? []
+    const nextList = currentList.filter((item) => item.id !== clientId)
+    if (nextList.length !== currentList.length) {
+      await txStorage.set(LOCAL_COLLECTIONS.clients, 'list', nextList)
+      await writeCacheTimestamp(txStorage, LOCAL_COLLECTIONS.clients, 'list')
+    }
+    await txStorage.delete(LOCAL_COLLECTIONS.clients, `summary:${clientId}`)
+  }
+
+  async function findLocalClientByPhone(phone: string, excludeClientId?: string): Promise<Client | null> {
+    const normalizedPhone = normalizePhone(phone)
+    const list = (await storage.get<Client[]>(LOCAL_COLLECTIONS.clients, 'list')) ?? []
+    const fromList = list.find(
+      (client) => client.id !== excludeClientId && client.phone === normalizedPhone
+    )
+    if (fromList) return fromList
+
+    const keys = await storage.listKeys(LOCAL_COLLECTIONS.clients)
+    for (const key of keys) {
+      if (!key.startsWith('id:')) continue
+      const client = await storage.get<Client>(LOCAL_COLLECTIONS.clients, key)
+      if (client && client.id !== excludeClientId && client.phone === normalizedPhone) {
+        return client
+      }
+    }
+    return null
   }
 
   function assertNoOverlap(
@@ -230,18 +324,44 @@ export function createAppointmentsModule(
     }
   }
 
+  function assertPlaceholderSingleUse(
+    candidate: Pick<AppointmentWithDetails, 'id' | 'clientId' | 'client'>,
+    others: AppointmentWithDetails[]
+  ) {
+    if (!candidate.client.isPlaceholder) return
+    const conflict = others.find((appointment) => appointment.clientId === candidate.clientId)
+    if (!conflict) return
+
+    throw new DataClientHttpError('این مشتری موقت قبلاً به نوبت دیگری وصل شده است', 409, {
+      code: 'placeholder-reuse',
+    })
+  }
+
   async function patchAppointment(
     id: string,
     input: AppointmentUpdateInput
-  ): Promise<AppointmentWithDetails> {
-    const data = await transport.json<AppointmentOneResponse>('PATCH', `/api/appointments/${id}`, {
+  ): Promise<AppointmentMutationResult> {
+    const before = await resolveCurrentAppointment(id)
+    const data = await transport.json<AppointmentMutationResponse>('PATCH', `/api/appointments/${id}`, {
       body: input,
     })
     await invalidateAllRanges()
+    if (data.removedAppointmentId) {
+      await storage.delete(COLLECTION, `one:${data.removedAppointmentId}`)
+      if (before?.client.isPlaceholder) {
+        await removeClientListRecord(storage, before.clientId)
+      }
+      return { type: 'deleted', id: data.removedAppointmentId }
+    }
+
     const apt = data.appointment
+    if (!apt) {
+      throw new DataClientHttpError('پاسخ به‌روزرسانی کامل نبود', 500, data)
+    }
+
     await storage.set(COLLECTION, `one:${apt.id}`, apt)
     listeners.notify({ startDate: apt.date, endDate: apt.date, appointments: [apt] })
-    return apt
+    return { type: 'updated', appointment: apt }
   }
 
   async function resolveCurrentAppointment(id: string): Promise<AppointmentWithDetails | null> {
@@ -251,7 +371,8 @@ export function createAppointmentsModule(
     const pending = await mutationQueue.listForLocalOverlay()
     for (const m of pending) {
       if (m.entityType === 'appointment' && m.entityId === id && m.operation !== 'delete') {
-        const pay = m.payload as { appointment?: AppointmentWithDetails }
+        const pay = m.payload as { appointment?: AppointmentWithDetails; removeAppointment?: boolean }
+        if (pay.removeAppointment) return null
         if (pay.appointment) return pay.appointment
       }
     }
@@ -261,33 +382,115 @@ export function createAppointmentsModule(
   async function performOfflineUpdate(
     id: string,
     input: AppointmentUpdateInput
-  ): Promise<AppointmentWithDetails> {
+  ): Promise<AppointmentMutationResult> {
     const current = await resolveCurrentAppointment(id)
     if (!current) {
       throw new DataClientHttpError('نوبت یافت نشد', 404, null)
     }
 
+    if (input.status === 'cancelled' && current.client.isPlaceholder) {
+      const pending = await mutationQueue!.listForLocalOverlay()
+      const createRow = pending.find(
+        (row) => row.entityType === 'appointment' && row.entityId === id && row.operation === 'create'
+      )
+
+      await mutationQueue!.runAtomically(async (txQueue, txStorage) => {
+        if (createRow) {
+          await txQueue.delete(createRow.id)
+        } else {
+          await txQueue.enqueue({
+            entityType: 'appointment',
+            entityId: id,
+            operation: 'update',
+          payload: {
+            id,
+            action: 'cancel_incomplete_placeholder',
+            patch: { status: 'cancelled' },
+            removeAppointment: true,
+            localPlaceholderClientId: current.clientId,
+            reviewMetadata: {
+              action: 'cancel_incomplete_placeholder',
+                appointmentId: current.id,
+                appointmentDate: current.date,
+                placeholderClientId: current.clientId,
+              },
+            },
+          })
+        }
+
+        await txStorage.delete(COLLECTION, `one:${id}`)
+        await removeClientListRecord(txStorage, current.clientId)
+      })
+
+      listeners.notify({ startDate: current.date, endDate: current.date, appointments: [] })
+      return { type: 'deleted', id }
+    }
+
+    let nextClient = current.client
+    let localPlaceholderClientIdToDelete: string | null = null
+
+    if (input.placeholderClient) {
+      const nextName = input.placeholderClient.name.trim()
+      if (!nextName) {
+        throw new DataClientHttpError('نام مشتری موقت الزامی است', 400, {
+          code: 'validation-error',
+        })
+      }
+      nextClient = current.client.isPlaceholder
+        ? {
+            ...current.client,
+            name: nextName,
+            phone: null,
+            isPlaceholder: true,
+            notes: input.placeholderClient.notes,
+          }
+        : {
+            id: newOfflineEntityId(),
+            name: nextName,
+            phone: null,
+            isPlaceholder: true,
+            notes: input.placeholderClient.notes,
+            createdAt: new Date(),
+          }
+    } else if (input.clientId && input.clientId !== current.clientId) {
+      const resolvedClient = await resolveClientLocal(input.clientId)
+      if (!resolvedClient) {
+        throw new DataClientHttpError('اطلاعات مشتری در حافظه محلی نیست', 400, {
+          code: 'missing-reference',
+        })
+      }
+      nextClient = resolvedClient
+      if (current.client.isPlaceholder) {
+        localPlaceholderClientIdToDelete = current.clientId
+      }
+    }
+
+    const resolvedStaff = input.staffId ? await resolveStaffLocal(input.staffId) : current.staff
+    const resolvedService = input.serviceId
+      ? await resolveServiceLocal(input.serviceId)
+      : current.service
+    if (!resolvedStaff || !resolvedService) {
+      throw new DataClientHttpError('اطلاعات پایه نوبت در حافظه محلی نیست', 400, {
+        code: 'missing-reference',
+      })
+    }
+
     const next: AppointmentWithDetails = {
       ...current,
       ...input,
-      clientId: input.clientId ?? current.clientId,
-      staffId: input.staffId ?? current.staffId,
-      serviceId: input.serviceId ?? current.serviceId,
+      clientId: nextClient.id,
+      staffId: resolvedStaff.id,
+      serviceId: resolvedService.id,
       date: input.date ?? current.date,
       startTime: input.startTime ?? current.startTime,
       endTime: input.endTime ?? current.endTime,
       status: input.status ?? current.status,
       notes: input.notes !== undefined ? input.notes : current.notes,
       updatedAt: new Date(),
+      client: nextClient,
+      staff: resolvedStaff,
+      service: resolvedService,
     }
-
-    const resolved = await resolveClientStaffService(next.clientId, next.staffId, next.serviceId)
-    if (!resolved) {
-      throw new DataClientHttpError('اطلاعات پایه نوبت در حافظه محلی نیست', 400, { code: 'missing-reference' })
-    }
-    next.client = resolved.client
-    next.staff = resolved.staff
-    next.service = resolved.service
 
     const win = validateAppointmentWindow(next.startTime, next.endTime)
     if (!win.ok) throw new DataClientHttpError(win.error, 400, { code: 'validation-error' })
@@ -295,6 +498,7 @@ export function createAppointmentsModule(
     const raw = await loadRawRange(next.date, next.date)
     const merged = await mergeOverlay(next.date, next.date, raw)
     const others = merged.filter((a) => a.id !== id)
+    assertPlaceholderSingleUse(next, others)
     if (isBlockingAppointmentStatus(next.status)) {
       assertNoOverlap(next, others, id)
     }
@@ -303,12 +507,27 @@ export function createAppointmentsModule(
     const createRow = pend.find((p) => p.entityId === id && p.operation === 'create')
     if (createRow) {
       await mutationQueue!.runAtomically(async (txQueue, txStorage) => {
+        const createPayload = createRow.payload as {
+          id: string
+          localPlaceholderClientId?: string
+          createInput: Record<string, unknown>
+          appointment: AppointmentWithDetails
+        }
         await txQueue.save({
           ...createRow,
           payload: {
             id,
             createInput: {
-              clientId: next.clientId,
+              ...(next.client.isPlaceholder
+                ? {
+                    placeholderClient: {
+                      name: next.client.name,
+                      notes: next.client.notes,
+                    },
+                  }
+                : {
+                    clientId: next.clientId,
+                  }),
               staffId: next.staffId,
               serviceId: next.serviceId,
               date: next.date,
@@ -317,10 +536,32 @@ export function createAppointmentsModule(
               notes: next.notes,
               durationMinutes: input.durationMinutes,
             },
+            ...(input.placeholderClient || next.client.isPlaceholder
+              ? { localPlaceholderClientId: next.clientId }
+              : createPayload.localPlaceholderClientId
+                ? { localPlaceholderClientId: createPayload.localPlaceholderClientId }
+                : {}),
             appointment: next,
+            reviewMetadata: {
+              action: 'create',
+              appointmentId: next.id,
+              appointmentDate: next.date,
+              ...(next.client.isPlaceholder ? { placeholderClientId: next.client.id } : {}),
+            },
           },
         })
         await txStorage.set(COLLECTION, `one:${id}`, next)
+        if (next.client.isPlaceholder) {
+          await updateClientListRecord(txStorage, next.client, false)
+        } else {
+          await updateClientListRecord(txStorage, next.client, true)
+          if (
+            createPayload.localPlaceholderClientId &&
+            createPayload.localPlaceholderClientId !== next.client.id
+          ) {
+            await removeClientListRecord(txStorage, createPayload.localPlaceholderClientId)
+          }
+        }
       })
     } else {
       await mutationQueue!.runAtomically(async (txQueue, txStorage) => {
@@ -328,14 +569,46 @@ export function createAppointmentsModule(
           entityType: 'appointment',
           entityId: id,
           operation: 'update',
-          payload: { id, patch: input, appointment: next },
+          payload: {
+            id,
+            patch: {
+              ...input,
+              ...(input.placeholderClient
+                ? {
+                    placeholderClient: {
+                      name: next.client.name,
+                      notes: next.client.notes,
+                    },
+                  }
+                : {}),
+            },
+            ...(input.placeholderClient && !current.client.isPlaceholder
+              ? { localPlaceholderClientId: next.client.id }
+              : {}),
+            appointment: next,
+            reviewMetadata: {
+              action: 'update',
+              appointmentId: next.id,
+              appointmentDate: next.date,
+              ...(next.client.isPlaceholder ? { placeholderClientId: next.client.id } : {}),
+            },
+          },
         })
         await txStorage.set(COLLECTION, `one:${id}`, next)
+        if (input.placeholderClient) {
+          await updateClientListRecord(txStorage, next.client, false)
+        } else if (localPlaceholderClientIdToDelete) {
+          await removeClientListRecord(txStorage, localPlaceholderClientIdToDelete)
+        } else if (next.client.isPlaceholder) {
+          await updateClientListRecord(txStorage, next.client, false)
+        } else if (current.client.isPlaceholder && next.client.id !== current.client.id) {
+          await removeClientListRecord(txStorage, current.client.id)
+        }
       })
     }
 
     listeners.notify({ startDate: next.date, endDate: next.date, appointments: [next] })
-    return next
+    return { type: 'updated', appointment: next }
   }
 
   return {
@@ -350,7 +623,8 @@ export function createAppointmentsModule(
         for (const m of pending) {
           if (m.entityType !== 'appointment' || m.entityId !== id) continue
           if (m.operation === 'delete') return null
-          const pay = m.payload as { appointment?: AppointmentWithDetails }
+          const pay = m.payload as { appointment?: AppointmentWithDetails; removeAppointment?: boolean }
+          if (pay.removeAppointment) return null
           if (pay.appointment) return pay.appointment
         }
       }
@@ -392,9 +666,36 @@ export function createAppointmentsModule(
         return apt
       }
 
-      const resolved = await resolveClientStaffService(input.clientId, input.staffId, input.serviceId)
-      if (!resolved) {
-        throw new DataClientHttpError('اطلاعات پایه نوبت (مشتری/پرسنل/خدمت) در حافظه محلی نیست', 400, {
+      const staff = await resolveStaffLocal(input.staffId)
+      const service = await resolveServiceLocal(input.serviceId)
+      if (!staff || !service) {
+        throw new DataClientHttpError('اطلاعات پایه نوبت (پرسنل/خدمت) در حافظه محلی نیست', 400, {
+          code: 'missing-reference',
+        })
+      }
+
+      const localPlaceholderClient =
+        input.placeholderClient != null
+          ? ({
+              id: newOfflineEntityId(),
+              name: input.placeholderClient.name.trim(),
+              phone: null,
+              isPlaceholder: true,
+              notes: input.placeholderClient.notes,
+              createdAt: new Date(),
+            } satisfies Client)
+          : null
+      if (localPlaceholderClient && !localPlaceholderClient.name) {
+        throw new DataClientHttpError('نام مشتری موقت الزامی است', 400, {
+          code: 'validation-error',
+        })
+      }
+
+      const resolvedClient =
+        localPlaceholderClient ??
+        (input.clientId ? await resolveClientLocal(input.clientId) : null)
+      if (!resolvedClient) {
+        throw new DataClientHttpError('اطلاعات پایه نوبت (مشتری) در حافظه محلی نیست', 400, {
           code: 'missing-reference',
         })
       }
@@ -402,7 +703,7 @@ export function createAppointmentsModule(
       const dur =
         typeof input.durationMinutes === 'number' && input.durationMinutes > 0
           ? input.durationMinutes
-          : resolved.service.duration
+          : service.duration
       const resolvedEndTime =
         input.endTime && input.endTime.trim() !== ''
           ? input.endTime.trim()
@@ -416,9 +717,9 @@ export function createAppointmentsModule(
       const id = newOfflineEntityId()
       const candidate: AppointmentWithDetails = {
         id,
-        clientId: resolved.client.id,
-        staffId: resolved.staff.id,
-        serviceId: resolved.service.id,
+        clientId: resolvedClient.id,
+        staffId: staff.id,
+        serviceId: service.id,
         date: input.date,
         startTime: input.startTime,
         endTime: resolvedEndTime,
@@ -426,14 +727,15 @@ export function createAppointmentsModule(
         notes: input.notes,
         createdAt: new Date(),
         updatedAt: new Date(),
-        client: resolved.client,
-        staff: resolved.staff,
-        service: resolved.service,
+        client: resolvedClient,
+        staff,
+        service,
       }
 
       const rawSameDay = await loadRawRange(input.date, input.date)
       const mergedSameDay = await mergeOverlay(input.date, input.date, rawSameDay)
       const others = mergedSameDay.filter((a) => a.id !== id)
+      assertPlaceholderSingleUse(candidate, others)
       assertNoOverlap(candidate, others)
 
       await mutationQueue.runAtomically(async (txQueue, txStorage) => {
@@ -444,7 +746,14 @@ export function createAppointmentsModule(
           payload: {
             id,
             createInput: {
-              clientId: input.clientId,
+              ...(localPlaceholderClient
+                ? {
+                    placeholderClient: {
+                      name: localPlaceholderClient.name,
+                      notes: localPlaceholderClient.notes,
+                    },
+                  }
+                : { clientId: input.clientId }),
               staffId: input.staffId,
               serviceId: input.serviceId,
               date: input.date,
@@ -453,10 +762,20 @@ export function createAppointmentsModule(
               durationMinutes: input.durationMinutes,
               notes: input.notes,
             },
+            ...(localPlaceholderClient ? { localPlaceholderClientId: localPlaceholderClient.id } : {}),
             appointment: candidate,
+            reviewMetadata: {
+              action: 'create',
+              appointmentId: candidate.id,
+              appointmentDate: candidate.date,
+              ...(localPlaceholderClient ? { placeholderClientId: localPlaceholderClient.id } : {}),
+            },
           },
         })
         await txStorage.set(COLLECTION, `one:${id}`, candidate)
+        if (localPlaceholderClient) {
+          await updateClientListRecord(txStorage, localPlaceholderClient, false)
+        }
       })
 
       listeners.notify({ startDate: input.date, endDate: input.date, appointments: [candidate] })
@@ -468,6 +787,100 @@ export function createAppointmentsModule(
         return patchAppointment(id, input)
       }
       return performOfflineUpdate(id, input)
+    },
+
+    async completePlaceholderClient(id, input) {
+      if (!mutationQueue || isOnline()) {
+        const data = await transport.json<AppointmentCompletePlaceholderResponse>(
+          'POST',
+          `/api/appointments/${id}/complete-client`,
+          {
+            body: input,
+          }
+        )
+        await invalidateAllRanges()
+        await storage.clearCollection(LOCAL_COLLECTIONS.clients)
+        const apt = data.appointment
+        await storage.set(COLLECTION, `one:${apt.id}`, apt)
+        listeners.notify({ startDate: apt.date, endDate: apt.date, appointments: [apt] })
+        return apt
+      }
+
+      const current = await resolveCurrentAppointment(id)
+      if (!current) {
+        throw new DataClientHttpError('نوبت یافت نشد', 404, null)
+      }
+      if (!current.client.isPlaceholder) {
+        throw new DataClientHttpError('این نوبت مشتری موقت ندارد', 400, null)
+      }
+
+      const normalizedPhone = normalizePhone(input.phone)
+      const duplicateClient = await findLocalClientByPhone(normalizedPhone, current.clientId)
+      if (
+        duplicateClient &&
+        input.reassignToExistingClientId !== duplicateClient.id
+      ) {
+        throw new DataClientHttpError('این شماره تماس برای مشتری دیگری ثبت شده است', 409, {
+          code: 'duplicate-phone',
+          existingClient: duplicateClient,
+        })
+      }
+
+      const nextClient =
+        duplicateClient ??
+        ({
+          ...current.client,
+          name: input.name.trim(),
+          phone: normalizedPhone,
+          isPlaceholder: false,
+          notes: input.notes,
+        } satisfies Client)
+
+      const next: AppointmentWithDetails = {
+        ...current,
+        clientId: nextClient.id,
+        client: nextClient,
+        updatedAt: new Date(),
+      }
+
+      const raw = await loadRawRange(next.date, next.date)
+      const merged = await mergeOverlay(next.date, next.date, raw)
+      const others = merged.filter((appointment) => appointment.id !== id)
+      if (isBlockingAppointmentStatus(next.status)) {
+        assertNoOverlap(next, others, id)
+      }
+
+      await mutationQueue.runAtomically(async (txQueue, txStorage) => {
+        await txQueue.enqueue({
+          entityType: 'appointment',
+          entityId: id,
+          operation: 'update',
+          payload: {
+            id,
+            action: 'complete_placeholder_client',
+            input: {
+              ...input,
+              phone: normalizedPhone,
+            },
+            appointment: next,
+            reviewMetadata: {
+              action: 'complete_placeholder_client',
+              appointmentId: next.id,
+              appointmentDate: next.date,
+              placeholderClientId: current.clientId,
+            },
+          },
+        })
+        await txStorage.set(COLLECTION, `one:${id}`, next)
+        if (duplicateClient) {
+          await removeClientListRecord(txStorage, current.clientId)
+        } else {
+          await updateClientListRecord(txStorage, nextClient, true)
+        }
+      })
+
+      listeners.notify({ startDate: next.date, endDate: next.date, appointments: [next] })
+      return next
     },
 
     updateStatus: async (id, status) => {
@@ -487,13 +900,16 @@ export function createAppointmentsModule(
       const current = await resolveCurrentAppointment(id)
       const date = current?.date
       await mutationQueue.runAtomically(async (txQueue, txStorage) => {
-        await txQueue.enqueue({
+        const enqueued = await txQueue.enqueue({
           entityType: 'appointment',
           entityId: id,
           operation: 'delete',
           payload: { id },
         })
         await txStorage.delete(COLLECTION, `one:${id}`)
+        if (enqueued === null && current?.client.isPlaceholder) {
+          await removeClientListRecord(txStorage, current.clientId)
+        }
       })
       if (date) {
         listeners.notify({ startDate: date, endDate: date, appointments: [] })

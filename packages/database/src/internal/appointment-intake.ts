@@ -7,6 +7,7 @@ import {
 } from '@repo/salon-core/appointment-time'
 import { isClientProvidedEntityId } from './client-queries'
 import { getClientById } from './client-queries'
+import { validatePlaceholderClientUsage } from './placeholder-client-queries'
 import { getServiceById } from './service-queries'
 import {
   checkStaffAvailabilityForAppointment,
@@ -173,6 +174,14 @@ export async function validateCreateAppointmentIntake(input: {
   })
   if (!refs.ok) return refs
 
+  const placeholderUsage = await validatePlaceholderClientUsage({
+    salonId: input.salonId,
+    clientId: refs.client.id,
+  })
+  if (!placeholderUsage.ok) {
+    return fail(placeholderUsage.status, placeholderUsage.error, placeholderUsage.code)
+  }
+
   const duration = positiveDurationMinutes(input.durationMinutes)
   const endTime = explicitEndTime(input.endTime) ?? endTimeFromDuration(input.startTime, duration ?? refs.service.duration)
   const windowCheck = validateAppointmentWindow(input.startTime, endTime)
@@ -269,6 +278,15 @@ export async function validateUpdateAppointmentIntake(input: {
     serviceId: resolvedServiceId,
   })
   if (!refs.ok) return refs
+
+  const placeholderUsage = await validatePlaceholderClientUsage({
+    salonId: input.salonId,
+    clientId: refs.client.id,
+    appointmentId: input.appointmentId,
+  })
+  if (!placeholderUsage.ok) {
+    return fail(placeholderUsage.status, placeholderUsage.error, placeholderUsage.code)
+  }
 
   const resolvedStatus =
     typeof body.status === 'string' ? (body.status as Appointment['status']) : existing.status

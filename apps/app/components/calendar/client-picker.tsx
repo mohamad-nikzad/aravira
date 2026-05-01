@@ -43,7 +43,7 @@ export function ClientPicker({
     const q = query.trim().toLowerCase()
     const phoneQuery = normalizePhone(q)
     return clients.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.phone.includes(phoneQuery)
+      (c) => c.name.toLowerCase().includes(q) || (c.phone ?? '').includes(phoneQuery)
     )
   }, [clients, query])
 
@@ -171,7 +171,7 @@ export function ClientPicker({
       >
         <span className="truncate">
           {selectedClient
-            ? `${selectedClient.name} · ${displayPhone(selectedClient.phone)}`
+            ? `${selectedClient.name}${selectedClient.isPlaceholder ? ' · اطلاعات ناقص' : ` · ${displayPhone(selectedClient.phone)}`}`
             : 'انتخاب مشتری…'}
         </span>
         <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
@@ -219,7 +219,9 @@ export function ClientPicker({
                 >
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate text-[13px]">{client.name}</p>
-                    <p className="text-[11px] text-muted-foreground" dir="ltr">{displayPhone(client.phone)}</p>
+                    <p className="text-[11px] text-muted-foreground" dir="ltr">
+                      {client.isPlaceholder ? 'اطلاعات ناقص' : displayPhone(client.phone)}
+                    </p>
                   </div>
                   {client.id === value && (
                     <Check className="h-4 w-4 shrink-0 text-primary" />

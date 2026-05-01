@@ -49,6 +49,7 @@ export function rowToClient(row: typeof clients.$inferSelect): Client {
     id: row.id,
     name: row.name,
     phone: row.phone,
+    isPlaceholder: row.isPlaceholder,
     notes: row.notes ?? undefined,
     createdAt: row.createdAt,
   }

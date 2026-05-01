@@ -139,12 +139,14 @@ export default function RetentionPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" className="touch-manipulation gap-1" asChild>
-                    <a href={`tel:${item.client.phone}`}>
-                      <Phone className="h-3.5 w-3.5" />
-                      تماس
-                    </a>
-                  </Button>
+                  {item.client.phone ? (
+                    <Button size="sm" variant="outline" className="touch-manipulation gap-1" asChild>
+                      <a href={`tel:${item.client.phone}`}>
+                        <Phone className="h-3.5 w-3.5" />
+                        تماس
+                      </a>
+                    </Button>
+                  ) : null}
                   <Button size="sm" variant="secondary" className="touch-manipulation gap-1" asChild>
                     <Link href={`/calendar?clientId=${item.client.id}`}>
                       <CalendarPlus className="h-3.5 w-3.5" />

@@ -109,7 +109,7 @@ export function SalonFullCalendar({
     () =>
       appointments.map((apt) => ({
         id: apt.id,
-        title: `${apt.client.name} — ${apt.service.name}`,
+        title: `${apt.client.isPlaceholder ? 'موقت · ' : ''}${apt.client.name} — ${apt.service.name}`,
         start: `${apt.date}T${apt.startTime}:00`,
         end: `${apt.date}T${apt.endTime}:00`,
         allDay: false,

@@ -12,6 +12,7 @@ import {
 } from '@repo/ui/drawer'
 import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
+import { Checkbox } from '@repo/ui/checkbox'
 import { Field, FieldLabel, FieldGroup, FieldError } from '@repo/ui/field'
 import {
   Select,
@@ -94,9 +95,13 @@ export function AppointmentDrawer({
     endTimeFromDuration(formatTimeHm(parseTimeHm(initialTime)), 45)
   )
   const [notes, setNotes] = useState('')
+  const [useTemporaryClient, setUseTemporaryClient] = useState(false)
+  const [temporaryClientName, setTemporaryClientName] = useState('')
+  const [temporaryClientNotes, setTemporaryClientNotes] = useState('')
   const [localClients, setLocalClients] = useState<Client[]>(clients)
   const [staffSlotOk, setStaffSlotOk] = useState<Record<string, boolean>>({})
   const durationRef = useRef(durationMinutes)
+  const temporaryClientNameRef = useRef<HTMLInputElement>(null)
   durationRef.current = durationMinutes
 
   useEffect(() => {
@@ -116,6 +121,9 @@ export function AppointmentDrawer({
     setStaffId('')
     setServiceId('')
     setNotes('')
+    setUseTemporaryClient(false)
+    setTemporaryClientName('')
+    setTemporaryClientNotes('')
     setError('')
     setLocalClients(clients)
   }, [clients, initialClientId, initialDate, initialTime])
@@ -162,6 +170,12 @@ export function AppointmentDrawer({
     setStartTime(st)
     setEndTime(endTimeFromDuration(st, durationRef.current))
   }, [initialDate, initialTime, open])
+
+  useEffect(() => {
+    if (open && useTemporaryClient) {
+      requestAnimationFrame(() => temporaryClientNameRef.current?.focus())
+    }
+  }, [open, useTemporaryClient])
 
   const handleServiceChange = (id: string) => {
     setServiceId(id)
@@ -220,7 +234,14 @@ export function AppointmentDrawer({
     try {
       if (dataClient) {
         const created = await dataClient.appointments.create({
-          clientId,
+          ...(useTemporaryClient
+            ? {
+                placeholderClient: {
+                  name: temporaryClientName.trim(),
+                  notes: temporaryClientNotes.trim() || undefined,
+                },
+              }
+            : { clientId }),
           staffId,
           serviceId,
           date,
@@ -239,7 +260,14 @@ export function AppointmentDrawer({
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          clientId,
+          ...(useTemporaryClient
+            ? {
+                placeholderClient: {
+                  name: temporaryClientName.trim(),
+                  notes: temporaryClientNotes.trim() || undefined,
+                },
+              }
+            : { clientId }),
           staffId,
           serviceId,
           date,
@@ -343,12 +371,68 @@ export function AppointmentDrawer({
           <FieldGroup className="gap-4">
             <Field>
               <FieldLabel>مشتری</FieldLabel>
-              <ClientPicker
-                clients={localClients}
-                value={clientId}
-                onChange={setClientId}
-                onClientCreated={handleClientCreated}
-              />
+              <div className="space-y-3">
+                <label
+                  htmlFor="temporary-client-mode"
+                  className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-card px-3 py-3"
+                >
+                  <Checkbox
+                    id="temporary-client-mode"
+                    checked={useTemporaryClient}
+                    onCheckedChange={(checked) => {
+                      const enabled = checked === true
+                      setUseTemporaryClient(enabled)
+                      setError('')
+                      if (enabled) {
+                        setClientId('')
+                        return
+                      }
+                      setTemporaryClientName('')
+                      setTemporaryClientNotes('')
+                    }}
+                    className="mt-0.5"
+                  />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">بعداً اطلاعات مشتری را کامل می‌کنم</p>
+                    <p className="text-xs text-muted-foreground">
+                      برای این حالت فقط نام لازم است و بعداً می‌توانید شماره را تکمیل کنید.
+                    </p>
+                  </div>
+                </label>
+
+                {useTemporaryClient ? (
+                  <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                    <Field className="gap-2">
+                      <FieldLabel htmlFor="temporary-client-name">نام مشتری</FieldLabel>
+                      <Input
+                        id="temporary-client-name"
+                        ref={temporaryClientNameRef}
+                        value={temporaryClientName}
+                        onChange={(e) => setTemporaryClientName(e.target.value)}
+                        placeholder="مثلاً دوستِ سارا"
+                        required
+                      />
+                    </Field>
+
+                    <Field className="gap-2">
+                      <FieldLabel htmlFor="temporary-client-notes">یادداشت (اختیاری)</FieldLabel>
+                      <Input
+                        id="temporary-client-notes"
+                        value={temporaryClientNotes}
+                        onChange={(e) => setTemporaryClientNotes(e.target.value)}
+                        placeholder="مثلاً شماره را بعداً می‌گیرم"
+                      />
+                    </Field>
+                  </div>
+                ) : (
+                  <ClientPicker
+                    clients={localClients}
+                    value={clientId}
+                    onChange={setClientId}
+                    onClientCreated={handleClientCreated}
+                  />
+                )}
+              </div>
             </Field>
 
             {/* Nested column so staff always stacks above service (stable in RTL / flex layouts). */}
@@ -501,7 +585,15 @@ export function AppointmentDrawer({
         </form>
 
         <DrawerFooter>
-          <Button onClick={handleSubmit} disabled={loading || !clientId || !serviceId || !staffId}>
+          <Button
+            onClick={handleSubmit}
+            disabled={
+              loading ||
+              !serviceId ||
+              !staffId ||
+              (useTemporaryClient ? !temporaryClientName.trim() : !clientId)
+            }
+          >
             {loading && <Spinner className="ml-2" />}
             {loading ? 'در حال ثبت…' : 'ثبت نوبت'}
           </Button>

@@ -166,7 +166,8 @@ export const clients = pgTable(
       .notNull()
       .references(() => salons.id, { onDelete: 'restrict' }),
     name: text('name').notNull(),
-    phone: text('phone').notNull(),
+    phone: text('phone'),
+    isPlaceholder: boolean('is_placeholder').notNull().default(false),
     notes: text('notes'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

@@ -57,6 +57,13 @@
       "when": 1776636368771,
       "tag": "0007_cooing_madame_hydra",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777656326722,
+      "tag": "0008_shiny_silhouette",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import {
   Drawer,
@@ -10,8 +10,10 @@ import {
   DrawerDescription,
   DrawerFooter,
   DrawerClose,
+  DrawerNested,
 } from '@repo/ui/drawer'
 import { Button } from '@repo/ui/button'
+import { Checkbox } from '@repo/ui/checkbox'
 import { Input } from '@repo/ui/input'
 import { Field, FieldLabel, FieldGroup, FieldError } from '@repo/ui/field'
 import {
@@ -51,7 +53,7 @@ import { useNetworkStatus } from '@/lib/pwa-client'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
 import { TimePicker } from '@repo/ui/time-picker'
 import { formatJalaliFullDate } from '@repo/salon-core/jalali'
-import { displayPhone } from '@repo/salon-core/phone'
+import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
 import { formatPersianTime, parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
 
 type StatusActionState = {
@@ -99,9 +101,21 @@ export function AppointmentDetailDrawer({
   const [isEditing, setIsEditing] = useState(false)
   const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showCompleteClientDrawer, setShowCompleteClientDrawer] = useState(false)
+  const [completeClientName, setCompleteClientName] = useState('')
+  const [completeClientPhone, setCompleteClientPhone] = useState('')
+  const [completeClientNotes, setCompleteClientNotes] = useState('')
+  const [completeClientError, setCompleteClientError] = useState('')
+  const [completeClientLoading, setCompleteClientLoading] = useState(false)
+  const [duplicateClient, setDuplicateClient] = useState<Client | null>(null)
   const [localClients, setLocalClients] = useState<Client[]>(clients)
+  const completeClientNameRef = useRef<HTMLInputElement>(null)
+  const temporaryClientNameRef = useRef<HTMLInputElement>(null)
 
   const [clientId, setClientId] = useState('')
+  const [useTemporaryClient, setUseTemporaryClient] = useState(false)
+  const [temporaryClientName, setTemporaryClientName] = useState('')
+  const [temporaryClientNotes, setTemporaryClientNotes] = useState('')
   const [staffId, setStaffId] = useState('')
   const [serviceId, setServiceId] = useState('')
   const [date, setDate] = useState('')
@@ -124,6 +138,16 @@ export function AppointmentDetailDrawer({
     setIsEditing(false)
     setEditingAppointmentId(null)
     setShowDeleteConfirm(false)
+    setShowCompleteClientDrawer(false)
+    setUseTemporaryClient(false)
+    setTemporaryClientName('')
+    setTemporaryClientNotes('')
+    setCompleteClientName('')
+    setCompleteClientPhone('')
+    setCompleteClientNotes('')
+    setCompleteClientError('')
+    setCompleteClientLoading(false)
+    setDuplicateClient(null)
     setError('')
     setStatusAction(null)
   }, [appointment?.id])
@@ -152,6 +176,16 @@ export function AppointmentDetailDrawer({
       setIsEditing(false)
       setEditingAppointmentId(null)
       setShowDeleteConfirm(false)
+      setShowCompleteClientDrawer(false)
+      setUseTemporaryClient(false)
+      setTemporaryClientName('')
+      setTemporaryClientNotes('')
+      setCompleteClientName('')
+      setCompleteClientPhone('')
+      setCompleteClientNotes('')
+      setCompleteClientError('')
+      setCompleteClientLoading(false)
+      setDuplicateClient(null)
       setError('')
       setStatusAction(null)
     } else {
@@ -167,7 +201,15 @@ export function AppointmentDetailDrawer({
 
   const startEditing = () => {
     if (!appointment || readOnly) return
-    setClientId(appointment.clientId)
+    setLocalClients(
+      appointment.client.isPlaceholder && !clients.some((client) => client.id === appointment.client.id)
+        ? [appointment.client, ...clients]
+        : clients
+    )
+    setUseTemporaryClient(appointment.client.isPlaceholder)
+    setTemporaryClientName(appointment.client.isPlaceholder ? appointment.client.name : '')
+    setTemporaryClientNotes(appointment.client.isPlaceholder ? appointment.client.notes ?? '' : '')
+    setClientId(appointment.client.isPlaceholder ? '' : appointment.clientId)
     setStaffId(appointment.staffId)
     setServiceId(appointment.serviceId)
     setDate(appointment.date)
@@ -180,6 +222,83 @@ export function AppointmentDetailDrawer({
     setNotes(appointment.notes || '')
     setIsEditing(true)
     setEditingAppointmentId(appointment.id)
+  }
+
+  useEffect(() => {
+    if (showCompleteClientDrawer) {
+      requestAnimationFrame(() => completeClientNameRef.current?.focus())
+    }
+  }, [showCompleteClientDrawer])
+
+  useEffect(() => {
+    if (isEditing && useTemporaryClient) {
+      requestAnimationFrame(() => temporaryClientNameRef.current?.focus())
+    }
+  }, [isEditing, useTemporaryClient])
+
+  const openCompleteClientDrawer = () => {
+    if (!appointment?.client.isPlaceholder) return
+    setCompleteClientName(appointment.client.name)
+    setCompleteClientPhone('')
+    setCompleteClientNotes(appointment.client.notes ?? '')
+    setCompleteClientError('')
+    setDuplicateClient(null)
+    setShowCompleteClientDrawer(true)
+  }
+
+  const submitCompleteClient = async (reassignToExistingClientId?: string) => {
+    if (!appointment) return
+
+    setCompleteClientLoading(true)
+    setCompleteClientError('')
+
+    try {
+      let updated: AppointmentWithDetails
+      if (dataClient) {
+        updated = await dataClient.appointments.completePlaceholderClient(appointment.id, {
+          name: completeClientName.trim(),
+          phone: completeClientPhone.trim(),
+          notes: completeClientNotes.trim() || undefined,
+          reassignToExistingClientId,
+        })
+        void dataClient.sync.processPending()
+      } else {
+        const res = await fetch(`/api/appointments/${appointment.id}/complete-client`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            name: completeClientName.trim(),
+            phone: completeClientPhone.trim(),
+            notes: completeClientNotes.trim() || undefined,
+            reassignToExistingClientId,
+          }),
+        })
+
+        const data = await res.json()
+        if (!res.ok) {
+          setCompleteClientError(data.error || 'تکمیل اطلاعات مشتری انجام نشد')
+          setDuplicateClient(data.existingClient ?? null)
+          return
+        }
+        updated = data.appointment as AppointmentWithDetails
+      }
+
+      setShowCompleteClientDrawer(false)
+      setDuplicateClient(null)
+      onClientsChanged?.()
+      onSuccess({ type: 'updated', appointment: updated })
+    } catch (err) {
+      if (err instanceof DataClientHttpError) {
+        setCompleteClientError(err.message)
+        const body = err.body as { existingClient?: Client } | null
+        setDuplicateClient(body?.existingClient ?? null)
+      } else {
+        setCompleteClientError('خطایی رخ داد. لطفاً دوباره تلاش کنید.')
+      }
+    } finally {
+      setCompleteClientLoading(false)
+    }
   }
 
   const handleEditServiceChange = (id: string) => {
@@ -225,6 +344,14 @@ export function AppointmentDetailDrawer({
     e.preventDefault()
     if (!appointment) return
     setError('')
+    if (useTemporaryClient && !temporaryClientName.trim()) {
+      setError('نام مشتری موقت الزامی است')
+      return
+    }
+    if (!useTemporaryClient && !clientId) {
+      setError('انتخاب مشتری الزامی است')
+      return
+    }
 
     const localCheck = validateAppointmentWindow(startTime, endTime)
     if (!localCheck.ok) {
@@ -235,8 +362,15 @@ export function AppointmentDetailDrawer({
     setLoading(true)
     try {
       if (dataClient) {
-        const updated = await dataClient.appointments.update(appointment.id, {
-          clientId,
+        const result = await dataClient.appointments.update(appointment.id, {
+          ...(useTemporaryClient
+            ? {
+                placeholderClient: {
+                  name: temporaryClientName.trim(),
+                  notes: temporaryClientNotes.trim() || undefined,
+                },
+              }
+            : { clientId }),
           staffId,
           serviceId,
           date,
@@ -247,7 +381,11 @@ export function AppointmentDetailDrawer({
           notes: notes || undefined,
         })
         void dataClient.sync.processPending()
-        onSuccess({ type: 'updated', appointment: updated })
+        onSuccess(
+          result.type === 'deleted'
+            ? { type: 'deleted', id: result.id }
+            : { type: 'updated', appointment: result.appointment }
+        )
         return
       }
 
@@ -256,7 +394,14 @@ export function AppointmentDetailDrawer({
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          clientId,
+          ...(useTemporaryClient
+            ? {
+                placeholderClient: {
+                  name: temporaryClientName.trim(),
+                  notes: temporaryClientNotes.trim() || undefined,
+                },
+              }
+            : { clientId }),
           staffId,
           serviceId,
           date,
@@ -273,6 +418,11 @@ export function AppointmentDetailDrawer({
       if (!res.ok) {
         setError(data.error || 'به‌روزرسانی نوبت انجام نشد')
         setLoading(false)
+        return
+      }
+
+      if (typeof data.removedAppointmentId === 'string') {
+        onSuccess({ type: 'deleted', id: data.removedAppointmentId })
         return
       }
 
@@ -344,7 +494,7 @@ export function AppointmentDetailDrawer({
 
     try {
       if (dataClient) {
-        const updated = await dataClient.appointments.updateStatus(
+        const result = await dataClient.appointments.updateStatus(
           appointment.id,
           nextStatus
         )
@@ -352,11 +502,20 @@ export function AppointmentDetailDrawer({
         setStatusAction({
           status: nextStatus,
           mode: isOnline ? 'saved' : 'queued',
-          message: isOnline
-            ? 'وضعیت نوبت ثبت شد.'
-            : 'وضعیت نوبت آفلاین ثبت شد و بعدا همگام می‌شود.',
+          message:
+            result.type === 'deleted'
+              ? isOnline
+                ? 'رزرو موقت لغو و حذف شد.'
+                : 'لغو رزرو موقت آفلاین ثبت شد و بعدا همگام می‌شود.'
+              : isOnline
+                ? 'وضعیت نوبت ثبت شد.'
+                : 'وضعیت نوبت آفلاین ثبت شد و بعدا همگام می‌شود.',
         })
-        onSuccess({ type: 'updated', appointment: updated })
+        onSuccess(
+          result.type === 'deleted'
+            ? { type: 'deleted', id: result.id }
+            : { type: 'updated', appointment: result.appointment }
+        )
         return
       }
 
@@ -373,6 +532,16 @@ export function AppointmentDetailDrawer({
         setError(data.error || 'تغییر وضعیت انجام نشد')
         setStatusAction(null)
         setLoading(false)
+        return
+      }
+
+      if (typeof data.removedAppointmentId === 'string') {
+        setStatusAction({
+          status: nextStatus,
+          mode: 'saved',
+          message: 'رزرو موقت لغو و حذف شد.',
+        })
+        onSuccess({ type: 'deleted', id: data.removedAppointmentId })
         return
       }
 
@@ -436,12 +605,70 @@ export function AppointmentDetailDrawer({
             <FieldGroup>
               <Field>
                 <FieldLabel>مشتری</FieldLabel>
-                <ClientPicker
-                  clients={localClients}
-                  value={clientId}
-                  onChange={setClientId}
-                  onClientCreated={handleClientCreated}
-                />
+                <div className="space-y-3">
+                  <label
+                    htmlFor="edit-temporary-client-mode"
+                    className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-card px-3 py-3"
+                  >
+                    <Checkbox
+                      id="edit-temporary-client-mode"
+                      checked={useTemporaryClient}
+                      onCheckedChange={(checked) => {
+                        const enabled = checked === true
+                        setUseTemporaryClient(enabled)
+                        setError('')
+                        if (enabled) {
+                          setClientId('')
+                          setTemporaryClientName(appointment.client.isPlaceholder ? appointment.client.name : '')
+                          setTemporaryClientNotes(appointment.client.isPlaceholder ? appointment.client.notes ?? '' : '')
+                          return
+                        }
+                        setTemporaryClientName('')
+                        setTemporaryClientNotes('')
+                      }}
+                      className="mt-0.5"
+                    />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">بعداً اطلاعات مشتری را کامل می‌کنم</p>
+                      <p className="text-xs text-muted-foreground">
+                        در حالت موقت فقط یک نام نمایشی نگه می‌داریم و شماره تماس بعداً تکمیل می‌شود.
+                      </p>
+                    </div>
+                  </label>
+
+                  {useTemporaryClient ? (
+                    <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                      <Field className="gap-2">
+                        <FieldLabel htmlFor="edit-temporary-client-name">نام مشتری</FieldLabel>
+                        <Input
+                          id="edit-temporary-client-name"
+                          ref={temporaryClientNameRef}
+                          value={temporaryClientName}
+                          onChange={(e) => setTemporaryClientName(e.target.value)}
+                          placeholder="مثلاً دوستِ سارا"
+                          required
+                        />
+                      </Field>
+
+                      <Field className="gap-2">
+                        <FieldLabel htmlFor="edit-temporary-client-notes">یادداشت (اختیاری)</FieldLabel>
+                        <Input
+                          id="edit-temporary-client-notes"
+                          value={temporaryClientNotes}
+                          onChange={(e) => setTemporaryClientNotes(e.target.value)}
+                          placeholder="مثلاً شماره را بعداً می‌گیرم"
+                        />
+                      </Field>
+                    </div>
+                  ) : (
+                    <ClientPicker
+                      clients={localClients}
+                      value={clientId}
+                      onChange={setClientId}
+                      onClientCreated={handleClientCreated}
+                    />
+                  )}
+                </div>
               </Field>
 
               <div className="flex min-w-0 flex-col gap-7">
@@ -582,6 +809,11 @@ export function AppointmentDetailDrawer({
               <Badge variant="secondary" className={cn('text-xs', statusInfo.color)}>
                 {statusInfo.label}
               </Badge>
+              {appointment.client.isPlaceholder ? (
+                <Badge variant="outline" className="text-xs border-amber-300 bg-amber-50 text-amber-800">
+                  اطلاعات ناقص
+                </Badge>
+              ) : null}
               <span className="text-sm text-muted-foreground">{formatTomans(appointment.service.price)}</span>
             </div>
 
@@ -699,6 +931,23 @@ export function AppointmentDetailDrawer({
             )}
 
             {error && <p className="text-sm text-destructive">{error}</p>}
+
+            {appointment.client.isPlaceholder && !readOnly ? (
+              <div className="rounded-2xl border border-amber-300/70 bg-amber-50/80 p-3 text-sm text-amber-950">
+                <p className="font-medium">اطلاعات این مشتری هنوز کامل نشده است.</p>
+                <p className="mt-1 text-xs text-amber-800">
+                  شماره تماس و مشخصات نهایی را ثبت کنید تا این نوبت مثل یک مشتری عادی ادامه پیدا کند.
+                </p>
+                <Button
+                  size="sm"
+                  className="mt-3"
+                  variant="outline"
+                  onClick={openCompleteClientDrawer}
+                >
+                  تکمیل اطلاعات مشتری
+                </Button>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -711,7 +960,13 @@ export function AppointmentDetailDrawer({
             </DrawerClose>
           ) : isEditingCurrentAppointment ? (
             <>
-              <Button onClick={handleUpdate} disabled={loading}>
+              <Button
+                onClick={handleUpdate}
+                disabled={
+                  loading ||
+                  (useTemporaryClient ? !temporaryClientName.trim() : !clientId)
+                }
+              >
                 {loading && <Spinner className="mr-2" />}
                 {loading ? 'در حال ذخیره…' : 'ذخیره تغییرات'}
               </Button>
@@ -762,6 +1017,94 @@ export function AppointmentDetailDrawer({
           )}
         </DrawerFooter>
       </DrawerContent>
+
+      <DrawerNested open={showCompleteClientDrawer} onOpenChange={setShowCompleteClientDrawer}>
+        <DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[92lvh]">
+          <DrawerHeader>
+            <DrawerTitle>تکمیل اطلاعات مشتری</DrawerTitle>
+            <DrawerDescription>
+              نام و شماره تماس را ثبت کنید تا این نوبت از حالت موقت خارج شود.
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="min-h-0 flex-1 overflow-auto px-4 pb-4">
+            <FieldGroup className="gap-4">
+              <Field>
+                <FieldLabel htmlFor="complete-client-name">نام مشتری</FieldLabel>
+                <Input
+                  id="complete-client-name"
+                  ref={completeClientNameRef}
+                  value={completeClientName}
+                  onChange={(e) => setCompleteClientName(e.target.value)}
+                  placeholder="نام کامل مشتری"
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="complete-client-phone">شماره تماس</FieldLabel>
+                <Input
+                  id="complete-client-phone"
+                  type="tel"
+                  value={displayPhone(completeClientPhone, '')}
+                  onChange={(e) => setCompleteClientPhone(normalizePhone(e.target.value))}
+                  placeholder="۰۹۱۲…"
+                  dir="ltr"
+                  className="text-left tabular-nums"
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="complete-client-notes">یادداشت (اختیاری)</FieldLabel>
+                <Input
+                  id="complete-client-notes"
+                  value={completeClientNotes}
+                  onChange={(e) => setCompleteClientNotes(e.target.value)}
+                  placeholder="یادداشت مشتری"
+                />
+              </Field>
+
+              {duplicateClient ? (
+                <div className="rounded-xl border border-amber-300/70 bg-amber-50 p-3 text-sm">
+                  <p className="font-medium text-amber-950">
+                    این شماره قبلاً برای {duplicateClient.name} ثبت شده است.
+                  </p>
+                  <p className="mt-1 text-xs text-amber-800">
+                    می‌توانید این نوبت را به همان مشتری موجود وصل کنید تا سابقه‌ها یکی بماند.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => void submitCompleteClient(duplicateClient.id)}
+                    disabled={completeClientLoading}
+                  >
+                    اتصال به مشتری موجود
+                  </Button>
+                </div>
+              ) : null}
+
+              {completeClientError ? <FieldError>{completeClientError}</FieldError> : null}
+            </FieldGroup>
+          </div>
+
+          <DrawerFooter>
+            <Button
+              onClick={() => void submitCompleteClient()}
+              disabled={
+                completeClientLoading ||
+                !completeClientName.trim() ||
+                !completeClientPhone.trim()
+              }
+            >
+              {completeClientLoading ? 'در حال ذخیره…' : 'ثبت اطلاعات'}
+            </Button>
+            <DrawerClose asChild>
+              <Button variant="outline">بستن</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </DrawerNested>
     </Drawer>
   )
 }

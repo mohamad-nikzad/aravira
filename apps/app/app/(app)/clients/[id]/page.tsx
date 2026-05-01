@@ -168,12 +168,14 @@ export default function ClientDetailPage() {
 
       <div className="flex-1 space-y-3 overflow-auto p-4">
         <div className="flex flex-wrap gap-2">
-          <Button className="touch-manipulation gap-1.5" asChild>
-            <a href={`tel:${client.phone}`}>
-              <Phone className="h-4 w-4" />
-              تماس
-            </a>
-          </Button>
+          {client.phone ? (
+            <Button className="touch-manipulation gap-1.5" asChild>
+              <a href={`tel:${client.phone}`}>
+                <Phone className="h-4 w-4" />
+                تماس
+              </a>
+            </Button>
+          ) : null}
           {isOnline ? (
             <Button variant="secondary" className="touch-manipulation gap-1.5" asChild>
               <Link href={`/calendar?clientId=${client.id}`}>

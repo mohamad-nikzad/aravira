@@ -201,6 +201,7 @@ export function createClientsModule(
         id,
         name: input.name,
         phone: normalized,
+        isPlaceholder: false,
         notes: input.notes,
         createdAt: new Date(),
         tags,

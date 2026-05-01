@@ -149,19 +149,49 @@ async function applyOneMutation(input: {
       const p = row.payload as {
         id: string
         createInput: Record<string, unknown>
+        localPlaceholderClientId?: string
       }
       await transport.json<AppointmentOneResponse>('POST', '/api/appointments', {
         body: { ...p.createInput, id: p.id },
       })
       await storage.clearCollection(LOCAL_COLLECTIONS.appointments)
+      if (p.localPlaceholderClientId) {
+        await storage.delete(LOCAL_COLLECTIONS.clients, `id:${p.localPlaceholderClientId}`)
+        await storage.delete(LOCAL_COLLECTIONS.clients, `summary:${p.localPlaceholderClientId}`)
+      }
       return
     }
     if (row.operation === 'update') {
-      const p = row.payload as { id: string; patch: Record<string, unknown> }
-      await transport.json<AppointmentOneResponse>('PATCH', `/api/appointments/${p.id}`, {
-        body: p.patch,
-      })
+      const p = row.payload as {
+        id: string
+        patch?: Record<string, unknown>
+        action?: string
+        input?: Record<string, unknown>
+        appointment?: { client?: { id: string } }
+        localPlaceholderClientId?: string
+      }
+      if (p.action === 'complete_placeholder_client') {
+        await transport.json<AppointmentOneResponse>('POST', `/api/appointments/${p.id}/complete-client`, {
+          body: p.input,
+        })
+      } else {
+        await transport.json<AppointmentOneResponse | { removedAppointmentId?: string }>(
+          'PATCH',
+          `/api/appointments/${p.id}`,
+          {
+          body: p.patch,
+          }
+        )
+      }
       await storage.clearCollection(LOCAL_COLLECTIONS.appointments)
+      if (p.localPlaceholderClientId) {
+        await storage.delete(LOCAL_COLLECTIONS.clients, `id:${p.localPlaceholderClientId}`)
+        await storage.delete(LOCAL_COLLECTIONS.clients, `summary:${p.localPlaceholderClientId}`)
+      }
+      if (p.action === 'complete_placeholder_client' && p.appointment?.client?.id) {
+        await storage.delete(LOCAL_COLLECTIONS.clients, `summary:${p.appointment.client.id}`)
+      }
+      await storage.delete(LOCAL_COLLECTIONS.clients, 'list')
       return
     }
     if (row.operation === 'delete') {

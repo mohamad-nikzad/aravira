@@ -6,6 +6,13 @@ export function normalizePhone(input: string): string {
   return s.replace(/\D/g, '')
 }
 
-export function displayPhone(normalized: string): string {
-  return toPersianDigits(normalized)
+export function hasPhone(normalized: string | null | undefined): normalized is string {
+  return typeof normalized === 'string' && normalized.length > 0
+}
+
+export function displayPhone(
+  normalized: string | null | undefined,
+  fallback = 'بدون شماره'
+): string {
+  return hasPhone(normalized) ? toPersianDigits(normalized) : fallback
 }

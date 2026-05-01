@@ -28,7 +28,8 @@ export interface Service {
 export interface Client {
   id: string
   name: string
-  phone: string
+  phone: string | null
+  isPlaceholder: boolean
   notes?: string
   createdAt: Date
   tags?: ClientTag[]
@@ -130,7 +131,7 @@ export interface ClientSummary {
 
 export interface TodayAttentionItem {
   id: string
-  type: 'soon' | 'overdue' | 'no-show-risk' | 'first-time' | 'vip'
+  type: 'soon' | 'overdue' | 'no-show-risk' | 'first-time' | 'vip' | 'incomplete-client'
   title: string
   detail: string
   appointmentId?: string

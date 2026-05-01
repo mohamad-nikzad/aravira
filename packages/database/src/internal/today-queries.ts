@@ -7,6 +7,8 @@ import { getClientTagsForClients } from './client-queries'
 import { getBusinessSettings } from './settings-queries'
 import { getAllStaff, getStaffSchedules } from './staff-queries'
 
+const ACTIVE_TODAY_STATUSES = new Set<AppointmentWithDetails['status']>(['scheduled', 'confirmed'])
+
 function appointmentsByClient(
   appointments: AppointmentWithDetails[]
 ): Map<string, AppointmentWithDetails[]> {
@@ -70,12 +72,30 @@ export async function getTodayData(
     const noShowCount = clientHistory.filter((row) => row.status === 'no-show').length
     const tags = tagsByClient.get(appointment.clientId) ?? []
     const isVip = tags.some((tag) => tag.label.toLowerCase() === 'vip')
-
-    if (
+    const isSoonWindow =
       useLiveClock &&
-      appointment.status === 'scheduled' &&
       appointment.startTime >= current &&
       appointment.startTime <= plusTwo
+
+    if (
+      !staffIdFilter &&
+      appointment.client.isPlaceholder &&
+      ACTIVE_TODAY_STATUSES.has(appointment.status)
+    ) {
+      attentionItems.push({
+        id: `${appointment.id}:incomplete-client`,
+        type: 'incomplete-client',
+        title: `${appointment.client.name} هنوز تکمیل نشده است`,
+        detail: `${appointment.startTime} با ${appointment.staff.name}`,
+        appointmentId: appointment.id,
+        clientId: appointment.clientId,
+        priority: isSoonWindow ? 1 : 2,
+      })
+    }
+
+    if (
+      isSoonWindow &&
+      appointment.status === 'scheduled'
     ) {
       attentionItems.push({
         id: `${appointment.id}:soon`,

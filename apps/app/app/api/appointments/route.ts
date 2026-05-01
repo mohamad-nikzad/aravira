@@ -5,6 +5,10 @@ import {
   getAppointmentsWithDetailsByDateRange,
   validateCreateAppointmentIntake,
 } from '@repo/database/appointments'
+import {
+  createPlaceholderClient,
+  deletePlaceholderClientIfOrphaned,
+} from '@repo/database/clients'
 import { sendWebPushToUser, isWebPushConfigured } from '@/lib/push'
 import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant'
 
@@ -41,14 +45,18 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  let createdPlaceholderId: string | null = null
+  let placeholderSalonId: string | null = null
   try {
     const tenant = await getTenantManagerRequest()
     if (!tenant.ok) return tenant.response
     const { user } = tenant
+    placeholderSalonId = user.salonId
 
     const body = await request.json()
     const {
       clientId,
+      placeholderClient,
       staffId,
       serviceId,
       date,
@@ -59,9 +67,34 @@ export async function POST(request: Request) {
       id: requestedAppointmentId,
     } = body
 
+    let resolvedClientId = clientId
+
+    if (
+      placeholderClient &&
+      typeof placeholderClient === 'object' &&
+      typeof placeholderClient.name === 'string'
+    ) {
+      const name = placeholderClient.name.trim()
+      const notes =
+        typeof placeholderClient.notes === 'string' && placeholderClient.notes.trim() !== ''
+          ? placeholderClient.notes.trim()
+          : undefined
+      if (!name) {
+        return NextResponse.json({ error: 'نام مشتری موقت الزامی است' }, { status: 400 })
+      }
+
+      const placeholder = await createPlaceholderClient({
+        salonId: user.salonId,
+        name,
+        notes,
+      })
+      resolvedClientId = placeholder.id
+      createdPlaceholderId = placeholder.id
+    }
+
     const intake = await validateCreateAppointmentIntake({
       salonId: user.salonId,
-      clientId,
+      clientId: resolvedClientId,
       staffId,
       serviceId,
       date,
@@ -72,6 +105,9 @@ export async function POST(request: Request) {
       requestedAppointmentId,
     })
     if (!intake.ok) {
+      if (createdPlaceholderId) {
+        await deletePlaceholderClientIfOrphaned(createdPlaceholderId, user.salonId)
+      }
       return NextResponse.json(
         { error: intake.error, ...(intake.code ? { code: intake.code } : {}) },
         { status: intake.status }
@@ -104,6 +140,11 @@ export async function POST(request: Request) {
       },
     })
   } catch (error) {
+    if (createdPlaceholderId && placeholderSalonId) {
+      await deletePlaceholderClientIfOrphaned(createdPlaceholderId, placeholderSalonId).catch(
+        () => {}
+      )
+    }
     console.error('Create appointment error:', error)
     return NextResponse.json({ error: 'خطای سرور. لطفاً دوباره تلاش کنید.' }, { status: 500 })
   }
