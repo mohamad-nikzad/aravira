@@ -10,6 +10,8 @@ export {
   updateAppointment,
 } from './internal/appointment-queries'
 
+export { getManagerAppointmentAvailability } from './internal/appointment-availability'
+
 export {
   validateCreateAppointmentIntake,
   validateUpdateAppointmentIntake,

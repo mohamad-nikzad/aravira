@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import { AlertTriangle, CalendarDays, Clock, Plus, Users } from 'lucide-react'
 import { Button } from '@repo/ui/button'
@@ -25,6 +26,7 @@ import type {
 } from '@repo/salon-core/types'
 import { APPOINTMENT_STATUS } from '@repo/salon-core/types'
 import { AppointmentDrawer } from '@/components/calendar/appointment-drawer'
+import { AvailabilityDrawer } from '@/components/calendar/availability-drawer'
 import { useBumpOfflineData, useManagerDataClient } from '@/components/manager-data-client-provider'
 import { useAuth } from '@/components/auth-provider'
 import {
@@ -364,11 +366,18 @@ function ManagerTodayView({
   clients: Client[]
   onRefreshResources: () => void
 }) {
+  const router = useRouter()
   const dataClient = useManagerDataClient()
   const bumpOfflineData = useBumpOfflineData()
   const [statusFeedback, setStatusFeedback] = useState<StatusActionFeedback>(null)
   const [showCreateDrawer, setShowCreateDrawer] = useState(false)
+  const [showAvailabilityDrawer, setShowAvailabilityDrawer] = useState(false)
+  const [createDate, setCreateDate] = useState(date)
+  const [createTime, setCreateTime] = useState('09:00')
+  const [initialStaffIdForCreate, setInitialStaffIdForCreate] = useState<string | undefined>(undefined)
+  const [initialServiceIdForCreate, setInitialServiceIdForCreate] = useState<string | undefined>(undefined)
   const createReady = staff.length > 0 && services.length > 0
+  const availabilityReady = createReady && isOnline
 
   const activeAppointments = useMemo(() => {
     if (!data) return []
@@ -426,6 +435,14 @@ function ManagerTodayView({
   const handleRetry = () => {
     mutateToday()
     onRefreshResources()
+  }
+
+  const handleOpenCreateDrawer = () => {
+    setInitialStaffIdForCreate(undefined)
+    setInitialServiceIdForCreate(undefined)
+    setCreateDate(date)
+    setCreateTime(defaultCreateTime)
+    setShowCreateDrawer(true)
   }
 
   const handlePatchStatus = async (
@@ -498,9 +515,39 @@ function ManagerTodayView({
     }
   }
 
-  const handleAppointmentCreated = () => {
+  const handleAvailabilitySlotSelect = (selection: {
+    slot: {
+      date: string
+      startTime: string
+      staffId: string
+    }
+    serviceId: string
+  }) => {
+    setShowAvailabilityDrawer(false)
+    setCreateDate(selection.slot.date)
+    setCreateTime(selection.slot.startTime)
+    setInitialStaffIdForCreate(selection.slot.staffId)
+    setInitialServiceIdForCreate(selection.serviceId)
+    requestAnimationFrame(() => setShowCreateDrawer(true))
+  }
+
+  const handleCreateDrawerOpenChange = (nextOpen: boolean) => {
+    setShowCreateDrawer(nextOpen)
+    if (!nextOpen) {
+      setInitialStaffIdForCreate(undefined)
+      setInitialServiceIdForCreate(undefined)
+    }
+  }
+
+  const handleAppointmentCreated = (appointment: AppointmentWithDetails) => {
     setShowCreateDrawer(false)
+    setInitialStaffIdForCreate(undefined)
+    setInitialServiceIdForCreate(undefined)
     bumpOfflineData()
+    if (appointment.date !== date) {
+      router.push(`/calendar?date=${appointment.date}`)
+      return
+    }
     mutateToday()
   }
 
@@ -525,10 +572,19 @@ function ManagerTodayView({
                 size="sm"
                 className="touch-manipulation gap-1"
                 disabled={(!isOnline && !dataClient) || !createReady}
-                onClick={() => setShowCreateDrawer(true)}
+                onClick={handleOpenCreateDrawer}
               >
                 <Plus className="h-4 w-4" />
                 نوبت جدید
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="touch-manipulation"
+                disabled={!availabilityReady}
+                onClick={() => setShowAvailabilityDrawer(true)}
+              >
+                بررسی زمان خالی
               </Button>
               <Button variant="outline" size="sm" className="touch-manipulation" asChild>
                 <Link href={`/calendar?date=${date}`}>تقویم</Link>
@@ -559,11 +615,22 @@ function ManagerTodayView({
           onAction={handleRetry}
         />
 
+        <AvailabilityDrawer
+          open={showAvailabilityDrawer}
+          onOpenChange={setShowAvailabilityDrawer}
+          initialDate={date}
+          staff={staff}
+          services={services}
+          onSelectSlot={handleAvailabilitySlotSelect}
+        />
+
         <AppointmentDrawer
           open={showCreateDrawer}
-          onOpenChange={setShowCreateDrawer}
-          initialDate={date}
-          initialTime={defaultCreateTime}
+          onOpenChange={handleCreateDrawerOpenChange}
+          initialDate={createDate}
+          initialTime={createTime}
+          initialStaffId={initialStaffIdForCreate}
+          initialServiceId={initialServiceIdForCreate}
           staff={staff}
           services={services}
           clients={clients}
@@ -591,10 +658,19 @@ function ManagerTodayView({
               size="sm"
               className="touch-manipulation gap-1"
               disabled={(!isOnline && !dataClient) || !createReady}
-              onClick={() => setShowCreateDrawer(true)}
+              onClick={handleOpenCreateDrawer}
             >
               <Plus className="h-4 w-4" />
               نوبت جدید
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="touch-manipulation"
+              disabled={!availabilityReady}
+              onClick={() => setShowAvailabilityDrawer(true)}
+            >
+              بررسی زمان خالی
             </Button>
             <Button variant="outline" size="sm" className="touch-manipulation" asChild>
               <Link href={`/calendar?date=${date}`}>تقویم</Link>
@@ -685,7 +761,7 @@ function ManagerTodayView({
                       size="sm"
                       className="mt-3 touch-manipulation gap-1"
                       disabled={(!isOnline && !dataClient) || !createReady}
-                      onClick={() => setShowCreateDrawer(true)}
+                      onClick={handleOpenCreateDrawer}
                     >
                       <Plus className="h-4 w-4" />
                       افزودن نوبت
@@ -744,11 +820,22 @@ function ManagerTodayView({
           </div>
       </div>
 
+      <AvailabilityDrawer
+        open={showAvailabilityDrawer}
+        onOpenChange={setShowAvailabilityDrawer}
+        initialDate={date}
+        staff={staff}
+        services={services}
+        onSelectSlot={handleAvailabilitySlotSelect}
+      />
+
       <AppointmentDrawer
         open={showCreateDrawer}
-        onOpenChange={setShowCreateDrawer}
-        initialDate={date}
-        initialTime={defaultCreateTime}
+        onOpenChange={handleCreateDrawerOpenChange}
+        initialDate={createDate}
+        initialTime={createTime}
+        initialStaffId={initialStaffIdForCreate}
+        initialServiceId={initialServiceIdForCreate}
         staff={staff}
         services={services}
         clients={clients}

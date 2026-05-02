@@ -5,10 +5,12 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { format, parseISO, subDays, addDays } from 'date-fns'
 import useSWR from 'swr'
 import { Plus } from 'lucide-react'
+import { Button } from '@repo/ui/button'
 import { CalendarHeader } from '@/components/calendar/calendar-header'
 import { SalonFullCalendar } from '@/components/calendar/salon-full-calendar'
 import { StaffFilter } from '@/components/calendar/staff-filter'
 import { AppointmentDrawer } from '@/components/calendar/appointment-drawer'
+import { AvailabilityDrawer } from '@/components/calendar/availability-drawer'
 import { AppointmentDetailDrawer } from '@/components/calendar/appointment-detail-drawer'
 import {
   NetworkStatusBanner,
@@ -89,8 +91,11 @@ function CalendarPageContent() {
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([])
 
   const [showCreateDrawer, setShowCreateDrawer] = useState(false)
+  const [showAvailabilityDrawer, setShowAvailabilityDrawer] = useState(false)
   const [createDate, setCreateDate] = useState<string>('')
   const [createTime, setCreateTime] = useState<string>('')
+  const [initialStaffIdForCreate, setInitialStaffIdForCreate] = useState<string | undefined>(undefined)
+  const [initialServiceIdForCreate, setInitialServiceIdForCreate] = useState<string | undefined>(undefined)
   const [initialClientIdForCreate, setInitialClientIdForCreate] = useState<string | undefined>(undefined)
 
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithDetails | null>(null)
@@ -199,6 +204,8 @@ function CalendarPageContent() {
     if (!isManager || !clientIdParam || clients.length === 0) return
     if (!clients.some((c) => c.id === clientIdParam)) return
     setInitialClientIdForCreate(clientIdParam)
+    setInitialStaffIdForCreate(undefined)
+    setInitialServiceIdForCreate(undefined)
     setCreateDate(format(navDate, 'yyyy-MM-dd'))
     setCreateTime(businessHours.workingStart)
     setShowCreateDrawer(true)
@@ -286,6 +293,8 @@ function CalendarPageContent() {
   const handleAddAppointment = () => {
     if (!isManager) return
     setInitialClientIdForCreate(undefined)
+    setInitialStaffIdForCreate(undefined)
+    setInitialServiceIdForCreate(undefined)
     setCreateDate(format(navDate, 'yyyy-MM-dd'))
     setCreateTime(businessHours.workingStart)
     setShowCreateDrawer(true)
@@ -295,11 +304,38 @@ function CalendarPageContent() {
     (dateStr: string, timeStr: string) => {
       if (!isManager) return
       setInitialClientIdForCreate(undefined)
+      setInitialStaffIdForCreate(undefined)
+      setInitialServiceIdForCreate(undefined)
       setCreateDate(dateStr)
       setCreateTime(timeStr)
       setShowCreateDrawer(true)
     },
     [isManager]
+  )
+
+  const handleOpenAvailability = () => {
+    if (!isManager) return
+    setShowAvailabilityDrawer(true)
+  }
+
+  const handleAvailabilitySlotSelect = useCallback(
+    (selection: {
+      slot: {
+        date: string
+        startTime: string
+        staffId: string
+      }
+      serviceId: string
+    }) => {
+      setShowAvailabilityDrawer(false)
+      setInitialClientIdForCreate(undefined)
+      setInitialStaffIdForCreate(selection.slot.staffId)
+      setInitialServiceIdForCreate(selection.serviceId)
+      setCreateDate(selection.slot.date)
+      setCreateTime(selection.slot.startTime)
+      requestAnimationFrame(() => setShowCreateDrawer(true))
+    },
+    []
   )
 
   const handleAppointmentClick = (appointment: AppointmentWithDetails) => {
@@ -310,6 +346,8 @@ function CalendarPageContent() {
     upsertAppointmentInCache(appointment)
     setShowCreateDrawer(false)
     setInitialClientIdForCreate(undefined)
+    setInitialStaffIdForCreate(undefined)
+    setInitialServiceIdForCreate(undefined)
     void mutateAppointments()
   }
 
@@ -329,7 +367,11 @@ function CalendarPageContent() {
 
   const handleCreateDrawerOpenChange = (open: boolean) => {
     setShowCreateDrawer(open)
-    if (!open) setInitialClientIdForCreate(undefined)
+    if (!open) {
+      setInitialClientIdForCreate(undefined)
+      setInitialStaffIdForCreate(undefined)
+      setInitialServiceIdForCreate(undefined)
+    }
   }
 
   const handleRetry = useCallback(() => {
@@ -435,6 +477,18 @@ function CalendarPageContent() {
             />
           </div>
         )}
+
+        {isManager && (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full gap-2 rounded-2xl sm:w-auto"
+            disabled={!isOnline || services.length === 0 || staff.length === 0}
+            onClick={handleOpenAvailability}
+          >
+            بررسی زمان خالی
+          </Button>
+        )}
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -463,11 +517,24 @@ function CalendarPageContent() {
       )}
 
       {isManager && (
+        <AvailabilityDrawer
+          open={showAvailabilityDrawer}
+          onOpenChange={setShowAvailabilityDrawer}
+          initialDate={format(navDate, 'yyyy-MM-dd')}
+          staff={staff}
+          services={services}
+          onSelectSlot={handleAvailabilitySlotSelect}
+        />
+      )}
+
+      {isManager && (
         <AppointmentDrawer
           open={showCreateDrawer}
           onOpenChange={handleCreateDrawerOpenChange}
           initialDate={createDate}
           initialTime={createTime}
+          initialStaffId={initialStaffIdForCreate}
+          initialServiceId={initialServiceIdForCreate}
           initialClientId={initialClientIdForCreate}
           staff={staff}
           services={services}

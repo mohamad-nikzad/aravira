@@ -59,6 +59,8 @@ interface AppointmentDrawerProps {
   onOpenChange: (open: boolean) => void
   initialDate: string
   initialTime: string
+  initialStaffId?: string
+  initialServiceId?: string
   /** When set while opening, pre-selects this client (e.g. deep link from client profile). */
   initialClientId?: string
   staff: User[]
@@ -73,6 +75,8 @@ export function AppointmentDrawer({
   onOpenChange,
   initialDate,
   initialTime,
+  initialStaffId,
+  initialServiceId,
   initialClientId,
   staff,
   services,
@@ -109,7 +113,10 @@ export function AppointmentDrawer({
   }, [clients])
 
   const resetFormForInitialSlot = useCallback(() => {
-    const defaultDuration = 45
+    const initialService = initialServiceId
+      ? services.find((service) => service.id === initialServiceId)
+      : undefined
+    const defaultDuration = initialService?.duration ?? 45
     const st = formatTimeHm(parseTimeHm(initialTime))
 
     durationRef.current = defaultDuration
@@ -118,15 +125,15 @@ export function AppointmentDrawer({
     setStartTime(st)
     setEndTime(endTimeFromDuration(st, defaultDuration))
     setClientId(initialClientId ?? '')
-    setStaffId('')
-    setServiceId('')
+    setStaffId(initialStaffId ?? '')
+    setServiceId(initialServiceId ?? '')
     setNotes('')
     setUseTemporaryClient(false)
     setTemporaryClientName('')
     setTemporaryClientNotes('')
     setError('')
     setLocalClients(clients)
-  }, [clients, initialClientId, initialDate, initialTime])
+  }, [clients, initialClientId, initialDate, initialServiceId, initialStaffId, initialTime, services])
 
   const applyDuration = (mins: number) => {
     const clamped = Math.min(

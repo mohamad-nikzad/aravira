@@ -13,6 +13,16 @@ export type StaffAvailabilityResult =
   | { ok: true; source: 'staff' | 'business'; hours: BusinessHours }
   | { ok: false; code: StaffAvailabilityCode; error: string; source: 'staff' | 'business'; hours: BusinessHours }
 
+export type StaffWorkingHoursResult =
+  | { ok: true; source: 'staff' | 'business'; hours: BusinessHours }
+  | {
+      ok: false
+      code: typeof STAFF_AVAILABILITY_CODES.STAFF_INACTIVE_DAY
+      error: string
+      source: 'staff' | 'business'
+      hours: BusinessHours
+    }
+
 export function dayOfWeekFromDate(date: string): number {
   const parsed = new Date(`${date}T00:00:00Z`)
   if (Number.isNaN(parsed.getTime())) return -1
@@ -27,16 +37,14 @@ export function validateAgainstHours(
   return startTime >= hours.workingStart && endTime <= hours.workingEnd
 }
 
-export function validateStaffAvailability(
+export function resolveStaffWorkingHoursForDay(
   params: {
     schedule: StaffSchedule | undefined
     hasAnyScheduleRows: boolean
     businessHours: BusinessHours
-    startTime: string
-    endTime: string
   }
-): StaffAvailabilityResult {
-  const { schedule, hasAnyScheduleRows, businessHours, startTime, endTime } = params
+): StaffWorkingHoursResult {
+  const { schedule, hasAnyScheduleRows, businessHours } = params
 
   if (schedule) {
     const hours = {
@@ -55,16 +63,6 @@ export function validateStaffAvailability(
       }
     }
 
-    if (!validateAgainstHours(startTime, endTime, hours)) {
-      return {
-        ok: false,
-        code: STAFF_AVAILABILITY_CODES.OUTSIDE_STAFF_HOURS,
-        error: `این نوبت خارج از برنامه کاری پرسنل (${hours.workingStart} تا ${hours.workingEnd}) است.`,
-        source: 'staff',
-        hours,
-      }
-    }
-
     return { ok: true, source: 'staff', hours }
   }
 
@@ -78,15 +76,44 @@ export function validateStaffAvailability(
     }
   }
 
-  if (!validateAgainstHours(startTime, endTime, businessHours)) {
+  return { ok: true, source: 'business', hours: businessHours }
+}
+
+export function validateStaffAvailability(
+  params: {
+    schedule: StaffSchedule | undefined
+    hasAnyScheduleRows: boolean
+    businessHours: BusinessHours
+    startTime: string
+    endTime: string
+  }
+): StaffAvailabilityResult {
+  const { businessHours, startTime, endTime } = params
+  const resolved = resolveStaffWorkingHoursForDay(params)
+
+  if (!resolved.ok) {
+    return resolved
+  }
+
+  if (resolved.source === 'staff' && !validateAgainstHours(startTime, endTime, resolved.hours)) {
+    return {
+      ok: false,
+      code: STAFF_AVAILABILITY_CODES.OUTSIDE_STAFF_HOURS,
+      error: `این نوبت خارج از برنامه کاری پرسنل (${resolved.hours.workingStart} تا ${resolved.hours.workingEnd}) است.`,
+      source: 'staff',
+      hours: resolved.hours,
+    }
+  }
+
+  if (resolved.source === 'business' && !validateAgainstHours(startTime, endTime, resolved.hours)) {
     return {
       ok: false,
       code: STAFF_AVAILABILITY_CODES.OUTSIDE_BUSINESS_HOURS,
       error: `این نوبت خارج از ساعت کاری سالن (${businessHours.workingStart} تا ${businessHours.workingEnd}) است.`,
       source: 'business',
-      hours: businessHours,
+      hours: resolved.hours,
     }
   }
 
-  return { ok: true, source: 'business', hours: businessHours }
+  return resolved
 }
