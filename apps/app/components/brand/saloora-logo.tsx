@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
+import { withPwaAssetVersion } from '@/lib/pwa-assets'
 import { cn } from '@repo/ui/utils'
 
 type SalooraMarkProps = {
@@ -11,7 +12,7 @@ export function SalooraMark({ className, imageClassName, priority: _priority = f
   return (
     <span className={cn('inline-flex shrink-0 items-center justify-center', className)}>
       <img
-        src="/brand/saloora-mark-clean.png"
+        src={withPwaAssetVersion('/brand/saloora-mark-clean.png')}
         alt=""
         className={cn('h-full w-full object-contain', imageClassName)}
       />
@@ -25,7 +26,7 @@ export function SalooraLogo({
 }: Pick<SalooraMarkProps, 'className' | 'priority'>) {
   return (
     <img
-      src="/brand/saloora-logo-clean.png"
+      src={withPwaAssetVersion('/brand/saloora-logo-clean.png')}
       alt="Saloora"
       className={cn('h-auto w-auto object-contain', className)}
     />

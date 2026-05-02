@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { ToastAction } from '@repo/ui/toast'
 import { toast } from '@repo/ui/use-toast'
+import { withPwaAssetVersion } from '@/lib/pwa-assets'
 import { extractNextBuildId } from '@/lib/pwa-build-id'
 
 function getCurrentBuildId() {
@@ -146,7 +147,7 @@ export function ServiceWorkerRegister() {
     navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange)
 
     navigator.serviceWorker
-      .register('/sw.js', { scope: '/', updateViaCache: 'none' })
+      .register(withPwaAssetVersion('/sw.js'), { scope: '/', updateViaCache: 'none' })
       .then((registration) => {
         const recheckForUpdates = () => {
           void checkForAppShellUpdate()

@@ -4,6 +4,7 @@ import { Vazirmatn } from 'next/font/google'
 import { InstallPrompt } from '@/components/pwa/install-prompt'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
 import { ThemeProvider } from '@/components/theme-provider'
+import { withPwaAssetVersion } from '@/lib/pwa-assets'
 import { Toaster } from '@repo/ui/toaster'
 import './globals.css'
 
@@ -30,14 +31,24 @@ export const metadata: Metadata = {
   title: 'سالورا',
   description: 'سامانه مدیریت هوشمند نوبت‌دهی سالورا',
   applicationName: 'سالورا',
-  manifest: '/manifest.json',
+  manifest: withPwaAssetVersion('/manifest.webmanifest'),
   icons: {
     icon: [
-      { url: '/favicon.ico' },
-      { url: '/icons/icon-192x192.png', type: 'image/png', sizes: '192x192' },
+      { url: withPwaAssetVersion('/favicon.ico') },
+      {
+        url: withPwaAssetVersion('/icons/icon-192x192.png'),
+        type: 'image/png',
+        sizes: '192x192',
+      },
     ],
-    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
-    shortcut: ['/favicon.ico'],
+    apple: [
+      {
+        url: withPwaAssetVersion('/apple-touch-icon.png'),
+        sizes: '180x180',
+        type: 'image/png',
+      },
+    ],
+    shortcut: [withPwaAssetVersion('/favicon.ico')],
   },
   category: 'business',
   keywords: ['سالورا', 'Saloora', 'نوبت دهی سالن', 'مدیریت سالن', 'آرایشگاه', 'PWA'],

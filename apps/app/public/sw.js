@@ -1,4 +1,6 @@
-const SW_VERSION = '2026-04-28-v2'
+const PWA_ASSET_VERSION =
+  new URL(self.location.href).searchParams.get('v') || '2026-05-02-v1'
+const SW_VERSION = `2026-05-02-v1-${PWA_ASSET_VERSION}`
 const STATIC_CACHE_NAME = `aravira-static-${SW_VERSION}`
 const NAVIGATION_CACHE_NAME = `aravira-pages-${SW_VERSION}`
 const MEDIA_CACHE_NAME = `aravira-media-${SW_VERSION}`
@@ -8,14 +10,19 @@ const CACHE_NAMES = [
   MEDIA_CACHE_NAME,
 ]
 
+function withAssetVersion(path) {
+  const separator = path.includes('?') ? '&' : '?'
+  return `${path}${separator}v=${encodeURIComponent(PWA_ASSET_VERSION)}`
+}
+
 const PRECACHE_ASSETS = [
-  '/manifest.json',
-  '/favicon.ico',
-  '/apple-touch-icon.png',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
-  '/icons/icon-maskable-192x192.png',
-  '/icons/icon-maskable-512x512.png',
+  withAssetVersion('/manifest.webmanifest'),
+  withAssetVersion('/favicon.ico'),
+  withAssetVersion('/apple-touch-icon.png'),
+  withAssetVersion('/icons/icon-192x192.png'),
+  withAssetVersion('/icons/icon-512x512.png'),
+  withAssetVersion('/icons/icon-maskable-192x192.png'),
+  withAssetVersion('/icons/icon-maskable-512x512.png'),
   '/logo.png',
   '/offline-launch.html',
 ]
@@ -210,8 +217,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-192x192.png',
+      icon: withAssetVersion('/icons/icon-192x192.png'),
+      badge: withAssetVersion('/icons/icon-192x192.png'),
       tag: payload.tag,
       data: { url: payload.url, tag: payload.tag },
       lang: 'fa',

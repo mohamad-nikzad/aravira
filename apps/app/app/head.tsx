@@ -1,3 +1,5 @@
+import { withPwaAssetVersion } from '@/lib/pwa-assets'
+
 const startupImages = [
   {
     href: '/icons/apple-splash-2048-2732.png',
@@ -108,7 +110,7 @@ export default function Head() {
         <link
           key={image.href}
           rel="apple-touch-startup-image"
-          href={image.href}
+          href={withPwaAssetVersion(image.href)}
           media={image.media}
         />
       ))}
