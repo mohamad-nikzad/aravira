@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAllStaff, createUser } from '@repo/database/staff'
 import { STAFF_COLORS } from '@repo/salon-core/types'
+import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant'
 
 export async function GET(request: Request) {
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
 
     const existingStaff = await getAllStaff(user.salonId)
     const colorIndex = existingStaff.length % STAFF_COLORS.length
-    const color = STAFF_COLORS[colorIndex]
+    const color = normalizeCalendarColorId(STAFF_COLORS[colorIndex])
 
     const newUser = await createUser({
       phone,

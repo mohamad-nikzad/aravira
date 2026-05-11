@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getAllServices, createService } from '@repo/database/services'
 import { isClientProvidedEntityId } from '@repo/database/clients'
 import type { Service } from '@repo/salon-core/types'
+import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { getTenantManagerRequest, getTenantRequest, isManagerRole } from '@repo/auth/tenant'
 
 export async function GET(request: Request) {
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
       category: category as Service['category'],
       duration: Number(duration),
       price: Number(price),
-      color,
+      color: normalizeCalendarColorId(color),
       active: active !== false,
       salonId: user.salonId,
       ...(isClientProvidedEntityId(String(id)) ? { id: String(id) } : {}),

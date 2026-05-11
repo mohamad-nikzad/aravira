@@ -1,0 +1,27 @@
+{
+  "name": "@repo/brand-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./colors": "./src/colors.ts",
+    "./radius": "./src/radius.ts",
+    "./fonts": "./src/fonts.ts",
+    "./staff-colors": "./src/staff-colors.ts",
+    "./calendar-colors": "./src/calendar-colors.ts",
+    "./appointment-status": "./src/appointment-status.ts",
+    "./generated/*": "./generated/*"
+  },
+  "scripts": {
+    "tokens:generate": "tsx scripts/generate-tokens.ts",
+    "tokens:check": "pnpm run tokens:generate && git diff --exit-code -- generated",
+    "lint": "eslint .",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "5.7.3"
+  }
+}

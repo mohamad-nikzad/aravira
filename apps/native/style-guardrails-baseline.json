@@ -1,0 +1,1972 @@
+{
+  "description": "Known native style guardrail findings. Run pnpm --filter @repo/native style:check -- --update-baseline only when intentionally accepting existing debt.",
+  "findings": [
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 202,
+      "text": "borderRadius: 28,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 306,
+      "text": "borderRadius: 28,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 333,
+      "text": "borderRadius: 999,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "app/login.tsx",
+      "line": 64,
+      "text": "style={{ width: 80, height: 80, borderRadius: 22 }}"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "app/signup.tsx",
+      "line": 33,
+      "text": "style={{ width: 72, height: 72, borderRadius: 20 }}"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 138,
+      "text": "borderRadius: 12,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 187,
+      "text": "borderRadius: 999,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 225,
+      "text": "borderRadius: 14,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 250,
+      "text": "borderRadius: 8,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 302,
+      "text": "borderRadius: 999,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 57,
+      "text": "borderRadius: 32,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/appointment-block.tsx",
+      "line": 49,
+      "text": "borderRadius: 10,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 113,
+      "text": "borderRadius: 2,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 146,
+      "text": "borderRadius: 16,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 162,
+      "text": "borderRadius: 999,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 183,
+      "text": "borderRadius: 16,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 206,
+      "text": "borderRadius: 10,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 257,
+      "text": "borderRadius: 7,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 360,
+      "text": "borderRadius: 12,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 41,
+      "text": "borderTopLeftRadius: 24,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 42,
+      "text": "borderTopRightRadius: 24,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 428,
+      "text": "borderRadius: 14,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 437,
+      "text": "borderRadius: 8,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/day-view.tsx",
+      "line": 153,
+      "text": "borderRadius: 4,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/day-view.tsx",
+      "line": 212,
+      "text": "borderRadius: 16,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/month-view.tsx",
+      "line": 117,
+      "text": "borderRadius: 2.5,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/month-view.tsx",
+      "line": 46,
+      "text": "<View style={{ borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF' }}>"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/month-view.tsx",
+      "line": 87,
+      "text": "borderRadius: 13,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/week-view.tsx",
+      "line": 117,
+      "text": "borderRadius: 14,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/calendar/week-view.tsx",
+      "line": 136,
+      "text": "borderRadius: 2,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/ui/select.tsx",
+      "line": 157,
+      "text": "borderRadius: 10,"
+    },
+    {
+      "rule": "ad-hoc-radius",
+      "description": "ad hoc radius style keys outside tokens/theme",
+      "file": "components/ui/time-picker.tsx",
+      "line": 168,
+      "text": "borderRadius: 12,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app.json",
+      "line": 30,
+      "text": "\"bundleIdentifier\": \"com.saloora.app\""
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app.json",
+      "line": 33,
+      "text": "\"package\": \"com.saloora.app\","
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 171,
+      "text": "<View style={{ flex: 1, backgroundColor: saloora.mist.hex }}>"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 205,
+      "text": "backgroundColor: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 309,
+      "text": "backgroundColor: saloora.rose.hex + '1A',"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 312,
+      "text": "<AlertCircle size={24} color={saloora.rose.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 318,
+      "text": "color: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 335,
+      "text": "borderColor: saloora.rose.hex + '55',"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 338,
+      "text": "<RefreshCw size={14} color={saloora.rose.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 343,
+      "text": "color: saloora.rose.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/(tabs)/clients.tsx",
+      "line": 117,
+      "text": "<Phone size={12} color={saloora.sage.hex} strokeWidth={1.6} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/(tabs)/clients.tsx",
+      "line": 63,
+      "text": "<Search size={16} color={saloora.sage.hex} strokeWidth={1.6} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/(tabs)/settings.tsx",
+      "line": 51,
+      "text": "<LogOut size={18} color={saloora.plum.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/(tabs)/settings.tsx",
+      "line": 72,
+      "text": "<Users size={18} color={saloora.plum.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/(tabs)/settings.tsx",
+      "line": 82,
+      "text": "<ChevronLeft size={18} color={saloora.sage.hex} strokeWidth={1.6} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/login.tsx",
+      "line": 155,
+      "text": "color: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/signup.tsx",
+      "line": 76,
+      "text": "color: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/staff.tsx",
+      "line": 150,
+      "text": "<Shield size={12} color={saloora.plum.hex} strokeWidth={1.6} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/staff.tsx",
+      "line": 152,
+      "text": "<UserIcon size={12} color={saloora.plum.hex} strokeWidth={1.6} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/staff.tsx",
+      "line": 165,
+      "text": "<Phone size={12} color={saloora.sage.hex} strokeWidth={1.6} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/staff.tsx",
+      "line": 71,
+      "text": "<ArrowRight size={20} color={saloora.plum.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "app/staff.tsx",
+      "line": 91,
+      "text": "<Search size={16} color={saloora.sage.hex} strokeWidth={1.6} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 139,
+      "text": "backgroundColor: isToday ? saloora.plum.hex : '#FFFFFF',"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 141,
+      "text": "borderColor: isToday ? saloora.plum.hex : '#E5D9DB99',"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 147,
+      "text": "color: isToday ? '#FFFFFF' : isFriday ? saloora.rose.hex : saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 155,
+      "text": "color: isToday ? '#FFFFFFCC' : saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 166,
+      "text": "color: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 175,
+      "text": "color: saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 188,
+      "text": "backgroundColor: saloora.rose.hex + '22',"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 190,
+      "text": "<Text style={{ fontFamily: FONTS.semi, fontSize: 10, color: saloora.rose.hex }}>"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 259,
+      "text": "color: isCancelled ? '#737373' : saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 268,
+      "text": "color: isCancelled ? '#A3A3A3' : saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 282,
+      "text": "color: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 292,
+      "text": "color: saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 58,
+      "text": "backgroundColor: saloora.mist.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 63,
+      "text": "<CalendarX size={26} color={saloora.plum.hex} strokeWidth={1.6} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 69,
+      "text": "color: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 78,
+      "text": "color: saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 126,
+      "text": "color: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 135,
+      "text": "color: saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 151,
+      "text": "<X size={16} color={saloora.plum.hex} strokeWidth={2} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 211,
+      "text": "<Clock size={18} color={saloora.plum.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 218,
+      "text": "color: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 227,
+      "text": "color: saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 239,
+      "text": "icon={<Scissors size={16} color={saloora.plum.hex} strokeWidth={1.8} />}"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 249,
+      "text": "icon={<UserIcon size={16} color={saloora.plum.hex} strokeWidth={1.8} />}"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 265,
+      "text": "icon={<Phone size={16} color={saloora.plum.hex} strokeWidth={1.8} />}"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 273,
+      "text": "icon={<StickyNote size={16} color={saloora.plum.hex} strokeWidth={1.8} />}"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 296,
+      "text": "color: saloora.rose.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 385,
+      "text": "bg: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 386,
+      "text": "border: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 393,
+      "text": "border: saloora.rose.hex + '66',"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 394,
+      "text": "text: saloora.rose.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 400,
+      "text": "text: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 449,
+      "text": "color: saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 459,
+      "text": "color: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 469,
+      "text": "color: saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/calendar-header.tsx",
+      "line": 120,
+      "text": "<ChevronLeft size={18} color={saloora.plum.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/calendar-header.tsx",
+      "line": 99,
+      "text": "<ChevronRight size={18} color={saloora.plum.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 145,
+      "text": "<ChevronDown size={16} color={saloora.sage.hex} strokeWidth={1.6} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 162,
+      "text": "<X size={16} color={saloora.plum.hex} strokeWidth={2} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 222,
+      "text": "<Search size={16} color={saloora.sage.hex} strokeWidth={1.6} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 240,
+      "text": "<X size={14} color={saloora.sage.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 279,
+      "text": "{isSelected ? <Check size={16} color={saloora.plum.hex} strokeWidth={2} /> : null}"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 303,
+      "text": "<UserPlus size={14} color={saloora.plum.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 318,
+      "text": "<Plus size={16} color={saloora.sage.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/day-view.tsx",
+      "line": 143,
+      "text": "backgroundColor: saloora.rose.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/day-view.tsx",
+      "line": 154,
+      "text": "backgroundColor: saloora.rose.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/day-view.tsx",
+      "line": 218,
+      "text": "<Text style={{ fontFamily: FONTS.med, fontSize: 12, color: saloora.sage.hex }}>"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/day-view.tsx",
+      "line": 233,
+      "text": "<Text style={{ fontFamily: FONTS.reg, fontSize: 11, color: saloora.sage.hex }}>"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/day-view.tsx",
+      "line": 85,
+      "text": "color: saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/helpers.ts",
+      "line": 50,
+      "text": "if (!color) return saloora.sage.hex;"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/month-view.tsx",
+      "line": 130,
+      "text": "color: cell.inCurrentMonth ? saloora.sage.hex : '#C7BAB9',"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/month-view.tsx",
+      "line": 145,
+      "text": "<Text style={{ fontFamily: FONTS.reg, fontSize: 11, color: saloora.sage.hex }}>"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/month-view.tsx",
+      "line": 38,
+      "text": "color: i === 6 ? saloora.rose.hex : saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/month-view.tsx",
+      "line": 64,
+      "text": "? saloora.rose.hex"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/month-view.tsx",
+      "line": 65,
+      "text": ": saloora.plum.hex;"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/month-view.tsx",
+      "line": 90,
+      "text": "backgroundColor: isToday ? saloora.plum.hex : 'transparent',"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/week-view.tsx",
+      "line": 108,
+      "text": "color: isFriday ? saloora.rose.hex : saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/week-view.tsx",
+      "line": 120,
+      "text": "backgroundColor: isToday ? saloora.plum.hex : 'transparent',"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/week-view.tsx",
+      "line": 126,
+      "text": "color: isToday ? '#FFFFFF' : isFriday ? saloora.rose.hex : saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/week-view.tsx",
+      "line": 137,
+      "text": "backgroundColor: count > 0 ? saloora.rose.hex : 'transparent',"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/week-view.tsx",
+      "line": 174,
+      "text": "color: saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/calendar/week-view.tsx",
+      "line": 214,
+      "text": "backgroundColor: saloora.rose.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/today/manager-view.tsx",
+      "line": 131,
+      "text": "<CalendarDays size={20} color={saloora.plum.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/today/manager-view.tsx",
+      "line": 217,
+      "text": "<Clock size={16} color={saloora.plum.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/today/manager-view.tsx",
+      "line": 246,
+      "text": "<Users size={16} color={saloora.plum.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/today/staff-view.tsx",
+      "line": 110,
+      "text": "<CalendarDays size={20} color={saloora.plum.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/today/staff-view.tsx",
+      "line": 177,
+      "text": "<Clock size={16} color={saloora.plum.hex} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/ui/jalali-date-picker.tsx",
+      "line": 122,
+      "text": "<ChevronRight size={20} color={saloora.plum.hex} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/ui/jalali-date-picker.tsx",
+      "line": 134,
+      "text": "<ChevronLeft size={20} color={saloora.plum.hex} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/ui/jalali-date-picker.tsx",
+      "line": 96,
+      "text": "<CalendarIcon size={16} color={saloora.sage.hex} strokeWidth={1.6} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/ui/select.tsx",
+      "line": 159,
+      "text": "backgroundColor: selected ? saloora.blush.hex + '40' : 'transparent',"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/ui/select.tsx",
+      "line": 163,
+      "text": "<Check size={16} color={saloora.plum.hex} strokeWidth={2} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/ui/select.tsx",
+      "line": 172,
+      "text": "color: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/ui/select.tsx",
+      "line": 183,
+      "text": "color: saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/ui/select.tsx",
+      "line": 68,
+      "text": "<ChevronDown size={16} color={saloora.sage.hex} strokeWidth={1.6} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/ui/time-picker.tsx",
+      "line": 107,
+      "text": "color: saloora.plum.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/ui/time-picker.tsx",
+      "line": 169,
+      "text": "backgroundColor: saloora.blush.hex + '55',"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/ui/time-picker.tsx",
+      "line": 205,
+      "text": "color: selected ? saloora.plum.hex : saloora.sage.hex,"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "components/ui/time-picker.tsx",
+      "line": 76,
+      "text": "<Clock size={16} color={saloora.sage.hex} strokeWidth={1.6} />"
+    },
+    {
+      "rule": "direct-saloora",
+      "description": "direct saloora.* imports/usages in native components",
+      "file": "lib/secure-storage.ts",
+      "line": 4,
+      "text": "const TOKEN_KEY = 'saloora.session.token';"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 152,
+      "text": "backgroundColor: '#FFFFFF',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 154,
+      "text": "borderBottomColor: '#E5D9DB66',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 162,
+      "text": "backgroundColor: '#FFFFFF',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 165,
+      "text": "borderBottomColor: '#E5D9DB66',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 208,
+      "text": "shadowColor: '#000',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "app/(tabs)/calendar.tsx",
+      "line": 214,
+      "text": "<Plus size={26} color=\"#FFFFFF\" strokeWidth={2.2} />"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "app/(tabs)/clients.tsx",
+      "line": 100,
+      "text": "idx > 0 ? { borderTopWidth: 1, borderTopColor: 'rgba(229,217,219,0.5)' } : null,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "app/staff.tsx",
+      "line": 130,
+      "text": "idx > 0 ? { borderTopWidth: 1, borderTopColor: 'rgba(229,217,219,0.5)' } : null,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 139,
+      "text": "backgroundColor: isToday ? saloora.plum.hex : '#FFFFFF',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 141,
+      "text": "borderColor: isToday ? saloora.plum.hex : '#E5D9DB99',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 147,
+      "text": "color: isToday ? '#FFFFFF' : isFriday ? saloora.rose.hex : saloora.plum.hex,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 155,
+      "text": "color: isToday ? '#FFFFFFCC' : saloora.sage.hex,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 224,
+      "text": "backgroundColor: '#FFFFFF',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 227,
+      "text": "borderColor: isCancelled ? '#E5E5E5' : border,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 234,
+      "text": "backgroundColor: isCancelled ? '#BDBDBD' : stripeHex,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 251,
+      "text": "backgroundColor: isCancelled ? '#F5F5F5' : tint,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 259,
+      "text": "color: isCancelled ? '#737373' : saloora.plum.hex,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/agenda-view.tsx",
+      "line": 268,
+      "text": "color: isCancelled ? '#A3A3A3' : saloora.sage.hex,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-block.tsx",
+      "line": 46,
+      "text": "backgroundColor: isCancelled ? '#FAFAFA' : tint,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-block.tsx",
+      "line": 47,
+      "text": "borderColor: isCancelled ? '#E5E5E5' : border,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-block.tsx",
+      "line": 62,
+      "text": "backgroundColor: isCancelled ? '#BDBDBD' : stripe,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-block.tsx",
+      "line": 71,
+      "text": "color: isCancelled ? '#737373' : palette.text,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-block.tsx",
+      "line": 83,
+      "text": "color: isCancelled ? '#A3A3A3' : '#6B3A4A99',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-block.tsx",
+      "line": 94,
+      "text": "color: isCancelled ? '#A3A3A3' : '#767A6F',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-create-modal.tsx",
+      "line": 289,
+      "text": "<X size={16} color=\"#6B3A4A\" strokeWidth={2} />"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-create-modal.tsx",
+      "line": 324,
+      "text": "{useTemporaryClient ? <Check size={12} color=\"#FFFFFF\" strokeWidth={3} /> : null}"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-create-modal.tsx",
+      "line": 503,
+      "text": "{loading ? <Spinner color=\"#FFFFFF\" /> : null}"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 114,
+      "text": "backgroundColor: '#E5D9DB',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 149,
+      "text": "backgroundColor: '#F4EFE7',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 182,
+      "text": "backgroundColor: isCancelled ? '#FAFAFA' : tint,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 185,
+      "text": "borderColor: isCancelled ? '#E5E5E5' : border,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 191,
+      "text": "backgroundColor: isCancelled ? '#BDBDBD' : stripe,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 207,
+      "text": "backgroundColor: '#FFFFFFCC',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 35,
+      "text": "backgroundColor: 'rgba(43, 22, 27, 0.45)',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 387,
+      "text": "text: '#FFFFFF',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 392,
+      "text": "bg: '#FFFFFF',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 398,
+      "text": "bg: '#FFFFFF',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 399,
+      "text": "border: '#E5D9DB',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 40,
+      "text": "backgroundColor: '#FFFFFF',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 427,
+      "text": "backgroundColor: '#FFFFFF',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 430,
+      "text": "borderColor: '#E5D9DB80',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/appointment-sheet.tsx",
+      "line": 440,
+      "text": "backgroundColor: '#F8EFF0',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 227,
+      "text": "placeholderTextColor=\"#767A6F\""
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 391,
+      "text": "<ActivityIndicator size=\"small\" color=\"#FFFFFF\" />"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 393,
+      "text": "<Plus size={14} color=\"#FFFFFF\" strokeWidth={2} />"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/day-view.tsx",
+      "line": 109,
+      "text": "backgroundColor: '#E5D9DB',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/day-view.tsx",
+      "line": 128,
+      "text": "backgroundColor: '#F4EFE7',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/day-view.tsx",
+      "line": 213,
+      "text": "backgroundColor: '#F8EFF099',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/day-view.tsx",
+      "line": 215,
+      "text": "borderColor: '#E5D9DB',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/helpers.ts",
+      "line": 192,
+      "text": "scheduled: { bg: '#F4EFE7', text: '#767A6F', border: '#E5D9DB' },"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/helpers.ts",
+      "line": 193,
+      "text": "confirmed: { bg: '#ECD3D7', text: '#6B3A4A', border: '#D8B8BF' },"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/helpers.ts",
+      "line": 194,
+      "text": "completed: { bg: '#DCEFE1', text: '#1F6B3A', border: '#B8D9C0' },"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/helpers.ts",
+      "line": 195,
+      "text": "cancelled: { bg: '#F7DAD7', text: '#A02A1F', border: '#E5B4AD' },"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/helpers.ts",
+      "line": 196,
+      "text": "'no-show': { bg: '#FCE7CC', text: '#9A5A12', border: '#EBC994' },"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/month-view.tsx",
+      "line": 130,
+      "text": "color: cell.inCurrentMonth ? saloora.sage.hex : '#C7BAB9',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/month-view.tsx",
+      "line": 46,
+      "text": "<View style={{ borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF' }}>"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/month-view.tsx",
+      "line": 62,
+      "text": "? '#C7BAB9'"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/month-view.tsx",
+      "line": 77,
+      "text": "borderTopColor: '#F0E5E7',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/month-view.tsx",
+      "line": 79,
+      "text": "borderLeftColor: '#F0E5E7',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/month-view.tsx",
+      "line": 80,
+      "text": "backgroundColor: pressed ? '#F4EFE7' : isCursor ? '#ECD3D766' : 'transparent',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/month-view.tsx",
+      "line": 96,
+      "text": "color: isToday ? '#FFFFFF' : dayTextColor,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/staff-filter.tsx",
+      "line": 37,
+      "text": "<Users size={13} color={selected === null ? '#6B3A4A' : '#767A6F'} strokeWidth={1.8} />"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/staff-filter.tsx",
+      "line": 61,
+      "text": "borderColor: active ? hex : 'rgba(229, 217, 219, 0.7)',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/week-view.tsx",
+      "line": 126,
+      "text": "color: isToday ? '#FFFFFF' : isFriday ? saloora.rose.hex : saloora.plum.hex,"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/week-view.tsx",
+      "line": 198,
+      "text": "backgroundColor: '#E5D9DB',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/week-view.tsx",
+      "line": 232,
+      "text": "backgroundColor: isToday ? '#F8EFF066' : 'transparent',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/week-view.tsx",
+      "line": 234,
+      "text": "borderLeftColor: '#E5D9DB55',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/week-view.tsx",
+      "line": 88,
+      "text": "backgroundColor: '#FFFFFF',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/calendar/week-view.tsx",
+      "line": 90,
+      "text": "borderBottomColor: '#E5D9DB99',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/today/manager-view.tsx",
+      "line": 172,
+      "text": "backgroundColor: '#fffbeb',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/today/manager-view.tsx",
+      "line": 173,
+      "text": "borderColor: '#fde68a',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/today/manager-view.tsx",
+      "line": 178,
+      "text": "<AlertTriangle size={16} color=\"#b45309\" strokeWidth={1.8} />"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/today/shared.tsx",
+      "line": 91,
+      "text": "backgroundColor: '#fffbeb',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/today/shared.tsx",
+      "line": 92,
+      "text": "borderColor: '#fcd34d',"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/today/shared.tsx",
+      "line": 96,
+      "text": "textStyle={{ color: '#92400e', fontSize: 10 }}>"
+    },
+    {
+      "rule": "raw-color",
+      "description": "raw hex/rgb/hsl colors outside token/theme files",
+      "file": "components/ui/spinner.tsx",
+      "line": 8,
+      "text": "function Spinner({ size = 'small', color = '#6B3A4A', ...props }: SpinnerProps) {"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/(tabs)/clients.tsx",
+      "line": 17,
+      "text": "const FONT_REG = 'Vazirmatn_400Regular';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/(tabs)/clients.tsx",
+      "line": 18,
+      "text": "const FONT_MED = 'Vazirmatn_500Medium';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/(tabs)/clients.tsx",
+      "line": 19,
+      "text": "const FONT_BOLD = 'Vazirmatn_700Bold';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/(tabs)/settings.tsx",
+      "line": 13,
+      "text": "const FONT_REG = 'Vazirmatn_400Regular';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/(tabs)/settings.tsx",
+      "line": 14,
+      "text": "const FONT_MED = 'Vazirmatn_500Medium';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/(tabs)/settings.tsx",
+      "line": 15,
+      "text": "const FONT_BOLD = 'Vazirmatn_700Bold';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/login.tsx",
+      "line": 102,
+      "text": "style={{ fontFamily: 'Vazirmatn_400Regular', textAlign: 'right' }}"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/login.tsx",
+      "line": 107,
+      "text": "<Label style={{ fontFamily: 'Vazirmatn_500Medium' }}>رمز عبور</Label>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/login.tsx",
+      "line": 116,
+      "text": "style={{ fontFamily: 'Vazirmatn_400Regular', textAlign: 'right' }}"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/login.tsx",
+      "line": 121,
+      "text": "<Text style={[tw('text-sm text-destructive'), { fontFamily: 'Vazirmatn_500Medium' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/login.tsx",
+      "line": 135,
+      "text": "{ fontFamily: 'Vazirmatn_600SemiBold' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/login.tsx",
+      "line": 145,
+      "text": "style={[tw('text-xs text-muted-foreground'), { fontFamily: 'Vazirmatn_400Regular' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/login.tsx",
+      "line": 154,
+      "text": "fontFamily: 'Vazirmatn_600SemiBold',"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/login.tsx",
+      "line": 68,
+      "text": "style={[tw('text-3xl text-foreground'), { fontFamily: 'Vazirmatn_800ExtraBold' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/login.tsx",
+      "line": 72,
+      "text": "style={[tw('text-sm text-muted-foreground'), { fontFamily: 'Vazirmatn_400Regular' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/login.tsx",
+      "line": 80,
+      "text": "style={[tw('text-base text-foreground'), { fontFamily: 'Vazirmatn_600SemiBold' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/login.tsx",
+      "line": 86,
+      "text": "{ fontFamily: 'Vazirmatn_400Regular' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/login.tsx",
+      "line": 93,
+      "text": "<Label style={{ fontFamily: 'Vazirmatn_500Medium' }}>شماره موبایل</Label>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/signup.tsx",
+      "line": 36,
+      "text": "<Text style={[tw('text-2xl text-foreground'), { fontFamily: 'Vazirmatn_700Bold' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/signup.tsx",
+      "line": 42,
+      "text": "<Text style={[tw('text-base text-foreground'), { fontFamily: 'Vazirmatn_600SemiBold' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/signup.tsx",
+      "line": 48,
+      "text": "{ fontFamily: 'Vazirmatn_400Regular', lineHeight: 22 },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/signup.tsx",
+      "line": 60,
+      "text": "{ fontFamily: 'Vazirmatn_600SemiBold' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/signup.tsx",
+      "line": 75,
+      "text": "fontFamily: 'Vazirmatn_600SemiBold',"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/staff.tsx",
+      "line": 18,
+      "text": "const FONT_REG = 'Vazirmatn_400Regular';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/staff.tsx",
+      "line": 19,
+      "text": "const FONT_MED = 'Vazirmatn_500Medium';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "app/staff.tsx",
+      "line": 20,
+      "text": "const FONT_BOLD = 'Vazirmatn_700Bold';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/appointment-create-modal.tsx",
+      "line": 49,
+      "text": "const FONT_REG = 'Vazirmatn_400Regular';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/appointment-create-modal.tsx",
+      "line": 50,
+      "text": "const FONT_MED = 'Vazirmatn_500Medium';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/appointment-create-modal.tsx",
+      "line": 51,
+      "text": "const FONT_SEMI = 'Vazirmatn_600SemiBold';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/appointment-create-modal.tsx",
+      "line": 52,
+      "text": "const FONT_BOLD = 'Vazirmatn_700Bold';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 140,
+      "text": "{ fontFamily: 'Vazirmatn_500Medium', textAlign: 'right' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 156,
+      "text": "style={[tw('text-base text-foreground'), { fontFamily: 'Vazirmatn_700Bold' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 232,
+      "text": "fontFamily: 'Vazirmatn_400Regular',"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 262,
+      "text": "{ fontFamily: 'Vazirmatn_600SemiBold', textAlign: 'right' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 271,
+      "text": "fontFamily: 'Vazirmatn_400Regular',"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 288,
+      "text": "{ fontFamily: 'Vazirmatn_400Regular' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 308,
+      "text": "{ fontFamily: 'Vazirmatn_600SemiBold', textAlign: 'right' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 322,
+      "text": "{ fontFamily: 'Vazirmatn_500Medium', textAlign: 'right' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 357,
+      "text": "style={[tw('text-xs text-muted-foreground'), { fontFamily: 'Vazirmatn_500Medium' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 361,
+      "text": "<Text style={[tw('text-sm text-foreground'), { fontFamily: 'Vazirmatn_600SemiBold' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 380,
+      "text": "{ fontFamily: 'Vazirmatn_500Medium', textAlign: 'right' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/client-picker.tsx",
+      "line": 396,
+      "text": "style={[tw('text-sm text-primary-foreground'), { fontFamily: 'Vazirmatn_600SemiBold' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/helpers.ts",
+      "line": 16,
+      "text": "reg: 'Vazirmatn_400Regular',"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/helpers.ts",
+      "line": 17,
+      "text": "med: 'Vazirmatn_500Medium',"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/helpers.ts",
+      "line": 18,
+      "text": "semi: 'Vazirmatn_600SemiBold',"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/calendar/helpers.ts",
+      "line": 19,
+      "text": "bold: 'Vazirmatn_700Bold',"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/services/services-card.tsx",
+      "line": 14,
+      "text": "const FONT_REG = 'Vazirmatn_400Regular';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/services/services-card.tsx",
+      "line": 15,
+      "text": "const FONT_MED = 'Vazirmatn_500Medium';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/today/shared.tsx",
+      "line": 10,
+      "text": "const FONT_REG = 'Vazirmatn_400Regular';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/today/shared.tsx",
+      "line": 11,
+      "text": "const FONT_MED = 'Vazirmatn_500Medium';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/today/shared.tsx",
+      "line": 12,
+      "text": "const FONT_SEMI = 'Vazirmatn_600SemiBold';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/today/shared.tsx",
+      "line": 13,
+      "text": "const FONT_BOLD = 'Vazirmatn_700Bold';"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/avatar.tsx",
+      "line": 37,
+      "text": "{ fontFamily: 'Vazirmatn_500Medium' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/jalali-date-picker.tsx",
+      "line": 105,
+      "text": "<Text style={[tw('text-base text-foreground'), { fontFamily: 'Vazirmatn_700Bold' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/jalali-date-picker.tsx",
+      "line": 111,
+      "text": "{ fontFamily: 'Vazirmatn_400Regular' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/jalali-date-picker.tsx",
+      "line": 127,
+      "text": "{ fontFamily: 'Vazirmatn_600SemiBold' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/jalali-date-picker.tsx",
+      "line": 144,
+      "text": "{ fontFamily: 'Vazirmatn_500Medium' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/jalali-date-picker.tsx",
+      "line": 183,
+      "text": "{ fontFamily: 'Vazirmatn_500Medium' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/jalali-date-picker.tsx",
+      "line": 207,
+      "text": "style={[tw('text-sm text-foreground'), { fontFamily: 'Vazirmatn_500Medium' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/jalali-date-picker.tsx",
+      "line": 92,
+      "text": "{ fontFamily: 'Vazirmatn_400Regular' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/select.tsx",
+      "line": 170,
+      "text": "fontFamily: 'Vazirmatn_500Medium',"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/select.tsx",
+      "line": 181,
+      "text": "fontFamily: 'Vazirmatn_400Regular',"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/select.tsx",
+      "line": 63,
+      "text": "{ fontFamily: 'Vazirmatn_500Medium', textAlign: 'right' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/select.tsx",
+      "line": 79,
+      "text": "style={[tw('text-base text-foreground'), { fontFamily: 'Vazirmatn_700Bold' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/select.tsx",
+      "line": 95,
+      "text": "fontFamily: 'Vazirmatn_500Medium',"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/time-picker.tsx",
+      "line": 105,
+      "text": "fontFamily: 'Vazirmatn_700Bold',"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/time-picker.tsx",
+      "line": 124,
+      "text": "style={[tw('text-sm text-foreground'), { fontFamily: 'Vazirmatn_500Medium' }]}>"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/time-picker.tsx",
+      "line": 132,
+      "text": "{ fontFamily: 'Vazirmatn_600SemiBold' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/time-picker.tsx",
+      "line": 203,
+      "text": "fontFamily: selected ? 'Vazirmatn_700Bold' : 'Vazirmatn_500Medium',"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/time-picker.tsx",
+      "line": 72,
+      "text": "{ fontFamily: 'Vazirmatn_500Medium', writingDirection: 'ltr' },"
+    },
+    {
+      "rule": "vazirmatn-family",
+      "description": "hard-coded Vazirmatn family names outside theme/font loading",
+      "file": "components/ui/time-picker.tsx",
+      "line": 85,
+      "text": "<Text style={[tw('text-base text-foreground'), { fontFamily: 'Vazirmatn_700Bold' }]}>"
+    }
+  ]
+}

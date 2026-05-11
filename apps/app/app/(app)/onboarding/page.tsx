@@ -36,6 +36,8 @@ import { Skeleton } from '@repo/ui/skeleton'
 import { Spinner } from '@repo/ui/spinner'
 import { cn } from '@repo/ui/utils'
 import { SERVICE_CATEGORIES, STAFF_COLORS, type Service } from '@repo/salon-core/types'
+import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
+import { calendarColorOptions } from '@repo/brand-tokens/calendar-colors'
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
 import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
 
@@ -385,7 +387,7 @@ function ServiceStep({
           category,
           duration,
           price,
-          color,
+          color: normalizeCalendarColorId(color),
           active: true,
         }),
       })
@@ -477,18 +479,24 @@ function ServiceStep({
             <Field>
               <FieldLabel>رنگ در تقویم</FieldLabel>
               <div className="flex flex-wrap gap-2">
-                {STAFF_COLORS.map((item) => (
+                {calendarColorOptions.map((item) => (
                   <button
-                    key={item}
+                    key={item.id}
                     type="button"
-                    aria-label={item}
-                    onClick={() => setColor(item)}
+                    aria-label={item.labelFa}
+                    onClick={() => setColor(item.id)}
                     className={cn(
-                      'h-9 w-9 rounded-xl border-2',
-                      item,
-                      color === item ? 'border-foreground' : 'border-transparent',
+                      'flex h-9 items-center gap-2 rounded-xl border-2 bg-card px-2 text-xs font-medium',
+                      color === item.id ? 'border-foreground' : 'border-transparent',
                     )}
-                  />
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="size-4 rounded-full border border-border"
+                      style={{ backgroundColor: `var(--calendar-${item.id})` }}
+                    />
+                    <span>{item.labelFa}</span>
+                  </button>
                 ))}
               </div>
             </Field>

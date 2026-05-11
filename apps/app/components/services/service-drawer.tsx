@@ -22,6 +22,8 @@ import {
 } from '@repo/ui/select'
 import { Spinner } from '@repo/ui/spinner'
 import { Service, SERVICE_CATEGORIES, STAFF_COLORS } from '@repo/salon-core/types'
+import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
+import { calendarColorOptions } from '@repo/brand-tokens/calendar-colors'
 import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
 import { DataClientHttpError } from '@repo/data-client'
 import { useManagerDataClient } from '@/components/manager-data-client-provider'
@@ -59,7 +61,7 @@ export function ServiceDrawer({
       setCategory(service.category)
       setDuration(service.duration)
       setPrice(service.price)
-      setColor(service.color)
+      setColor(normalizeCalendarColorId(service.color))
       setActive(service.active)
     } else {
       setName('')
@@ -88,7 +90,7 @@ export function ServiceDrawer({
           category,
           duration,
           price,
-          color,
+          color: normalizeCalendarColorId(color),
           active,
         })
       } else {
@@ -97,7 +99,7 @@ export function ServiceDrawer({
           category,
           duration,
           price,
-          color,
+          color: normalizeCalendarColorId(color),
           active,
         })
       }
@@ -182,9 +184,16 @@ export function ServiceDrawer({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {STAFF_COLORS.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c.replace('bg-', '')}
+                  {calendarColorOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      <span className="flex items-center gap-2">
+                        <span
+                          aria-hidden="true"
+                          className="size-3 rounded-full border border-border"
+                          style={{ backgroundColor: `var(--calendar-${option.id})` }}
+                        />
+                        <span>{option.labelFa}</span>
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

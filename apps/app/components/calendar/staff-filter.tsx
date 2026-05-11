@@ -1,6 +1,7 @@
 'use client'
 
 import { User } from '@repo/salon-core/types'
+import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { Avatar, AvatarFallback } from '@repo/ui/avatar'
 import { cn } from '@repo/ui/utils'
 
@@ -19,17 +20,6 @@ export function StaffFilter({ staff, selectedIds, onToggle, onClear }: StaffFilt
       .join('')
       .toUpperCase()
       .slice(0, 2)
-  }
-
-  const getStaffColorClass = (color: string) => {
-    const colorMap: Record<string, string> = {
-      'bg-staff-1': 'bg-staff-1',
-      'bg-staff-2': 'bg-staff-2',
-      'bg-staff-3': 'bg-staff-3',
-      'bg-staff-4': 'bg-staff-4',
-      'bg-staff-5': 'bg-staff-5',
-    }
-    return colorMap[color] || 'bg-primary'
   }
 
   return (
@@ -63,7 +53,12 @@ export function StaffFilter({ staff, selectedIds, onToggle, onClear }: StaffFilt
             )}
           >
             <Avatar className="h-6 w-6">
-              <AvatarFallback className={cn('text-[10px] text-foreground font-medium', getStaffColorClass(member.color))}>
+              <AvatarFallback
+                className="text-[10px] text-foreground font-medium"
+                style={{
+                  backgroundColor: `var(--calendar-${normalizeCalendarColorId(member.color)})`,
+                }}
+              >
                 {getInitials(member.name)}
               </AvatarFallback>
             </Avatar>

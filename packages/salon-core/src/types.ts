@@ -1,3 +1,5 @@
+import type { CalendarColorId } from './calendar-colors'
+
 export type UserRole = 'manager' | 'staff'
 
 export interface User {
@@ -179,12 +181,12 @@ export const SERVICE_CATEGORIES = {
 } as const
 
 export const STAFF_COLORS = [
-  'bg-staff-1',
-  'bg-staff-2',
-  'bg-staff-3',
-  'bg-staff-4',
-  'bg-staff-5',
-] as const
+  'rose',
+  'violet',
+  'mint',
+  'gold',
+  'coral',
+] as const satisfies readonly CalendarColorId[]
 
 export const APPOINTMENT_STATUS = {
   scheduled: { label: 'در انتظار', color: 'bg-muted text-muted-foreground' },

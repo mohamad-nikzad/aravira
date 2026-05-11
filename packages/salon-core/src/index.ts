@@ -1,6 +1,7 @@
 export * from './appointment-conflict'
 export * from './appointment-time'
 export * from './availability'
+export * from './calendar-colors'
 export * from './jalali'
 export * from './jalali-display'
 export * from './phone'

@@ -15,6 +15,7 @@ import { useAuth } from '@/components/auth-provider'
 import { useManagerDataClient } from '@/components/manager-data-client-provider'
 import { StaffSkeleton } from '@/components/skeletons/staff-skeleton'
 import type { Service, User } from '@repo/salon-core/types'
+import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { cn } from '@repo/ui/utils'
 import { displayPhone } from '@repo/salon-core/phone'
 
@@ -100,17 +101,6 @@ export default function StaffPage() {
       .slice(0, 2)
   }
 
-  const getStaffColorClass = (color: string) => {
-    const colorMap: Record<string, string> = {
-      'bg-staff-1': 'bg-staff-1',
-      'bg-staff-2': 'bg-staff-2',
-      'bg-staff-3': 'bg-staff-3',
-      'bg-staff-4': 'bg-staff-4',
-      'bg-staff-5': 'bg-staff-5',
-    }
-    return colorMap[color] || 'bg-primary'
-  }
-
   if (staffLoading) {
     return <StaffSkeleton />
   }
@@ -164,7 +154,12 @@ export default function StaffPage() {
             {filteredStaff.map((member) => (
               <div key={member.id} className="flex items-center gap-3 px-4 py-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback className={cn('text-foreground text-sm font-medium', getStaffColorClass(member.color))}>
+                  <AvatarFallback
+                    className="text-foreground text-sm font-medium"
+                    style={{
+                      backgroundColor: `var(--calendar-${normalizeCalendarColorId(member.color)})`,
+                    }}
+                  >
                     {getInitials(member.name)}
                   </AvatarFallback>
                 </Avatar>

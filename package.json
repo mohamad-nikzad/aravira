@@ -7,6 +7,9 @@
     "dev": "turbo run dev --filter=@repo/app --filter=@repo/web",
     "dev:app": "pnpm --filter @repo/app dev",
     "dev:web": "pnpm --filter @repo/web dev",
+    "dev:native": "pnpm --filter @repo/native dev",
+    "dev:native:prod-api": "pnpm --filter @repo/native dev:prod-api",
+    "dev:mobile": "node scripts/dev-mobile.mjs",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
@@ -14,6 +17,8 @@
     "test:unit": "turbo run test:unit",
     "test:e2e": "turbo run test:e2e --filter=@repo/app",
     "boundaries": "turbo run boundaries",
+    "tokens:generate": "pnpm --filter @repo/brand-tokens tokens:generate",
+    "tokens:check": "pnpm --filter @repo/brand-tokens tokens:check",
     "db:generate": "DATABASE_ENV_FILE=.env.database.dev pnpm --filter @repo/database db:generate",
     "db:check": "node scripts/check-db-schema-sync.mjs",
     "db:migrate": "DATABASE_ENV_FILE=.env.database.dev pnpm --filter @repo/database db:migrate",
@@ -37,5 +42,10 @@
     "turbo": "^2.5.8",
     "typescript": "5.7.3",
     "vitest": "^3.0.5"
+  },
+  "pnpm": {
+    "overrides": {
+      "lightningcss": "1.30.1"
+    }
   }
 }

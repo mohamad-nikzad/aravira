@@ -10,6 +10,7 @@ import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
 import { format, subDays } from 'date-fns'
 import { AppointmentWithDetails, CalendarView, WORKING_HOURS, type BusinessHours } from '@repo/salon-core/types'
+import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import {
   expandedZonedToDate,
   formatPersianDayHeaderCompact,
@@ -20,9 +21,7 @@ import {
 import { cn } from '@repo/ui/utils'
 
 function staffColorToCssVar(staffColor: string): string {
-  const m = staffColor.match(/^bg-staff-(\d)$/)
-  if (m) return `var(--staff-${m[1]})`
-  return 'var(--primary)'
+  return `var(--calendar-${normalizeCalendarColorId(staffColor)})`
 }
 
 function escapeHtml(text: string): string {

@@ -1,0 +1,107 @@
+import * as React from 'react';
+import { Pressable, Text, View } from 'react-native';
+import type { AppointmentWithDetails } from '@repo/salon-core/types';
+import { formatPersianTime } from '@repo/salon-core/persian-digits';
+import { FONTS, staffBorder, staffHex, staffSoftBg, statusPalette } from './helpers';
+
+export type AppointmentBlockProps = {
+  appointment: AppointmentWithDetails;
+  topPx: number;
+  heightPx: number;
+  leftPercent: number;
+  widthPercent: number;
+  onPress: () => void;
+  /** Compact mode for week view */
+  compact?: boolean;
+};
+
+export function AppointmentBlock({
+  appointment,
+  topPx,
+  heightPx,
+  leftPercent,
+  widthPercent,
+  onPress,
+  compact = false,
+}: AppointmentBlockProps) {
+  const stripe = staffHex(appointment.staff.color);
+  const tint = staffSoftBg(appointment.staff.color);
+  const border = staffBorder(appointment.staff.color);
+  const status = appointment.status;
+  const showSecondaryLine = heightPx >= 44;
+
+  const isCancelled = status === 'cancelled' || status === 'no-show';
+  const palette = statusPalette(status);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        {
+          position: 'absolute',
+          top: topPx,
+          height: Math.max(22, heightPx - 2),
+          left: `${leftPercent}%`,
+          width: `${widthPercent}%`,
+          backgroundColor: isCancelled ? '#FAFAFA' : tint,
+          borderColor: isCancelled ? '#E5E5E5' : border,
+          borderWidth: 1,
+          borderRadius: 10,
+          overflow: 'hidden',
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}>
+      {/* Trailing-side stripe (right in RTL) */}
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          right: 0,
+          width: 3,
+          backgroundColor: isCancelled ? '#BDBDBD' : stripe,
+        }}
+      />
+      <View style={{ paddingHorizontal: 8, paddingVertical: 4, paddingRight: 11 }}>
+        <Text
+          numberOfLines={1}
+          style={{
+            fontFamily: FONTS.semi,
+            fontSize: compact ? 10 : 11,
+            color: isCancelled ? '#737373' : palette.text,
+            textDecorationLine: status === 'cancelled' ? 'line-through' : 'none',
+          }}>
+          {appointment.client.name}
+        </Text>
+        {showSecondaryLine ? (
+          <>
+            <Text
+              numberOfLines={1}
+              style={{
+                fontFamily: FONTS.reg,
+                fontSize: compact ? 9 : 10,
+                color: isCancelled ? '#A3A3A3' : '#6B3A4A99',
+                marginTop: 1,
+              }}>
+              {appointment.service.name}
+            </Text>
+            {!compact && heightPx >= 60 ? (
+              <Text
+                numberOfLines={1}
+                style={{
+                  fontFamily: FONTS.med,
+                  fontSize: 10,
+                  color: isCancelled ? '#A3A3A3' : '#767A6F',
+                  marginTop: 1,
+                  writingDirection: 'ltr',
+                }}>
+                {formatPersianTime(appointment.startTime)} -{' '}
+                {formatPersianTime(appointment.endTime)}
+              </Text>
+            ) : null}
+          </>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}

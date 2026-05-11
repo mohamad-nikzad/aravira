@@ -34,3 +34,6 @@ playwright/.cache/
 
 # Local brand/logo explorations
 _brand-ideas/*
+
+# Local Claude worktrees
+.claude/worktrees/

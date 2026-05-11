@@ -1,0 +1,29 @@
+{
+  "name": "@repo/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/auth.ts",
+    "./today": "./src/today.ts",
+    "./clients": "./src/clients.ts",
+    "./staff": "./src/staff.ts",
+    "./services": "./src/services.ts",
+    "./appointments": "./src/appointments.ts",
+    "./errors": "./src/errors.ts",
+    "./endpoints": "./src/endpoints.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@repo/salon-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "5.7.3"
+  }
+}

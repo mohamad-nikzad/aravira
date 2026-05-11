@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServiceById, updateService } from '@repo/database/services'
 import type { Service } from '@repo/salon-core/types'
+import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant'
 
 export async function PATCH(
@@ -21,7 +22,7 @@ export async function PATCH(
     if (category !== undefined) patch.category = category as Service['category']
     if (duration !== undefined) patch.duration = Number(duration)
     if (price !== undefined) patch.price = Number(price)
-    if (color !== undefined) patch.color = color
+    if (color !== undefined) patch.color = normalizeCalendarColorId(color)
     if (active !== undefined) patch.active = Boolean(active)
 
     const service = await updateService(id, user.salonId, patch)

@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { getDb } from '@repo/database/client'
 import { businessSettings, salons, users } from '@repo/database/schema'
 import { normalizePhone } from '@repo/salon-core/phone'
+import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import type { User } from '@repo/salon-core/types'
 import { STAFF_COLORS } from '@repo/salon-core/types'
 
@@ -159,7 +160,7 @@ export async function createSalonWorkspace(input: SignupInput): Promise<SignupRe
           phone: parsed.normalizedPhone,
           passwordHash,
           role: 'manager',
-          color: STAFF_COLORS[0],
+          color: normalizeCalendarColorId(STAFF_COLORS[0]),
           active: true,
         })
         .returning()
