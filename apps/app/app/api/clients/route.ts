@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getAllClients, createClient, setClientTags, isClientProvidedEntityId } from '@repo/database/clients'
 import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { clientCreateSchema } from '@repo/salon-core/forms/client'
+import { validationErrorResponse } from '../validation'
 
 export async function GET(request: Request) {
   try {
@@ -22,12 +24,9 @@ export async function POST(request: Request) {
     if (!tenant.ok) return tenant.response
     const { user } = tenant
 
-    const body = await request.json()
-    const { name, phone, notes, tags, id: requestedId } = body
-
-    if (!name || !phone) {
-      return NextResponse.json({ error: 'نام و شماره تماس الزامی است' }, { status: 400 })
-    }
+    const parsed = clientCreateSchema.safeParse(await request.json())
+    if (!parsed.success) return validationErrorResponse(parsed.error)
+    const { name, phone, notes, tags, id: requestedId } = parsed.data
 
     const client = await createClient({
       name,
@@ -36,9 +35,7 @@ export async function POST(request: Request) {
       salonId: user.salonId,
       ...(isClientProvidedEntityId(requestedId) ? { id: requestedId } : {}),
     })
-    const savedTags = Array.isArray(tags)
-      ? await setClientTags(client.id, user.salonId, tags.map(String))
-      : []
+    const savedTags = await setClientTags(client.id, user.salonId, tags)
     return NextResponse.json({ client: { ...client, tags: savedTags } })
   } catch (error: unknown) {
     console.error('Create client error:', error)

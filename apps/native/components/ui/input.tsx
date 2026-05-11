@@ -24,7 +24,6 @@ function Input({ placeholderTextColor, style, ...props }: InputProps) {
           includeFontPadding: false,
           lineHeight: 20,
           paddingHorizontal: 12,
-          textAlign: 'right',
           writingDirection: 'rtl',
           width: '100%',
         },

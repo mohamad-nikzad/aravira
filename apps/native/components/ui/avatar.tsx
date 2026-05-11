@@ -3,23 +3,24 @@ import {
   Text,
   View,
   type StyleProp,
-  type TextProps,
   type TextStyle,
   type ViewProps,
-  type ViewStyle,
 } from 'react-native';
+import { useThemeStyles } from '../../theme';
 
-import { tw } from '../../lib/utils';
 function Avatar({ style, ...props }: ViewProps) {
-  return (
-    <View
-      style={[
-        tw('h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-muted'),
-        style,
-      ]}
-      {...props}
-    />
-  );
+  const styles = useThemeStyles((theme) => ({
+    avatar: {
+      height: theme.sizes.avatarMd,
+      width: theme.sizes.avatarMd,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+      borderRadius: theme.radius.full,
+      backgroundColor: theme.colors.muted,
+    },
+  }));
+  return <View style={[styles.avatar, style]} {...props} />;
 }
 
 function AvatarFallback({
@@ -28,17 +29,25 @@ function AvatarFallback({
   children,
   ...props
 }: ViewProps & { textStyle?: StyleProp<TextStyle>; children?: React.ReactNode }) {
+  const styles = useThemeStyles((theme) => ({
+    container: {
+      height: '100%' as const,
+      width: '100%' as const,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    text: {
+      fontSize: theme.fontSize.base,
+      fontWeight: theme.fontWeights.medium,
+      color: theme.colors.foreground,
+      fontFamily: theme.fonts.sansMedium,
+    },
+  }));
+
   return (
-    <View style={[tw('h-full w-full items-center justify-center'), style]} {...props}>
+    <View style={[styles.container, style]} {...props}>
       {typeof children === 'string' ? (
-        <Text
-          style={[
-            tw('text-sm font-medium text-foreground'),
-            { fontFamily: 'Vazirmatn_500Medium' },
-            textStyle,
-          ]}>
-          {children}
-        </Text>
+        <Text style={[styles.text, textStyle]}>{children}</Text>
       ) : (
         children
       )}

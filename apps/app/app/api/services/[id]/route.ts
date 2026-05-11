@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getServiceById, updateService } from '@repo/database/services'
 import type { Service } from '@repo/salon-core/types'
-import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant'
+import { serviceUpdateSchema } from '@repo/salon-core/forms/service'
+import { validationErrorResponse } from '../../validation'
 
 export async function PATCH(
   request: Request,
@@ -14,15 +15,16 @@ export async function PATCH(
     const { user } = tenant
 
     const { id } = await params
-    const body = await request.json()
-    const { name, category, duration, price, color, active } = body
+    const parsed = serviceUpdateSchema.safeParse(await request.json())
+    if (!parsed.success) return validationErrorResponse(parsed.error)
+    const { name, category, duration, price, color, active } = parsed.data
 
     const patch: Partial<Service> = {}
     if (name !== undefined) patch.name = name
-    if (category !== undefined) patch.category = category as Service['category']
-    if (duration !== undefined) patch.duration = Number(duration)
-    if (price !== undefined) patch.price = Number(price)
-    if (color !== undefined) patch.color = normalizeCalendarColorId(color)
+    if (category !== undefined) patch.category = category
+    if (duration !== undefined) patch.duration = duration
+    if (price !== undefined) patch.price = price
+    if (color !== undefined) patch.color = color
     if (active !== undefined) patch.active = Boolean(active)
 
     const service = await updateService(id, user.salonId, patch)

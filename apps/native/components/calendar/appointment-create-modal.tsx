@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Check, X } from 'lucide-react-native';
+import { Controller, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import type { AppointmentWithDetails, Client, Service, User } from '@repo/salon-core/types';
 import {
   APPOINTMENT_DURATION_BOUNDS,
@@ -20,23 +22,26 @@ import {
   validateAppointmentWindow,
 } from '@repo/salon-core/appointment-time';
 import {
+  appointmentFormSchema,
+  type AppointmentFormInput,
+} from '@repo/salon-core/forms/appointment';
+import {
   autoPickServiceForStaff,
   eligibleServicesForStaff,
   eligibleStaffForService,
 } from '@repo/salon-core/staff-service-autofill';
 import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits';
 import { ApiError } from '@repo/api-client';
-import { semanticLight } from '@repo/brand-tokens/colors';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { JalaliDatePicker } from '../ui/jalali-date-picker';
 import { Select, type SelectGroup, type SelectOption } from '../ui/select';
 import { TimePicker } from '../ui/time-picker';
 import { Spinner } from '../ui/spinner';
+import { FormJalaliDateField, FormRootError, FormTextField } from '../ui/form-field';
 import { appointmentsApi } from '../../lib/api';
 import { ClientPicker } from './client-picker';
+import { useTheme, useThemeStyles } from '../../theme';
 
-import { tw } from '../../lib/utils';
 const CATEGORY_LABELS: Record<string, string> = {
   hair: 'مو',
   nails: 'ناخن',
@@ -45,11 +50,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const DURATION_PRESETS = [30, 45, 60, 90, 120];
-
-const FONT_REG = 'Vazirmatn_400Regular';
-const FONT_MED = 'Vazirmatn_500Medium';
-const FONT_SEMI = 'Vazirmatn_600SemiBold';
-const FONT_BOLD = 'Vazirmatn_700Bold';
+const CHECKBOX_SIZE = 18;
 
 const numFmt = new Intl.NumberFormat('fa-IR');
 function formatPrice(price: number) {
@@ -83,27 +84,217 @@ export function AppointmentCreateModal({
   onSuccess,
   onClientCreated,
 }: AppointmentCreateModalProps) {
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState('');
-
-  const [clientId, setClientId] = React.useState('');
-  const [staffId, setStaffId] = React.useState('');
-  const [serviceId, setServiceId] = React.useState('');
-  const [date, setDate] = React.useState(initialDate);
-  const [startTime, setStartTime] = React.useState(() =>
-    formatTimeHm(parseTimeHm(initialTime ?? '09:00'))
-  );
-  const [durationMinutes, setDurationMinutes] = React.useState(45);
-  const [endTime, setEndTime] = React.useState(() =>
-    endTimeFromDuration(formatTimeHm(parseTimeHm(initialTime ?? '09:00')), 45)
-  );
-  const [notes, setNotes] = React.useState('');
-  const [useTemporaryClient, setUseTemporaryClient] = React.useState(false);
-  const [temporaryClientName, setTemporaryClientName] = React.useState('');
-  const [temporaryClientNotes, setTemporaryClientNotes] = React.useState('');
   const [showDetails, setShowDetails] = React.useState(false);
   const [localClients, setLocalClients] = React.useState<Client[]>(clients);
   const wasOpenRef = React.useRef(false);
+  const form = useForm<AppointmentFormInput>({
+    resolver: zodResolver(appointmentFormSchema, undefined, { raw: true }),
+    defaultValues: {
+      useTemporaryClient: false,
+      clientId: '',
+      staffId: initialStaffId ?? '',
+      serviceId: initialServiceId ?? '',
+      date: initialDate,
+      startTime: formatTimeHm(parseTimeHm(initialTime ?? '09:00')),
+      endTime: endTimeFromDuration(formatTimeHm(parseTimeHm(initialTime ?? '09:00')), 45),
+      durationMinutes: 45,
+      notes: '',
+      temporaryClientName: '',
+      temporaryClientNotes: '',
+    },
+  });
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setError,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = form;
+  const clientId = watch('clientId') ?? '';
+  const staffId = watch('staffId') ?? '';
+  const serviceId = watch('serviceId') ?? '';
+  const startTime = watch('startTime') ?? '09:00';
+  const durationMinutes = Number(watch('durationMinutes')) || 45;
+  const endTime = watch('endTime') ?? endTimeFromDuration(startTime, durationMinutes);
+  const useTemporaryClient = Boolean(watch('useTemporaryClient'));
+  const temporaryClientName = watch('temporaryClientName') ?? '';
+  const { theme } = useTheme();
+  const styles = useThemeStyles((t) => ({
+    safe: { flex: 1, backgroundColor: t.colors.background },
+    header: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      borderBottomWidth: t.sizes.hairline,
+      borderBottomColor: t.colors.border,
+      paddingHorizontal: t.spacing.xl,
+      paddingVertical: t.spacing.lg,
+    },
+    flex1: { flex: 1, width: '100%' },
+    headerTitle: {
+      fontSize: t.fontSize.lg,
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sansBold,
+    },
+    headerSubtitle: {
+      marginTop: t.spacing.xs / 2,
+      fontSize: t.fontSize.sm,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sans,
+    },
+    closeBtn: {
+      height: t.sizes.avatarSm,
+      width: t.sizes.avatarSm,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      borderRadius: t.radius.full,
+      backgroundColor: t.colors.muted,
+    },
+    scrollContent: {
+      padding: t.spacing.xl,
+      paddingBottom: t.spacing['3xl'],
+      gap: t.spacing.xl,
+    },
+    temporaryRow: {
+      marginBottom: t.spacing.md,
+      flexDirection: 'row' as const,
+      alignItems: 'flex-start' as const,
+      gap: t.spacing.md,
+      borderRadius: t.radius.lg,
+      borderWidth: t.sizes.hairline,
+      borderColor: t.colors.border,
+      backgroundColor: t.colors.card,
+      padding: t.spacing.lg,
+    },
+    checkbox: {
+      marginTop: t.spacing.xs / 2,
+      height: CHECKBOX_SIZE,
+      width: CHECKBOX_SIZE,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      borderRadius: t.radius.sm / 2,
+      borderWidth: t.sizes.hairline,
+    },
+    checkboxActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primary },
+    checkboxInactive: { borderColor: t.colors.border, backgroundColor: 'transparent' },
+    checkboxLabel: {
+      fontSize: t.fontSize.base,
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    checkboxHint: {
+      marginTop: t.spacing.xs / 2,
+      fontSize: t.fontSize.sm,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sans,
+    },
+    temporaryFields: { gap: t.spacing.md },
+    twoCol: { flexDirection: 'row' as const, gap: t.spacing.md },
+    detailsCard: {
+      overflow: 'hidden' as const,
+      borderRadius: t.radius.lg,
+      borderWidth: t.sizes.hairline,
+      borderColor: t.colors.border,
+      backgroundColor: t.colors.card,
+    },
+    detailsHeader: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.lg,
+    },
+    detailsHeaderText: {
+      fontSize: t.fontSize.base,
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    detailsSummary: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.md,
+    },
+    detailsSummaryText: {
+      fontSize: t.fontSize.sm,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sans,
+    },
+    detailsSummaryTextLtr: {
+      fontSize: t.fontSize.sm,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sans,
+      writingDirection: 'ltr' as const,
+      fontVariant: ['tabular-nums' as const],
+    },
+    detailsBody: {
+      gap: t.spacing.lg,
+      borderTopWidth: t.sizes.hairline,
+      borderTopColor: t.colors.border,
+      paddingHorizontal: t.spacing.lg,
+      paddingBottom: t.spacing.lg,
+      paddingTop: t.spacing.lg,
+    },
+    presetRow: {
+      marginBottom: t.spacing.md,
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      gap: t.spacing.sm,
+    },
+    preset: {
+      height: t.sizes.avatarSm,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      borderRadius: t.radius.md,
+      borderWidth: t.sizes.hairline,
+      paddingHorizontal: t.spacing.lg,
+    },
+    presetActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primary },
+    presetInactive: { borderColor: t.colors.border, backgroundColor: 'transparent' },
+    presetText: { fontSize: t.fontSize.sm, fontFamily: t.fonts.sansSemiBold },
+    presetTextActive: { color: t.colors.primaryForeground },
+    presetTextInactive: { color: t.colors.foreground },
+    endHint: {
+      marginTop: t.spacing.xs,
+      fontSize: t.fontSize.xs,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sans,
+    },
+    errorText: {
+      fontSize: t.fontSize.sm,
+      color: t.colors.destructive,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    footer: {
+      gap: t.spacing.md,
+      borderTopWidth: t.sizes.hairline,
+      borderTopColor: t.colors.border,
+      backgroundColor: t.colors.background,
+      padding: t.spacing.xl,
+    },
+    submitText: {
+      fontSize: t.fontSize.base,
+      color: t.colors.primaryForeground,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    cancelText: {
+      fontSize: t.fontSize.base,
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sansMedium,
+    },
+    fieldWrap: { gap: t.spacing.sm },
+    fieldLabel: {
+      fontSize: t.fontSize.sm,
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    subFieldLabel: {
+      fontSize: t.fontSize.sm,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sansMedium,
+    },
+  }));
 
   React.useEffect(() => {
     setLocalClients(clients);
@@ -117,21 +308,22 @@ export function AppointmentCreateModal({
       : undefined;
     const defaultDuration = initialService?.duration ?? 45;
     const st = formatTimeHm(parseTimeHm(initialTime ?? '09:00'));
-    setDurationMinutes(defaultDuration);
-    setDate(initialDate);
-    setStartTime(st);
-    setEndTime(endTimeFromDuration(st, defaultDuration));
-    setClientId('');
-    setStaffId(initialStaffId ?? '');
-    setServiceId(initialServiceId ?? '');
-    setNotes('');
-    setUseTemporaryClient(false);
-    setTemporaryClientName('');
-    setTemporaryClientNotes('');
-    setError('');
+    reset({
+      useTemporaryClient: false,
+      clientId: '',
+      staffId: initialStaffId ?? '',
+      serviceId: initialServiceId ?? '',
+      date: initialDate,
+      startTime: st,
+      endTime: endTimeFromDuration(st, defaultDuration),
+      durationMinutes: defaultDuration,
+      notes: '',
+      temporaryClientName: '',
+      temporaryClientNotes: '',
+    });
     setShowDetails(false);
     setLocalClients(clients);
-  }, [clients, initialDate, initialTime, initialStaffId, initialServiceId, services]);
+  }, [clients, initialDate, initialTime, initialStaffId, initialServiceId, reset, services]);
 
   React.useEffect(() => {
     if (open && !wasOpenRef.current) resetForm();
@@ -143,40 +335,43 @@ export function AppointmentCreateModal({
       APPOINTMENT_DURATION_BOUNDS.max,
       Math.max(APPOINTMENT_DURATION_BOUNDS.min, mins)
     );
-    setDurationMinutes(clamped);
-    setEndTime(endTimeFromDuration(startTime, clamped));
+    setValue('durationMinutes', clamped, { shouldDirty: true });
+    setValue('endTime', endTimeFromDuration(startTime, clamped), { shouldDirty: true });
   };
 
   const applyEndTime = (et: string) => {
-    setEndTime(et);
+    setValue('endTime', et, { shouldDirty: true });
     try {
       const d = durationMinutesFromRange(startTime, et);
-      if (d > 0) setDurationMinutes(d);
+      if (d > 0) setValue('durationMinutes', d, { shouldDirty: true });
     } catch {
       /* invalid time */
     }
   };
 
   const handleStartTimeChange = (st: string) => {
-    setStartTime(st);
-    setEndTime(endTimeFromDuration(st, durationMinutes));
+    setValue('startTime', st, { shouldDirty: true, shouldValidate: true });
+    setValue('endTime', endTimeFromDuration(st, durationMinutes), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
   };
 
   const handleServiceChange = (id: string) => {
-    setServiceId(id);
+    setValue('serviceId', id, { shouldDirty: true, shouldValidate: true });
     const svc = services.find((s) => s.id === id);
     if (svc) applyDuration(svc.duration);
     const eligibleAll = eligibleStaffForService(staff, id);
     const eligibleStaffMembers = eligibleStaffForService(staffRoleOnly, id);
     if (eligibleStaffMembers.length === 1) {
-      setStaffId(eligibleStaffMembers[0].id);
+      setValue('staffId', eligibleStaffMembers[0].id, { shouldDirty: true, shouldValidate: true });
     } else if (!eligibleAll.some((m) => m.id === staffId)) {
-      setStaffId('');
+      setValue('staffId', '', { shouldDirty: true, shouldValidate: true });
     }
   };
 
   const handleStaffChange = (id: string) => {
-    setStaffId(id);
+    setValue('staffId', id, { shouldDirty: true, shouldValidate: true });
     const member = staff.find((s) => s.id === id);
     if (!member) return;
     const eligible = eligibleServicesForStaff(member, services);
@@ -188,10 +383,10 @@ export function AppointmentCreateModal({
         staffHasExplicitServiceList: explicitList,
       });
       if (auto) {
-        setServiceId(auto.id);
+        setValue('serviceId', auto.id, { shouldDirty: true, shouldValidate: true });
         applyDuration(auto.duration);
       } else {
-        setServiceId('');
+        setValue('serviceId', '', { shouldDirty: true, shouldValidate: true });
       }
     }
   };
@@ -201,41 +396,22 @@ export function AppointmentCreateModal({
     onClientCreated?.(newClient);
   };
 
-  const handleSubmit = async () => {
-    setError('');
-    const localCheck = validateAppointmentWindow(startTime, endTime);
+  const onSubmit = handleSubmit(async (values) => {
+    const localCheck = validateAppointmentWindow(values.startTime, values.endTime);
     if (!localCheck.ok) {
-      setError(localCheck.error);
+      setError('root', { message: localCheck.error });
       return;
     }
-    setLoading(true);
     try {
-      const { appointment } = await appointmentsApi.create({
-        ...(useTemporaryClient
-          ? {
-              placeholderClient: {
-                name: temporaryClientName.trim(),
-                notes: temporaryClientNotes.trim() || undefined,
-              },
-            }
-          : { clientId }),
-        staffId,
-        serviceId,
-        date,
-        startTime,
-        endTime,
-        durationMinutes,
-        notes: notes || undefined,
-      });
+      const payload = appointmentFormSchema.parse(values);
+      const { appointment } = await appointmentsApi.create(payload);
       onSuccess(appointment);
     } catch (err) {
       const msg =
         err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'خطایی رخ داد';
-      setError(msg);
-    } finally {
-      setLoading(false);
+      setError('root', { message: msg });
     }
-  };
+  });
 
   const staffOptions: SelectOption[] = staffRoleOnly.map((member) => ({
     value: member.id,
@@ -259,10 +435,24 @@ export function AppointmentCreateModal({
   }, [services]);
 
   const submitDisabled =
-    loading ||
+    isSubmitting ||
     !serviceId ||
     !staffId ||
     (useTemporaryClient ? !temporaryClientName.trim() : !clientId);
+
+  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <View style={styles.fieldWrap}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      {children}
+    </View>
+  );
+
+  const SubField = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <View style={styles.fieldWrap}>
+      <Text style={styles.subFieldLabel}>{label}</Text>
+      {children}
+    </View>
+  );
 
   return (
     <Modal
@@ -270,187 +460,178 @@ export function AppointmentCreateModal({
       animationType="slide"
       onRequestClose={onClose}
       presentationStyle="pageSheet">
-      <SafeAreaView
-        style={[tw('flex-1 bg-background'), { backgroundColor: semanticLight.background.hex }]}
-        edges={['top']}>
-        <View style={tw('flex-row items-center justify-between border-b border-border px-4 py-3')}>
-          <View style={tw('flex-1')}>
-            <Text style={[tw('text-base text-foreground'), { fontFamily: FONT_BOLD }]}>
-              نوبت جدید
-            </Text>
-            <Text style={[tw('mt-0.5 text-xs text-muted-foreground'), { fontFamily: FONT_REG }]}>
-              خدمت، پرسنل و زمان نوبت را انتخاب کنید
-            </Text>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.header}>
+          <View style={styles.flex1}>
+            <Text style={styles.headerTitle}>نوبت جدید</Text>
+            <Text style={styles.headerSubtitle}>خدمت، پرسنل و زمان نوبت را انتخاب کنید</Text>
           </View>
-          <Pressable
-            onPress={onClose}
-            accessibilityLabel="بستن"
-            style={tw('h-8 w-8 items-center justify-center rounded-full bg-muted')}>
-            <X size={16} color="#6B3A4A" strokeWidth={2} />
+          <Pressable onPress={onClose} accessibilityLabel="بستن" style={styles.closeBtn}>
+            <X size={theme.sizes.iconSm} color={theme.colors.foreground} strokeWidth={2} />
           </Pressable>
         </View>
 
         <KeyboardAvoidingView
-          style={tw('flex-1')}
+          style={styles.flex1}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView
-            contentContainerStyle={{ padding: 16, paddingBottom: 24, gap: 16 }}
+            contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled">
-            {/* Client */}
             <Field label="مشتری">
               <Pressable
                 onPress={() => {
-                  setUseTemporaryClient((v) => {
-                    const next = !v;
-                    if (next) setClientId('');
-                    else {
-                      setTemporaryClientName('');
-                      setTemporaryClientNotes('');
-                    }
-                    setError('');
-                    return next;
+                  const next = !useTemporaryClient;
+                  setValue('useTemporaryClient', next, {
+                    shouldDirty: true,
+                    shouldValidate: true,
                   });
+                  if (next) {
+                    setValue('clientId', '', { shouldDirty: true });
+                  } else {
+                    setValue('temporaryClientName', '', { shouldDirty: true });
+                    setValue('temporaryClientNotes', '', { shouldDirty: true });
+                  }
                 }}
-                style={tw(
-                  'mb-2.5 flex-row items-start gap-2.5 rounded-xl border border-border bg-card p-3'
-                )}>
+                style={styles.temporaryRow}>
                 <View
-                  style={tw(
-                    'mt-0.5 h-[18px] w-[18px] items-center justify-center rounded border',
-                    useTemporaryClient
-                      ? 'border-primary bg-primary'
-                      : 'border-border bg-transparent'
-                  )}>
-                  {useTemporaryClient ? <Check size={12} color="#FFFFFF" strokeWidth={3} /> : null}
+                  style={[
+                    styles.checkbox,
+                    useTemporaryClient ? styles.checkboxActive : styles.checkboxInactive,
+                  ]}>
+                  {useTemporaryClient ? (
+                    <Check size={12} color={theme.colors.primaryForeground} strokeWidth={3} />
+                  ) : null}
                 </View>
-                <View style={tw('flex-1')}>
-                  <Text
-                    style={[
-                      tw('text-sm text-foreground'),
-                      { fontFamily: FONT_SEMI, textAlign: 'right' },
-                    ]}>
-                    بعداً اطلاعات مشتری را کامل می‌کنم
-                  </Text>
-                  <Text
-                    style={[
-                      tw('mt-0.5 text-xs text-muted-foreground'),
-                      { fontFamily: FONT_REG, textAlign: 'right' },
-                    ]}>
-                    برای این حالت فقط نام لازم است.
-                  </Text>
+                <View style={styles.flex1}>
+                  <Text style={styles.checkboxLabel}>بعداً اطلاعات مشتری را کامل می‌کنم</Text>
+                  <Text style={styles.checkboxHint}>برای این حالت فقط نام لازم است.</Text>
                 </View>
               </Pressable>
 
               {useTemporaryClient ? (
-                <View style={tw('gap-2.5')}>
-                  <SubField label="نام مشتری">
-                    <Input
-                      value={temporaryClientName}
-                      onChangeText={setTemporaryClientName}
-                      placeholder="مثلاً دوستِ سارا"
-                    />
-                  </SubField>
-                  <SubField label="یادداشت (اختیاری)">
-                    <Input
-                      value={temporaryClientNotes}
-                      onChangeText={setTemporaryClientNotes}
-                      placeholder="مثلاً شماره را بعداً می‌گیرم"
-                    />
-                  </SubField>
+                <View style={styles.temporaryFields}>
+                  <FormTextField
+                    control={control}
+                    name="temporaryClientName"
+                    label="نام مشتری"
+                    placeholder="مثلاً دوستِ سارا"
+                  />
+                  <FormTextField
+                    control={control}
+                    name="temporaryClientNotes"
+                    label="یادداشت (اختیاری)"
+                    placeholder="مثلاً شماره را بعداً می‌گیرم"
+                  />
                 </View>
               ) : (
                 <ClientPicker
                   clients={localClients}
                   value={clientId}
-                  onChange={setClientId}
+                  onChange={(id) =>
+                    setValue('clientId', id, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
                   onClientCreated={handleClientCreated}
                 />
               )}
+              {errors.clientId ? (
+                <Text style={styles.errorText}>{errors.clientId.message}</Text>
+              ) : null}
             </Field>
 
-            {/* Staff */}
             <Field label="پرسنل">
-              <Select
-                title="انتخاب پرسنل"
-                placeholder="انتخاب پرسنل"
-                value={staffId}
-                onChange={handleStaffChange}
-                options={staffOptions}
-              />
-            </Field>
-
-            {/* Service */}
-            <Field label="خدمت">
-              <Select
-                title="انتخاب خدمت"
-                placeholder="انتخاب خدمت"
-                value={serviceId}
-                onChange={handleServiceChange}
-                groups={serviceGroups}
-              />
-            </Field>
-
-            {/* Date + Start time */}
-            <View style={tw('flex-row gap-2.5')}>
-              <View style={tw('flex-1')}>
-                <Field label="تاریخ">
-                  <JalaliDatePicker value={date} onChange={setDate} />
-                </Field>
-              </View>
-              <View style={tw('flex-1')}>
-                <Field label="شروع">
-                  <TimePicker
-                    value={startTime}
-                    onChange={handleStartTimeChange}
-                    label="ساعت شروع"
+              <Controller
+                control={control}
+                name="staffId"
+                render={({ field }) => (
+                  <Select
+                    title="انتخاب پرسنل"
+                    placeholder="انتخاب پرسنل"
+                    value={field.value ?? ''}
+                    onChange={handleStaffChange}
+                    options={staffOptions}
                   />
+                )}
+              />
+              {errors.staffId ? (
+                <Text style={styles.errorText}>{errors.staffId.message}</Text>
+              ) : null}
+            </Field>
+
+            <Field label="خدمت">
+              <Controller
+                control={control}
+                name="serviceId"
+                render={({ field }) => (
+                  <Select
+                    title="انتخاب خدمت"
+                    placeholder="انتخاب خدمت"
+                    value={field.value ?? ''}
+                    onChange={handleServiceChange}
+                    groups={serviceGroups}
+                  />
+                )}
+              />
+              {errors.serviceId ? (
+                <Text style={styles.errorText}>{errors.serviceId.message}</Text>
+              ) : null}
+            </Field>
+
+            <View style={styles.twoCol}>
+              <View style={styles.flex1}>
+                <FormJalaliDateField control={control} name="date" label="تاریخ" />
+              </View>
+              <View style={styles.flex1}>
+                <Field label="شروع">
+                  <Controller
+                    control={control}
+                    name="startTime"
+                    render={({ field }) => (
+                      <TimePicker
+                        value={field.value ?? '09:00'}
+                        onChange={handleStartTimeChange}
+                        label="ساعت شروع"
+                      />
+                    )}
+                  />
+                  {errors.startTime ? (
+                    <Text style={styles.errorText}>{errors.startTime.message}</Text>
+                  ) : null}
                 </Field>
               </View>
             </View>
 
-            {/* Duration / End / Notes (collapsible) */}
-            <View style={tw('overflow-hidden rounded-xl border border-border bg-card')}>
-              <Pressable
-                onPress={() => setShowDetails((v) => !v)}
-                style={tw('flex-row items-center justify-between px-3 py-3')}>
-                <Text style={[tw('text-sm text-foreground'), { fontFamily: FONT_SEMI }]}>
-                  جزئیات زمان و توضیحات
-                </Text>
-                <View style={tw('flex-row items-center gap-2.5')}>
-                  <Text
-                    style={[
-                      tw('text-xs text-muted-foreground tabular-nums'),
-                      { fontFamily: FONT_REG, writingDirection: 'ltr' },
-                    ]}>
-                    {toPersianDigits(endTime)}
-                  </Text>
-                  <Text style={[tw('text-xs text-muted-foreground'), { fontFamily: FONT_REG }]}>
+            <View style={styles.detailsCard}>
+              <Pressable onPress={() => setShowDetails((v) => !v)} style={styles.detailsHeader}>
+                <Text style={styles.detailsHeaderText}>جزئیات زمان و توضیحات</Text>
+                <View style={styles.detailsSummary}>
+                  <Text style={styles.detailsSummaryTextLtr}>{toPersianDigits(endTime)}</Text>
+                  <Text style={styles.detailsSummaryText}>
                     {toPersianDigits(durationMinutes)} دقیقه
                   </Text>
                 </View>
               </Pressable>
 
               {showDetails ? (
-                <View style={tw('gap-3 border-t border-border px-3 pb-3.5 pt-3')}>
+                <View style={styles.detailsBody}>
                   <SubField label="مدت (دقیقه)">
-                    <View style={tw('mb-2 flex-row flex-wrap gap-1.5')}>
+                    <View style={styles.presetRow}>
                       {DURATION_PRESETS.map((m) => {
                         const active = durationMinutes === m;
                         return (
                           <Pressable
                             key={m}
                             onPress={() => applyDuration(m)}
-                            style={tw(
-                              'h-8 items-center justify-center rounded-lg border px-3',
-                              active ? 'border-primary bg-primary' : 'border-border bg-transparent'
-                            )}>
+                            style={[
+                              styles.preset,
+                              active ? styles.presetActive : styles.presetInactive,
+                            ]}>
                             <Text
                               style={[
-                                tw(
-                                  'text-xs',
-                                  active ? 'text-primary-foreground' : 'text-foreground'
-                                ),
-                                { fontFamily: FONT_SEMI },
+                                styles.presetText,
+                                active ? styles.presetTextActive : styles.presetTextInactive,
                               ]}>
                               {numFmt.format(m)}
                             </Text>
@@ -467,76 +648,53 @@ export function AppointmentCreateModal({
                       }}
                       keyboardType="number-pad"
                     />
+                    {errors.durationMinutes ? (
+                      <Text style={styles.errorText}>{errors.durationMinutes.message}</Text>
+                    ) : null}
                   </SubField>
 
                   <SubField label="پایان">
-                    <TimePicker value={endTime} onChange={applyEndTime} label="ساعت پایان" />
-                    <Text
-                      style={[
-                        tw('mt-1 text-[10px] text-muted-foreground'),
-                        { fontFamily: FONT_REG, textAlign: 'right' },
-                      ]}>
-                      تغییر پایان، مدت را هم‌زمان به‌روز می‌کند.
-                    </Text>
+                    <Controller
+                      control={control}
+                      name="endTime"
+                      render={({ field }) => (
+                        <TimePicker
+                          value={field.value ?? endTime}
+                          onChange={applyEndTime}
+                          label="ساعت پایان"
+                        />
+                      )}
+                    />
+                    <Text style={styles.endHint}>تغییر پایان، مدت را هم‌زمان به‌روز می‌کند.</Text>
+                    {errors.endTime ? (
+                      <Text style={styles.errorText}>{errors.endTime.message}</Text>
+                    ) : null}
                   </SubField>
 
-                  <SubField label="توضیحات (اختیاری)">
-                    <Input value={notes} onChangeText={setNotes} placeholder="توضیحات اضافی…" />
-                  </SubField>
+                  <FormTextField
+                    control={control}
+                    name="notes"
+                    label="توضیحات (اختیاری)"
+                    placeholder="توضیحات اضافی…"
+                  />
                 </View>
               ) : null}
             </View>
 
-            {error ? (
-              <Text
-                style={[
-                  tw('text-xs text-destructive'),
-                  { fontFamily: FONT_SEMI, textAlign: 'right' },
-                ]}>
-                {error}
-              </Text>
-            ) : null}
+            <FormRootError message={errors.root?.message} />
           </ScrollView>
 
-          <View style={tw('gap-2 border-t border-border bg-background p-4')}>
-            <Button onPress={handleSubmit} disabled={submitDisabled}>
-              {loading ? <Spinner color="#FFFFFF" /> : null}
-              <Text style={[tw('text-sm text-primary-foreground'), { fontFamily: FONT_SEMI }]}>
-                {loading ? 'در حال ثبت…' : 'ثبت نوبت'}
-              </Text>
+          <View style={styles.footer}>
+            <Button onPress={onSubmit} disabled={submitDisabled}>
+              {isSubmitting ? <Spinner color={theme.colors.primaryForeground} /> : null}
+              <Text style={styles.submitText}>{isSubmitting ? 'در حال ثبت…' : 'ثبت نوبت'}</Text>
             </Button>
-            <Button variant="outline" onPress={onClose} disabled={loading}>
-              <Text style={[tw('text-sm text-foreground'), { fontFamily: FONT_MED }]}>انصراف</Text>
+            <Button variant="outline" onPress={onClose} disabled={isSubmitting}>
+              <Text style={styles.cancelText}>انصراف</Text>
             </Button>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <View style={tw('gap-1.5')}>
-      <Text style={[tw('text-xs text-foreground'), { fontFamily: FONT_SEMI, textAlign: 'right' }]}>
-        {label}
-      </Text>
-      {children}
-    </View>
-  );
-}
-
-function SubField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <View style={tw('gap-1.5')}>
-      <Text
-        style={[
-          tw('text-[11px] text-muted-foreground'),
-          { fontFamily: FONT_MED, textAlign: 'right' },
-        ]}>
-        {label}
-      </Text>
-      {children}
-    </View>
   );
 }

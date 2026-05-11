@@ -1,19 +1,16 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { login } from '@repo/auth/auth'
+import { loginSchema } from '@repo/salon-core/forms/auth'
+import { validationErrorResponse } from '../../validation'
 
 export async function POST(request: Request) {
   try {
-    const { phone, password } = await request.json()
+    const parsed = loginSchema.safeParse(await request.json())
+    if (!parsed.success) return validationErrorResponse(parsed.error)
+    const { phone, password } = parsed.data
 
-    if (!phone || !password) {
-      return NextResponse.json(
-        { error: 'شماره موبایل و رمز عبور الزامی است' },
-        { status: 400 }
-      )
-    }
-
-    const result = await login(String(phone).trim(), password)
+    const result = await login(phone, password)
 
     if (!result) {
       return NextResponse.json(

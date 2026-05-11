@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getAllServices, createService } from '@repo/database/services'
 import { isClientProvidedEntityId } from '@repo/database/clients'
-import type { Service } from '@repo/salon-core/types'
-import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { getTenantManagerRequest, getTenantRequest, isManagerRole } from '@repo/auth/tenant'
+import { serviceCreateSchema } from '@repo/salon-core/forms/service'
+import { validationErrorResponse } from '../validation'
 
 export async function GET(request: Request) {
   try {
@@ -27,12 +27,9 @@ export async function POST(request: Request) {
     if (!tenant.ok) return tenant.response
     const { user } = tenant
 
-    const body = await request.json()
-    const { name, category, duration, price, color, active, id } = body
-
-    if (!name || !category || duration == null || price == null || !color) {
-      return NextResponse.json({ error: 'فیلدهای الزامی ناقص است' }, { status: 400 })
-    }
+    const parsed = serviceCreateSchema.safeParse(await request.json())
+    if (!parsed.success) return validationErrorResponse(parsed.error)
+    const { name, category, duration, price, color, active, id } = parsed.data
 
     if (id !== undefined && id !== null && !isClientProvidedEntityId(String(id))) {
       return NextResponse.json({ error: 'شناسه خدمت نامعتبر است' }, { status: 400 })
@@ -40,10 +37,10 @@ export async function POST(request: Request) {
 
     const service = await createService({
       name,
-      category: category as Service['category'],
-      duration: Number(duration),
-      price: Number(price),
-      color: normalizeCalendarColorId(color),
+      category,
+      duration,
+      price,
+      color,
       active: active !== false,
       salonId: user.salonId,
       ...(isClientProvidedEntityId(String(id)) ? { id: String(id) } : {}),

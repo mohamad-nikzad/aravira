@@ -6,6 +6,8 @@ import {
   validateActiveServiceIds,
 } from '@repo/database/staff'
 import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { staffServiceIdsSchema } from '@repo/salon-core/forms/staff'
+import { validationErrorResponse } from '../../../validation'
 
 export async function PATCH(
   request: Request,
@@ -28,18 +30,9 @@ export async function PATCH(
       )
     }
 
-    const body = await request.json()
-    const raw = body.serviceIds
-
-    let normalized: string[] | null
-    if (raw === null || raw === undefined) {
-      normalized = null
-    } else if (!Array.isArray(raw)) {
-      return NextResponse.json({ error: 'serviceIds باید آرایه یا null باشد' }, { status: 400 })
-    } else {
-      const ids = [...new Set(raw.filter((x: unknown) => typeof x === 'string'))] as string[]
-      normalized = ids.length === 0 ? null : ids
-    }
+    const parsed = staffServiceIdsSchema.safeParse(await request.json())
+    if (!parsed.success) return validationErrorResponse(parsed.error)
+    const { serviceIds: normalized } = parsed.data
 
     if (normalized !== null) {
       const ok = await validateActiveServiceIds(normalized, user.salonId)

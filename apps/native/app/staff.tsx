@@ -5,7 +5,6 @@ import { useRouter } from 'expo-router';
 import { ArrowRight, Phone, Search, Shield, User as UserIcon } from 'lucide-react-native';
 import type { User } from '@repo/salon-core/types';
 import { displayPhone } from '@repo/salon-core/phone';
-import { saloora, semanticLight } from '@repo/brand-tokens/colors';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
@@ -13,19 +12,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { useAuth } from '../components/auth-provider';
 import { staffApi } from '../lib/api';
 import { useAsyncResource } from '../lib/hooks/use-async-resource';
-
-import { tw } from '../lib/utils';
-const FONT_REG = 'Vazirmatn_400Regular';
-const FONT_MED = 'Vazirmatn_500Medium';
-const FONT_BOLD = 'Vazirmatn_700Bold';
-
-const STAFF_COLOR_CLASS: Record<string, string> = {
-  'bg-staff-1': 'bg-staff-1',
-  'bg-staff-2': 'bg-staff-2',
-  'bg-staff-3': 'bg-staff-3',
-  'bg-staff-4': 'bg-staff-4',
-  'bg-staff-5': 'bg-staff-5',
-};
+import { useTheme, useThemeStyles, withAlpha } from '../theme';
 
 function getInitials(name: string) {
   return name
@@ -38,7 +25,131 @@ function getInitials(name: string) {
 export default function StaffScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [search, setSearch] = React.useState('');
+  const styles = useThemeStyles((t) => ({
+    safe: { backgroundColor: t.colors.background, flex: 1 },
+    header: {
+      borderBottomColor: withAlpha(t.colors.border, 0.5),
+      backgroundColor: t.colors.card,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      gap: t.spacing.lg,
+      borderBottomWidth: t.sizes.hairline,
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.lg,
+    },
+    headerLeft: {
+      minWidth: 0,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.lg,
+    },
+    backButton: {
+      height: t.sizes.avatarMd,
+      width: t.sizes.avatarMd,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      borderRadius: t.radius.xl,
+    },
+    headerTextWrap: { minWidth: 0 },
+    headerTitle: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.xl,
+      fontFamily: t.fonts.sansBold,
+    },
+    headerSubtitle: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sans,
+    },
+    searchBar: {
+      backgroundColor: t.colors.card,
+      paddingHorizontal: t.spacing.xl,
+      paddingTop: t.spacing.md,
+      paddingBottom: t.spacing.lg,
+    },
+    searchWrap: { position: 'relative' as const },
+    searchIconWrap: {
+      position: 'absolute' as const,
+      top: '50%' as const,
+      right: t.spacing.lg,
+      zIndex: 10,
+      transform: [{ translateY: -8 }],
+    },
+    searchInput: {
+      height: t.sizes.avatarMd,
+      borderWidth: 0,
+      paddingRight: t.spacing['4xl'],
+    },
+    skeletonWrap: {
+      gap: t.spacing.lg,
+      paddingHorizontal: t.spacing.xl,
+      paddingVertical: t.spacing.lg,
+    },
+    skeletonRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.lg,
+    },
+    skeletonBody: { flex: 1, gap: t.spacing.md },
+    empty: {
+      flex: 1,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      paddingVertical: t.spacing['5xl'],
+    },
+    emptyText: { color: t.colors.mutedForeground, fontFamily: t.fonts.sans },
+    row: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.lg,
+      paddingHorizontal: t.spacing.xl,
+      paddingVertical: t.spacing.lg,
+    },
+    rowBorder: {
+      borderTopWidth: t.sizes.hairline,
+      borderTopColor: withAlpha(t.colors.border, 0.5),
+    },
+    avatar: { height: t.sizes.avatarMd, width: t.sizes.avatarMd },
+    rowBody: { minWidth: 0, flex: 1, gap: t.spacing.xs },
+    rowHeader: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.md,
+    },
+    name: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sansMedium,
+    },
+    roleBadge: { paddingHorizontal: t.spacing.sm, paddingVertical: 0 },
+    roleBadgeInner: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.xs,
+    },
+    roleText: {
+      color: t.colors.secondaryForeground,
+      fontSize: t.fontSize.xs,
+      fontFamily: t.fonts.sansMedium,
+    },
+    phoneRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.xs,
+    },
+    phoneText: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sans,
+    },
+    avatarText: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.base,
+    },
+  }));
 
   const key = user?.role === 'manager' ? 'staff' : null;
   const { data, loading } = useAsyncResource<{ staff: User[] }>(key, (signal) =>
@@ -56,55 +167,46 @@ export default function StaffScreen() {
   if (!user || user.role !== 'manager') return null;
 
   return (
-    <SafeAreaView
-      style={[tw('bg-background flex-1'), { backgroundColor: semanticLight.background.hex }]}
-      edges={['top']}>
-      <View
-        style={tw(
-          'border-border/50 bg-card flex-row items-center justify-between gap-3 border-b px-3 py-3'
-        )}>
-        <View style={tw('min-w-0 flex-row items-center gap-3')}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
           <Pressable
             accessibilityLabel="بازگشت به بیشتر"
             onPress={() => router.back()}
-            style={tw('h-10 w-10 items-center justify-center rounded-2xl')}>
-            <ArrowRight size={20} color={saloora.plum.hex} strokeWidth={1.8} />
+            style={styles.backButton}>
+            <ArrowRight size={theme.sizes.iconMd} color={theme.colors.primary} strokeWidth={1.8} />
           </Pressable>
-          <View style={tw('min-w-0')}>
-            <Text
-              style={[tw('text-foreground text-lg'), { fontFamily: FONT_BOLD }]}
-              numberOfLines={1}>
+          <View style={styles.headerTextWrap}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
               پرسنل
             </Text>
-            <Text
-              style={[tw('text-muted-foreground text-xs'), { fontFamily: FONT_REG }]}
-              numberOfLines={1}>
+            <Text style={styles.headerSubtitle} numberOfLines={1}>
               نقش‌ها، خدمات و ساعت کاری
             </Text>
           </View>
         </View>
       </View>
 
-      <View style={tw('bg-card px-4 pb-3')}>
-        <View style={tw('relative')}>
-          <View style={[tw('absolute top-1/2 right-3 z-10'), { transform: [{ translateY: -8 }] }]}>
-            <Search size={16} color={saloora.sage.hex} strokeWidth={1.6} />
+      <View style={styles.searchBar}>
+        <View style={styles.searchWrap}>
+          <View style={styles.searchIconWrap}>
+            <Search size={theme.sizes.iconSm} color={theme.iconColors.muted} strokeWidth={1.6} />
           </View>
           <Input
             placeholder="جستجوی پرسنل…"
             value={search}
             onChangeText={setSearch}
-            style={{ height: 40, borderWidth: 0, paddingRight: 36 }}
+            style={styles.searchInput}
           />
         </View>
       </View>
 
       {loading && !data ? (
-        <View style={tw('gap-3 px-4 py-3')}>
+        <View style={styles.skeletonWrap}>
           {[0, 1, 2, 3].map((i) => (
-            <View key={i} style={tw('flex-row items-center gap-3')}>
+            <View key={i} style={styles.skeletonRow}>
               <Skeleton height={40} width={40} radius={20} />
-              <View style={tw('flex-1 gap-2')}>
+              <View style={styles.skeletonBody}>
                 <Skeleton height={16} width="50%" />
                 <Skeleton height={12} width="33%" />
               </View>
@@ -112,65 +214,45 @@ export default function StaffScreen() {
           ))}
         </View>
       ) : filtered.length === 0 ? (
-        <View style={tw('flex-1 items-center justify-center py-16')}>
-          <Text style={[tw('text-muted-foreground'), { fontFamily: FONT_REG }]}>
-            پرسنلی یافت نشد
-          </Text>
+        <View style={styles.empty}>
+          <Text style={styles.emptyText}>پرسنلی یافت نشد</Text>
         </View>
       ) : (
         <ScrollView contentInsetAdjustmentBehavior="automatic">
           <View>
-            {filtered.map((member, idx) => {
-              const colorClass = STAFF_COLOR_CLASS[member.color] ?? 'bg-primary';
-              return (
-                <View
-                  key={member.id}
-                  style={[
-                    tw('flex-row items-center gap-3 px-4 py-3'),
-                    idx > 0 ? { borderTopWidth: 1, borderTopColor: 'rgba(229,217,219,0.5)' } : null,
-                  ]}>
-                  <Avatar style={tw('h-10 w-10', colorClass)}>
-                    <AvatarFallback textStyle={tw('text-foreground text-sm')}>
-                      {getInitials(member.name)}
-                    </AvatarFallback>
-                  </Avatar>
+            {filtered.map((member, idx) => (
+              <View key={member.id} style={[styles.row, idx > 0 ? styles.rowBorder : null]}>
+                <Avatar style={styles.avatar}>
+                  <AvatarFallback textStyle={styles.avatarText}>
+                    {getInitials(member.name)}
+                  </AvatarFallback>
+                </Avatar>
 
-                  <View style={tw('min-w-0 flex-1 gap-1')}>
-                    <View style={tw('flex-row items-center gap-2')}>
-                      <Text
-                        style={[tw('text-foreground text-sm'), { fontFamily: FONT_MED }]}
-                        numberOfLines={1}>
-                        {member.name}
-                      </Text>
-                      <Badge
-                        variant="secondary"
-                        style={{ paddingHorizontal: 6, paddingVertical: 0 }}>
-                        <View style={tw('flex-row items-center gap-1')}>
-                          {member.role === 'manager' ? (
-                            <Shield size={12} color={saloora.plum.hex} strokeWidth={1.6} />
-                          ) : (
-                            <UserIcon size={12} color={saloora.plum.hex} strokeWidth={1.6} />
-                          )}
-                          <Text
-                            style={[
-                              tw('text-secondary-foreground text-[10px]'),
-                              { fontFamily: FONT_MED },
-                            ]}>
-                            {member.role === 'manager' ? 'مدیر' : 'پرسنل'}
-                          </Text>
-                        </View>
-                      </Badge>
-                    </View>
-                    <View style={tw('flex-row items-center gap-1')}>
-                      <Phone size={12} color={saloora.sage.hex} strokeWidth={1.6} />
-                      <Text style={[tw('text-muted-foreground text-xs'), { fontFamily: FONT_REG }]}>
-                        {displayPhone(member.phone)}
-                      </Text>
-                    </View>
+                <View style={styles.rowBody}>
+                  <View style={styles.rowHeader}>
+                    <Text style={styles.name} numberOfLines={1}>
+                      {member.name}
+                    </Text>
+                    <Badge variant="secondary" style={styles.roleBadge}>
+                      <View style={styles.roleBadgeInner}>
+                        {member.role === 'manager' ? (
+                          <Shield size={12} color={theme.colors.primary} strokeWidth={1.6} />
+                        ) : (
+                          <UserIcon size={12} color={theme.colors.primary} strokeWidth={1.6} />
+                        )}
+                        <Text style={styles.roleText}>
+                          {member.role === 'manager' ? 'مدیر' : 'پرسنل'}
+                        </Text>
+                      </View>
+                    </Badge>
+                  </View>
+                  <View style={styles.phoneRow}>
+                    <Phone size={12} color={theme.iconColors.muted} strokeWidth={1.6} />
+                    <Text style={styles.phoneText}>{displayPhone(member.phone)}</Text>
                   </View>
                 </View>
-              );
-            })}
+              </View>
+            ))}
           </View>
         </ScrollView>
       )}

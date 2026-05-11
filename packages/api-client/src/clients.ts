@@ -1,4 +1,5 @@
 import type { Client } from '@repo/salon-core/types'
+import type { ClientCreatePayload } from '@repo/salon-core/forms/client'
 import type { ApiClient } from './client'
 import { endpoints } from './endpoints'
 
@@ -6,11 +7,7 @@ export type ClientsResponse = {
   clients: Client[]
 }
 
-export type CreateClientInput = {
-  name: string
-  phone: string
-  notes?: string
-}
+export type CreateClientInput = ClientCreatePayload
 
 export type CreateClientResponse = {
   client: Client

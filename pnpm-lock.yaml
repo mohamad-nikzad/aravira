@@ -6,6 +6,7 @@ settings:
 
 overrides:
   lightningcss: 1.30.1
+  zod: ^3.24.1
 
 importers:
 
@@ -62,6 +63,9 @@ importers:
       '@fullcalendar/timegrid':
         specifier: ^6.1.20
         version: 6.1.20(@fullcalendar/core@6.1.20)
+      '@hookform/resolvers':
+        specifier: ^3.9.1
+        version: 3.10.0(react-hook-form@7.73.1(react@19.2.5))
       '@repo/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -107,6 +111,9 @@ importers:
       react-dom:
         specifier: ^19
         version: 19.2.5(react@19.2.5)
+      react-hook-form:
+        specifier: ^7.54.1
+        version: 7.73.1(react@19.2.5)
       swr:
         specifier: ^2.4.1
         version: 2.4.1(react@19.2.5)
@@ -150,6 +157,9 @@ importers:
       '@expo/metro-runtime':
         specifier: ~6.1.2
         version: 6.1.2(expo@54.0.34)(react-dom@19.1.0(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      '@hookform/resolvers':
+        specifier: ^3.9.1
+        version: 3.10.0(react-hook-form@7.73.1(react@19.1.0))
       '@react-native-async-storage/async-storage':
         specifier: ^3.0.2
         version: 3.0.2(react-native@0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -198,6 +208,9 @@ importers:
       react-dom:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
+      react-hook-form:
+        specifier: ^7.54.1
+        version: 7.73.1(react@19.1.0)
       react-native:
         specifier: 0.81.5
         version: 0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.1.0)
@@ -222,6 +235,9 @@ importers:
       react-native-worklets:
         specifier: 0.5.1
         version: 0.5.1(@babel/core@7.29.0)(react-native@0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
     devDependencies:
       '@babel/core':
         specifier: ^7.20.0
@@ -389,6 +405,9 @@ importers:
       date-fns:
         specifier: 4.1.0
         version: 4.1.0
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
     devDependencies:
       '@repo/typescript-config':
         specifier: workspace:*
@@ -1894,6 +1913,11 @@ packages:
     resolution: {integrity: sha512-4H+/MWbz3ntA50lrPif+7TsvMeX3R1GSYjiLULz0+zEJ7/Yfd9pupZmAwUs/PBpA6aAcFmeRr0laWfcz1a9V1A==}
     peerDependencies:
       '@fullcalendar/core': ~6.1.20
+
+  '@hookform/resolvers@3.10.0':
+    resolution: {integrity: sha512-79Dv+3mDF7i+2ajj7SkypSKHhl1cbln1OGavqrsF7p6mbUv11xpqpacPsGDCTRvCSjEEIez2ef1NveSVL3b0Ag==}
+    peerDependencies:
+      react-hook-form: ^7.0.0
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -8962,6 +8986,14 @@ snapshots:
       '@fullcalendar/core': 6.1.20
       '@fullcalendar/daygrid': 6.1.20(@fullcalendar/core@6.1.20)
 
+  '@hookform/resolvers@3.10.0(react-hook-form@7.73.1(react@19.1.0))':
+    dependencies:
+      react-hook-form: 7.73.1(react@19.1.0)
+
+  '@hookform/resolvers@3.10.0(react-hook-form@7.73.1(react@19.2.5))':
+    dependencies:
+      react-hook-form: 7.73.1(react@19.2.5)
+
   '@humanfs/core@0.19.2':
     dependencies:
       '@humanfs/types': 0.15.0
@@ -14585,6 +14617,10 @@ snapshots:
   react-fast-compare@3.2.2: {}
 
   react-freeze@1.0.4(react@19.1.0):
+    dependencies:
+      react: 19.1.0
+
+  react-hook-form@7.73.1(react@19.1.0):
     dependencies:
       react: 19.1.0
 

@@ -59,6 +59,47 @@ export type Theme = {
     lg: number;
     xl: number;
     base: number;
+    full: number;
+  };
+  spacing: {
+    none: 0;
+    xs: number;
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
+    '2xl': number;
+    '3xl': number;
+    '4xl': number;
+    '5xl': number;
+    '6xl': number;
+  };
+  fontSize: {
+    xs: number;
+    sm: number;
+    base: number;
+    md: number;
+    lg: number;
+    xl: number;
+    '2xl': number;
+    '3xl': number;
+  };
+  sizes: {
+    iconSm: number;
+    iconMd: number;
+    iconLg: number;
+    avatarSm: number;
+    avatarMd: number;
+    controlSm: number;
+    controlMd: number;
+    controlLg: number;
+    hairline: number;
+  };
+  fontWeights: {
+    regular: '400';
+    medium: '500';
+    semibold: '600';
+    bold: '700';
   };
   fonts: {
     sans: string;

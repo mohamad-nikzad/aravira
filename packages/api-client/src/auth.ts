@@ -1,24 +1,16 @@
 import type { User } from '@repo/salon-core/types'
+import type { LoginFormPayload, SignupFormPayload } from '@repo/salon-core/forms/auth'
 import type { ApiClient } from './client'
 import { endpoints } from './endpoints'
 
-export type LoginInput = {
-  phone: string
-  password: string
-}
+export type LoginInput = LoginFormPayload
 
 export type LoginResponse = {
   user: User
   token: string
 }
 
-export type SignupInput = {
-  salonName: string
-  slug: string
-  managerName: string
-  managerPhone: string
-  password: string
-}
+export type SignupInput = SignupFormPayload
 
 export type SignupResponse = {
   user: User

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getBusinessSettings, updateBusinessSettings } from '@repo/database/settings'
 import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant'
+import { businessSettingsSchema } from '@repo/salon-core/forms/settings'
+import { validationErrorResponse } from '../../validation'
 
 export async function GET(request: Request) {
   try {
@@ -22,13 +24,14 @@ export async function PATCH(request: Request) {
     if (!tenant.ok) return tenant.response
     const { user } = tenant
 
-    const body = await request.json()
-    const { workingStart, workingEnd, slotDurationMinutes } = body
+    const parsed = businessSettingsSchema.safeParse(await request.json())
+    if (!parsed.success) return validationErrorResponse(parsed.error)
+    const { workingStart, workingEnd, slotDurationMinutes } = parsed.data
 
     const next = await updateBusinessSettings(user.salonId, {
-      ...(typeof workingStart === 'string' ? { workingStart } : {}),
-      ...(typeof workingEnd === 'string' ? { workingEnd } : {}),
-      ...(typeof slotDurationMinutes === 'number' ? { slotDurationMinutes } : {}),
+      ...(workingStart !== undefined ? { workingStart } : {}),
+      ...(workingEnd !== undefined ? { workingEnd } : {}),
+      ...(slotDurationMinutes !== undefined ? { slotDurationMinutes } : {}),
     })
 
     return NextResponse.json({ settings: next })

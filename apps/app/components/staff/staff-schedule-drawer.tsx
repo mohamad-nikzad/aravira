@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useForm, useFieldArray, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Drawer,
   DrawerContent,
@@ -12,11 +14,20 @@ import {
 import { Button } from '@repo/ui/button'
 import { Switch } from '@repo/ui/switch'
 import { Field, FieldLabel, FieldError } from '@repo/ui/field'
+import { FormRootError } from '@repo/ui/form'
 import { Skeleton } from '@repo/ui/skeleton'
 import { TimePicker } from '@repo/ui/time-picker'
 import { Spinner } from '@repo/ui/spinner'
-import type { BusinessHours, StaffSchedule, User } from '@repo/salon-core/types'
+import type { BusinessHours, User } from '@repo/salon-core/types'
 import { formatPersianTime } from '@repo/salon-core/persian-digits'
+import { z } from 'zod'
+import {
+  staffScheduleSchema,
+  type StaffScheduleFormInput,
+} from '@repo/salon-core/forms/staff'
+
+const scheduleFormSchema = z.object({ rows: staffScheduleSchema })
+type ScheduleFormValues = z.input<typeof scheduleFormSchema>
 import { DataClientHttpError } from '@repo/data-client'
 import { useManagerDataClient } from '@/components/manager-data-client-provider'
 
@@ -30,13 +41,6 @@ const days = [
   { dayOfWeek: 5, label: 'جمعه' },
 ] as const
 
-type ScheduleDraft = {
-  dayOfWeek: number
-  active: boolean
-  workingStart: string
-  workingEnd: string
-}
-
 interface StaffScheduleDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -44,7 +48,7 @@ interface StaffScheduleDrawerProps {
   onSuccess: () => void
 }
 
-function defaultRows(hours?: BusinessHours): ScheduleDraft[] {
+function defaultRows(hours?: BusinessHours): StaffScheduleFormInput {
   return days.map((day) => ({
     dayOfWeek: day.dayOfWeek,
     active: day.dayOfWeek !== 5,
@@ -88,17 +92,30 @@ export function StaffScheduleDrawer({
   onSuccess,
 }: StaffScheduleDrawerProps) {
   const dc = useManagerDataClient()
-  const [rows, setRows] = useState<ScheduleDraft[]>(defaultRows())
   const [salonHours, setSalonHours] = useState<BusinessHours | null>(null)
   const [bundleLoading, setBundleLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setError,
+    setValue,
+    getValues,
+    formState: { errors, isSubmitting },
+  } = useForm<ScheduleFormValues>({
+    resolver: zodResolver(scheduleFormSchema),
+    defaultValues: { rows: defaultRows() },
+    mode: 'onSubmit',
+  })
+
+  const { fields } = useFieldArray({ control, name: 'rows' })
 
   useEffect(() => {
     if (!open || !staff || !dc) return
     let cancelled = false
-    setError('')
     setBundleLoading(true)
+    reset({ rows: defaultRows() })
     void dc.staff.getScheduleBundle(staff.id).then((bundle) => {
       if (cancelled) return
       setBundleLoading(false)
@@ -106,8 +123,8 @@ export function StaffScheduleDrawer({
       setSalonHours(bundle.businessHours)
       const map = new Map(bundle.schedule.map((r) => [r.dayOfWeek, r]))
       const base = defaultRows(bundle.businessHours)
-      setRows(
-        base.map((row) => {
+      reset({
+        rows: base.map((row) => {
           const saved = map.get(row.dayOfWeek)
           return saved
             ? {
@@ -117,36 +134,29 @@ export function StaffScheduleDrawer({
                 workingEnd: saved.workingEnd,
               }
             : row
-        })
-      )
+        }),
+      })
     })
     return () => {
       cancelled = true
     }
-  }, [open, staff, dc])
-
-  const updateRow = (dayOfWeek: number, patch: Partial<ScheduleDraft>) => {
-    setRows((current) =>
-      current.map((row) => (row.dayOfWeek === dayOfWeek ? { ...row, ...patch } : row))
-    )
-  }
+  }, [open, staff, dc, reset])
 
   const useSalonHours = () => {
     if (!salonHours) return
-    setRows((current) =>
-      current.map((row) => ({
-        ...row,
-        workingStart: salonHours.workingStart,
-        workingEnd: salonHours.workingEnd,
-      }))
-    )
+    const current = getValues('rows')
+    current.forEach((_, idx) => {
+      setValue(`rows.${idx}.workingStart`, salonHours.workingStart, {
+        shouldDirty: true,
+      })
+      setValue(`rows.${idx}.workingEnd`, salonHours.workingEnd, {
+        shouldDirty: true,
+      })
+    })
   }
 
-  const handleSave = async () => {
+  const onSubmit = handleSubmit(async ({ rows }) => {
     if (!staff || !dc) return
-    setSaving(true)
-    setError('')
-
     try {
       await dc.staff.setSchedule(staff.id, rows)
       onSuccess()
@@ -157,11 +167,9 @@ export function StaffScheduleDrawer({
           : err instanceof Error
             ? err.message
             : 'خطایی رخ داد. لطفاً دوباره تلاش کنید.'
-      setError(msg)
-    } finally {
-      setSaving(false)
+      setError('root', { message: msg })
     }
-  }
+  })
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -173,7 +181,7 @@ export function StaffScheduleDrawer({
           </DrawerDescription>
         </DrawerHeader>
 
-        <div className="space-y-3 overflow-auto px-4">
+        <form onSubmit={onSubmit} className="space-y-3 overflow-auto px-4">
           <div className="flex items-center justify-between rounded-lg border border-border/60 p-3">
             <div className="text-sm">
               <p className="font-medium">ساعت سالن</p>
@@ -190,39 +198,61 @@ export function StaffScheduleDrawer({
           {bundleLoading ? (
             <StaffScheduleRowsSkeleton />
           ) : (
-            rows.map((row) => {
-              const label = days.find((day) => day.dayOfWeek === row.dayOfWeek)?.label
+            fields.map((field, idx) => {
+              const label = days.find((day) => day.dayOfWeek === field.dayOfWeek)?.label
+              const rowError = errors.rows?.[idx]
               return (
-                <div key={row.dayOfWeek} className="rounded-lg border border-border/60 p-3">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium">{label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {row.active ? 'قابل رزرو' : 'تعطیل برای این پرسنل'}
-                      </p>
-                    </div>
-                    <Switch
-                      checked={row.active}
-                      onCheckedChange={(active) => updateRow(row.dayOfWeek, { active })}
-                    />
-                  </div>
+                <div key={field.id} className="rounded-lg border border-border/60 p-3">
+                  <Controller
+                    control={control}
+                    name={`rows.${idx}.active`}
+                    render={({ field: activeField }) => (
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium">{label}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {activeField.value ? 'قابل رزرو' : 'تعطیل برای این پرسنل'}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={activeField.value}
+                          onCheckedChange={activeField.onChange}
+                        />
+                      </div>
+                    )}
+                  />
 
                   <div className="grid grid-cols-2 gap-3">
                     <Field>
                       <FieldLabel>شروع</FieldLabel>
-                      <TimePicker
-                        value={row.workingStart}
-                        onChange={(workingStart) => updateRow(row.dayOfWeek, { workingStart })}
-                        label={`${label} شروع`}
+                      <Controller
+                        control={control}
+                        name={`rows.${idx}.workingStart`}
+                        render={({ field: timeField }) => (
+                          <TimePicker
+                            value={timeField.value}
+                            onChange={timeField.onChange}
+                            label={`${label} شروع`}
+                          />
+                        )}
                       />
                     </Field>
                     <Field>
                       <FieldLabel>پایان</FieldLabel>
-                      <TimePicker
-                        value={row.workingEnd}
-                        onChange={(workingEnd) => updateRow(row.dayOfWeek, { workingEnd })}
-                        label={`${label} پایان`}
+                      <Controller
+                        control={control}
+                        name={`rows.${idx}.workingEnd`}
+                        render={({ field: timeField }) => (
+                          <TimePicker
+                            value={timeField.value}
+                            onChange={timeField.onChange}
+                            label={`${label} پایان`}
+                          />
+                        )}
                       />
+                      {rowError?.workingEnd && (
+                        <FieldError>{rowError.workingEnd.message}</FieldError>
+                      )}
                     </Field>
                   </div>
                 </div>
@@ -230,13 +260,13 @@ export function StaffScheduleDrawer({
             })
           )}
 
-          {error && <FieldError>{error}</FieldError>}
-        </div>
+          <FormRootError message={errors.root?.message} />
+        </form>
 
         <DrawerFooter>
-          <Button onClick={handleSave} disabled={saving || bundleLoading}>
-            {saving && <Spinner className="ml-2" />}
-            {saving ? 'در حال ذخیره…' : 'ذخیره برنامه کاری'}
+          <Button onClick={onSubmit} disabled={isSubmitting || bundleLoading}>
+            {isSubmitting && <Spinner className="ml-2" />}
+            {isSubmitting ? 'در حال ذخیره…' : 'ذخیره برنامه کاری'}
           </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             بستن

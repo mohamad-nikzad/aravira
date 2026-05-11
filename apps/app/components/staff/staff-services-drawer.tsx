@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Drawer,
   DrawerContent,
@@ -11,11 +13,12 @@ import {
   DrawerClose,
 } from '@repo/ui/drawer'
 import { Button } from '@repo/ui/button'
-import { FieldError } from '@repo/ui/field'
+import { FormRootError } from '@repo/ui/form'
 import { Checkbox } from '@repo/ui/checkbox'
 import { Switch } from '@repo/ui/switch'
 import { Spinner } from '@repo/ui/spinner'
 import { User, Service, SERVICE_CATEGORIES } from '@repo/salon-core/types'
+import { staffServiceIdsSchema, type StaffServiceIdsInput } from '@repo/salon-core/forms/staff'
 import { toPersianDigits } from '@repo/salon-core/persian-digits'
 import { cn } from '@repo/ui/utils'
 import { DataClientHttpError } from '@repo/data-client'
@@ -37,10 +40,20 @@ export function StaffServicesDrawer({
   onSuccess,
 }: StaffServicesDrawerProps) {
   const dc = useManagerDataClient()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [unrestricted, setUnrestricted] = useState(true)
-  const [selected, setSelected] = useState<Set<string>>(() => new Set())
+  const {
+    handleSubmit,
+    reset,
+    setError,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<StaffServiceIdsInput>({
+    resolver: zodResolver(staffServiceIdsSchema),
+    defaultValues: { serviceIds: null },
+  })
+  const serviceIds = watch('serviceIds')
+  const selected = useMemo(() => new Set(serviceIds ?? []), [serviceIds])
+  const unrestricted = serviceIds == null
 
   const activeServices = useMemo(() => services.filter((s) => s.active), [services])
 
@@ -58,43 +71,40 @@ export function StaffServicesDrawer({
 
   useEffect(() => {
     if (!open || !staff) return
-    setError('')
-    const unres = staff.serviceIds == null
-    setUnrestricted(unres)
-    setSelected(new Set(staff.serviceIds ?? []))
-  }, [open, staff])
+    reset({ serviceIds: staff.serviceIds ?? null })
+  }, [open, reset, staff])
 
   const toggleService = (serviceId: string, checked: boolean) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (checked) next.add(serviceId)
-      else next.delete(serviceId)
-      return next
-    })
+    const next = new Set(selected)
+    if (checked) next.add(serviceId)
+    else next.delete(serviceId)
+    setValue('serviceIds', [...next], { shouldDirty: true, shouldValidate: false })
   }
 
   const handleUnrestrictedChange = (checked: boolean) => {
-    setUnrestricted(checked)
-    if (!checked && selected.size === 0 && activeServices.length > 0) {
-      setSelected(new Set(activeServices.map((s) => s.id)))
+    if (checked) {
+      setValue('serviceIds', null, { shouldDirty: true })
+      return
     }
+    setValue('serviceIds', selected.size === 0 ? activeServices.map((s) => s.id) : [...selected], {
+      shouldDirty: true,
+      shouldValidate: false,
+    })
   }
 
-  const handleSave = async () => {
+  const handleSave = handleSubmit(async (values) => {
     if (!staff) return
-    setError('')
-    if (!unrestricted && selected.size === 0) {
-      setError('حداقل یک خدمت انتخاب کنید، یا حالت «همه خدمات» را فعال بگذارید.')
+    if (values.serviceIds != null && values.serviceIds.length === 0) {
+      setError('root', { message: 'حداقل یک خدمت انتخاب کنید، یا حالت «همه خدمات» را فعال بگذارید.' })
       return
     }
 
     if (!dc) {
-      setError('اتصال داده برقرار نیست')
+      setError('root', { message: 'اتصال داده برقرار نیست' })
       return
     }
-    setLoading(true)
     try {
-      await dc.staff.setServiceIds(staff.id, unrestricted ? null : [...selected])
+      await dc.staff.setServiceIds(staff.id, values.serviceIds ?? null)
       onSuccess()
     } catch (err) {
       const msg =
@@ -103,14 +113,12 @@ export function StaffServicesDrawer({
           : err instanceof Error
             ? err.message
             : 'خطایی رخ داد'
-      setError(msg)
-    } finally {
-      setLoading(false)
+      setError('root', { message: msg })
     }
-  }
+  })
 
   const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen) setError('')
+    if (!isOpen) reset({ serviceIds: null })
     onOpenChange(isOpen)
   }
 
@@ -201,19 +209,19 @@ export function StaffServicesDrawer({
               </div>
             )}
 
-            {error && <FieldError>{error}</FieldError>}
+            <FormRootError message={errors.root?.message} />
           </div>
         </div>
 
         <DrawerFooter className="shrink-0 border-t border-border/60 bg-background">
           <Button
             type="button"
-            onClick={handleSave}
-            disabled={loading || !staff}
+            onClick={() => void handleSave()}
+            disabled={isSubmitting || !staff}
             className="touch-manipulation"
           >
-            {loading && <Spinner className="ml-2" />}
-            {loading ? 'در حال ذخیره…' : 'ذخیره'}
+            {isSubmitting && <Spinner className="ml-2" />}
+            {isSubmitting ? 'در حال ذخیره…' : 'ذخیره'}
           </Button>
           <DrawerClose asChild>
             <Button variant="outline" type="button">

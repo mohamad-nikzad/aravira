@@ -16,6 +16,8 @@ import {
   updateClient,
 } from '@repo/database/clients'
 import { getTenantManagerRequest, getTenantRequest, isManagerRole } from '@repo/auth/tenant'
+import { appointmentUpdateSchema } from '@repo/salon-core/forms/appointment'
+import { validationErrorResponse } from '../../validation'
 
 const STAFF_STATUS_UPDATES: ReadonlySet<Appointment['status']> = new Set([
   'confirmed',
@@ -63,7 +65,9 @@ export async function PATCH(
     placeholderSalonId = user.salonId
 
     const { id } = await params
-    const body = await request.json()
+    const parsed = appointmentUpdateSchema.safeParse(await request.json())
+    if (!parsed.success) return validationErrorResponse(parsed.error)
+    const body = parsed.data
     const { status, placeholderClient } = body
 
     const existing = await getAppointmentById(id, user.salonId)

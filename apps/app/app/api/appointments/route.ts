@@ -9,6 +9,7 @@ import {
   createPlaceholderClient,
   deletePlaceholderClientIfOrphaned,
 } from '@repo/database/clients'
+import { appointmentCreateSchema } from '@repo/salon-core/forms/appointment'
 import { sendWebPushToUser, isWebPushConfigured } from '@/lib/push'
 import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant'
 
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
     if (!startDate || !endDate) {
       return NextResponse.json(
         { error: 'تاریخ شروع و پایان الزامی است' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -34,13 +35,16 @@ export async function GET(request: Request) {
       user.salonId,
       startDate,
       endDate,
-      staffFilter
+      staffFilter,
     )
 
     return NextResponse.json({ appointments })
   } catch (error) {
     console.error('Get appointments error:', error)
-    return NextResponse.json({ error: 'خطای سرور. لطفاً دوباره تلاش کنید.' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'خطای سرور. لطفاً دوباره تلاش کنید.' },
+      { status: 500 },
+    )
   }
 }
 
@@ -53,7 +57,13 @@ export async function POST(request: Request) {
     const { user } = tenant
     placeholderSalonId = user.salonId
 
-    const body = await request.json()
+    const parsed = appointmentCreateSchema.safeParse(await request.json())
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? 'داده نامعتبر' },
+        { status: 400 },
+      )
+    }
     const {
       clientId,
       placeholderClient,
@@ -65,28 +75,15 @@ export async function POST(request: Request) {
       durationMinutes,
       notes,
       id: requestedAppointmentId,
-    } = body
+    } = parsed.data
 
     let resolvedClientId = clientId
 
-    if (
-      placeholderClient &&
-      typeof placeholderClient === 'object' &&
-      typeof placeholderClient.name === 'string'
-    ) {
-      const name = placeholderClient.name.trim()
-      const notes =
-        typeof placeholderClient.notes === 'string' && placeholderClient.notes.trim() !== ''
-          ? placeholderClient.notes.trim()
-          : undefined
-      if (!name) {
-        return NextResponse.json({ error: 'نام مشتری موقت الزامی است' }, { status: 400 })
-      }
-
+    if (placeholderClient) {
       const placeholder = await createPlaceholderClient({
         salonId: user.salonId,
-        name,
-        notes,
+        name: placeholderClient.name,
+        notes: placeholderClient.notes,
       })
       resolvedClientId = placeholder.id
       createdPlaceholderId = placeholder.id
@@ -106,18 +103,21 @@ export async function POST(request: Request) {
     })
     if (!intake.ok) {
       if (createdPlaceholderId) {
-        await deletePlaceholderClientIfOrphaned(createdPlaceholderId, user.salonId)
+        await deletePlaceholderClientIfOrphaned(
+          createdPlaceholderId,
+          user.salonId,
+        )
       }
       return NextResponse.json(
         { error: intake.error, ...(intake.code ? { code: intake.code } : {}) },
-        { status: intake.status }
+        { status: intake.status },
       )
     }
 
     const appointment = await createAppointment(
       intake.command,
       user.salonId,
-      user.userId
+      user.userId,
     )
 
     if (isWebPushConfigured() && intake.staff.id !== user.userId) {
@@ -129,7 +129,10 @@ export async function POST(request: Request) {
       })
     }
 
-    const detail = await getAppointmentWithDetailsById(appointment.id, user.salonId)
+    const detail = await getAppointmentWithDetailsById(
+      appointment.id,
+      user.salonId,
+    )
 
     return NextResponse.json({
       appointment: detail ?? {
@@ -141,11 +144,15 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     if (createdPlaceholderId && placeholderSalonId) {
-      await deletePlaceholderClientIfOrphaned(createdPlaceholderId, placeholderSalonId).catch(
-        () => {}
-      )
+      await deletePlaceholderClientIfOrphaned(
+        createdPlaceholderId,
+        placeholderSalonId,
+      ).catch(() => {})
     }
     console.error('Create appointment error:', error)
-    return NextResponse.json({ error: 'خطای سرور. لطفاً دوباره تلاش کنید.' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'خطای سرور. لطفاً دوباره تلاش کنید.' },
+      { status: 500 },
+    )
   }
 }

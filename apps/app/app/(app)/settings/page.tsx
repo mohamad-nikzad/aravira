@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTheme } from 'next-themes'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   LogOut,
   Moon,
@@ -20,7 +22,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card'
 import { Avatar, AvatarFallback } from '@repo/ui/avatar'
 import { Switch } from '@repo/ui/switch'
 import { Input } from '@repo/ui/input'
-import { Field, FieldLabel, FieldGroup } from '@repo/ui/field'
+import { Field, FieldError, FieldLabel, FieldGroup } from '@repo/ui/field'
+import { FormRootError } from '@repo/ui/form'
 import { TimePicker } from '@repo/ui/time-picker'
 import { useAuth } from '@/components/auth-provider'
 import {
@@ -36,6 +39,7 @@ import type { Service } from '@repo/salon-core/types'
 import { SERVICE_CATEGORIES } from '@repo/salon-core/types'
 import { displayPhone } from '@repo/salon-core/phone'
 import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
+import { businessSettingsSchema, type BusinessSettingsPayload } from '@repo/salon-core/forms/settings'
 
 export default function SettingsPage() {
   const { user, logout } = useAuth()
@@ -48,12 +52,26 @@ export default function SettingsPage() {
   const [showServiceDrawer, setShowServiceDrawer] = useState(false)
   const [selectedService, setSelectedService] = useState<Service | null>(null)
 
-  const [workingStart, setWorkingStart] = useState('09:00')
-  const [workingEnd, setWorkingEnd] = useState('19:00')
-  const [slotMin, setSlotMin] = useState(30)
-  const [savingHours, setSavingHours] = useState(false)
   const [services, setServices] = useState<Service[]>([])
   const [managerDataReady, setManagerDataReady] = useState(false)
+  const {
+    handleSubmit: handleBusinessHoursSubmit,
+    reset: resetBusinessHours,
+    setError: setBusinessHoursError,
+    setValue: setBusinessHoursValue,
+    watch: watchBusinessHours,
+    formState: { errors: businessHoursErrors, isSubmitting: savingHours },
+  } = useForm<BusinessSettingsPayload>({
+    resolver: zodResolver(businessSettingsSchema),
+    defaultValues: {
+      workingStart: '09:00',
+      workingEnd: '19:00',
+      slotDurationMinutes: 30,
+    },
+  })
+  const workingStart = watchBusinessHours('workingStart') ?? '09:00'
+  const workingEnd = watchBusinessHours('workingEnd') ?? '19:00'
+  const slotMin = watchBusinessHours('slotDurationMinutes') ?? 30
 
   useEffect(() => {
     if (!dc || user?.role !== 'manager') {
@@ -63,15 +81,11 @@ export default function SettingsPage() {
     let cancelled = false
     void dc.businessSettings.get().then((s) => {
       if (cancelled || !s) return
-      setWorkingStart(s.workingStart)
-      setWorkingEnd(s.workingEnd)
-      setSlotMin(s.slotDurationMinutes)
+      resetBusinessHours(s)
     })
     const unsubBiz = dc.businessSettings.subscribe((s) => {
       if (cancelled || !s) return
-      setWorkingStart(s.workingStart)
-      setWorkingEnd(s.workingEnd)
-      setSlotMin(s.slotDurationMinutes)
+      resetBusinessHours(s)
     })
     void dc.services
       .list({ includeInactive: true })
@@ -89,7 +103,7 @@ export default function SettingsPage() {
       unsubBiz()
       unsubSvc()
     }
-  }, [dc, user?.role])
+  }, [dc, resetBusinessHours, user?.role])
 
   useEffect(() => {
     setMounted(true)
@@ -112,20 +126,15 @@ export default function SettingsPage() {
       .slice(0, 2)
   }
 
-  const saveBusinessHours = async () => {
+  const saveBusinessHours = handleBusinessHoursSubmit(async (values) => {
     if (!dc) return
-    setSavingHours(true)
     try {
-      await dc.businessSettings.update({
-        workingStart,
-        workingEnd,
-        slotDurationMinutes: slotMin,
-      })
+      await dc.businessSettings.update(values)
       bumpOfflineData()
-    } finally {
-      setSavingHours(false)
+    } catch {
+      setBusinessHoursError('root', { message: 'ذخیره ساعات کاری انجام نشد' })
     }
-  }
+  })
 
   const settingsDataLoading = user?.role === 'manager' && (!dc || !managerDataReady)
   if (settingsDataLoading) {
@@ -232,17 +241,23 @@ export default function SettingsPage() {
                     <FieldLabel>شروع</FieldLabel>
                     <TimePicker
                       value={workingStart}
-                      onChange={setWorkingStart}
+                      onChange={(value) => setBusinessHoursValue('workingStart', value)}
                       label="ساعت شروع"
                     />
+                    {businessHoursErrors.workingStart && (
+                      <FieldError>{businessHoursErrors.workingStart.message}</FieldError>
+                    )}
                   </Field>
                   <Field>
                     <FieldLabel>پایان</FieldLabel>
                     <TimePicker
                       value={workingEnd}
-                      onChange={setWorkingEnd}
+                      onChange={(value) => setBusinessHoursValue('workingEnd', value)}
                       label="ساعت پایان"
                     />
+                    {businessHoursErrors.workingEnd && (
+                      <FieldError>{businessHoursErrors.workingEnd.message}</FieldError>
+                    )}
                   </Field>
                 </div>
                 <Field>
@@ -251,12 +266,21 @@ export default function SettingsPage() {
                     type="text"
                     inputMode="numeric"
                     value={toPersianDigits(slotMin)}
-                    onChange={(e) => setSlotMin(Math.max(5, parseLocalizedInt(e.target.value, slotMin)))}
+                    onChange={(e) =>
+                      setBusinessHoursValue(
+                        'slotDurationMinutes',
+                        Math.max(5, parseLocalizedInt(e.target.value, slotMin)),
+                      )
+                    }
                     dir="rtl"
                     className="h-10 text-right tabular-nums"
                   />
+                  {businessHoursErrors.slotDurationMinutes && (
+                    <FieldError>{businessHoursErrors.slotDurationMinutes.message}</FieldError>
+                  )}
                 </Field>
               </FieldGroup>
+              <FormRootError message={businessHoursErrors.root?.message} />
               <Button
                 size="sm"
                 className="w-full touch-manipulation"

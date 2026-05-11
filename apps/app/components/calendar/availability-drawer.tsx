@@ -1,6 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   AlertTriangle,
   CalendarDays,
@@ -44,6 +46,10 @@ import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-dig
 import { addDaysYmd } from '@repo/salon-core/salon-local-time'
 import { eligibleStaffForService } from '@repo/salon-core/staff-service-autofill'
 import type { Service, User } from '@repo/salon-core/types'
+import {
+  availabilitySearchSchema,
+  type AvailabilitySearchInput,
+} from '@repo/salon-core/forms/appointment'
 import { fetchJsonOrThrow, HttpError, useNetworkStatus } from '@/lib/pwa-client'
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -129,9 +135,22 @@ export function AvailabilityDrawer({
   const abortRef = useRef<AbortController | null>(null)
   const wasOpenRef = useRef(open)
 
-  const [serviceId, setServiceId] = useState('')
-  const [staffSelection, setStaffSelection] = useState(ANY_STAFF_VALUE)
-  const [date, setDate] = useState(initialDate)
+  const {
+    setValue,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm<AvailabilitySearchInput>({
+    resolver: zodResolver(availabilitySearchSchema),
+    defaultValues: {
+      serviceId: '',
+      staffSelection: ANY_STAFF_VALUE,
+      date: initialDate,
+    },
+  })
+  const serviceId = watch('serviceId') ?? ''
+  const staffSelection = watch('staffSelection') ?? ANY_STAFF_VALUE
+  const date = watch('date') ?? initialDate
   const [loadingMode, setLoadingMode] = useState<'day' | 'nearest' | null>(null)
   const [error, setError] = useState('')
   const [dayResponse, setDayResponse] = useState<DayAvailabilityResponse | null>(null)
@@ -177,10 +196,12 @@ export function AvailabilityDrawer({
 
   const resetDrawer = useCallback(() => {
     clearResults()
-    setServiceId('')
-    setStaffSelection(ANY_STAFF_VALUE)
-    setDate(initialDate)
-  }, [clearResults, initialDate])
+    reset({
+      serviceId: '',
+      staffSelection: ANY_STAFF_VALUE,
+      date: initialDate,
+    })
+  }, [clearResults, initialDate, reset])
 
   const runSearch = useCallback(
     async (mode: 'day' | 'nearest', targetDate = date) => {
@@ -271,30 +292,30 @@ export function AvailabilityDrawer({
   }, [])
 
   const handleServiceChange = (nextServiceId: string) => {
-    setServiceId(nextServiceId)
+    setValue('serviceId', nextServiceId, { shouldValidate: false })
     const nextEligibleStaff = eligibleStaffForService(staffRoleOnly, nextServiceId)
     if (
       staffSelection !== ANY_STAFF_VALUE &&
       !nextEligibleStaff.some((member) => member.id === staffSelection)
     ) {
-      setStaffSelection(ANY_STAFF_VALUE)
+      setValue('staffSelection', ANY_STAFF_VALUE, { shouldValidate: false })
     }
     clearResults()
   }
 
   const handleStaffChange = (nextStaffSelection: string) => {
-    setStaffSelection(nextStaffSelection)
+    setValue('staffSelection', nextStaffSelection, { shouldValidate: false })
     clearResults()
   }
 
   const handleDateChange = (nextDate: string) => {
-    setDate(nextDate)
+    setValue('date', nextDate, { shouldValidate: false })
     clearResults()
   }
 
   const handleDayNavigation = (deltaDays: number) => {
     const nextDate = addDaysYmd(date, deltaDays)
-    setDate(nextDate)
+    setValue('date', nextDate, { shouldValidate: false })
     setError('')
     if (!serviceId) {
       setDayResponse(null)
@@ -337,6 +358,7 @@ export function AvailabilityDrawer({
                   ))}
                 </SelectContent>
               </Select>
+              {errors.serviceId && <FieldError>{errors.serviceId.message}</FieldError>}
             </Field>
 
             <Field>
@@ -370,6 +392,7 @@ export function AvailabilityDrawer({
                 onChange={handleDateChange}
                 required
               />
+              {errors.date && <FieldError>{errors.date.message}</FieldError>}
             </Field>
 
             <Button

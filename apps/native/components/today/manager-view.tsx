@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AlertTriangle, CalendarDays, Clock, Users } from 'lucide-react-native';
 import type { AppointmentWithDetails, TodayData, TodayAttentionItem } from '@repo/salon-core/types';
 import { formatJalaliFullDate } from '@repo/salon-core/jalali';
-import { saloora, semanticLight } from '@repo/brand-tokens/colors';
 import { Badge } from '../ui/badge';
 import { Card, CardContent } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
@@ -13,14 +12,13 @@ import {
   ACTIVE_STATUSES,
   ATTENTION_LABELS,
   AppointmentCard,
-  FONTS,
   StatCard,
   formatNumber,
   sortAppointments,
   summarizeOpenRanges,
 } from './shared';
+import { useTheme, useThemeStyles, withAlpha } from '../../theme';
 
-import { tw } from '../../lib/utils';
 type GroupedAttentionItem = {
   id: string;
   title: string;
@@ -68,6 +66,132 @@ export function ManagerTodayView({
   data?: TodayData;
   isLoading: boolean;
 }) {
+  const { theme } = useTheme();
+  const styles = useThemeStyles((t) => ({
+    safe: { backgroundColor: t.colors.background, flex: 1 },
+    header: {
+      borderBottomColor: withAlpha(t.colors.border, 0.5),
+      backgroundColor: t.colors.card,
+      borderBottomWidth: t.sizes.hairline,
+      paddingHorizontal: t.spacing.xl,
+      paddingVertical: t.spacing.lg,
+    },
+    headerRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.md,
+    },
+    headerTitle: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.xl,
+      fontFamily: t.fonts.sansBold,
+    },
+    headerSubtitle: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sans,
+    },
+    datePickerWrap: { marginTop: t.spacing.lg },
+    scroll: { padding: t.spacing.xl, gap: t.spacing.xl },
+    skelGap: { gap: t.spacing.lg },
+    statRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: t.spacing.lg },
+    statCell: { flexBasis: '47%' as const, flexGrow: 1 },
+    statSkelCell: { minWidth: '45%' as const, flex: 1 },
+    attentionCard: {
+      backgroundColor: withAlpha(t.colors.accent, 0.4),
+      borderColor: t.colors.ring,
+      gap: t.spacing.lg,
+      padding: t.spacing.xl,
+    },
+    sectionTitleRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.md,
+    },
+    sectionTitle: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    attentionList: { gap: t.spacing.md },
+    attentionItem: {
+      borderColor: withAlpha(t.colors.border, 0.5),
+      backgroundColor: withAlpha(t.colors.card, 0.85),
+      gap: t.spacing.xs,
+      borderRadius: t.radius.xl,
+      borderWidth: t.sizes.hairline,
+      padding: t.spacing.lg,
+    },
+    attentionRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'flex-start' as const,
+      justifyContent: 'space-between' as const,
+      gap: t.spacing.lg,
+    },
+    attentionBody: { minWidth: 0, flex: 1, gap: t.spacing.xs },
+    attentionTitle: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    attentionDetail: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sans,
+    },
+    badgeRow: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      justifyContent: 'flex-end' as const,
+      gap: t.spacing.xs,
+    },
+    badgeText: { fontSize: t.fontSize.xs },
+    sectionCard: { gap: t.spacing.lg, padding: t.spacing.xl },
+    list: { gap: t.spacing.lg },
+    empty: {
+      borderColor: withAlpha(t.colors.border, 0.7),
+      alignItems: 'center' as const,
+      borderRadius: t.radius.xl,
+      borderWidth: t.sizes.hairline,
+      borderStyle: 'dashed' as const,
+      padding: t.spacing.xl,
+    },
+    emptyText: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sans,
+    },
+    teamContent: { gap: t.spacing.md, padding: 0 },
+    teamEmpty: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sans,
+    },
+    teamRow: {
+      borderColor: withAlpha(t.colors.border, 0.6),
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      gap: t.spacing.lg,
+      borderRadius: t.radius.xl,
+      borderWidth: t.sizes.hairline,
+      padding: t.spacing.lg,
+    },
+    teamBody: { minWidth: 0, flex: 1, gap: t.spacing.xs },
+    teamName: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    teamMeta: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sans,
+    },
+    teamBadgeWrap: { maxWidth: '52%' as const },
+    teamBadgeText: { fontSize: t.fontSize.xs },
+  }));
+
   const activeAppointments = React.useMemo(
     () =>
       data
@@ -123,32 +247,28 @@ export function ManagerTodayView({
   const showSkeleton = !data && isLoading;
 
   return (
-    <SafeAreaView
-      style={[tw('bg-background flex-1'), { backgroundColor: semanticLight.background.hex }]}
-      edges={['top']}>
-      <View style={tw('border-border/50 bg-card border-b px-4 py-3')}>
-        <View style={tw('flex-row items-center gap-2')}>
-          <CalendarDays size={20} color={saloora.plum.hex} strokeWidth={1.8} />
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.header}>
+        <View style={styles.headerRow}>
+          <CalendarDays size={theme.sizes.iconMd} color={theme.colors.primary} strokeWidth={1.8} />
           <View>
-            <Text style={[tw('text-foreground text-lg'), { fontFamily: FONTS.bold }]}>امروز</Text>
-            <Text style={[tw('text-muted-foreground text-xs'), { fontFamily: FONTS.reg }]}>
+            <Text style={styles.headerTitle}>امروز</Text>
+            <Text style={styles.headerSubtitle}>
               {data ? formatJalaliFullDate(data.date) : 'نمای سریع سالن و نوبت‌ها'}
             </Text>
           </View>
         </View>
-        <View style={tw('mt-3')}>
+        <View style={styles.datePickerWrap}>
           <JalaliDatePicker value={date} onChange={setDate} />
         </View>
       </View>
 
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 16, gap: 16 }}>
+      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.scroll}>
         {showSkeleton ? (
-          <View style={tw('gap-3')}>
-            <View style={tw('flex-row flex-wrap gap-3')}>
+          <View style={styles.skelGap}>
+            <View style={styles.statRow}>
               {[0, 1, 2, 3].map((i) => (
-                <View key={i} style={tw('min-w-[45%] flex-1')}>
+                <View key={i} style={styles.statSkelCell}>
                   <Skeleton height={80} width="100%" radius={12} />
                 </View>
               ))}
@@ -158,49 +278,35 @@ export function ManagerTodayView({
           </View>
         ) : (
           <>
-            <View style={tw('flex-row flex-wrap gap-3')}>
+            <View style={styles.statRow}>
               {quickStats.map((item) => (
-                <View key={item.label} style={{ flexBasis: '47%', flexGrow: 1 }}>
+                <View key={item.label} style={styles.statCell}>
                   <StatCard label={item.label} value={item.value} hint={item.hint} />
                 </View>
               ))}
             </View>
 
             {attentionItems.length > 0 ? (
-              <Card
-                style={{
-                  backgroundColor: '#fffbeb',
-                  borderColor: '#fde68a',
-                  gap: 12,
-                  padding: 16,
-                }}>
-                <View style={tw('flex-row items-center gap-2')}>
-                  <AlertTriangle size={16} color="#b45309" strokeWidth={1.8} />
-                  <Text style={[tw('text-foreground text-sm'), { fontFamily: FONTS.semi }]}>
-                    نیاز به توجه
-                  </Text>
+              <Card style={styles.attentionCard}>
+                <View style={styles.sectionTitleRow}>
+                  <AlertTriangle
+                    size={theme.sizes.iconSm}
+                    color={theme.colors.accentForeground}
+                    strokeWidth={1.8}
+                  />
+                  <Text style={styles.sectionTitle}>نیاز به توجه</Text>
                 </View>
-                <View style={tw('gap-2')}>
+                <View style={styles.attentionList}>
                   {attentionItems.map((item) => (
-                    <View
-                      key={item.id}
-                      style={tw('border-border/50 bg-card/85 gap-1 rounded-2xl border p-3')}>
-                      <View style={tw('flex-row items-start justify-between gap-3')}>
-                        <View style={tw('min-w-0 flex-1 gap-1')}>
-                          <Text style={[tw('text-foreground text-sm'), { fontFamily: FONTS.semi }]}>
-                            {item.title}
-                          </Text>
-                          <Text
-                            style={[
-                              tw('text-muted-foreground text-xs'),
-                              { fontFamily: FONTS.reg },
-                            ]}>
-                            {item.detail}
-                          </Text>
+                    <View key={item.id} style={styles.attentionItem}>
+                      <View style={styles.attentionRow}>
+                        <View style={styles.attentionBody}>
+                          <Text style={styles.attentionTitle}>{item.title}</Text>
+                          <Text style={styles.attentionDetail}>{item.detail}</Text>
                         </View>
-                        <View style={tw('flex-row flex-wrap justify-end gap-1')}>
+                        <View style={styles.badgeRow}>
                           {item.labels.map((label) => (
-                            <Badge key={label} variant="secondary" textStyle={{ fontSize: 10 }}>
+                            <Badge key={label} variant="secondary" textStyle={styles.badgeText}>
                               {label}
                             </Badge>
                           ))}
@@ -212,22 +318,15 @@ export function ManagerTodayView({
               </Card>
             ) : null}
 
-            <Card style={{ gap: 12, padding: 16 }}>
-              <View style={tw('flex-row items-center gap-2')}>
-                <Clock size={16} color={saloora.plum.hex} strokeWidth={1.8} />
-                <Text style={[tw('text-foreground text-sm'), { fontFamily: FONTS.semi }]}>
-                  صف فعال امروز
-                </Text>
+            <Card style={styles.sectionCard}>
+              <View style={styles.sectionTitleRow}>
+                <Clock size={theme.sizes.iconSm} color={theme.colors.primary} strokeWidth={1.8} />
+                <Text style={styles.sectionTitle}>صف فعال امروز</Text>
               </View>
-              <View style={tw('gap-3')}>
+              <View style={styles.list}>
                 {activeAppointments.length === 0 ? (
-                  <View
-                    style={tw(
-                      'border-border/70 items-center rounded-2xl border border-dashed p-4'
-                    )}>
-                    <Text style={[tw('text-muted-foreground text-sm'), { fontFamily: FONTS.reg }]}>
-                      نوبت فعال برای این روز وجود ندارد.
-                    </Text>
+                  <View style={styles.empty}>
+                    <Text style={styles.emptyText}>نوبت فعال برای این روز وجود ندارد.</Text>
                   </View>
                 ) : (
                   activeAppointments.map((appointment) => (
@@ -241,39 +340,28 @@ export function ManagerTodayView({
               </View>
             </Card>
 
-            <Card style={{ gap: 12, padding: 16 }}>
-              <View style={tw('flex-row items-center gap-2')}>
-                <Users size={16} color={saloora.plum.hex} strokeWidth={1.8} />
-                <Text style={[tw('text-foreground text-sm'), { fontFamily: FONTS.semi }]}>
-                  خلاصه تیم
-                </Text>
+            <Card style={styles.sectionCard}>
+              <View style={styles.sectionTitleRow}>
+                <Users size={theme.sizes.iconSm} color={theme.colors.primary} strokeWidth={1.8} />
+                <Text style={styles.sectionTitle}>خلاصه تیم</Text>
               </View>
-              <CardContent style={{ gap: 8, padding: 0 }}>
+              <CardContent style={styles.teamContent}>
                 {teamRows.length === 0 ? (
-                  <Text style={[tw('text-muted-foreground text-sm'), { fontFamily: FONTS.reg }]}>
-                    اطلاعاتی برای نمایش وجود ندارد.
-                  </Text>
+                  <Text style={styles.teamEmpty}>اطلاعاتی برای نمایش وجود ندارد.</Text>
                 ) : (
                   teamRows.map((row) => (
-                    <View
-                      key={row.staffId}
-                      style={tw(
-                        'border-border/60 flex-row items-center justify-between gap-3 rounded-2xl border p-3'
-                      )}>
-                      <View style={tw('min-w-0 flex-1 gap-1')}>
-                        <Text
-                          style={[tw('text-foreground text-sm'), { fontFamily: FONTS.semi }]}
-                          numberOfLines={1}>
+                    <View key={row.staffId} style={styles.teamRow}>
+                      <View style={styles.teamBody}>
+                        <Text style={styles.teamName} numberOfLines={1}>
                           {row.staffName}
                         </Text>
-                        <Text
-                          style={[tw('text-muted-foreground text-xs'), { fontFamily: FONTS.reg }]}>
+                        <Text style={styles.teamMeta}>
                           {formatNumber(row.appointmentCount)} نوبت ·{' '}
                           {formatNumber(row.bookedMinutes)} دقیقه
                         </Text>
                       </View>
-                      <View style={{ maxWidth: '52%' }}>
-                        <Badge variant="outline" textStyle={{ fontSize: 10, textAlign: 'right' }}>
+                      <View style={styles.teamBadgeWrap}>
+                        <Badge variant="outline" textStyle={styles.teamBadgeText}>
                           {row.openSlotSummary}
                         </Badge>
                       </View>

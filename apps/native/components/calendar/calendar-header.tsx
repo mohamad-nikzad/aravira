@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { saloora } from '@repo/brand-tokens/colors';
 import {
   formatJalaliFullDate,
   JALALI_MONTHS,
@@ -9,10 +8,10 @@ import {
   parseGregorianToJalali,
 } from '@repo/salon-core/jalali';
 import { addDaysYmd } from '@repo/salon-core/salon-local-time';
-import { FONTS, jalaliMonthGrid, numFmt, weekDays, weekStartYmd } from './helpers';
+import { jalaliMonthGrid, numFmt, weekDays, weekStartYmd } from './helpers';
 import type { CalendarView } from './types';
+import { useTheme, useThemeStyles, withAlpha } from '../../theme';
 
-import { tw } from '../../lib/utils';
 function formatWeekTitle(weekStartYmdStr: string): string {
   const days = weekDays(weekStartYmdStr);
   const start = parseGregorianToJalali(days[0]);
@@ -48,6 +47,66 @@ export type CalendarHeaderProps = {
 };
 
 export function CalendarHeader({ view, cursorYmd, todayYmd, onCursorChange }: CalendarHeaderProps) {
+  const { theme } = useTheme();
+  const styles = useThemeStyles((t) => ({
+    container: {
+      borderBottomColor: withAlpha(t.colors.border, 0.5),
+      backgroundColor: t.colors.card,
+      borderBottomWidth: t.sizes.hairline,
+      paddingHorizontal: t.spacing.xl,
+      paddingTop: t.spacing.lg,
+      paddingBottom: t.spacing.lg,
+    },
+    row: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.md,
+    },
+    navButton: {
+      backgroundColor: withAlpha(t.colors.muted, 0.6),
+      height: t.sizes.controlMd,
+      width: t.sizes.controlMd,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      borderRadius: t.radius.lg,
+    },
+    titleWrap: { flex: 1, alignItems: 'center' as const },
+    title: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.lg,
+      fontFamily: t.fonts.sansBold,
+    },
+    subtitle: {
+      color: t.colors.mutedForeground,
+      marginTop: t.spacing.xs / 2,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sans,
+    },
+    todayRow: {
+      marginTop: t.spacing.md,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+    },
+    todayChip: {
+      borderRadius: t.radius.full,
+      borderWidth: t.sizes.hairline,
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.xs,
+    },
+    todayChipDisabled: {
+      borderColor: withAlpha(t.colors.border, 0.6),
+      backgroundColor: withAlpha(t.colors.muted, 0.6),
+    },
+    todayChipEnabled: {
+      borderColor: withAlpha(t.colors.primary, 0.4),
+      backgroundColor: withAlpha(t.colors.primary, 0.1),
+    },
+    todayLabel: { fontSize: t.fontSize.sm, fontFamily: t.fonts.sansSemiBold },
+    todayLabelDisabled: { color: t.colors.mutedForeground },
+    todayLabelEnabled: { color: t.colors.primary },
+  }));
+
   const title = React.useMemo(() => {
     if (view === 'day') return formatDayTitle(cursorYmd);
     if (view === 'week') return formatWeekTitle(weekStartYmd(cursorYmd));
@@ -89,53 +148,33 @@ export function CalendarHeader({ view, cursorYmd, todayYmd, onCursorChange }: Ca
   const isToday = cursorYmd === todayYmd;
 
   return (
-    <View style={tw('border-border/50 bg-card border-b px-4 pt-3 pb-3')}>
-      <View style={tw('flex-row items-center gap-2')}>
-        {/* In RTL: visually, ChevronRight points "back" (older), ChevronLeft points "forward" (newer) */}
-        <Pressable
-          onPress={goPrev}
-          accessibilityLabel="قبلی"
-          style={tw('bg-muted/60 active:bg-muted h-9 w-9 items-center justify-center rounded-xl')}>
-          <ChevronRight size={18} color={saloora.plum.hex} strokeWidth={1.8} />
+    <View style={styles.container}>
+      <View style={styles.row}>
+        <Pressable onPress={goPrev} accessibilityLabel="قبلی" style={styles.navButton}>
+          <ChevronRight size={theme.sizes.iconSm + 2} color={theme.colors.foreground} strokeWidth={1.8} />
         </Pressable>
 
-        <View style={tw('flex-1 items-center')}>
-          <Text
-            style={[tw('text-foreground text-[15px]'), { fontFamily: FONTS.bold }]}
-            numberOfLines={1}>
+        <View style={styles.titleWrap}>
+          <Text style={styles.title} numberOfLines={1}>
             {title}
           </Text>
-          {subtitle ? (
-            <Text
-              style={[tw('text-muted-foreground mt-0.5 text-[11px]'), { fontFamily: FONTS.reg }]}>
-              {subtitle}
-            </Text>
-          ) : null}
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
 
-        <Pressable
-          onPress={goNext}
-          accessibilityLabel="بعدی"
-          style={tw('bg-muted/60 active:bg-muted h-9 w-9 items-center justify-center rounded-xl')}>
-          <ChevronLeft size={18} color={saloora.plum.hex} strokeWidth={1.8} />
+        <Pressable onPress={goNext} accessibilityLabel="بعدی" style={styles.navButton}>
+          <ChevronLeft size={theme.sizes.iconSm + 2} color={theme.colors.foreground} strokeWidth={1.8} />
         </Pressable>
       </View>
 
-      <View style={tw('mt-2 flex-row items-center justify-center')}>
+      <View style={styles.todayRow}>
         <Pressable
           onPress={() => onCursorChange(todayYmd)}
           disabled={isToday}
-          style={tw(
-            `rounded-full border px-3 py-1 ${
-              isToday
-                ? 'border-border/60 bg-muted/60'
-                : 'border-primary/40 bg-primary/10 active:bg-primary/15'
-            }`
-          )}>
+          style={[styles.todayChip, isToday ? styles.todayChipDisabled : styles.todayChipEnabled]}>
           <Text
             style={[
-              tw(`text-[11px] ${isToday ? 'text-muted-foreground' : 'text-primary'}`),
-              { fontFamily: FONTS.semi },
+              styles.todayLabel,
+              isToday ? styles.todayLabelDisabled : styles.todayLabelEnabled,
             ]}>
             امروز
           </Text>

@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import useSWR from 'swr'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   ArrowLeft,
   ArrowRight,
@@ -34,12 +36,15 @@ import {
 } from '@repo/ui/select'
 import { Skeleton } from '@repo/ui/skeleton'
 import { Spinner } from '@repo/ui/spinner'
+import { FormRootError } from '@repo/ui/form'
 import { cn } from '@repo/ui/utils'
 import { SERVICE_CATEGORIES, STAFF_COLORS, type Service } from '@repo/salon-core/types'
-import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { calendarColorOptions } from '@repo/brand-tokens/calendar-colors'
-import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
+import { displayPhone } from '@repo/salon-core/phone'
 import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
+import { businessSettingsSchema, type BusinessSettingsPayload } from '@repo/salon-core/forms/settings'
+import { serviceFormSchema, type ServiceFormPayload } from '@repo/salon-core/forms/service'
+import { staffCreateSchema, type StaffCreateFormInput } from '@repo/salon-core/forms/staff'
 
 type OnboardingStepKey =
   | 'profileConfirmed'
@@ -258,43 +263,49 @@ function BusinessHoursStep({
   settings?: BusinessSettings
   onSaved: () => void
 }) {
-  const [workingStart, setWorkingStart] = useState('09:00')
-  const [workingEnd, setWorkingEnd] = useState('19:00')
-  const [slotDurationMinutes, setSlotDurationMinutes] = useState(30)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const {
+    handleSubmit,
+    reset,
+    setError,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<BusinessSettingsPayload>({
+    resolver: zodResolver(businessSettingsSchema),
+    defaultValues: {
+      workingStart: '09:00',
+      workingEnd: '19:00',
+      slotDurationMinutes: 30,
+    },
+  })
+
+  const workingStart = watch('workingStart') ?? '09:00'
+  const workingEnd = watch('workingEnd') ?? '19:00'
+  const slotDurationMinutes = watch('slotDurationMinutes') ?? 30
 
   useEffect(() => {
     if (!settings) return
-    setWorkingStart(settings.workingStart)
-    setWorkingEnd(settings.workingEnd)
-    setSlotDurationMinutes(settings.slotDurationMinutes)
-  }, [settings])
+    reset(settings)
+  }, [reset, settings])
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setSaving(true)
-    setError('')
-
+  const onSubmit = handleSubmit(async (values) => {
     try {
       const response = await fetch('/api/settings/business', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ workingStart, workingEnd, slotDurationMinutes }),
+        body: JSON.stringify(values),
       })
       const data = await response.json()
       if (!response.ok) {
-        setError(data.error || 'ذخیره ساعات کاری انجام نشد')
+        setError('root', { message: data.error || 'ذخیره ساعات کاری انجام نشد' })
         return
       }
       onSaved()
     } catch {
-      setError('خطایی رخ داد. دوباره تلاش کنید.')
-    } finally {
-      setSaving(false)
+      setError('root', { message: 'خطایی رخ داد. دوباره تلاش کنید.' })
     }
-  }
+  })
 
   return (
     <Card className="border-border/50">
@@ -308,7 +319,7 @@ function BusinessHoursStep({
         </p>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={onSubmit} noValidate>
           <FieldGroup className="gap-4">
             <div className="grid grid-cols-2 gap-3">
               <Field>
@@ -316,18 +327,20 @@ function BusinessHoursStep({
                 <TimePicker
                   id="onboarding-working-start"
                   value={workingStart}
-                  onChange={setWorkingStart}
+                  onChange={(value) => setValue('workingStart', value, { shouldValidate: false })}
                   label="ساعت شروع"
                 />
+                {errors.workingStart && <FieldError>{errors.workingStart.message}</FieldError>}
               </Field>
               <Field>
                 <FieldLabel htmlFor="onboarding-working-end">پایان</FieldLabel>
                 <TimePicker
                   id="onboarding-working-end"
                   value={workingEnd}
-                  onChange={setWorkingEnd}
+                  onChange={(value) => setValue('workingEnd', value, { shouldValidate: false })}
                   label="ساعت پایان"
                 />
+                {errors.workingEnd && <FieldError>{errors.workingEnd.message}</FieldError>}
               </Field>
             </div>
             <Field>
@@ -338,16 +351,19 @@ function BusinessHoursStep({
                 inputMode="numeric"
                 value={toPersianDigits(slotDurationMinutes)}
                 onChange={(event) =>
-                  setSlotDurationMinutes(Math.max(5, parseLocalizedInt(event.target.value, slotDurationMinutes)))
+                  setValue('slotDurationMinutes', Math.max(5, parseLocalizedInt(event.target.value, slotDurationMinutes)), {
+                    shouldValidate: false,
+                  })
                 }
                 dir="ltr"
                 className="h-11 text-left tabular-nums"
               />
               <FieldDescription>عدد به دقیقه است؛ مقدار رایج برای سالن‌ها ۳۰ دقیقه است.</FieldDescription>
+              {errors.slotDurationMinutes && <FieldError>{errors.slotDurationMinutes.message}</FieldError>}
             </Field>
-            {error && <FieldError>{error}</FieldError>}
-            <Button className="w-full" disabled={saving}>
-              {saving && <Spinner className="ml-2" />}
+            <FormRootError message={errors.root?.message} />
+            <Button className="w-full" disabled={isSubmitting}>
+              {isSubmitting && <Spinner className="ml-2" />}
               ذخیره ساعات کاری
             </Button>
           </FieldGroup>
@@ -364,48 +380,60 @@ function ServiceStep({
   isDone: boolean
   onCreated: () => void
 }) {
-  const [name, setName] = useState('')
-  const [category, setCategory] = useState<Service['category']>('hair')
-  const [duration, setDuration] = useState(45)
-  const [price, setPrice] = useState(0)
-  const [color, setColor] = useState<string>(STAFF_COLORS[0])
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<ServiceFormPayload>({
+    resolver: zodResolver(serviceFormSchema),
+    defaultValues: {
+      name: '',
+      category: 'hair',
+      duration: 45,
+      price: 0,
+      color: STAFF_COLORS[0],
+      active: true,
+    },
+  })
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setSaving(true)
-    setError('')
+  const name = watch('name') ?? ''
+  const category = (watch('category') ?? 'hair') as Service['category']
+  const duration = watch('duration') ?? 45
+  const price = watch('price') ?? 0
+  const color = watch('color') ?? STAFF_COLORS[0]
 
+  const onSubmit = handleSubmit(async (values) => {
     try {
       const response = await fetch('/api/services', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          name,
-          category,
-          duration,
-          price,
-          color: normalizeCalendarColorId(color),
-          active: true,
-        }),
+        body: JSON.stringify(values),
       })
       const data = await response.json()
       if (!response.ok) {
-        setError(data.error || 'افزودن خدمت انجام نشد')
+        setError('root', { message: data.error || 'افزودن خدمت انجام نشد' })
         return
       }
-      setName('')
-      setDuration(45)
-      setPrice(0)
+      reset({
+        name: '',
+        category: 'hair',
+        duration: 45,
+        price: 0,
+        color: STAFF_COLORS[0],
+        active: true,
+      })
       onCreated()
     } catch {
-      setError('خطایی رخ داد. دوباره تلاش کنید.')
-    } finally {
-      setSaving(false)
+      setError('root', { message: 'خطایی رخ داد. دوباره تلاش کنید.' })
     }
-  }
+  })
+
+  const nameField = register('name')
 
   return (
     <Card className="border-border/50">
@@ -422,22 +450,21 @@ function ServiceStep({
         </p>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={onSubmit} noValidate>
           <FieldGroup className="gap-4">
             <Field>
               <FieldLabel htmlFor="onboarding-service-name">نام خدمت</FieldLabel>
               <Input
                 id="onboarding-service-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
                 placeholder="مثلاً کوتاهی مو"
                 className="h-11 text-right"
-                required
+                {...nameField}
               />
+              {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
             <Field>
               <FieldLabel>دسته خدمت</FieldLabel>
-              <Select value={category} onValueChange={(value) => setCategory(value as Service['category'])}>
+              <Select value={category} onValueChange={(value) => setValue('category', value as Service['category'])}>
                 <SelectTrigger className="h-11 w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -457,11 +484,12 @@ function ServiceStep({
                   id="onboarding-service-duration"
                   type="text"
                   inputMode="numeric"
-                  value={toPersianDigits(duration)}
-                  onChange={(event) => setDuration(Math.max(5, parseLocalizedInt(event.target.value, duration)))}
+                value={toPersianDigits(duration)}
+                  onChange={(event) => setValue('duration', Math.max(5, parseLocalizedInt(event.target.value, duration)))}
                   dir="rtl"
                   className="h-11 text-right tabular-nums"
                 />
+                {errors.duration && <FieldError>{errors.duration.message}</FieldError>}
               </Field>
               <Field>
                 <FieldLabel htmlFor="onboarding-service-price">قیمت</FieldLabel>
@@ -470,10 +498,11 @@ function ServiceStep({
                   type="text"
                   inputMode="numeric"
                   value={toPersianDigits(price)}
-                  onChange={(event) => setPrice(Math.max(0, parseLocalizedInt(event.target.value, price)))}
+                  onChange={(event) => setValue('price', Math.max(0, parseLocalizedInt(event.target.value, price)))}
                   dir="rtl"
                   className="h-11 text-right tabular-nums"
                 />
+                {errors.price && <FieldError>{errors.price.message}</FieldError>}
               </Field>
             </div>
             <Field>
@@ -484,7 +513,7 @@ function ServiceStep({
                     key={item.id}
                     type="button"
                     aria-label={item.labelFa}
-                    onClick={() => setColor(item.id)}
+                    onClick={() => setValue('color', item.id)}
                     className={cn(
                       'flex h-9 items-center gap-2 rounded-xl border-2 bg-card px-2 text-xs font-medium',
                       color === item.id ? 'border-foreground' : 'border-transparent',
@@ -500,9 +529,9 @@ function ServiceStep({
                 ))}
               </div>
             </Field>
-            {error && <FieldError>{error}</FieldError>}
-            <Button className="w-full" disabled={saving || !name.trim()}>
-              {saving && <Spinner className="ml-2" />}
+            <FormRootError message={errors.root?.message} />
+            <Button className="w-full" disabled={isSubmitting || !name.trim()}>
+              {isSubmitting && <Spinner className="ml-2" />}
               {isDone ? 'افزودن خدمت دیگر' : 'ثبت اولین خدمت'}
             </Button>
           </FieldGroup>
@@ -519,44 +548,45 @@ function StaffStep({
   isDone: boolean
   onCreated: () => void
 }) {
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [password, setPassword] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<StaffCreateFormInput>({
+    resolver: zodResolver(staffCreateSchema),
+    defaultValues: { name: '', phone: '', password: '', role: 'staff' },
+  })
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setSaving(true)
-    setError('')
+  const name = watch('name') ?? ''
+  const phone = watch('phone') ?? ''
+  const password = watch('password') ?? ''
 
+  const onSubmit = handleSubmit(async (values) => {
     try {
       const response = await fetch('/api/staff', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          name,
-          phone,
-          password,
-          role: 'staff',
-        }),
+        body: JSON.stringify(values),
       })
       const data = await response.json()
       if (!response.ok) {
-        setError(data.error || 'افزودن پرسنل انجام نشد')
+        setError('root', { message: data.error || 'افزودن پرسنل انجام نشد' })
         return
       }
-      setName('')
-      setPhone('')
-      setPassword('')
+      reset({ name: '', phone: '', password: '', role: 'staff' })
       onCreated()
     } catch {
-      setError('خطایی رخ داد. دوباره تلاش کنید.')
-    } finally {
-      setSaving(false)
+      setError('root', { message: 'خطایی رخ داد. دوباره تلاش کنید.' })
     }
-  }
+  })
+
+  const nameField = register('name')
+  const passwordField = register('password')
 
   return (
     <Card className="border-border/50">
@@ -573,18 +603,17 @@ function StaffStep({
         </p>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={onSubmit} noValidate>
           <FieldGroup className="gap-4">
             <Field>
               <FieldLabel htmlFor="onboarding-staff-name">نام و نام خانوادگی</FieldLabel>
               <Input
                 id="onboarding-staff-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
                 placeholder="مثلاً نرگس کاظمی"
                 className="h-11 text-right"
-                required
+                {...nameField}
               />
+              {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
             <Field>
               <FieldLabel htmlFor="onboarding-staff-phone">شماره موبایل</FieldLabel>
@@ -592,30 +621,29 @@ function StaffStep({
                 id="onboarding-staff-phone"
                 type="tel"
                 value={displayPhone(phone)}
-                onChange={(event) => setPhone(normalizePhone(event.target.value))}
+                onChange={(event) => setValue('phone', event.target.value)}
                 placeholder="۰۹۱۲۰۰۰۰۰۰۰"
                 inputMode="numeric"
                 dir="rtl"
                 className="h-11 text-right tabular-nums"
-                required
               />
+              {errors.phone && <FieldError>{errors.phone.message}</FieldError>}
             </Field>
             <Field>
               <FieldLabel htmlFor="onboarding-staff-password">رمز عبور پرسنل</FieldLabel>
               <Input
                 id="onboarding-staff-password"
                 type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
                 placeholder="حداقل یک رمز موقت"
                 className="h-11"
-                required
+                {...passwordField}
               />
               <FieldDescription>پرسنل با همین شماره و رمز وارد پنل خود می‌شود.</FieldDescription>
+              {errors.password && <FieldError>{errors.password.message}</FieldError>}
             </Field>
-            {error && <FieldError>{error}</FieldError>}
-            <Button className="w-full" disabled={saving || !name.trim() || !phone.trim() || !password}>
-              {saving && <Spinner className="ml-2" />}
+            <FormRootError message={errors.root?.message} />
+            <Button className="w-full" disabled={isSubmitting || !name.trim() || !phone.trim() || !password}>
+              {isSubmitting && <Spinner className="ml-2" />}
               {isDone ? 'افزودن پرسنل دیگر' : 'ثبت اولین پرسنل'}
             </Button>
           </FieldGroup>

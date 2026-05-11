@@ -3,6 +3,8 @@ import { getAllStaff, createUser } from '@repo/database/staff'
 import { STAFF_COLORS } from '@repo/salon-core/types'
 import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant'
+import { staffCreateSchema } from '@repo/salon-core/forms/staff'
+import { validationErrorResponse } from '../validation'
 
 export async function GET(request: Request) {
   try {
@@ -24,15 +26,9 @@ export async function POST(request: Request) {
     if (!tenant.ok) return tenant.response
     const { user } = tenant
 
-    const body = await request.json()
-    const { password, name, role, phone } = body
-
-    if (!phone || !password || !name) {
-      return NextResponse.json(
-        { error: 'شماره موبایل، رمز عبور و نام الزامی است' },
-        { status: 400 }
-      )
-    }
+    const parsed = staffCreateSchema.safeParse(await request.json())
+    if (!parsed.success) return validationErrorResponse(parsed.error)
+    const { password, name, role, phone } = parsed.data
 
     const existingStaff = await getAllStaff(user.salonId)
     const colorIndex = existingStaff.length % STAFF_COLORS.length

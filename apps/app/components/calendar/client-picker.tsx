@@ -2,12 +2,15 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { Check, ChevronDown, Plus, Search, UserPlus, X } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Input } from '@repo/ui/input'
 import { Button } from '@repo/ui/button'
 import { Spinner } from '@repo/ui/spinner'
 import { cn } from '@repo/ui/utils'
 import { Client } from '@repo/salon-core/types'
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
+import { clientFormSchema, type ClientFormInput } from '@repo/salon-core/forms/client'
 import { DataClientHttpError } from '@repo/data-client'
 import { useManagerDataClient } from '@/components/manager-data-client-provider'
 
@@ -29,12 +32,21 @@ export function ClientPicker({
   const dataClient = useManagerDataClient()
   const [mode, setMode] = useState<PickerMode>('closed')
   const [query, setQuery] = useState('')
-  const [newName, setNewName] = useState('')
-  const [newPhone, setNewPhone] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState('')
+  const {
+    handleSubmit,
+    reset,
+    setError,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<ClientFormInput>({
+    resolver: zodResolver(clientFormSchema),
+    defaultValues: { name: '', phone: '', notes: '', tags: [] },
+  })
   const searchRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const newName = watch('name') ?? ''
+  const newPhone = watch('phone') ?? ''
 
   const selectedClient = clients.find((c) => c.id === value)
 
@@ -79,7 +91,7 @@ export function ClientPicker({
 
   const openSearch = () => {
     setQuery('')
-    setSaveError('')
+    reset({ name: '', phone: '', notes: '', tags: [] })
     setMode('searching')
   }
 
@@ -95,45 +107,38 @@ export function ClientPicker({
   const startAdding = () => {
     const q = query.trim()
     const looksLikePhone = /^[\d۰-۹٠-٩\s+()-]{4,}$/.test(q)
-    setNewName(looksLikePhone ? '' : q)
-    setNewPhone(looksLikePhone ? normalizePhone(q) : '')
-    setSaveError('')
+    reset({
+      name: looksLikePhone ? '' : q,
+      phone: looksLikePhone ? normalizePhone(q) : '',
+      notes: '',
+      tags: [],
+    })
     setMode('adding')
   }
 
   const cancelAdding = () => {
     setMode('searching')
-    setSaveError('')
+    reset({ name: '', phone: '', notes: '', tags: [] })
   }
 
-  const handleSaveNew = async () => {
-    if (!newName.trim() || !newPhone.trim()) return
-    setSaving(true)
-    setSaveError('')
-
+  const handleSaveNew = handleSubmit(async (values) => {
     try {
       let created: Client
       if (dataClient) {
-        created = await dataClient.clients.create({
-          name: newName.trim(),
-          phone: newPhone.trim(),
-        })
+        created = await dataClient.clients.create(values)
         void dataClient.sync.processPending()
       } else {
         const res = await fetch('/api/clients', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({
-            name: newName.trim(),
-            phone: newPhone.trim(),
-          }),
+          body: JSON.stringify(values),
         })
 
         const data = await res.json()
 
         if (!res.ok) {
-          setSaveError(data.error || 'خطا در ثبت مشتری')
+          setError('root', { message: data.error || 'خطا در ثبت مشتری' })
           return
         }
 
@@ -147,16 +152,13 @@ export function ClientPicker({
       onChange(created.id)
       setMode('closed')
       setQuery('')
-      setNewName('')
-      setNewPhone('')
+      reset({ name: '', phone: '', notes: '', tags: [] })
     } catch (err) {
-      setSaveError(
-        err instanceof DataClientHttpError ? err.message : 'خطایی رخ داد'
-      )
-    } finally {
-      setSaving(false)
+      setError('root', {
+        message: err instanceof DataClientHttpError ? err.message : 'خطایی رخ داد',
+      })
     }
-  }
+  })
 
   if (mode === 'closed') {
     return (
@@ -276,14 +278,14 @@ export function ClientPicker({
 
           <Input
             value={newName}
-            onChange={(e) => setNewName(e.target.value)}
+            onChange={(e) => setValue('name', e.target.value)}
             placeholder="نام مشتری"
             className="h-10"
           />
 
           <Input
             value={displayPhone(newPhone)}
-            onChange={(e) => setNewPhone(normalizePhone(e.target.value))}
+            onChange={(e) => setValue('phone', e.target.value)}
             placeholder="شماره تماس (۰۹…)"
             type="tel"
             inputMode="numeric"
@@ -291,19 +293,19 @@ export function ClientPicker({
             className="h-10 text-left tabular-nums"
           />
 
-          {saveError && (
-            <p className="text-xs text-destructive">{saveError}</p>
-          )}
+          {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+          {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
+          {errors.root && <p className="text-xs text-destructive">{errors.root.message}</p>}
 
           <Button
             type="button"
             size="sm"
             className="w-full touch-manipulation"
-            disabled={saving || !newName.trim() || !newPhone.trim()}
-            onClick={handleSaveNew}
+            disabled={isSubmitting || !newName.trim() || !newPhone.trim()}
+            onClick={() => void handleSaveNew()}
           >
-            {saving ? <Spinner className="ml-1.5 h-3.5 w-3.5" /> : <Plus className="ml-1.5 h-3.5 w-3.5" />}
-            {saving ? 'در حال ذخیره…' : 'ذخیره و انتخاب'}
+            {isSubmitting ? <Spinner className="ml-1.5 h-3.5 w-3.5" /> : <Plus className="ml-1.5 h-3.5 w-3.5" />}
+            {isSubmitting ? 'در حال ذخیره…' : 'ذخیره و انتخاب'}
           </Button>
         </div>
       )}

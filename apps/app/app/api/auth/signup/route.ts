@@ -6,17 +6,14 @@ import {
   SignupConflictError,
   SignupValidationError,
 } from '@/lib/server/salons/signup'
+import { signupSchema } from '@repo/salon-core/forms/auth'
+import { validationErrorResponse } from '../../validation'
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const result = await createSalonWorkspace({
-      salonName: String(body.salonName ?? ''),
-      slug: String(body.slug ?? ''),
-      managerName: String(body.managerName ?? ''),
-      managerPhone: String(body.managerPhone ?? ''),
-      password: String(body.password ?? ''),
-    })
+    const parsed = signupSchema.safeParse(await request.json())
+    if (!parsed.success) return validationErrorResponse(parsed.error)
+    const result = await createSalonWorkspace(parsed.data)
 
     const token = await createSession(result.user.id)
     const cookieStore = await cookies()

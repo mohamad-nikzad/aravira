@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { completePlaceholderAppointmentClient } from '@repo/database/clients'
 import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { completePlaceholderClientSchema } from '@repo/salon-core/forms/appointment'
+import { validationErrorResponse } from '../../../validation'
 
 export async function POST(
   request: Request,
@@ -12,24 +14,17 @@ export async function POST(
     const { user } = tenant
 
     const { id } = await params
-    const body = await request.json()
-    const { name, phone, notes, reassignToExistingClientId } = body
-
-    if (typeof name !== 'string' || typeof phone !== 'string' || !name.trim() || !phone.trim()) {
-      return NextResponse.json(
-        { error: 'نام و شماره تماس برای تکمیل اطلاعات مشتری الزامی است' },
-        { status: 400 }
-      )
-    }
+    const parsed = completePlaceholderClientSchema.safeParse(await request.json())
+    if (!parsed.success) return validationErrorResponse(parsed.error)
+    const { name, phone, notes, reassignToExistingClientId } = parsed.data
 
     const result = await completePlaceholderAppointmentClient({
       salonId: user.salonId,
       appointmentId: id,
-      name: name.trim(),
-      phone: phone.trim(),
-      notes: typeof notes === 'string' ? notes : undefined,
-      reassignToExistingClientId:
-        typeof reassignToExistingClientId === 'string' ? reassignToExistingClientId : undefined,
+      name,
+      phone,
+      notes,
+      reassignToExistingClientId,
     })
 
     if (!result.ok) {

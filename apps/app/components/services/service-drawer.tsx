@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Drawer,
   DrawerContent,
@@ -13,6 +15,7 @@ import {
 import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
 import { Field, FieldLabel, FieldGroup, FieldError } from '@repo/ui/field'
+import { FormRootError } from '@repo/ui/form'
 import {
   Select,
   SelectContent,
@@ -21,10 +24,21 @@ import {
   SelectValue,
 } from '@repo/ui/select'
 import { Spinner } from '@repo/ui/spinner'
-import { Service, SERVICE_CATEGORIES, STAFF_COLORS } from '@repo/salon-core/types'
+import {
+  Service,
+  SERVICE_CATEGORIES,
+  STAFF_COLORS,
+} from '@repo/salon-core/types'
 import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { calendarColorOptions } from '@repo/brand-tokens/calendar-colors'
-import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
+import {
+  parseLocalizedInt,
+  toPersianDigits,
+} from '@repo/salon-core/persian-digits'
+import {
+  serviceFormSchema,
+  type ServiceFormInput,
+} from '@repo/salon-core/forms/service'
 import { DataClientHttpError } from '@repo/data-client'
 import { useManagerDataClient } from '@/components/manager-data-client-provider'
 
@@ -35,6 +49,28 @@ interface ServiceDrawerProps {
   onSuccess: () => void
 }
 
+function emptyValues(): ServiceFormInput {
+  return {
+    name: '',
+    category: 'hair',
+    duration: 45,
+    price: 0,
+    color: STAFF_COLORS[0],
+    active: true,
+  }
+}
+
+function serviceToFormValues(service: Service): ServiceFormInput {
+  return {
+    name: service.name,
+    category: service.category,
+    duration: service.duration,
+    price: service.price,
+    color: normalizeCalendarColorId(service.color),
+    active: service.active,
+  }
+}
+
 export function ServiceDrawer({
   open,
   onOpenChange,
@@ -42,65 +78,45 @@ export function ServiceDrawer({
   onSuccess,
 }: ServiceDrawerProps) {
   const dc = useManagerDataClient()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const [name, setName] = useState('')
-  const [category, setCategory] = useState<keyof typeof SERVICE_CATEGORIES>('hair')
-  const [duration, setDuration] = useState(45)
-  const [price, setPrice] = useState(0)
-  const [color, setColor] = useState<string>(STAFF_COLORS[0])
-  const [active, setActive] = useState(true)
-
   const isEditing = !!service
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    setError,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<ServiceFormInput>({
+    resolver: zodResolver(serviceFormSchema),
+    defaultValues: emptyValues(),
+    mode: 'onSubmit',
+  })
 
   useEffect(() => {
     if (!open) return
-    if (service) {
-      setName(service.name)
-      setCategory(service.category)
-      setDuration(service.duration)
-      setPrice(service.price)
-      setColor(normalizeCalendarColorId(service.color))
-      setActive(service.active)
-    } else {
-      setName('')
-      setCategory('hair')
-      setDuration(45)
-      setPrice(0)
-      setColor(STAFF_COLORS[0])
-      setActive(true)
-    }
-    setError('')
-  }, [open, service])
+    reset(service ? serviceToFormValues(service) : emptyValues())
+  }, [open, reset, service])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+  const nameValue = watch('name')
+
+  const onSubmit = handleSubmit(async (values) => {
     if (!dc) {
-      setError('اتصال داده برقرار نیست')
+      setError('root', { message: 'اتصال داده برقرار نیست' })
       return
     }
-    setLoading(true)
 
     try {
+      const payload = serviceFormSchema.parse(values)
       if (isEditing) {
         await dc.services.update(service.id, {
-          name,
-          category,
-          duration,
-          price,
-          color: normalizeCalendarColorId(color),
-          active,
+          ...payload,
+          color: normalizeCalendarColorId(payload.color),
         })
       } else {
         await dc.services.create({
-          name,
-          category,
-          duration,
-          price,
-          color: normalizeCalendarColorId(color),
-          active,
+          ...payload,
+          color: normalizeCalendarColorId(payload.color),
         })
       }
       onSuccess()
@@ -111,11 +127,9 @@ export function ServiceDrawer({
           : err instanceof Error
             ? err.message
             : 'خطایی رخ داد'
-      setError(msg)
-    } finally {
-      setLoading(false)
+      setError('root', { message: msg })
     }
-  }
+  })
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -125,109 +139,184 @@ export function ServiceDrawer({
           <DrawerDescription>نام، مدت و قیمت را مشخص کنید</DrawerDescription>
         </DrawerHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-auto px-4">
+        <form
+          onSubmit={onSubmit}
+          className="flex flex-col gap-4 overflow-auto px-4"
+        >
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="svc-name">نام خدمت</FieldLabel>
-              <Input
-                id="svc-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
+              <Input id="svc-name" {...register('name')} />
+              {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
             <Field>
               <FieldLabel>دسته</FieldLabel>
-              <Select value={category} onValueChange={(v) => setCategory(v as typeof category)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(SERVICE_CATEGORIES) as (keyof typeof SERVICE_CATEGORIES)[]).map((k) => (
-                    <SelectItem key={k} value={k}>
-                      {SERVICE_CATEGORIES[k].label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="category"
+                render={({ field }) => (
+                  <Select
+                    value={field.value ?? 'hair'}
+                    onValueChange={(v) =>
+                      field.onChange(v as ServiceFormInput['category'])
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(
+                        Object.keys(
+                          SERVICE_CATEGORIES,
+                        ) as (keyof typeof SERVICE_CATEGORIES)[]
+                      ).map((k) => (
+                        <SelectItem key={k} value={k}>
+                          {SERVICE_CATEGORIES[k].label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.category && (
+                <FieldError>{errors.category.message}</FieldError>
+              )}
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field>
                 <FieldLabel htmlFor="svc-dur">مدت (دقیقه)</FieldLabel>
-                <Input
-                  id="svc-dur"
-                  type="text"
-                  inputMode="numeric"
-                  value={toPersianDigits(duration)}
-                  onChange={(e) => setDuration(Math.max(5, parseLocalizedInt(e.target.value, duration)))}
-                  dir="rtl"
-                  className="text-right tabular-nums"
+                <Controller
+                  control={control}
+                  name="duration"
+                  render={({ field }) => (
+                    <Input
+                      id="svc-dur"
+                      type="text"
+                      inputMode="numeric"
+                      value={toPersianDigits(field.value)}
+                      onChange={(e) =>
+                        field.onChange(
+                          Math.max(
+                            5,
+                            parseLocalizedInt(
+                              e.target.value,
+                              Number(field.value) || 45,
+                            ),
+                          ),
+                        )
+                      }
+                      onBlur={field.onBlur}
+                      dir="rtl"
+                      className="text-right tabular-nums"
+                    />
+                  )}
                 />
+                {errors.duration && (
+                  <FieldError>{errors.duration.message}</FieldError>
+                )}
               </Field>
               <Field>
                 <FieldLabel htmlFor="svc-price">قیمت (تومان)</FieldLabel>
-                <Input
-                  id="svc-price"
-                  type="text"
-                  inputMode="numeric"
-                  value={toPersianDigits(price)}
-                  onChange={(e) => setPrice(Math.max(0, parseLocalizedInt(e.target.value, price)))}
-                  dir="rtl"
-                  className="text-right tabular-nums"
+                <Controller
+                  control={control}
+                  name="price"
+                  render={({ field }) => (
+                    <Input
+                      id="svc-price"
+                      type="text"
+                      inputMode="numeric"
+                      value={toPersianDigits(field.value)}
+                      onChange={(e) =>
+                        field.onChange(
+                          Math.max(
+                            0,
+                            parseLocalizedInt(
+                              e.target.value,
+                              Number(field.value) || 0,
+                            ),
+                          ),
+                        )
+                      }
+                      onBlur={field.onBlur}
+                      dir="rtl"
+                      className="text-right tabular-nums"
+                    />
+                  )}
                 />
+                {errors.price && (
+                  <FieldError>{errors.price.message}</FieldError>
+                )}
               </Field>
             </div>
             <Field>
               <FieldLabel>رنگ در تقویم</FieldLabel>
-              <Select value={color} onValueChange={setColor}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {calendarColorOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      <span className="flex items-center gap-2">
-                        <span
-                          aria-hidden="true"
-                          className="size-3 rounded-full border border-border"
-                          style={{ backgroundColor: `var(--calendar-${option.id})` }}
-                        />
-                        <span>{option.labelFa}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="color"
+                render={({ field }) => (
+                  <Select
+                    value={normalizeCalendarColorId(field.value)}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {calendarColorOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          <span className="flex items-center gap-2">
+                            <span
+                              aria-hidden="true"
+                              className="size-3 rounded-full border border-border"
+                              style={{
+                                backgroundColor: `var(--calendar-${option.id})`,
+                              }}
+                            />
+                            <span>{option.labelFa}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.color && <FieldError>{errors.color.message}</FieldError>}
             </Field>
             {isEditing && (
               <Field>
                 <FieldLabel>وضعیت</FieldLabel>
-                <Select
-                  value={active ? 'on' : 'off'}
-                  onValueChange={(v) => setActive(v === 'on')}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="on">فعال</SelectItem>
-                    <SelectItem value="off">غیرفعال</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={control}
+                  name="active"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value ? 'on' : 'off'}
+                      onValueChange={(v) => field.onChange(v === 'on')}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="on">فعال</SelectItem>
+                        <SelectItem value="off">غیرفعال</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </Field>
             )}
-            {error && <FieldError>{error}</FieldError>}
+            <FormRootError message={errors.root?.message} />
           </FieldGroup>
         </form>
 
         <DrawerFooter>
           <Button
-            onClick={handleSubmit}
-            disabled={loading || !name}
+            onClick={onSubmit}
+            disabled={isSubmitting || !nameValue}
             className="touch-manipulation"
           >
-            {loading && <Spinner className="ml-2" />}
-            {loading ? '…' : isEditing ? 'ذخیره' : 'افزودن'}
+            {isSubmitting && <Spinner className="ml-2" />}
+            {isSubmitting ? '…' : isEditing ? 'ذخیره' : 'افزودن'}
           </Button>
           <DrawerClose asChild>
             <Button variant="outline">انصراف</Button>

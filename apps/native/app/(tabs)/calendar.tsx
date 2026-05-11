@@ -15,7 +15,6 @@ import type {
   Service,
   User,
 } from '@repo/salon-core/types';
-import { saloora, semanticLight } from '@repo/brand-tokens/colors';
 import { Skeleton } from '../../components/ui/skeleton';
 import { useAuth } from '../../components/auth-provider';
 import { appointmentsApi, clientsApi, servicesApi, staffApi } from '../../lib/api';
@@ -29,10 +28,12 @@ import { MonthView } from '../../components/calendar/month-view';
 import { AgendaView } from '../../components/calendar/agenda-view';
 import { AppointmentSheet } from '../../components/calendar/appointment-sheet';
 import { AppointmentCreateModal } from '../../components/calendar/appointment-create-modal';
-import { FONTS, defaultBusinessHours, weekStartYmd } from '../../components/calendar/helpers';
+import { defaultBusinessHours, weekStartYmd } from '../../components/calendar/helpers';
 import type { CalendarView } from '../../components/calendar/types';
+import { useTheme, useThemeStyles, withAlpha } from '../../theme';
 
-import { tw } from '../../lib/utils';
+const FAB_SIZE = 56;
+
 function computeRange(view: CalendarView, cursorYmd: string): { start: string; end: string } {
   if (view === 'day' || view === 'week') {
     const start = weekStartYmd(cursorYmd);
@@ -49,6 +50,7 @@ function computeRange(view: CalendarView, cursorYmd: string): { start: string; e
 
 export default function CalendarScreen() {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const todayYmd = React.useMemo(() => salonTodayYmd(), []);
   const [view, setView] = React.useState<CalendarView>('day');
   const [cursorYmd, setCursorYmd] = React.useState<string>(todayYmd);
@@ -62,6 +64,45 @@ export default function CalendarScreen() {
   } | null>(null);
 
   const isManager = user?.role === 'manager';
+
+  const styles = useThemeStyles((t) => ({
+    safe: { backgroundColor: t.colors.background, flex: 1 },
+    viewSwitcherBar: {
+      paddingHorizontal: t.spacing.xl,
+      paddingTop: t.spacing.md,
+      backgroundColor: t.colors.card,
+    },
+    viewSwitcherBarWithFilter: { paddingBottom: t.spacing.md },
+    viewSwitcherBarStandalone: {
+      paddingBottom: t.spacing.lg,
+      borderBottomWidth: t.sizes.hairline,
+      borderBottomColor: withAlpha(t.colors.border, 0.4),
+    },
+    staffBar: {
+      backgroundColor: t.colors.card,
+      paddingVertical: t.spacing.sm,
+      borderBottomWidth: t.sizes.hairline,
+      borderBottomColor: withAlpha(t.colors.border, 0.4),
+    },
+    body: { flex: 1, backgroundColor: t.colors.background },
+    fab: {
+      position: 'absolute' as const,
+      bottom: t.spacing.xl,
+      left: t.spacing.xl,
+      width: FAB_SIZE,
+      height: FAB_SIZE,
+      borderRadius: t.radius.full,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      backgroundColor: t.colors.primary,
+      elevation: 8,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      zIndex: 10,
+    },
+  }));
 
   const range = React.useMemo(() => computeRange(view, cursorYmd), [view, cursorYmd]);
 
@@ -120,6 +161,8 @@ export default function CalendarScreen() {
 
   if (!user) return null;
 
+  const showStaffBar = isManager && staff.length > 0;
+
   const sharedProps = {
     cursorYmd,
     appointments,
@@ -134,9 +177,7 @@ export default function CalendarScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[tw('bg-background flex-1'), { backgroundColor: semanticLight.background.hex }]}
-      edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <CalendarHeader
         view={view}
         cursorYmd={cursorYmd}
@@ -145,30 +186,20 @@ export default function CalendarScreen() {
       />
 
       <View
-        style={{
-          paddingHorizontal: 16,
-          paddingTop: 10,
-          paddingBottom: isManager && staff.length > 0 ? 8 : 12,
-          backgroundColor: '#FFFFFF',
-          borderBottomWidth: isManager && staff.length > 0 ? 0 : 1,
-          borderBottomColor: '#E5D9DB66',
-        }}>
+        style={[
+          styles.viewSwitcherBar,
+          showStaffBar ? styles.viewSwitcherBarWithFilter : styles.viewSwitcherBarStandalone,
+        ]}>
         <ViewSwitcher value={view} onChange={setView} />
       </View>
 
-      {isManager && staff.length > 0 ? (
-        <View
-          style={{
-            backgroundColor: '#FFFFFF',
-            paddingVertical: 6,
-            borderBottomWidth: 1,
-            borderBottomColor: '#E5D9DB66',
-          }}>
+      {showStaffBar ? (
+        <View style={styles.staffBar}>
           <StaffFilter staff={staff} selected={staffFilter} onSelect={setStaffFilter} />
         </View>
       ) : null}
 
-      <View style={{ flex: 1, backgroundColor: saloora.mist.hex }}>
+      <View style={styles.body}>
         {apptsResource.error && !apptsResource.data ? (
           <ErrorState
             message={apptsErrorMessage(apptsResource.error)}
@@ -193,25 +224,11 @@ export default function CalendarScreen() {
               setCreateOpen(true);
             }}
             accessibilityLabel="نوبت جدید"
-            style={({ pressed }) => ({
-              position: 'absolute',
-              bottom: 16,
-              left: 16,
-              width: 56,
-              height: 56,
-              borderRadius: 28,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: saloora.plum.hex,
-              opacity: pressed ? 0.9 : 1,
-              elevation: 8,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.2,
-              shadowRadius: 8,
-              zIndex: 10,
-            })}>
-            <Plus size={26} color="#FFFFFF" strokeWidth={2.2} />
+            style={({ pressed }) => [
+              styles.fab,
+              pressed ? { opacity: theme.states.pressed.opacity } : null,
+            ]}>
+            <Plus size={theme.sizes.iconLg + 2} color={theme.colors.primaryForeground} strokeWidth={2.2} />
           </Pressable>
         ) : null}
       </View>
@@ -255,13 +272,21 @@ function apptsErrorMessage(error: unknown): string {
 }
 
 function LoadingState({ view }: { view: CalendarView }) {
+  const styles = useThemeStyles((t) => ({
+    monthWrap: { padding: t.spacing.xl, gap: t.spacing.md },
+    monthRow: { flexDirection: 'row' as const, gap: t.spacing.sm },
+    monthCell: { flex: 1 },
+    agendaWrap: { padding: t.spacing.xl, gap: t.spacing.lg },
+    agendaGroup: { gap: t.spacing.md },
+    listWrap: { padding: t.spacing.xl, gap: t.spacing.md },
+  }));
   if (view === 'month') {
     return (
-      <View style={{ padding: 16, gap: 8 }}>
+      <View style={styles.monthWrap}>
         {Array.from({ length: 6 }, (_, i) => (
-          <View key={i} style={{ flexDirection: 'row', gap: 6 }}>
+          <View key={i} style={styles.monthRow}>
             {Array.from({ length: 7 }, (_, j) => (
-              <Skeleton key={j} height={64} radius={8} style={{ flex: 1 }} />
+              <Skeleton key={j} height={64} radius={8} style={styles.monthCell} />
             ))}
           </View>
         ))}
@@ -270,9 +295,9 @@ function LoadingState({ view }: { view: CalendarView }) {
   }
   if (view === 'agenda') {
     return (
-      <View style={{ padding: 16, gap: 12 }}>
+      <View style={styles.agendaWrap}>
         {Array.from({ length: 4 }, (_, i) => (
-          <View key={i} style={{ gap: 8 }}>
+          <View key={i} style={styles.agendaGroup}>
             <Skeleton height={24} width="66%" radius={8} />
             <Skeleton height={64} width="100%" radius={16} />
             <Skeleton height={64} width="100%" radius={16} />
@@ -282,7 +307,7 @@ function LoadingState({ view }: { view: CalendarView }) {
     );
   }
   return (
-    <View style={{ padding: 16, gap: 10 }}>
+    <View style={styles.listWrap}>
       {Array.from({ length: 6 }, (_, i) => (
         <Skeleton key={i} height={56} width="100%" radius={16} />
       ))}
@@ -291,59 +316,69 @@ function LoadingState({ view }: { view: CalendarView }) {
 }
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const { theme } = useTheme();
+  const styles = useThemeStyles((t) => ({
+    wrap: {
+      flex: 1,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      padding: t.spacing['3xl'],
+    },
+    iconWrap: {
+      width: FAB_SIZE,
+      height: FAB_SIZE,
+      borderRadius: t.radius.full,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      backgroundColor: withAlpha(t.colors.destructive, 0.1),
+      marginBottom: t.spacing.lg,
+    },
+    message: {
+      fontFamily: t.fonts.sansSemiBold,
+      fontSize: t.fontSize.md,
+      color: t.colors.foreground,
+      marginBottom: t.spacing.sm,
+      textAlign: 'center' as const,
+    },
+    retry: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.sm,
+      marginTop: t.spacing.lg,
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.md,
+      borderRadius: t.radius.full,
+      borderWidth: t.sizes.hairline,
+      borderColor: withAlpha(t.colors.destructive, 0.4),
+    },
+    retryText: {
+      fontFamily: t.fonts.sansSemiBold,
+      fontSize: t.fontSize.base,
+      color: t.colors.destructive,
+    },
+  }));
   return (
-    <View
-      style={{
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-      }}>
-      <View
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: saloora.rose.hex + '1A',
-          marginBottom: 12,
-        }}>
-        <AlertCircle size={24} color={saloora.rose.hex} strokeWidth={1.8} />
+    <View style={styles.wrap}>
+      <View style={styles.iconWrap}>
+        <AlertCircle
+          size={theme.sizes.iconLg}
+          color={theme.colors.destructive}
+          strokeWidth={1.8}
+        />
       </View>
-      <Text
-        style={{
-          fontFamily: FONTS.semi,
-          fontSize: 14,
-          color: saloora.plum.hex,
-          marginBottom: 6,
-          textAlign: 'center',
-        }}>
-        {message}
-      </Text>
+      <Text style={styles.message}>{message}</Text>
       <Pressable
         onPress={onRetry}
-        style={({ pressed }) => ({
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 6,
-          marginTop: 12,
-          paddingHorizontal: 14,
-          paddingVertical: 8,
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: saloora.rose.hex + '55',
-          opacity: pressed ? 0.75 : 1,
-        })}>
-        <RefreshCw size={14} color={saloora.rose.hex} strokeWidth={1.8} />
-        <Text
-          style={{
-            fontFamily: FONTS.semi,
-            fontSize: 12,
-            color: saloora.rose.hex,
-          }}>
-          تلاش دوباره
-        </Text>
+        style={({ pressed }) => [
+          styles.retry,
+          pressed ? { opacity: theme.states.pressed.opacity } : null,
+        ]}>
+        <RefreshCw
+          size={theme.sizes.iconSm - 2}
+          color={theme.colors.destructive}
+          strokeWidth={1.8}
+        />
+        <Text style={styles.retryText}>تلاش دوباره</Text>
       </Pressable>
     </View>
   );

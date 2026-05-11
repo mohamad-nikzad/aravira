@@ -155,6 +155,26 @@ function FormMessage({ className, ...props }: React.ComponentProps<'p'>) {
   )
 }
 
+function FormRootError({
+  message,
+  className,
+  ...props
+}: React.ComponentProps<'p'> & { message?: string }) {
+  if (!message) {
+    return null
+  }
+
+  return (
+    <p
+      data-slot="form-root-error"
+      className={cn('text-destructive text-sm', className)}
+      {...props}
+    >
+      {message}
+    </p>
+  )
+}
+
 export {
   useFormField,
   Form,
@@ -163,5 +183,6 @@ export {
   FormControl,
   FormDescription,
   FormMessage,
+  FormRootError,
   FormField,
 }

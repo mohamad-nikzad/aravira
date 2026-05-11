@@ -1,4 +1,5 @@
 import type { AppointmentWithDetails } from '@repo/salon-core/types'
+import type { AppointmentCreatePayload } from '@repo/salon-core/forms/appointment'
 import type { ApiClient } from './client'
 import { endpoints } from './endpoints'
 
@@ -6,17 +7,7 @@ export type AppointmentsRangeResponse = {
   appointments: AppointmentWithDetails[]
 }
 
-export type CreateAppointmentInput = {
-  clientId?: string
-  placeholderClient?: { name: string; notes?: string }
-  staffId: string
-  serviceId: string
-  date: string
-  startTime: string
-  endTime: string
-  durationMinutes: number
-  notes?: string
-}
+export type CreateAppointmentInput = AppointmentCreatePayload
 
 export type CreateAppointmentResponse = {
   appointment: AppointmentWithDetails

@@ -1,10 +1,9 @@
 import * as React from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { Check, ChevronDown } from 'lucide-react-native';
-import { saloora } from '@repo/brand-tokens/colors';
-
-import { tw } from '../../lib/utils';
+import { useTheme, useThemeStyles, withAlpha } from '../../theme';
 import { AppText } from './app-text';
+
 export type SelectOption = {
   value: string;
   label: string;
@@ -25,7 +24,6 @@ export type SelectProps = {
   options?: SelectOption[];
   groups?: SelectGroup[];
   disabled?: boolean;
-  className?: string;
 };
 
 export function Select({
@@ -36,9 +34,66 @@ export function Select({
   options,
   groups,
   disabled,
-  className,
 }: SelectProps) {
   const [open, setOpen] = React.useState(false);
+  const { theme } = useTheme();
+  const styles = useThemeStyles((t) => ({
+    trigger: {
+      height: t.sizes.controlMd,
+      width: '100%' as const,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      borderRadius: t.radius.sm,
+      borderWidth: t.sizes.hairline,
+      borderColor: t.colors.input,
+      backgroundColor: 'transparent',
+      paddingHorizontal: t.spacing.lg,
+    },
+    triggerDisabled: { opacity: t.states.disabled.opacity },
+    triggerText: {
+      fontSize: t.fontSize.base,
+      flex: 1,
+      writingDirection: 'rtl' as const,
+    },
+    triggerTextSelected: { color: t.colors.foreground },
+    triggerTextPlaceholder: { color: t.colors.mutedForeground },
+    backdrop: {
+      flex: 1,
+      justifyContent: 'flex-end' as const,
+      backgroundColor: withAlpha('#000000', 0.4),
+    },
+    sheet: {
+      borderTopLeftRadius: t.radius.xl,
+      borderTopRightRadius: t.radius.xl,
+      backgroundColor: t.colors.card,
+      paddingBottom: t.spacing['3xl'],
+      paddingTop: t.spacing.xl,
+      maxHeight: '80%' as const,
+    },
+    titleWrap: {
+      paddingHorizontal: t.spacing.xl,
+      paddingBottom: t.spacing.lg,
+    },
+    title: {
+      fontSize: t.fontSize.lg,
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sansBold,
+    },
+    list: { maxHeight: 480 },
+    listInner: {
+      paddingHorizontal: t.spacing.md,
+      paddingBottom: t.spacing.md,
+    },
+    groupLabel: {
+      fontSize: t.fontSize.sm,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sansMedium,
+      paddingHorizontal: t.spacing.lg,
+      paddingTop: t.spacing.lg,
+      paddingBottom: t.spacing.xs,
+    },
+  }));
 
   const allOptions = React.useMemo(() => {
     if (groups) return groups.flatMap((g) => g.options);
@@ -53,55 +108,33 @@ export function Select({
       <Pressable
         onPress={() => !disabled && setOpen(true)}
         disabled={disabled}
-        style={tw(
-          'h-9 w-full flex-row items-center justify-between rounded-md border border-input bg-transparent px-3',
-          disabled && 'opacity-50',
-          className
-        )}>
+        style={[styles.trigger, disabled && styles.triggerDisabled]}>
         <AppText
           style={[
-            tw('text-sm flex-1', selected ? 'text-foreground' : 'text-muted-foreground'),
-            // { fontFamily: 'Vazirmatn_500Medium', textAlign: 'right' },
+            styles.triggerText,
+            selected ? styles.triggerTextSelected : styles.triggerTextPlaceholder,
           ]}
           numberOfLines={1}>
           {displayText}
         </AppText>
-        <ChevronDown size={16} color={saloora.sage.hex} strokeWidth={1.6} />
+        <ChevronDown size={theme.sizes.iconSm} color={theme.iconColors.muted} strokeWidth={1.6} />
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable onPress={() => setOpen(false)} style={tw('flex-1 justify-end bg-black/40')}>
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
-            style={[tw('rounded-t-2xl bg-card pb-6 pt-4'), { maxHeight: '80%' }]}>
+        <Pressable onPress={() => setOpen(false)} style={styles.backdrop}>
+          <Pressable onPress={(e) => e.stopPropagation()} style={styles.sheet}>
             {title ? (
-              <View style={tw('px-4 pb-3')}>
-                <Text
-                  style={[tw('text-base text-foreground'), { fontFamily: 'Vazirmatn_700Bold' }]}>
-                  {title}
-                </Text>
+              <View style={styles.titleWrap}>
+                <Text style={styles.title}>{title}</Text>
               </View>
             ) : null}
 
-            <ScrollView style={{ maxHeight: 480 }}>
-              <View style={{ paddingHorizontal: 8, paddingBottom: 8 }}>
+            <ScrollView style={styles.list}>
+              <View style={styles.listInner}>
                 {groups
                   ? groups.map((g, gi) => (
                       <View key={gi}>
-                        {g.label ? (
-                          <Text
-                            style={[
-                              tw('text-xs text-muted-foreground'),
-                              {
-                                fontFamily: 'Vazirmatn_500Medium',
-                                paddingHorizontal: 12,
-                                paddingTop: 10,
-                                paddingBottom: 4,
-                              },
-                            ]}>
-                            {g.label}
-                          </Text>
-                        ) : null}
+                        {g.label ? <Text style={styles.groupLabel}>{g.label}</Text> : null}
                         {g.options.map((opt) => (
                           <OptionRow
                             key={opt.value}
@@ -146,48 +179,56 @@ function OptionRow({
   selected: boolean;
   onPress: () => void;
 }) {
+  const { theme } = useTheme();
+  const styles = useThemeStyles((t) => ({
+    row: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.lg,
+      borderRadius: t.radius.md,
+      gap: t.spacing.md,
+    },
+    checkPlaceholder: { width: t.sizes.iconSm },
+    contentWrap: { flex: 1 },
+    label: {
+      fontFamily: t.fonts.sansMedium,
+      fontSize: t.fontSize.md,
+      color: t.colors.foreground,
+    },
+    detail: {
+      fontFamily: t.fonts.sans,
+      fontSize: t.fontSize.sm,
+      color: t.colors.mutedForeground,
+      marginTop: t.spacing.xs / 2,
+    },
+  }));
+
   return (
     <Pressable
       onPress={onPress}
       disabled={option.disabled}
-      style={({ pressed }) => ({
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 12,
-        borderRadius: 10,
-        opacity: option.disabled ? 0.4 : pressed ? 0.7 : 1,
-        backgroundColor: selected ? saloora.blush.hex + '40' : 'transparent',
-        gap: 8,
-      })}>
+      style={({ pressed }) => [
+        styles.row,
+        {
+          opacity: option.disabled
+            ? theme.states.disabled.opacity
+            : pressed
+              ? theme.states.pressed.opacity
+              : 1,
+          backgroundColor: selected ? withAlpha(theme.colors.accent, 0.25) : 'transparent',
+        },
+      ]}>
       {selected ? (
-        <Check size={16} color={saloora.plum.hex} strokeWidth={2} />
+        <Check size={theme.sizes.iconSm} color={theme.colors.primary} strokeWidth={2} />
       ) : (
-        <View style={{ width: 16 }} />
+        <View style={styles.checkPlaceholder} />
       )}
-      <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            fontFamily: 'Vazirmatn_500Medium',
-            fontSize: 14,
-            color: saloora.plum.hex,
-            textAlign: 'right',
-          }}
-          numberOfLines={2}>
+      <View style={styles.contentWrap}>
+        <Text style={styles.label} numberOfLines={2}>
           {option.label}
         </Text>
-        {option.detail ? (
-          <Text
-            style={{
-              fontFamily: 'Vazirmatn_400Regular',
-              fontSize: 11,
-              color: saloora.sage.hex,
-              textAlign: 'right',
-              marginTop: 2,
-            }}>
-            {option.detail}
-          </Text>
-        ) : null}
+        {option.detail ? <Text style={styles.detail}>{option.detail}</Text> : null}
       </View>
     </Pressable>
   );

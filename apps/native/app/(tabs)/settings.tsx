@@ -3,41 +3,105 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, LogOut, Users } from 'lucide-react-native';
-import { saloora, semanticLight } from '@repo/brand-tokens/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from '../../components/ui/separator';
 import { useAuth } from '../../components/auth-provider';
 import { ServicesCard } from '../../components/services/services-card';
-
-import { tw } from '../../lib/utils';
-const FONT_REG = 'Vazirmatn_400Regular';
-const FONT_MED = 'Vazirmatn_500Medium';
-const FONT_BOLD = 'Vazirmatn_700Bold';
+import { useTheme, useThemeStyles, withAlpha } from '../../theme';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { theme } = useTheme();
   const isManager = user?.role === 'manager';
+  const styles = useThemeStyles((t) => ({
+    safe: { backgroundColor: t.colors.background, flex: 1 },
+    header: {
+      borderBottomColor: withAlpha(t.colors.border, 0.5),
+      backgroundColor: t.colors.card,
+      borderBottomWidth: t.sizes.hairline,
+      paddingHorizontal: t.spacing.xl,
+      paddingVertical: t.spacing.lg,
+    },
+    headerTitle: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.xl,
+      fontFamily: t.fonts.sansBold,
+    },
+    scroll: { padding: t.spacing.xl, gap: t.spacing.xl },
+    card: { gap: t.spacing.lg, padding: t.spacing.xl },
+    cardHeaderPadding: { padding: 0 },
+    cardContent: { gap: t.spacing.md, padding: 0 },
+    rowBetween: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+    },
+    label: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sansMedium,
+    },
+    muted: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sans,
+    },
+    logoutRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.lg,
+      paddingVertical: t.spacing.md,
+    },
+    navRow: {
+      borderColor: withAlpha(t.colors.border, 0.5),
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      gap: t.spacing.lg,
+      borderRadius: t.radius.lg,
+      borderWidth: t.sizes.hairline,
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.lg,
+    },
+    navLeft: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.lg,
+    },
+    navHint: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sans,
+    },
+    footer: {
+      alignItems: 'center' as const,
+      paddingTop: t.spacing.xl,
+      paddingBottom: t.spacing.md,
+    },
+    footerLabel: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sansMedium,
+    },
+    footerVersion: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.xs,
+      fontFamily: t.fonts.sans,
+    },
+  }));
 
   return (
-    <SafeAreaView
-      style={[tw('bg-background flex-1'), { backgroundColor: semanticLight.background.hex }]}
-      edges={['top']}>
-      <View style={tw('border-border/50 bg-card border-b px-4 py-3')}>
-        <Text style={[tw('text-foreground text-lg'), { fontFamily: FONT_BOLD }]}>
-          {isManager ? 'بیشتر' : 'تنظیمات'}
-        </Text>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>{isManager ? 'بیشتر' : 'تنظیمات'}</Text>
       </View>
 
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 16, gap: 16 }}>
-        <Card style={{ gap: 12, padding: 16 }}>
-          <View style={tw('flex-row items-center justify-between')}>
-            <Text style={[tw('text-foreground text-sm'), { fontFamily: FONT_MED }]}>
-              کاربر فعلی
-            </Text>
-            <Text style={[tw('text-muted-foreground text-sm'), { fontFamily: FONT_REG }]}>
+      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.scroll}>
+        <Card style={styles.card}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.label}>کاربر فعلی</Text>
+            <Text style={styles.muted}>
               {user?.name} · {isManager ? 'مدیر' : 'کارمند'}
             </Text>
           </View>
@@ -47,39 +111,41 @@ export default function SettingsScreen() {
             onPress={() => {
               void logout();
             }}
-            style={tw('flex-row items-center gap-3 py-2')}>
-            <LogOut size={18} color={saloora.plum.hex} strokeWidth={1.8} />
-            <Text style={[tw('text-foreground text-sm'), { fontFamily: FONT_MED }]}>خروج</Text>
+            style={styles.logoutRow}>
+            <LogOut size={theme.sizes.iconSm + 2} color={theme.colors.primary} strokeWidth={1.8} />
+            <Text style={styles.label}>خروج</Text>
           </Pressable>
         </Card>
 
         {isManager ? (
           <>
-            <Card style={{ gap: 12, padding: 16 }}>
-              <CardHeader style={{ padding: 0 }}>
+            <Card style={styles.card}>
+              <CardHeader style={styles.cardHeaderPadding}>
                 <CardTitle color="mutedForeground" variant="label" weight="medium">
                   مدیریت
                 </CardTitle>
               </CardHeader>
-              <CardContent style={{ gap: 8, padding: 0 }}>
+              <CardContent style={styles.cardContent}>
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => router.push('/staff')}
-                  style={tw(
-                    'border-border/50 flex-row items-center justify-between gap-3 rounded-xl border px-3 py-3'
-                  )}>
-                  <View style={tw('flex-row items-center gap-3')}>
-                    <Users size={18} color={saloora.plum.hex} strokeWidth={1.8} />
+                  style={styles.navRow}>
+                  <View style={styles.navLeft}>
+                    <Users
+                      size={theme.sizes.iconSm + 2}
+                      color={theme.colors.primary}
+                      strokeWidth={1.8}
+                    />
                     <View>
-                      <Text style={[tw('text-foreground text-sm'), { fontFamily: FONT_MED }]}>
-                        پرسنل و نقش‌ها
-                      </Text>
-                      <Text style={[tw('text-muted-foreground text-xs'), { fontFamily: FONT_REG }]}>
-                        مدیریت پرسنل، خدمات و ساعت کاری
-                      </Text>
+                      <Text style={styles.label}>پرسنل و نقش‌ها</Text>
+                      <Text style={styles.navHint}>مدیریت پرسنل، خدمات و ساعت کاری</Text>
                     </View>
                   </View>
-                  <ChevronLeft size={18} color={saloora.sage.hex} strokeWidth={1.6} />
+                  <ChevronLeft
+                    size={theme.sizes.iconSm + 2}
+                    color={theme.iconColors.muted}
+                    strokeWidth={1.6}
+                  />
                 </Pressable>
               </CardContent>
             </Card>
@@ -88,13 +154,9 @@ export default function SettingsScreen() {
           </>
         ) : null}
 
-        <View style={tw('items-center pt-4 pb-2')}>
-          <Text style={[tw('text-muted-foreground text-xs'), { fontFamily: FONT_MED }]}>
-            سالورا
-          </Text>
-          <Text style={[tw('text-muted-foreground text-[10px]'), { fontFamily: FONT_REG }]}>
-            نسخه ۱.۰.۰
-          </Text>
+        <View style={styles.footer}>
+          <Text style={styles.footerLabel}>سالورا</Text>
+          <Text style={styles.footerVersion}>نسخه ۱.۰.۰</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

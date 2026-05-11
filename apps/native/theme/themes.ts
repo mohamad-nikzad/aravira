@@ -12,6 +12,50 @@ import { withAlpha } from './utils';
 
 const tokens = nativeTokens;
 
+const spacing = {
+  none: 0,
+  xs: 4,
+  sm: 6,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  '2xl': 20,
+  '3xl': 24,
+  '4xl': 32,
+  '5xl': 48,
+  '6xl': 64,
+} as const;
+
+const fontSize = {
+  xs: 10,
+  sm: 11,
+  base: 12,
+  md: 13,
+  lg: 15,
+  xl: 17,
+  '2xl': 20,
+  '3xl': 24,
+} as const;
+
+const sizes = {
+  iconSm: 16,
+  iconMd: 20,
+  iconLg: 24,
+  avatarSm: 32,
+  avatarMd: 40,
+  controlSm: 32,
+  controlMd: 36,
+  controlLg: 44,
+  hairline: 1,
+} as const;
+
+const fontWeights = {
+  regular: '400',
+  medium: '500',
+  semibold: '600',
+  bold: '700',
+} as const;
+
 function createTheme(mode: ThemeMode): Theme {
   const colors = tokens.colors[mode] as ThemeColorMap;
 
@@ -19,7 +63,11 @@ function createTheme(mode: ThemeMode): Theme {
     mode,
     colors,
     brand: tokens.colors.brand,
-    radius: tokens.radius,
+    radius: { ...tokens.radius, full: 999 },
+    spacing,
+    fontSize,
+    sizes,
+    fontWeights,
     fonts: tokens.fontFamily,
     iconColors: {
       default: colors.foreground,

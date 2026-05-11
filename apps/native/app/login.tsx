@@ -3,16 +3,16 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } fro
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { ApiError, NetworkError } from '@repo/api-client';
-import { normalizePhone } from '@repo/salon-core/phone';
-import { saloora, semanticLight } from '@repo/brand-tokens/colors';
+import { loginSchema, type LoginFormInput } from '@repo/salon-core/forms/auth';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
+import { FormRootError, FormTextField } from '../components/ui/form-field';
 import { Spinner } from '../components/ui/spinner';
 import { useAuth } from '../components/auth-provider';
+import { useTheme, useThemeStyles, withAlpha } from '../theme';
 
-import { tw } from '../lib/utils';
 function KeyboardOffset({ children }: { children: React.ReactNode }) {
   if (Platform.OS !== 'ios') return <>{children}</>;
   return (
@@ -24,139 +24,147 @@ function KeyboardOffset({ children }: { children: React.ReactNode }) {
 
 export default function LoginScreen() {
   const { login } = useAuth();
-  const [phone, setPhone] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const { theme } = useTheme();
+  const {
+    control,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { phone: '', password: '' },
+  });
+  const styles = useThemeStyles((t) => ({
+    safe: { flex: 1, backgroundColor: t.colors.background },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: 'center' as const,
+      padding: t.spacing['3xl'],
+    },
+    brand: { alignItems: 'center' as const, gap: t.spacing.lg },
+    logo: { width: 80, height: 80, borderRadius: t.radius.xl },
+    brandTitle: {
+      fontSize: t.fontSize['3xl'],
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sansExtraBold,
+    },
+    brandSubtitle: {
+      fontSize: t.fontSize.base,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sans,
+    },
+    card: {
+      marginTop: t.spacing['4xl'],
+      gap: t.spacing['2xl'],
+      borderRadius: t.radius.xl,
+      borderWidth: t.sizes.hairline,
+      borderColor: withAlpha(t.colors.border, 0.6),
+      backgroundColor: t.colors.card,
+      padding: t.spacing['3xl'],
+    },
+    cardHeader: { alignItems: 'center' as const, gap: t.spacing.xs },
+    cardTitle: {
+      fontSize: t.fontSize.lg,
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    cardSubtitle: {
+      fontSize: t.fontSize.base,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sans,
+    },
+    submitText: {
+      fontSize: t.fontSize.base,
+      color: t.colors.primaryForeground,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    footer: {
+      marginTop: t.spacing['2xl'],
+      alignItems: 'center' as const,
+      gap: t.spacing.xs,
+    },
+    footerHint: {
+      fontSize: t.fontSize.sm,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sans,
+    },
+    footerLink: {
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sansSemiBold,
+      color: t.colors.primary,
+    },
+  }));
 
-  async function handleSubmit() {
-    if (loading) return;
-    setError(null);
-    setLoading(true);
+  const onSubmit = handleSubmit(async (values) => {
     try {
-      await login({ phone: normalizePhone(phone), password });
+      await login(values);
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else if (err instanceof NetworkError) {
-        setError(err.message);
-      } else {
-        setError('خطایی رخ داد. لطفاً دوباره تلاش کنید.');
-      }
-      setLoading(false);
+      const message =
+        err instanceof ApiError || err instanceof NetworkError
+          ? err.message
+          : 'خطایی رخ داد. لطفاً دوباره تلاش کنید.';
+      setError('root', { message });
     }
-  }
+  });
 
   return (
-    <SafeAreaView
-      style={[tw('flex-1 bg-background'), { backgroundColor: semanticLight.background.hex }]}>
+    <SafeAreaView style={styles.safe}>
       <KeyboardOffset>
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            justifyContent: 'center',
-            padding: 24,
-          }}
-          keyboardShouldPersistTaps="handled">
-          <View style={tw('items-center gap-3')}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.brand}>
             <Image
               source={require('../assets/images/saloora-mark-clean.png')}
-              style={{ width: 80, height: 80, borderRadius: 22 }}
+              style={styles.logo}
               contentFit="contain"
             />
-            <Text
-              style={[tw('text-3xl text-foreground'), { fontFamily: 'Vazirmatn_800ExtraBold' }]}>
-              سالورا
-            </Text>
-            <Text
-              style={[tw('text-sm text-muted-foreground'), { fontFamily: 'Vazirmatn_400Regular' }]}>
-              مدیریت هوشمند سالن زیبایی
-            </Text>
+            <Text style={styles.brandTitle}>سالورا</Text>
+            <Text style={styles.brandSubtitle}>مدیریت هوشمند سالن زیبایی</Text>
           </View>
 
-          <View style={tw('mt-8 gap-5 rounded-2xl border border-border/60 bg-card p-6')}>
-            <View style={tw('items-center gap-1')}>
-              <Text
-                style={[tw('text-base text-foreground'), { fontFamily: 'Vazirmatn_600SemiBold' }]}>
-                خوش آمدید
-              </Text>
-              <Text
-                style={[
-                  tw('text-sm text-muted-foreground'),
-                  { fontFamily: 'Vazirmatn_400Regular' },
-                ]}>
-                برای ادامه وارد شوید
-              </Text>
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>خوش آمدید</Text>
+              <Text style={styles.cardSubtitle}>برای ادامه وارد شوید</Text>
             </View>
 
-            <View style={tw('gap-2')}>
-              <Label style={{ fontFamily: 'Vazirmatn_500Medium' }}>شماره موبایل</Label>
-              <Input
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-                keyboardType="phone-pad"
-                autoComplete="tel"
-                textContentType="telephoneNumber"
-                editable={!loading}
-                style={{ fontFamily: 'Vazirmatn_400Regular', textAlign: 'right' }}
-              />
-            </View>
+            <FormTextField
+              control={control}
+              name="phone"
+              label="شماره موبایل"
+              placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+              keyboardType="phone-pad"
+              autoComplete="tel"
+              textContentType="telephoneNumber"
+              editable={!isSubmitting}
+            />
 
-            <View style={tw('gap-2')}>
-              <Label style={{ fontFamily: 'Vazirmatn_500Medium' }}>رمز عبور</Label>
-              <Input
-                value={password}
-                onChangeText={setPassword}
-                placeholder="رمز عبور"
-                secureTextEntry
-                autoComplete="password"
-                textContentType="password"
-                editable={!loading}
-                style={{ fontFamily: 'Vazirmatn_400Regular', textAlign: 'right' }}
-              />
-            </View>
+            <FormTextField
+              control={control}
+              name="password"
+              label="رمز عبور"
+              placeholder="رمز عبور"
+              secureTextEntry
+              autoComplete="password"
+              textContentType="password"
+              editable={!isSubmitting}
+            />
 
-            {error ? (
-              <Text style={[tw('text-sm text-destructive'), { fontFamily: 'Vazirmatn_500Medium' }]}>
-                {error}
-              </Text>
-            ) : null}
+            <FormRootError message={errors.root?.message} />
 
-            <Button
-              onPress={handleSubmit}
-              disabled={loading || phone.length === 0 || password.length === 0}>
-              {loading ? (
-                <Spinner color="white" />
+            <Button onPress={onSubmit} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <Spinner color={theme.colors.primaryForeground} />
               ) : (
-                <Text
-                  style={[
-                    tw('text-sm text-primary-foreground'),
-                    { fontFamily: 'Vazirmatn_600SemiBold' },
-                  ]}>
-                  ورود
-                </Text>
+                <Text style={styles.submitText}>ورود</Text>
               )}
             </Button>
           </View>
 
-          <View style={tw('mt-6 items-center gap-1')}>
-            <Text
-              style={[tw('text-xs text-muted-foreground'), { fontFamily: 'Vazirmatn_400Regular' }]}>
-              حساب کاربری ندارید؟
-            </Text>
+          <View style={styles.footer}>
+            <Text style={styles.footerHint}>حساب کاربری ندارید؟</Text>
             <Link href="/signup" asChild>
               <Pressable accessibilityRole="link">
-                <Text
-                  style={[
-                    tw('text-sm'),
-                    {
-                      fontFamily: 'Vazirmatn_600SemiBold',
-                      color: saloora.plum.hex,
-                    },
-                  ]}>
-                  ساخت سالن جدید
-                </Text>
+                <Text style={styles.footerLink}>ساخت سالن جدید</Text>
               </Pressable>
             </Link>
           </View>

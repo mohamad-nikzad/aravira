@@ -120,7 +120,8 @@ async function readJson(response: Response) {
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.getTenantUser.mockResolvedValue(salonManager)
-  mocks.getTenantRequest.mockImplementation(async (permission?: string) => {
+  mocks.getTenantRequest.mockImplementation(async (arg1?: Request | string, arg2?: string) => {
+    const permission = arg1 instanceof Request ? arg2 : arg1
     const user = await mocks.getTenantUser()
     if (!user) {
       return {

@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Drawer,
   DrawerContent,
@@ -14,9 +16,14 @@ import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
 import { Badge } from '@repo/ui/badge'
 import { Field, FieldLabel, FieldGroup, FieldError } from '@repo/ui/field'
+import { FormRootError } from '@repo/ui/form'
 import { Spinner } from '@repo/ui/spinner'
 import { Client } from '@repo/salon-core/types'
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
+import {
+  clientFormSchema,
+  type ClientFormInput,
+} from '@repo/salon-core/forms/client'
 import { DataClientHttpError } from '@repo/data-client'
 import { useManagerDataClient } from '@/components/manager-data-client-provider'
 
@@ -29,6 +36,17 @@ interface ClientDrawerProps {
   onSuccess: () => void
 }
 
+const emptyValues: ClientFormInput = { name: '', phone: '', notes: '', tags: [] }
+
+function toFormValues(client: Client): ClientFormInput {
+  return {
+    name: client.name,
+    phone: client.phone ?? '',
+    notes: client.notes ?? '',
+    tags: client.tags?.map((tag) => tag.label) ?? [],
+  }
+}
+
 export function ClientDrawer({
   open,
   onOpenChange,
@@ -36,54 +54,36 @@ export function ClientDrawer({
   onSuccess,
 }: ClientDrawerProps) {
   const dataClient = useManagerDataClient()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [notes, setNotes] = useState('')
-  const [tags, setTags] = useState<string[]>([])
-
   const isEditing = !!client
 
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    setError,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<ClientFormInput>({
+    resolver: zodResolver(clientFormSchema),
+    defaultValues: emptyValues,
+    mode: 'onSubmit',
+  })
+
   useEffect(() => {
-    if (open) {
-      if (client) {
-        setName(client.name)
-        setPhone(client.phone ?? '')
-        setNotes(client.notes || '')
-        setTags(client.tags?.map((tag) => tag.label) ?? [])
-      } else {
-        setName('')
-        setPhone('')
-        setNotes('')
-        setTags([])
-      }
-      setError('')
-    }
-  }, [open, client])
+    if (open) reset(client ? toFormValues(client) : emptyValues)
+  }, [open, client, reset])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+  const nameValue = watch('name')
+  const phoneValue = watch('phone')
 
+  const onSubmit = handleSubmit(async (values) => {
     try {
       if (dataClient) {
         if (isEditing && client) {
-          await dataClient.clients.update(client.id, {
-            name,
-            phone,
-            notes: notes || undefined,
-            tags,
-          })
+          await dataClient.clients.update(client.id, values)
         } else {
-          await dataClient.clients.create({
-            name,
-            phone,
-            notes: notes || undefined,
-            tags,
-          })
+          await dataClient.clients.create(values)
         }
         void dataClient.sync.processPending()
         onSuccess()
@@ -97,39 +97,25 @@ export function ClientDrawer({
         method,
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          name,
-          phone,
-          notes: notes || undefined,
-          tags,
-        }),
+        body: JSON.stringify(values),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'ذخیره اطلاعات مشتری انجام نشد')
-        setLoading(false)
+        setError('root', { message: data.error || 'ذخیره اطلاعات مشتری انجام نشد' })
         return
       }
 
       onSuccess()
     } catch (err) {
-      if (dataClient && err instanceof DataClientHttpError) {
-        setError(err.message)
-      } else {
-        setError('خطایی رخ داد. لطفاً دوباره تلاش کنید.')
-      }
-    } finally {
-      setLoading(false)
+      const message =
+        dataClient && err instanceof DataClientHttpError
+          ? err.message
+          : 'خطایی رخ داد. لطفاً دوباره تلاش کنید.'
+      setError('root', { message })
     }
-  }
-
-  const toggleTag = (label: string) => {
-    setTags((current) =>
-      current.includes(label) ? current.filter((tag) => tag !== label) : [...current, label]
-    )
-  }
+  })
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -141,72 +127,96 @@ export function ClientDrawer({
           </DrawerDescription>
         </DrawerHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-auto px-4">
+        <form onSubmit={onSubmit} className="flex flex-col gap-4 overflow-auto px-4">
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="client-name">نام</FieldLabel>
               <Input
                 id="client-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
                 placeholder="نام مشتری"
-                required
+                {...register('name')}
               />
+              {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
 
             <Field>
               <FieldLabel htmlFor="client-phone">شماره تماس</FieldLabel>
-              <Input
-                id="client-phone"
-                type="tel"
-                value={displayPhone(phone)}
-                onChange={(e) => setPhone(normalizePhone(e.target.value))}
-                placeholder="۰۹۱۲…"
-                required
-                dir="ltr"
-                className="text-left tabular-nums"
+              <Controller
+                control={control}
+                name="phone"
+                render={({ field }) => (
+                  <Input
+                    id="client-phone"
+                    type="tel"
+                    value={displayPhone(field.value ?? '')}
+                    onChange={(e) => field.onChange(normalizePhone(e.target.value))}
+                    onBlur={field.onBlur}
+                    placeholder="۰۹۱۲…"
+                    dir="ltr"
+                    className="text-left tabular-nums"
+                  />
+                )}
               />
+              {errors.phone && <FieldError>{errors.phone.message}</FieldError>}
             </Field>
 
             <Field>
               <FieldLabel htmlFor="client-notes">یادداشت (اختیاری)</FieldLabel>
               <Input
                 id="client-notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
                 placeholder="یادداشت درباره این مشتری…"
+                {...register('notes')}
               />
             </Field>
 
             <Field>
               <FieldLabel>برچسب‌ها</FieldLabel>
-              <div className="flex flex-wrap gap-2">
-                {tagOptions.map((label) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => toggleTag(label)}
-                    className="touch-manipulation"
-                  >
-                    <Badge
-                      variant={tags.includes(label) ? 'default' : 'outline'}
-                      className="px-2.5 py-1"
-                    >
-                      {label}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
+              <Controller
+                control={control}
+                name="tags"
+                render={({ field }) => {
+                  const current = field.value ?? []
+                  const toggle = (label: string) =>
+                    field.onChange(
+                      current.includes(label)
+                        ? current.filter((t) => t !== label)
+                        : [...current, label],
+                    )
+                  return (
+                    <div className="flex flex-wrap gap-2">
+                      {tagOptions.map((label) => (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => toggle(label)}
+                          className="touch-manipulation"
+                        >
+                          <Badge
+                            variant={current.includes(label) ? 'default' : 'outline'}
+                            className="px-2.5 py-1"
+                          >
+                            {label}
+                          </Badge>
+                        </button>
+                      ))}
+                    </div>
+                  )
+                }}
+              />
             </Field>
 
-            {error && <FieldError>{error}</FieldError>}
+            <FormRootError message={errors.root?.message} />
           </FieldGroup>
         </form>
 
         <DrawerFooter>
-          <Button onClick={handleSubmit} disabled={loading || !name || !phone} className="touch-manipulation">
-            {loading && <Spinner className="ml-2" />}
-            {loading ? 'در حال ذخیره…' : isEditing ? 'ذخیره تغییرات' : 'افزودن مشتری'}
+          <Button
+            onClick={onSubmit}
+            disabled={isSubmitting || !nameValue || !phoneValue}
+            className="touch-manipulation"
+          >
+            {isSubmitting && <Spinner className="ml-2" />}
+            {isSubmitting ? 'در حال ذخیره…' : isEditing ? 'ذخیره تغییرات' : 'افزودن مشتری'}
           </Button>
           <DrawerClose asChild>
             <Button variant="outline">انصراف</Button>

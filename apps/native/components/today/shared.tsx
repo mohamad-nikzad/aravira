@@ -5,12 +5,7 @@ import { APPOINTMENT_STATUS } from '@repo/salon-core/types';
 import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-digits';
 import { Badge } from '../ui/badge';
 import { Card, CardContent } from '../ui/card';
-
-import { tw } from '../../lib/utils';
-const FONT_REG = 'Vazirmatn_400Regular';
-const FONT_MED = 'Vazirmatn_500Medium';
-const FONT_SEMI = 'Vazirmatn_600SemiBold';
-const FONT_BOLD = 'Vazirmatn_700Bold';
+import { useThemeStyles, withAlpha } from '../../theme';
 
 export const ACTIVE_STATUSES = new Set<AppointmentWithDetails['status']>([
   'scheduled',
@@ -46,15 +41,29 @@ export function summarizeOpenRanges(ranges: { startTime: string; endTime: string
 }
 
 export function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  const styles = useThemeStyles((t) => ({
+    card: { gap: t.spacing.xs, padding: t.spacing.xl },
+    label: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sansMedium,
+    },
+    value: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize['2xl'],
+      fontFamily: t.fonts.sansBold,
+    },
+    hint: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sans,
+    },
+  }));
   return (
-    <Card style={{ gap: 4, padding: 16 }}>
-      <Text style={[tw('text-muted-foreground text-[11px]'), { fontFamily: FONT_MED }]}>
-        {label}
-      </Text>
-      <Text style={[tw('text-foreground text-2xl'), { fontFamily: FONT_BOLD }]}>{value}</Text>
-      {hint ? (
-        <Text style={[tw('text-muted-foreground text-xs'), { fontFamily: FONT_REG }]}>{hint}</Text>
-      ) : null}
+    <Card style={styles.card}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.value}>{value}</Text>
+      {hint ? <Text style={styles.hint}>{hint}</Text> : null}
     </Card>
   );
 }
@@ -70,57 +79,89 @@ export function AppointmentCard({
   tone?: 'default' | 'highlight';
   children?: React.ReactNode;
 }) {
+  const styles = useThemeStyles((t) => ({
+    card: {
+      borderColor: withAlpha(t.colors.border, 0.6),
+      backgroundColor: t.colors.card,
+      gap: t.spacing.lg,
+      borderRadius: t.radius.xl,
+      borderWidth: t.sizes.hairline,
+      padding: t.spacing.lg,
+    },
+    cardHighlight: {
+      borderColor: withAlpha(t.colors.primary, 0.3),
+      backgroundColor: withAlpha(t.colors.primary, 0.05),
+    },
+    header: {
+      flexDirection: 'row' as const,
+      alignItems: 'flex-start' as const,
+      justifyContent: 'space-between' as const,
+      gap: t.spacing.lg,
+    },
+    body: { minWidth: 0, flex: 1, gap: t.spacing.xs },
+    nameRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.md,
+    },
+    name: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    placeholderBadge: {
+      backgroundColor: withAlpha(t.colors.accent, 0.4),
+      borderColor: t.colors.ring,
+      paddingHorizontal: t.spacing.sm,
+      paddingVertical: 0,
+    },
+    placeholderBadgeText: { color: t.colors.accentForeground, fontSize: t.fontSize.xs },
+    muted: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sans,
+    },
+    mutedLtr: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sans,
+      writingDirection: 'ltr' as const,
+    },
+    statusBadge: { paddingHorizontal: t.spacing.md, paddingVertical: t.spacing.xs / 2 },
+    statusBadgeText: { fontSize: t.fontSize.xs },
+  }));
   return (
-    <View
-      style={tw(
-        'border-border/60 bg-card gap-3 rounded-2xl border p-3',
-        tone === 'highlight' && 'border-primary/30 bg-primary/5'
-      )}>
-      <View style={tw('flex-row items-start justify-between gap-3')}>
-        <View style={tw('min-w-0 flex-1 gap-1')}>
-          <View style={tw('flex-row items-center gap-2')}>
-            <Text
-              style={[tw('text-foreground text-sm'), { fontFamily: FONT_SEMI }]}
-              numberOfLines={1}>
+    <View style={[styles.card, tone === 'highlight' ? styles.cardHighlight : null]}>
+      <View style={styles.header}>
+        <View style={styles.body}>
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={1}>
               {appointment.client.name}
             </Text>
             {appointment.client.isPlaceholder ? (
               <Badge
                 variant="outline"
-                style={{
-                  backgroundColor: '#fffbeb',
-                  borderColor: '#fcd34d',
-                  paddingHorizontal: 6,
-                  paddingVertical: 0,
-                }}
-                textStyle={{ color: '#92400e', fontSize: 10 }}>
+                style={styles.placeholderBadge}
+                textStyle={styles.placeholderBadgeText}>
                 اطلاعات ناقص
               </Badge>
             ) : null}
           </View>
-          <Text style={[tw('text-muted-foreground text-xs'), { fontFamily: FONT_REG }]}>
-            {appointment.service.name}
-          </Text>
-          <Text
-            style={[
-              tw('text-muted-foreground text-xs'),
-              { fontFamily: FONT_REG, writingDirection: 'ltr' },
-            ]}>
+          <Text style={styles.muted}>{appointment.service.name}</Text>
+          <Text style={styles.mutedLtr}>
             {formatPersianTime(appointment.startTime)} - {formatPersianTime(appointment.endTime)} ·{' '}
             {meta}
           </Text>
           {appointment.notes ? (
-            <Text
-              style={[tw('text-muted-foreground text-xs'), { fontFamily: FONT_REG }]}
-              numberOfLines={2}>
+            <Text style={styles.muted} numberOfLines={2}>
               {appointment.notes}
             </Text>
           ) : null}
         </View>
         <Badge
           variant="outline"
-          style={{ paddingHorizontal: 8, paddingVertical: 2 }}
-          textStyle={{ fontSize: 10 }}>
+          style={styles.statusBadge}
+          textStyle={styles.statusBadgeText}>
           {APPOINTMENT_STATUS[appointment.status].label}
         </Badge>
       </View>
@@ -133,27 +174,32 @@ export function SectionCard({
   icon,
   title,
   children,
-  toneClassName: _toneClassName,
 }: {
   icon?: React.ReactNode;
   title: string;
   children: React.ReactNode;
-  toneClassName?: string;
 }) {
+  const styles = useThemeStyles((t) => ({
+    card: { gap: t.spacing.lg },
+    header: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.md,
+    },
+    title: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    content: { gap: t.spacing.lg, padding: 0 },
+  }));
   return (
-    <Card style={{ gap: 12 }}>
-      <View style={tw('flex-row items-center gap-2')}>
+    <Card style={styles.card}>
+      <View style={styles.header}>
         {icon}
-        <Text style={[tw('text-foreground text-sm'), { fontFamily: FONT_SEMI }]}>{title}</Text>
+        <Text style={styles.title}>{title}</Text>
       </View>
-      <CardContent style={{ gap: 12, padding: 0 }}>{children}</CardContent>
+      <CardContent style={styles.content}>{children}</CardContent>
     </Card>
   );
 }
-
-export const FONTS = {
-  reg: FONT_REG,
-  med: FONT_MED,
-  semi: FONT_SEMI,
-  bold: FONT_BOLD,
-};

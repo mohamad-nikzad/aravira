@@ -1,9 +1,8 @@
 import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { FONTS } from './helpers';
+import { useTheme, useThemeStyles, withAlpha } from '../../theme';
 import type { CalendarView } from './types';
 
-import { tw } from '../../lib/utils';
 const VIEWS: readonly { key: CalendarView; label: string }[] = [
   { key: 'day', label: 'روز' },
   { key: 'week', label: 'هفته' },
@@ -18,8 +17,30 @@ export function ViewSwitcher({
   value: CalendarView;
   onChange: (view: CalendarView) => void;
 }) {
+  const { theme } = useTheme();
+  const styles = useThemeStyles((t) => ({
+    container: {
+      backgroundColor: withAlpha(t.colors.muted, 0.7),
+      flexDirection: 'row' as const,
+      borderRadius: t.radius.xl,
+      padding: t.spacing.xs,
+    },
+    item: {
+      flex: 1,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      borderRadius: t.radius.lg,
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: t.spacing.sm,
+    },
+    itemActive: { backgroundColor: t.colors.card },
+    label: { fontSize: t.fontSize.base },
+    labelActive: { color: t.colors.primary, fontFamily: t.fonts.sansSemiBold },
+    labelInactive: { color: t.colors.mutedForeground, fontFamily: t.fonts.sansMedium },
+  }));
+
   return (
-    <View style={tw('bg-muted/70 flex-row rounded-2xl p-1')}>
+    <View style={styles.container}>
       {VIEWS.map((v) => {
         const active = v.key === value;
         return (
@@ -27,18 +48,11 @@ export function ViewSwitcher({
             key={v.key}
             onPress={() => onChange(v.key)}
             style={({ pressed }) => [
-              tw(
-                `flex-1 items-center justify-center rounded-xl px-2 py-1.5 ${
-                  active ? 'bg-card shadow-sm' : 'bg-transparent'
-                }`
-              ),
-              pressed && !active ? { opacity: 0.7 } : null,
+              styles.item,
+              active ? styles.itemActive : null,
+              pressed && !active ? { opacity: theme.states.pressed.opacity } : null,
             ]}>
-            <Text
-              style={[
-                tw(`text-[12px] ${active ? 'text-primary' : 'text-muted-foreground'}`),
-                { fontFamily: active ? FONTS.semi : FONTS.med },
-              ]}>
+            <Text style={[styles.label, active ? styles.labelActive : styles.labelInactive]}>
               {v.label}
             </Text>
           </Pressable>

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Drawer,
   DrawerContent,
@@ -14,6 +16,7 @@ import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
 import { Checkbox } from '@repo/ui/checkbox'
 import { Field, FieldLabel, FieldGroup, FieldError } from '@repo/ui/field'
+import { FormRootError } from '@repo/ui/form'
 import {
   Select,
   SelectContent,
@@ -23,7 +26,12 @@ import {
 } from '@repo/ui/select'
 import { Spinner } from '@repo/ui/spinner'
 import { ChevronDown } from 'lucide-react'
-import { User, Service, Client, AppointmentWithDetails } from '@repo/salon-core/types'
+import {
+  User,
+  Service,
+  Client,
+  AppointmentWithDetails,
+} from '@repo/salon-core/types'
 import {
   autoPickServiceForStaff,
   eligibleServicesForStaff,
@@ -43,7 +51,14 @@ import { DataClientHttpError } from '@repo/data-client'
 import { useNetworkStatus } from '@/lib/pwa-client'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
 import { TimePicker } from '@repo/ui/time-picker'
-import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
+import {
+  parseLocalizedInt,
+  toPersianDigits,
+} from '@repo/salon-core/persian-digits'
+import {
+  appointmentFormSchema,
+  type AppointmentFormInput,
+} from '@repo/salon-core/forms/appointment'
 
 const CATEGORY_LABELS: Record<string, string> = {
   hair: 'مو',
@@ -86,27 +101,46 @@ export function AppointmentDrawer({
 }: AppointmentDrawerProps) {
   const dataClient = useManagerDataClient()
   const isOnline = useNetworkStatus()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const [clientId, setClientId] = useState('')
-  const [staffId, setStaffId] = useState('')
-  const [serviceId, setServiceId] = useState('')
-  const [date, setDate] = useState(initialDate)
-  const [startTime, setStartTime] = useState(() => formatTimeHm(parseTimeHm(initialTime)))
-  const [durationMinutes, setDurationMinutes] = useState(45)
-  const [endTime, setEndTime] = useState(() =>
-    endTimeFromDuration(formatTimeHm(parseTimeHm(initialTime)), 45)
-  )
-  const [notes, setNotes] = useState('')
-  const [useTemporaryClient, setUseTemporaryClient] = useState(false)
-  const [temporaryClientName, setTemporaryClientName] = useState('')
-  const [temporaryClientNotes, setTemporaryClientNotes] = useState('')
   const [localClients, setLocalClients] = useState<Client[]>(clients)
   const [staffSlotOk, setStaffSlotOk] = useState<Record<string, boolean>>({})
-  const durationRef = useRef(durationMinutes)
-  const temporaryClientNameRef = useRef<HTMLInputElement>(null)
-  durationRef.current = durationMinutes
+  const form = useForm<AppointmentFormInput>({
+    resolver: zodResolver(appointmentFormSchema, undefined, { raw: true }),
+    defaultValues: {
+      useTemporaryClient: false,
+      clientId: '',
+      staffId: initialStaffId ?? '',
+      serviceId: initialServiceId ?? '',
+      date: initialDate,
+      startTime: formatTimeHm(parseTimeHm(initialTime)),
+      endTime: endTimeFromDuration(formatTimeHm(parseTimeHm(initialTime)), 45),
+      durationMinutes: 45,
+      notes: '',
+      temporaryClientName: '',
+      temporaryClientNotes: '',
+    },
+  })
+  const {
+    control,
+    handleSubmit,
+    register,
+    reset,
+    setError,
+    setFocus,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = form
+
+  const clientId = watch('clientId') ?? ''
+  const staffId = watch('staffId') ?? ''
+  const serviceId = watch('serviceId') ?? ''
+  const date = watch('date')
+  const startTime = watch('startTime') ?? '09:00'
+  const durationMinutes = Number(watch('durationMinutes')) || 45
+  const endTime =
+    watch('endTime') ?? endTimeFromDuration(startTime, durationMinutes)
+  const useTemporaryClient = Boolean(watch('useTemporaryClient'))
+  const temporaryClientName = watch('temporaryClientName') ?? ''
 
   useEffect(() => {
     setLocalClients(clients)
@@ -119,36 +153,47 @@ export function AppointmentDrawer({
     const defaultDuration = initialService?.duration ?? 45
     const st = formatTimeHm(parseTimeHm(initialTime))
 
-    durationRef.current = defaultDuration
-    setDurationMinutes(defaultDuration)
-    setDate(initialDate)
-    setStartTime(st)
-    setEndTime(endTimeFromDuration(st, defaultDuration))
-    setClientId(initialClientId ?? '')
-    setStaffId(initialStaffId ?? '')
-    setServiceId(initialServiceId ?? '')
-    setNotes('')
-    setUseTemporaryClient(false)
-    setTemporaryClientName('')
-    setTemporaryClientNotes('')
-    setError('')
+    reset({
+      useTemporaryClient: false,
+      clientId: initialClientId ?? '',
+      staffId: initialStaffId ?? '',
+      serviceId: initialServiceId ?? '',
+      date: initialDate,
+      startTime: st,
+      endTime: endTimeFromDuration(st, defaultDuration),
+      durationMinutes: defaultDuration,
+      notes: '',
+      temporaryClientName: '',
+      temporaryClientNotes: '',
+    })
     setLocalClients(clients)
-  }, [clients, initialClientId, initialDate, initialServiceId, initialStaffId, initialTime, services])
+  }, [
+    clients,
+    initialClientId,
+    initialDate,
+    initialServiceId,
+    initialStaffId,
+    initialTime,
+    reset,
+    services,
+  ])
 
   const applyDuration = (mins: number) => {
     const clamped = Math.min(
       APPOINTMENT_DURATION_BOUNDS.max,
-      Math.max(APPOINTMENT_DURATION_BOUNDS.min, mins)
+      Math.max(APPOINTMENT_DURATION_BOUNDS.min, mins),
     )
-    setDurationMinutes(clamped)
-    setEndTime(endTimeFromDuration(startTime, clamped))
+    setValue('durationMinutes', clamped, { shouldDirty: true })
+    setValue('endTime', endTimeFromDuration(startTime, clamped), {
+      shouldDirty: true,
+    })
   }
 
   const applyEndTime = (et: string) => {
-    setEndTime(et)
+    setValue('endTime', et, { shouldDirty: true })
     try {
       const d = durationMinutesFromRange(startTime, et)
-      if (d > 0) setDurationMinutes(d)
+      if (d > 0) setValue('durationMinutes', d, { shouldDirty: true })
     } catch {
       /* invalid time */
     }
@@ -172,41 +217,43 @@ export function AppointmentDrawer({
 
   useEffect(() => {
     if (!open) return
-    setDate(initialDate)
     const st = formatTimeHm(parseTimeHm(initialTime))
-    setStartTime(st)
-    setEndTime(endTimeFromDuration(st, durationRef.current))
-  }, [initialDate, initialTime, open])
+    setValue('date', initialDate)
+    setValue('startTime', st)
+    setValue('endTime', endTimeFromDuration(st, durationMinutes))
+  }, [durationMinutes, initialDate, initialTime, open, setValue])
 
   useEffect(() => {
     if (open && useTemporaryClient) {
-      requestAnimationFrame(() => temporaryClientNameRef.current?.focus())
+      requestAnimationFrame(() => setFocus('temporaryClientName'))
     }
-  }, [open, useTemporaryClient])
+  }, [open, setFocus, useTemporaryClient])
 
   const handleServiceChange = (id: string) => {
-    setServiceId(id)
+    setValue('serviceId', id, { shouldDirty: true, shouldValidate: true })
     const svc = services.find((s) => s.id === id)
     if (svc) applyDuration(svc.duration)
 
     const eligibleAll = eligibleStaffForService(staff, id)
     const eligibleStaffMembers = eligibleStaffForService(staffRoleOnly, id)
     if (eligibleStaffMembers.length === 1) {
-      setStaffId(eligibleStaffMembers[0].id)
+      setValue('staffId', eligibleStaffMembers[0].id, {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
     } else if (!eligibleAll.some((m) => m.id === staffId)) {
-      setStaffId('')
+      setValue('staffId', '', { shouldDirty: true, shouldValidate: true })
     }
   }
 
   const handleStaffChange = (id: string) => {
-    setStaffId(id)
+    setValue('staffId', id, { shouldDirty: true, shouldValidate: true })
     const member = staff.find((s) => s.id === id)
     if (!member) return
 
     const eligible = eligibleServicesForStaff(member, services)
     const current = services.find((s) => s.id === serviceId)
-    const serviceStillOk =
-      !!current && eligible.some((s) => s.id === serviceId)
+    const serviceStillOk = !!current && eligible.some((s) => s.id === serviceId)
 
     if (!serviceStillOk) {
       const explicitList =
@@ -215,10 +262,13 @@ export function AppointmentDrawer({
         staffHasExplicitServiceList: explicitList,
       })
       if (auto) {
-        setServiceId(auto.id)
+        setValue('serviceId', auto.id, {
+          shouldDirty: true,
+          shouldValidate: true,
+        })
         applyDuration(auto.duration)
       } else {
-        setServiceId('')
+        setValue('serviceId', '', { shouldDirty: true, shouldValidate: true })
       }
     }
   }
@@ -228,35 +278,20 @@ export function AppointmentDrawer({
     onClientsChanged?.()
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    const localCheck = validateAppointmentWindow(startTime, endTime)
+  const onSubmit = handleSubmit(async (values) => {
+    const localCheck = validateAppointmentWindow(
+      values.startTime,
+      values.endTime,
+    )
     if (!localCheck.ok) {
-      setError(localCheck.error)
+      setError('root', { message: localCheck.error })
       return
     }
-    setLoading(true)
 
     try {
+      const payload = appointmentFormSchema.parse(values)
       if (dataClient) {
-        const created = await dataClient.appointments.create({
-          ...(useTemporaryClient
-            ? {
-                placeholderClient: {
-                  name: temporaryClientName.trim(),
-                  notes: temporaryClientNotes.trim() || undefined,
-                },
-              }
-            : { clientId }),
-          staffId,
-          serviceId,
-          date,
-          startTime,
-          endTime,
-          durationMinutes,
-          notes: notes || undefined,
-        })
+        const created = await dataClient.appointments.create(payload)
         void dataClient.sync.processPending()
         onSuccess(created)
         return
@@ -266,59 +301,45 @@ export function AppointmentDrawer({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          ...(useTemporaryClient
-            ? {
-                placeholderClient: {
-                  name: temporaryClientName.trim(),
-                  notes: temporaryClientNotes.trim() || undefined,
-                },
-              }
-            : { clientId }),
-          staffId,
-          serviceId,
-          date,
-          startTime,
-          endTime,
-          durationMinutes,
-          notes: notes || undefined,
-        }),
+        body: JSON.stringify(payload),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'خطا در ثبت نوبت')
-        setLoading(false)
+        setError('root', { message: data.error || 'خطا در ثبت نوبت' })
         return
       }
 
       if (!data.appointment) {
-        setError('پاسخ ثبت نوبت کامل نبود')
-        setLoading(false)
+        setError('root', { message: 'پاسخ ثبت نوبت کامل نبود' })
         return
       }
 
       onSuccess(data.appointment)
     } catch (err) {
-      setError(err instanceof DataClientHttpError ? err.message : 'خطایی رخ داد')
-    } finally {
-      setLoading(false)
+      setError('root', {
+        message:
+          err instanceof DataClientHttpError ? err.message : 'خطایی رخ داد',
+      })
     }
-  }
+  })
 
-  const servicesByCategory = services.reduce((acc, service) => {
-    if (!acc[service.category]) {
-      acc[service.category] = []
-    }
-    acc[service.category].push(service)
-    return acc
-  }, {} as Record<string, Service[]>)
+  const servicesByCategory = services.reduce(
+    (acc, service) => {
+      if (!acc[service.category]) {
+        acc[service.category] = []
+      }
+      acc[service.category].push(service)
+      return acc
+    },
+    {} as Record<string, Service[]>,
+  )
 
   /** Managers are often unrestricted; autofill only among real staff to avoid false ambiguity. */
   const staffRoleOnly = useMemo(
     () => staff.filter((m) => m.role === 'staff'),
-    [staff]
+    [staff],
   )
 
   useEffect(() => {
@@ -336,7 +357,9 @@ export function AppointmentDrawer({
           credentials: 'include',
           signal: ctrl.signal,
         })
-        const json = (await res.json()) as { staff?: Array<{ staffId: string; available: boolean }> }
+        const json = (await res.json()) as {
+          staff?: Array<{ staffId: string; available: boolean }>
+        }
         if (!res.ok) return
         const next: Record<string, boolean> = {}
         for (const row of json.staff ?? []) {
@@ -355,9 +378,9 @@ export function AppointmentDrawer({
 
   useEffect(() => {
     if (staffId && staffSlotOk[staffId] === false) {
-      setStaffId('')
+      setValue('staffId', '', { shouldDirty: true, shouldValidate: true })
     }
-  }, [staffSlotOk, staffId])
+  }, [setValue, staffSlotOk, staffId])
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('fa-IR').format(price) + ' تومان'
@@ -371,10 +394,15 @@ export function AppointmentDrawer({
       <DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[96lvh]">
         <DrawerHeader className="pb-3">
           <DrawerTitle>نوبت جدید</DrawerTitle>
-          <DrawerDescription>خدمت، پرسنل و زمان نوبت را انتخاب کنید.</DrawerDescription>
+          <DrawerDescription>
+            خدمت، پرسنل و زمان نوبت را انتخاب کنید.
+          </DrawerDescription>
         </DrawerHeader>
 
-        <form onSubmit={handleSubmit} className="min-h-0 flex-1 overflow-auto px-4 pb-4">
+        <form
+          onSubmit={onSubmit}
+          className="min-h-0 flex-1 overflow-auto px-4 pb-4"
+        >
           <FieldGroup className="gap-4">
             <Field>
               <FieldLabel>مشتری</FieldLabel>
@@ -388,21 +416,30 @@ export function AppointmentDrawer({
                     checked={useTemporaryClient}
                     onCheckedChange={(checked) => {
                       const enabled = checked === true
-                      setUseTemporaryClient(enabled)
-                      setError('')
+                      setValue('useTemporaryClient', enabled, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
                       if (enabled) {
-                        setClientId('')
+                        setValue('clientId', '', { shouldDirty: true })
                         return
                       }
-                      setTemporaryClientName('')
-                      setTemporaryClientNotes('')
+                      setValue('temporaryClientName', '', {
+                        shouldDirty: true,
+                      })
+                      setValue('temporaryClientNotes', '', {
+                        shouldDirty: true,
+                      })
                     }}
                     className="mt-0.5"
                   />
                   <div className="space-y-1">
-                    <p className="text-sm font-medium">بعداً اطلاعات مشتری را کامل می‌کنم</p>
+                    <p className="text-sm font-medium">
+                      بعداً اطلاعات مشتری را کامل می‌کنم
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      برای این حالت فقط نام لازم است و بعداً می‌توانید شماره را تکمیل کنید.
+                      برای این حالت فقط نام لازم است و بعداً می‌توانید شماره را
+                      تکمیل کنید.
                     </p>
                   </div>
                 </label>
@@ -410,23 +447,28 @@ export function AppointmentDrawer({
                 {useTemporaryClient ? (
                   <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
                     <Field className="gap-2">
-                      <FieldLabel htmlFor="temporary-client-name">نام مشتری</FieldLabel>
+                      <FieldLabel htmlFor="temporary-client-name">
+                        نام مشتری
+                      </FieldLabel>
                       <Input
                         id="temporary-client-name"
-                        ref={temporaryClientNameRef}
-                        value={temporaryClientName}
-                        onChange={(e) => setTemporaryClientName(e.target.value)}
+                        {...register('temporaryClientName')}
                         placeholder="مثلاً دوستِ سارا"
-                        required
                       />
+                      {errors.temporaryClientName && (
+                        <FieldError>
+                          {errors.temporaryClientName.message}
+                        </FieldError>
+                      )}
                     </Field>
 
                     <Field className="gap-2">
-                      <FieldLabel htmlFor="temporary-client-notes">یادداشت (اختیاری)</FieldLabel>
+                      <FieldLabel htmlFor="temporary-client-notes">
+                        یادداشت (اختیاری)
+                      </FieldLabel>
                       <Input
                         id="temporary-client-notes"
-                        value={temporaryClientNotes}
-                        onChange={(e) => setTemporaryClientNotes(e.target.value)}
+                        {...register('temporaryClientNotes')}
                         placeholder="مثلاً شماره را بعداً می‌گیرم"
                       />
                     </Field>
@@ -435,9 +477,17 @@ export function AppointmentDrawer({
                   <ClientPicker
                     clients={localClients}
                     value={clientId}
-                    onChange={setClientId}
+                    onChange={(id) =>
+                      setValue('clientId', id, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
                     onClientCreated={handleClientCreated}
                   />
+                )}
+                {errors.clientId && (
+                  <FieldError>{errors.clientId.message}</FieldError>
                 )}
               </div>
             </Field>
@@ -446,49 +496,77 @@ export function AppointmentDrawer({
             <div className="flex min-w-0 flex-col gap-4">
               <Field>
                 <FieldLabel>پرسنل</FieldLabel>
-                <Select value={staffId || undefined} onValueChange={handleStaffChange} required>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="انتخاب پرسنل" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staffRoleOnly.map((member) => {
-                      const unavailable = staffSlotOk[member.id] === false
-                      return (
-                        <SelectItem key={member.id} value={member.id} disabled={unavailable}>
-                          {member.name}
-                          {unavailable ? ' (خارج از برنامه)' : ''}
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={control}
+                  name="staffId"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || undefined}
+                      onValueChange={handleStaffChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="انتخاب پرسنل" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {staffRoleOnly.map((member) => {
+                          const unavailable = staffSlotOk[member.id] === false
+                          return (
+                            <SelectItem
+                              key={member.id}
+                              value={member.id}
+                              disabled={unavailable}
+                            >
+                              {member.name}
+                              {unavailable ? ' (خارج از برنامه)' : ''}
+                            </SelectItem>
+                          )
+                        })}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.staffId && (
+                  <FieldError>{errors.staffId.message}</FieldError>
+                )}
               </Field>
 
               <Field>
                 <FieldLabel>خدمت</FieldLabel>
-                <Select
-                  value={serviceId || undefined}
-                  onValueChange={handleServiceChange}
-                  required
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="انتخاب خدمت" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(servicesByCategory).map(([category, categoryServices]) => (
-                      <div key={category}>
-                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                          {CATEGORY_LABELS[category] || category}
-                        </div>
-                        {categoryServices.map((service) => (
-                          <SelectItem key={service.id} value={service.id}>
-                            {service.name} · پیشنهاد {toPersianDigits(service.duration)} دقیقه — {formatPrice(service.price)}
-                          </SelectItem>
-                        ))}
-                      </div>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={control}
+                  name="serviceId"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || undefined}
+                      onValueChange={handleServiceChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="انتخاب خدمت" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(servicesByCategory).map(
+                          ([category, categoryServices]) => (
+                            <div key={category}>
+                              <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                                {CATEGORY_LABELS[category] || category}
+                              </div>
+                              {categoryServices.map((service) => (
+                                <SelectItem key={service.id} value={service.id}>
+                                  {service.name} · پیشنهاد{' '}
+                                  {toPersianDigits(service.duration)} دقیقه —{' '}
+                                  {formatPrice(service.price)}
+                                </SelectItem>
+                              ))}
+                            </div>
+                          ),
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.serviceId && (
+                  <FieldError>{errors.serviceId.message}</FieldError>
+                )}
               </Field>
             </div>
 
@@ -498,9 +576,15 @@ export function AppointmentDrawer({
                 <JalaliDatePicker
                   id="date"
                   value={date}
-                  onChange={setDate}
+                  onChange={(value) =>
+                    setValue('date', value, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
                   required
                 />
+                {errors.date && <FieldError>{errors.date.message}</FieldError>}
               </Field>
 
               <Field>
@@ -509,11 +593,24 @@ export function AppointmentDrawer({
                   id="time"
                   value={startTime}
                   onChange={(st) => {
-                    setStartTime(st)
-                    setEndTime(endTimeFromDuration(st, durationMinutes))
+                    setValue('startTime', st, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                    setValue(
+                      'endTime',
+                      endTimeFromDuration(st, durationMinutes),
+                      {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      },
+                    )
                   }}
                   label="ساعت شروع"
                 />
+                {errors.startTime && (
+                  <FieldError>{errors.startTime.message}</FieldError>
+                )}
               </Field>
             </div>
 
@@ -553,13 +650,19 @@ export function AppointmentDrawer({
                     inputMode="numeric"
                     value={toPersianDigits(durationMinutes)}
                     onChange={(e) => {
-                      const v = parseLocalizedInt(e.target.value, durationMinutes)
+                      const v = parseLocalizedInt(
+                        e.target.value,
+                        durationMinutes,
+                      )
                       if (!Number.isFinite(v)) return
                       applyDuration(v)
                     }}
                     dir="rtl"
                     className="text-right tabular-nums"
                   />
+                  {errors.durationMinutes && (
+                    <FieldError>{errors.durationMinutes.message}</FieldError>
+                  )}
                 </Field>
 
                 <Field>
@@ -573,36 +676,38 @@ export function AppointmentDrawer({
                   <p className="mt-1 text-xs text-muted-foreground">
                     تغییر پایان، مدت را هم‌زمان به‌روز می‌کند.
                   </p>
+                  {errors.endTime && (
+                    <FieldError>{errors.endTime.message}</FieldError>
+                  )}
                 </Field>
 
                 <Field>
                   <FieldLabel htmlFor="notes">توضیحات (اختیاری)</FieldLabel>
                   <Input
                     id="notes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                    {...register('notes')}
                     placeholder="توضیحات اضافی…"
                   />
                 </Field>
               </FieldGroup>
             </details>
 
-            {error && <FieldError>{error}</FieldError>}
+            <FormRootError message={errors.root?.message} />
           </FieldGroup>
         </form>
 
         <DrawerFooter>
           <Button
-            onClick={handleSubmit}
+            onClick={onSubmit}
             disabled={
-              loading ||
+              isSubmitting ||
               !serviceId ||
               !staffId ||
               (useTemporaryClient ? !temporaryClientName.trim() : !clientId)
             }
           >
-            {loading && <Spinner className="ml-2" />}
-            {loading ? 'در حال ثبت…' : 'ثبت نوبت'}
+            {isSubmitting && <Spinner className="ml-2" />}
+            {isSubmitting ? 'در حال ثبت…' : 'ثبت نوبت'}
           </Button>
           <DrawerClose asChild>
             <Button variant="outline">انصراف</Button>

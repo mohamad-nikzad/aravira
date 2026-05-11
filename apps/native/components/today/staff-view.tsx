@@ -7,22 +7,20 @@ import { formatJalaliFullDate } from '@repo/salon-core/jalali';
 import { formatPersianTime } from '@repo/salon-core/persian-digits';
 import { salonCurrentHm } from '@repo/salon-core/salon-local-time';
 import { durationMinutesFromRange } from '@repo/salon-core/appointment-time';
-import { saloora, semanticLight } from '@repo/brand-tokens/colors';
 import { Badge } from '../ui/badge';
 import { Card, CardContent } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
 import {
   ACTIVE_STATUSES,
   AppointmentCard,
-  FONTS,
   StatCard,
   formatNumber,
   sortAppointments,
 } from './shared';
 import { getNextOpenSlot } from './next-open-slot';
 import { toPersianDigits } from '@repo/salon-core/persian-digits';
+import { useTheme, useThemeStyles, withAlpha } from '../../theme';
 
-import { tw } from '../../lib/utils';
 function summarizeNextOpenSlot(slot: ReturnType<typeof getNextOpenSlot>) {
   if (!slot) return 'بازه آزاد دیگری ندارد';
   const primary = slot.startsNow
@@ -52,6 +50,129 @@ export function StaffTodayView({
   tomorrowLoading: boolean;
 }) {
   const [clockHm, setClockHm] = React.useState(() => salonCurrentHm());
+  const { theme } = useTheme();
+  const styles = useThemeStyles((t) => ({
+    safe: { backgroundColor: t.colors.background, flex: 1 },
+    header: {
+      borderBottomColor: withAlpha(t.colors.border, 0.5),
+      backgroundColor: t.colors.card,
+      borderBottomWidth: t.sizes.hairline,
+      paddingHorizontal: t.spacing.xl,
+      paddingVertical: t.spacing.lg,
+    },
+    headerRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.md,
+    },
+    headerTitle: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.xl,
+      fontFamily: t.fonts.sansBold,
+    },
+    headerSubtitle: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sans,
+    },
+    scroll: { padding: t.spacing.xl, gap: t.spacing.xl },
+    skelGap: { gap: t.spacing.lg },
+    statRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: t.spacing.lg },
+    statCell: { flexBasis: '47%' as const, flexGrow: 1 },
+    sectionCard: { gap: t.spacing.lg, padding: t.spacing.xl },
+    sectionTitleRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.md,
+    },
+    sectionTitle: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    cardContent: { gap: t.spacing.lg, padding: 0 },
+    currentCard: {
+      borderColor: withAlpha(t.colors.primary, 0.3),
+      backgroundColor: withAlpha(t.colors.primary, 0.05),
+      gap: t.spacing.md,
+      borderRadius: t.radius.xl,
+      borderWidth: t.sizes.hairline,
+      padding: t.spacing.lg,
+    },
+    nextCard: {
+      borderColor: withAlpha(t.colors.border, 0.6),
+      gap: t.spacing.md,
+      borderRadius: t.radius.xl,
+      borderWidth: t.sizes.hairline,
+      padding: t.spacing.lg,
+    },
+    cardHeaderRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      gap: t.spacing.md,
+    },
+    timeText: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sans,
+      writingDirection: 'ltr' as const,
+    },
+    clientName: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    serviceName: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sans,
+    },
+    empty: {
+      borderColor: withAlpha(t.colors.border, 0.7),
+      alignItems: 'center' as const,
+      borderRadius: t.radius.xl,
+      borderWidth: t.sizes.hairline,
+      borderStyle: 'dashed' as const,
+      padding: t.spacing.xl,
+    },
+    emptyText: {
+      color: t.colors.mutedForeground,
+      textAlign: 'center' as const,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sans,
+    },
+    openSlotCard: {
+      backgroundColor: withAlpha(t.colors.muted, 0.6),
+      gap: t.spacing.xs,
+      borderRadius: t.radius.xl,
+      padding: t.spacing.lg,
+    },
+    openSlotLabel: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sansMedium,
+    },
+    openSlotHint: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sans,
+    },
+    badgeText: { fontSize: t.fontSize.xs },
+    listEmpty: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sans,
+    },
+    tomorrowSkelWrap: { gap: t.spacing.lg },
+    tomorrowSkelCard: {
+      borderColor: withAlpha(t.colors.border, 0.6),
+      gap: t.spacing.md,
+      borderRadius: t.radius.xl,
+      borderWidth: t.sizes.hairline,
+      padding: t.spacing.lg,
+    },
+  }));
   React.useEffect(() => {
     const t = setInterval(() => setClockHm(salonCurrentHm()), 60_000);
     return () => clearInterval(t);
@@ -102,17 +223,13 @@ export function StaffTodayView({
   const showSkeleton = !todayData && todayLoading;
 
   return (
-    <SafeAreaView
-      style={[tw('bg-background flex-1'), { backgroundColor: semanticLight.background.hex }]}
-      edges={['top']}>
-      <View style={tw('border-border/50 bg-card border-b px-4 py-3')}>
-        <View style={tw('flex-row items-center gap-2')}>
-          <CalendarDays size={20} color={saloora.plum.hex} strokeWidth={1.8} />
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.header}>
+        <View style={styles.headerRow}>
+          <CalendarDays size={theme.sizes.iconMd} color={theme.colors.primary} strokeWidth={1.8} />
           <View>
-            <Text style={[tw('text-foreground text-lg'), { fontFamily: FONTS.bold }]}>
-              امروز من
-            </Text>
-            <Text style={[tw('text-muted-foreground text-xs'), { fontFamily: FONTS.reg }]}>
+            <Text style={styles.headerTitle}>امروز من</Text>
+            <Text style={styles.headerSubtitle}>
               {todayData ? formatJalaliFullDate(todayData.date) : formatJalaliFullDate(todayDate)} ·
               اکنون {formatPersianTime(clockHm)}
             </Text>
@@ -120,14 +237,12 @@ export function StaffTodayView({
         </View>
       </View>
 
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 16, gap: 16 }}>
+      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.scroll}>
         {showSkeleton ? (
-          <View style={tw('gap-3')}>
-            <View style={tw('flex-row flex-wrap gap-3')}>
+          <View style={styles.skelGap}>
+            <View style={styles.statRow}>
               {[0, 1, 2, 3].map((i) => (
-                <View key={i} style={{ flexBasis: '47%', flexGrow: 1 }}>
+                <View key={i} style={styles.statCell}>
                   <Skeleton height={80} width="100%" radius={12} />
                 </View>
               ))}
@@ -137,29 +252,29 @@ export function StaffTodayView({
           </View>
         ) : (
           <>
-            <View style={tw('flex-row flex-wrap gap-3')}>
-              <View style={{ flexBasis: '47%', flexGrow: 1 }}>
+            <View style={styles.statRow}>
+              <View style={styles.statCell}>
                 <StatCard
                   label="کل امروز"
                   value={formatNumber(todayAppointments.length)}
                   hint="همه نوبت‌های ثبت شده"
                 />
               </View>
-              <View style={{ flexBasis: '47%', flexGrow: 1 }}>
+              <View style={styles.statCell}>
                 <StatCard
                   label="در جریان"
                   value={formatNumber(activeTodayAppointments.length)}
                   hint="رزرو شده و تایید شده"
                 />
               </View>
-              <View style={{ flexBasis: '47%', flexGrow: 1 }}>
+              <View style={styles.statCell}>
                 <StatCard
                   label="زمان رزرو"
                   value={formatNumber(todayBookedMinutes)}
                   hint="دقیقه کاری امروز"
                 />
               </View>
-              <View style={{ flexBasis: '47%', flexGrow: 1 }}>
+              <View style={styles.statCell}>
                 <StatCard
                   label="فردا"
                   value={formatNumber(tomorrowAppointments.length)}
@@ -172,81 +287,54 @@ export function StaffTodayView({
               </View>
             </View>
 
-            <Card style={{ gap: 12, padding: 16 }}>
-              <View style={tw('flex-row items-center gap-2')}>
-                <Clock size={16} color={saloora.plum.hex} strokeWidth={1.8} />
-                <Text style={[tw('text-foreground text-sm'), { fontFamily: FONTS.semi }]}>
-                  الان و بعدی
-                </Text>
+            <Card style={styles.sectionCard}>
+              <View style={styles.sectionTitleRow}>
+                <Clock size={theme.sizes.iconSm} color={theme.colors.primary} strokeWidth={1.8} />
+                <Text style={styles.sectionTitle}>الان و بعدی</Text>
               </View>
-              <CardContent style={{ gap: 12, padding: 0 }}>
+              <CardContent style={styles.cardContent}>
                 {currentAppointment ? (
-                  <View style={tw('border-primary/30 bg-primary/5 gap-2 rounded-2xl border p-3')}>
-                    <View style={tw('flex-row items-center justify-between gap-2')}>
+                  <View style={styles.currentCard}>
+                    <View style={styles.cardHeaderRow}>
                       <Badge>در حال انجام</Badge>
-                      <Text
-                        style={[
-                          tw('text-muted-foreground text-xs'),
-                          { fontFamily: FONTS.reg, writingDirection: 'ltr' },
-                        ]}>
+                      <Text style={styles.timeText}>
                         {formatPersianTime(currentAppointment.startTime)} -{' '}
                         {formatPersianTime(currentAppointment.endTime)}
                       </Text>
                     </View>
-                    <Text style={[tw('text-foreground text-sm'), { fontFamily: FONTS.semi }]}>
-                      {currentAppointment.client.name}
-                    </Text>
-                    <Text style={[tw('text-muted-foreground text-xs'), { fontFamily: FONTS.reg }]}>
-                      {currentAppointment.service.name}
-                    </Text>
+                    <Text style={styles.clientName}>{currentAppointment.client.name}</Text>
+                    <Text style={styles.serviceName}>{currentAppointment.service.name}</Text>
                   </View>
                 ) : nextAppointment ? (
-                  <View style={tw('border-border/60 gap-2 rounded-2xl border p-3')}>
-                    <View style={tw('flex-row items-center justify-between gap-2')}>
+                  <View style={styles.nextCard}>
+                    <View style={styles.cardHeaderRow}>
                       <Badge variant="secondary">بعدی</Badge>
-                      <Text
-                        style={[
-                          tw('text-muted-foreground text-xs'),
-                          { fontFamily: FONTS.reg, writingDirection: 'ltr' },
-                        ]}>
+                      <Text style={styles.timeText}>
                         {formatPersianTime(nextAppointment.startTime)} -{' '}
                         {formatPersianTime(nextAppointment.endTime)}
                       </Text>
                     </View>
-                    <Text style={[tw('text-foreground text-sm'), { fontFamily: FONTS.semi }]}>
-                      {nextAppointment.client.name}
-                    </Text>
-                    <Text style={[tw('text-muted-foreground text-xs'), { fontFamily: FONTS.reg }]}>
-                      {nextAppointment.service.name}
-                    </Text>
+                    <Text style={styles.clientName}>{nextAppointment.client.name}</Text>
+                    <Text style={styles.serviceName}>{nextAppointment.service.name}</Text>
                   </View>
                 ) : (
-                  <View
-                    style={tw(
-                      'border-border/70 items-center rounded-2xl border border-dashed p-4'
-                    )}>
-                    <Text
-                      style={[
-                        tw('text-muted-foreground text-center text-sm'),
-                        { fontFamily: FONTS.reg },
-                      ]}>
+                  <View style={styles.empty}>
+                    <Text style={styles.emptyText}>
                       برای ادامه امروز نوبت فعالی باقی نمانده است.
                     </Text>
                   </View>
                 )}
 
-                <View style={tw('bg-muted/60 gap-1 rounded-2xl p-3')}>
-                  <View style={tw('flex-row items-center justify-between gap-2')}>
-                    <Text style={[tw('text-foreground text-sm'), { fontFamily: FONTS.med }]}>
-                      بازه آزاد بعدی
-                    </Text>
+                <View style={styles.openSlotCard}>
+                  <View style={styles.cardHeaderRow}>
+                    <Text style={styles.openSlotLabel}>بازه آزاد بعدی</Text>
                     {nextOpenSlot ? (
-                      <Badge variant="outline" textStyle={{ fontSize: 10 }}>
+                      <Badge variant="outline" textStyle={styles.badgeText}>
                         {nextOpenSlot.dayLabel}
                       </Badge>
                     ) : null}
                   </View>
-                  <Text style={[tw('text-muted-foreground text-xs'), { fontFamily: FONTS.reg }]}>
+                  <Text style={styles.openSlotHint}>
                     {checkingTomorrowOpenSlots
                       ? 'در حال بررسی اولین بازه آزاد...'
                       : summarizeNextOpenSlot(nextOpenSlot)}
@@ -255,15 +343,11 @@ export function StaffTodayView({
               </CardContent>
             </Card>
 
-            <Card style={{ gap: 12, padding: 16 }}>
-              <Text style={[tw('text-foreground text-sm'), { fontFamily: FONTS.semi }]}>
-                نوبت‌های امروز
-              </Text>
-              <CardContent style={{ gap: 12, padding: 0 }}>
+            <Card style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>نوبت‌های امروز</Text>
+              <CardContent style={styles.cardContent}>
                 {todayAppointments.length === 0 ? (
-                  <Text style={[tw('text-muted-foreground text-sm'), { fontFamily: FONTS.reg }]}>
-                    برای امروز نوبتی ثبت نشده است.
-                  </Text>
+                  <Text style={styles.listEmpty}>برای امروز نوبتی ثبت نشده است.</Text>
                 ) : (
                   todayAppointments.map((appointment) => (
                     <AppointmentCard
@@ -277,28 +361,24 @@ export function StaffTodayView({
               </CardContent>
             </Card>
 
-            <Card style={{ gap: 12, padding: 16 }}>
-              <Text style={[tw('text-foreground text-sm'), { fontFamily: FONTS.semi }]}>
-                نگاه به فردا
-              </Text>
-              <CardContent style={{ gap: 12, padding: 0 }}>
+            <Card style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>نگاه به فردا</Text>
+              <CardContent style={styles.cardContent}>
                 {!tomorrowData && tomorrowLoading ? (
-                  <View style={tw('gap-3')}>
-                    <View style={tw('border-border/60 gap-2 rounded-2xl border p-3')}>
+                  <View style={styles.tomorrowSkelWrap}>
+                    <View style={styles.tomorrowSkelCard}>
                       <Skeleton height={16} width={112} />
                       <Skeleton height={12} width={80} />
                       <Skeleton height={12} width={128} />
                     </View>
-                    <View style={tw('border-border/60 gap-2 rounded-2xl border p-3')}>
+                    <View style={styles.tomorrowSkelCard}>
                       <Skeleton height={16} width={96} />
                       <Skeleton height={12} width={96} />
                       <Skeleton height={12} width={112} />
                     </View>
                   </View>
                 ) : tomorrowAppointments.length === 0 ? (
-                  <Text style={[tw('text-muted-foreground text-sm'), { fontFamily: FONTS.reg }]}>
-                    برای فردا هنوز نوبتی ثبت نشده است.
-                  </Text>
+                  <Text style={styles.listEmpty}>برای فردا هنوز نوبتی ثبت نشده است.</Text>
                 ) : (
                   tomorrowAppointments.map((appointment) => (
                     <AppointmentCard

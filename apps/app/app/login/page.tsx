@@ -1,46 +1,53 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
 import { Field, FieldLabel, FieldError, FieldGroup } from '@repo/ui/field'
+import { FormRootError } from '@repo/ui/form'
 import { Spinner } from '@repo/ui/spinner'
 import { homePathForRole } from '@/lib/navigation'
 import type { User } from '@repo/salon-core/types'
-import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
+import { displayPhone } from '@repo/salon-core/phone'
+import { loginSchema, type LoginFormInput } from '@repo/salon-core/forms/auth'
 import { SalooraMark } from '@/components/brand/saloora-logo'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [phone, setPhone] = useState('')
   const showDemoCredentials = process.env.NODE_ENV !== 'production'
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+  const {
+    register,
+    handleSubmit,
+    setError,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { phone: '', password: '' },
+  })
 
-    const form = new FormData(e.currentTarget)
-    const normalizedPhone = normalizePhone(phone)
-    const password = form.get('password') as string
+  const phoneValue = watch('phone') ?? ''
 
+  const onSubmit = handleSubmit(async (values) => {
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ phone: normalizedPhone, password }),
+        body: JSON.stringify(values),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'شماره موبایل یا رمز عبور اشتباه است')
-        setLoading(false)
+        setError('root', {
+          message: data.error || 'شماره موبایل یا رمز عبور اشتباه است',
+        })
         return
       }
 
@@ -48,10 +55,11 @@ export default function LoginPage() {
       router.push(nextUser ? homePathForRole(nextUser.role) : '/calendar')
       router.refresh()
     } catch {
-      setError('خطایی رخ داد. لطفا دوباره تلاش کنید.')
-      setLoading(false)
+      setError('root', { message: 'خطایی رخ داد. لطفا دوباره تلاش کنید.' })
     }
-  }
+  })
+
+  const passwordField = register('password')
 
   return (
     <main className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-background p-4">
@@ -76,49 +84,48 @@ export default function LoginPage() {
             <p className="mt-1 text-sm text-muted-foreground">برای ادامه وارد شوید</p>
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={onSubmit} noValidate>
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="phone">شماره موبایل</FieldLabel>
                 <Input
                   id="phone"
-                  name="phone"
                   type="tel"
-                  value={displayPhone(phone)}
-                  onChange={(event) => setPhone(normalizePhone(event.target.value))}
+                  value={displayPhone(phoneValue)}
+                  onChange={(event) => setValue('phone', event.target.value, { shouldValidate: false })}
                   placeholder="مثلاً ۰۹۱۲۰۰۰۰۰۰۰"
                   autoComplete="username"
                   inputMode="numeric"
-                  required
-                  disabled={loading}
+                  disabled={isSubmitting}
                   className="h-12 rounded-xl bg-muted/40 border-border/50 text-base text-left tabular-nums"
                   dir="ltr"
                 />
+                {errors.phone && <FieldError>{errors.phone.message}</FieldError>}
               </Field>
 
               <Field>
                 <FieldLabel htmlFor="password">رمز عبور</FieldLabel>
                 <Input
                   id="password"
-                  name="password"
                   type="password"
                   placeholder="رمز عبور را وارد کنید"
                   autoComplete="current-password"
-                  required
-                  disabled={loading}
+                  disabled={isSubmitting}
                   className="h-12 rounded-xl bg-muted/40 border-border/50"
+                  {...passwordField}
                 />
+                {errors.password && <FieldError>{errors.password.message}</FieldError>}
               </Field>
 
-              {error && <FieldError>{error}</FieldError>}
+              <FormRootError message={errors.root?.message} />
 
               <Button
                 type="submit"
                 className="w-full h-12 rounded-xl text-base font-semibold touch-manipulation shadow-sm"
-                disabled={loading}
+                disabled={isSubmitting}
               >
-                {loading ? <Spinner className="ml-2" /> : null}
-                {loading ? 'در حال ورود…' : 'ورود'}
+                {isSubmitting ? <Spinner className="ml-2" /> : null}
+                {isSubmitting ? 'در حال ورود…' : 'ورود'}
               </Button>
             </FieldGroup>
           </form>

@@ -11,15 +11,17 @@ import {
   View,
 } from 'react-native';
 import { Check, ChevronDown, Plus, Search, UserPlus, X } from 'lucide-react-native';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { ApiError } from '@repo/api-client';
 import type { Client } from '@repo/salon-core/types';
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone';
-import { saloora } from '@repo/brand-tokens/colors';
+import { clientFormSchema, type ClientFormInput } from '@repo/salon-core/forms/client';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { clientsApi } from '../../lib/api';
+import { useTheme, useThemeStyles, withAlpha } from '../../theme';
 
-import { tw } from '../../lib/utils';
 type Mode = 'search' | 'add';
 
 export type ClientPickerProps = {
@@ -27,25 +29,194 @@ export type ClientPickerProps = {
   value: string;
   onChange: (clientId: string) => void;
   onClientCreated?: (client: Client) => void;
-  className?: string;
 };
 
-export function ClientPicker({
-  clients,
-  value,
-  onChange,
-  onClientCreated,
-  className,
-}: ClientPickerProps) {
+export function ClientPicker({ clients, value, onChange, onClientCreated }: ClientPickerProps) {
   const [open, setOpen] = React.useState(false);
   const [mode, setMode] = React.useState<Mode>('search');
   const [query, setQuery] = React.useState('');
-  const [newName, setNewName] = React.useState('');
-  const [newPhone, setNewPhone] = React.useState('');
-  const [saving, setSaving] = React.useState(false);
-  const [saveError, setSaveError] = React.useState('');
+  const {
+    handleSubmit,
+    reset: resetForm,
+    setError,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<ClientFormInput>({
+    resolver: zodResolver(clientFormSchema),
+    defaultValues: { name: '', phone: '', notes: '', tags: [] },
+  });
+  const { theme } = useTheme();
+  const styles = useThemeStyles((t) => ({
+    trigger: {
+      height: t.sizes.avatarMd,
+      width: '100%' as const,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      borderRadius: t.radius.md,
+      borderWidth: t.sizes.hairline,
+      borderColor: t.colors.input,
+      backgroundColor: t.colors.background,
+      paddingHorizontal: t.spacing.lg,
+    },
+    triggerText: {
+      flex: 1,
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sansMedium,
+    },
+    triggerTextSelected: { color: t.colors.foreground },
+    triggerTextPlaceholder: { color: t.colors.mutedForeground },
+    backdrop: {
+      flex: 1,
+      justifyContent: 'flex-end' as const,
+      backgroundColor: withAlpha('#000000', 0.4),
+    },
+    sheet: {
+      borderTopLeftRadius: t.radius.xl,
+      borderTopRightRadius: t.radius.xl,
+      backgroundColor: t.colors.card,
+      paddingBottom: t.spacing['3xl'],
+      paddingTop: t.spacing.xl,
+      maxHeight: '85%' as const,
+    },
+    headerRow: {
+      paddingHorizontal: t.spacing.xl,
+      paddingBottom: t.spacing.lg,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+    },
+    headerTitle: {
+      fontSize: t.fontSize.lg,
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sansBold,
+    },
+    closeBtn: {
+      height: t.sizes.avatarSm,
+      width: t.sizes.avatarSm,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      borderRadius: t.radius.full,
+      backgroundColor: t.colors.muted,
+    },
+    searchBar: {
+      marginHorizontal: t.spacing.xl,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.md,
+      borderRadius: t.radius.md,
+      borderWidth: t.sizes.hairline,
+      borderColor: t.colors.border,
+      backgroundColor: t.colors.background,
+      paddingHorizontal: t.spacing.lg,
+    },
+    searchInput: {
+      flex: 1,
+      paddingVertical: t.spacing.md,
+      fontSize: t.fontSize.base,
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sans,
+      includeFontPadding: false,
+    },
+    list: { marginTop: t.spacing.md, maxHeight: 320 },
+    listInner: { paddingHorizontal: t.spacing.md },
+    clientRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.lg,
+      borderRadius: t.radius.md,
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.lg,
+    },
+    clientRowSelected: { backgroundColor: withAlpha(t.colors.primary, 0.1) },
+    clientName: {
+      fontSize: t.fontSize.base,
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    clientPhone: {
+      marginTop: t.spacing.xs / 2,
+      fontSize: t.fontSize.sm,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sans,
+      writingDirection: 'ltr' as const,
+    },
+    flex1: { flex: 1 },
+    emptyWrap: { paddingHorizontal: t.spacing.lg, paddingVertical: t.spacing['3xl'] },
+    emptyText: {
+      textAlign: 'center' as const,
+      fontSize: t.fontSize.base,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sans,
+    },
+    addSection: {
+      marginTop: t.spacing.md,
+      borderTopWidth: t.sizes.hairline,
+      borderTopColor: t.colors.border,
+      paddingHorizontal: t.spacing.md,
+      paddingTop: t.spacing.md,
+    },
+    addRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.lg,
+      borderRadius: t.radius.md,
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.lg,
+    },
+    addIconWrap: {
+      height: t.sizes.avatarSm,
+      width: t.sizes.avatarSm,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      borderRadius: t.radius.md,
+      backgroundColor: withAlpha(t.colors.primary, 0.1),
+    },
+    addTextPrimary: {
+      flex: 1,
+      fontSize: t.fontSize.base,
+      color: t.colors.primary,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    addTextMuted: {
+      flex: 1,
+      fontSize: t.fontSize.base,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sansMedium,
+    },
+    addBody: { paddingHorizontal: t.spacing.xl, gap: t.spacing.lg },
+    addHeaderRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+    },
+    backText: {
+      fontSize: t.fontSize.sm,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sansMedium,
+    },
+    addTitle: {
+      fontSize: t.fontSize.base,
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    errorText: {
+      fontSize: t.fontSize.sm,
+      color: t.colors.destructive,
+      fontFamily: t.fonts.sansMedium,
+    },
+    submitText: {
+      fontSize: t.fontSize.base,
+      color: t.colors.primaryForeground,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    fullWidth: { width: '100%' as const },
+  }));
 
   const selectedClient = clients.find((c) => c.id === value);
+  const newName = watch('name') ?? '';
+  const newPhone = watch('phone') ?? '';
 
   const filtered = React.useMemo(() => {
     const q = query.trim();
@@ -68,9 +239,7 @@ export function ClientPicker({
   const reset = () => {
     setMode('search');
     setQuery('');
-    setNewName('');
-    setNewPhone('');
-    setSaveError('');
+    resetForm({ name: '', phone: '', notes: '', tags: [] });
   };
 
   const handleOpen = () => {
@@ -91,32 +260,27 @@ export function ClientPicker({
   const startAdding = () => {
     const q = query.trim();
     const looksLikePhone = /^[\d۰-۹٠-٩\s+()-]{4,}$/.test(q);
-    setNewName(looksLikePhone ? '' : q);
-    setNewPhone(looksLikePhone ? normalizePhone(q) : '');
-    setSaveError('');
+    resetForm({
+      name: looksLikePhone ? '' : q,
+      phone: looksLikePhone ? normalizePhone(q) : '',
+      notes: '',
+      tags: [],
+    });
     setMode('add');
   };
 
-  const handleSaveNew = async () => {
-    if (!newName.trim() || !newPhone.trim()) return;
-    setSaving(true);
-    setSaveError('');
+  const handleSaveNew = handleSubmit(async (values) => {
     try {
-      const { client } = await clientsApi.create({
-        name: newName.trim(),
-        phone: newPhone.trim(),
-      });
+      const { client } = await clientsApi.create({ ...values, tags: values.tags ?? [] });
       onClientCreated?.(client);
       onChange(client.id);
       handleClose();
     } catch (err) {
       const msg =
         err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'خطایی رخ داد';
-      setSaveError(msg);
-    } finally {
-      setSaving(false);
+      setError('root', { message: msg });
     }
-  };
+  });
 
   const triggerLabel = selectedClient
     ? `${selectedClient.name}${
@@ -128,275 +292,171 @@ export function ClientPicker({
 
   return (
     <>
-      <Pressable
-        onPress={handleOpen}
-        style={tw(
-          'h-10 w-full flex-row items-center justify-between rounded-lg border border-input bg-background px-3',
-          className
-        )}>
+      <Pressable onPress={handleOpen} style={styles.trigger}>
         <Text
           style={[
-            tw('flex-1 text-sm', selectedClient ? 'text-foreground' : 'text-muted-foreground'),
-            { fontFamily: 'Vazirmatn_500Medium', textAlign: 'right' },
+            styles.triggerText,
+            selectedClient ? styles.triggerTextSelected : styles.triggerTextPlaceholder,
           ]}
           numberOfLines={1}>
           {triggerLabel}
         </Text>
-        <ChevronDown size={16} color={saloora.sage.hex} strokeWidth={1.6} />
+        <ChevronDown size={theme.sizes.iconSm} color={theme.iconColors.muted} strokeWidth={1.6} />
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={handleClose}>
-        <Pressable onPress={handleClose} style={tw('flex-1 justify-end bg-black/40')}>
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
-            style={[tw('rounded-t-2xl bg-card pb-6 pt-4'), { maxHeight: '85%' }]}>
+        <Pressable onPress={handleClose} style={styles.backdrop}>
+          <Pressable onPress={(e) => e.stopPropagation()} style={styles.sheet}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-              <View style={tw('px-4 pb-3 flex-row items-center justify-between')}>
-                <Text
-                  style={[tw('text-base text-foreground'), { fontFamily: 'Vazirmatn_700Bold' }]}>
+              <View style={styles.headerRow}>
+                <Text style={styles.headerTitle}>
                   {mode === 'add' ? 'مشتری جدید' : 'انتخاب مشتری'}
                 </Text>
-                <Pressable
-                  onPress={handleClose}
-                  style={tw('h-8 w-8 items-center justify-center rounded-full bg-muted')}>
-                  <X size={16} color={saloora.plum.hex} strokeWidth={2} />
+                <Pressable onPress={handleClose} style={styles.closeBtn}>
+                  <X size={theme.sizes.iconSm} color={theme.colors.foreground} strokeWidth={2} />
                 </Pressable>
               </View>
 
               {mode === 'search' ? (
-                <SearchMode
-                  query={query}
-                  onQueryChange={setQuery}
-                  filtered={filtered}
-                  value={value}
-                  onSelect={handleSelect}
-                  hasExactMatch={hasExactMatch}
-                  onStartAdding={startAdding}
-                />
+                <>
+                  <View style={styles.searchBar}>
+                    <Search size={theme.sizes.iconSm} color={theme.iconColors.muted} strokeWidth={1.6} />
+                    <TextInput
+                      value={query}
+                      onChangeText={setQuery}
+                      placeholder="جستجو نام یا شماره…"
+                      placeholderTextColor={theme.colors.mutedForeground}
+                      autoFocus
+                      style={styles.searchInput}
+                    />
+                    {query ? (
+                      <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                        <X size={theme.sizes.iconSm - 2} color={theme.iconColors.muted} strokeWidth={1.8} />
+                      </Pressable>
+                    ) : null}
+                  </View>
+
+                  <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
+                    <View style={styles.listInner}>
+                      {filtered.length > 0 ? (
+                        filtered.map((client) => {
+                          const isSelected = client.id === value;
+                          return (
+                            <Pressable
+                              key={client.id}
+                              onPress={() => handleSelect(client.id)}
+                              style={[
+                                styles.clientRow,
+                                isSelected ? styles.clientRowSelected : null,
+                              ]}>
+                              <View style={styles.flex1}>
+                                <Text style={styles.clientName} numberOfLines={1}>
+                                  {client.name}
+                                </Text>
+                                <Text style={styles.clientPhone}>
+                                  {client.isPlaceholder
+                                    ? 'اطلاعات ناقص'
+                                    : displayPhone(client.phone)}
+                                </Text>
+                              </View>
+                              {isSelected ? (
+                                <Check
+                                  size={theme.sizes.iconSm}
+                                  color={theme.colors.primary}
+                                  strokeWidth={2}
+                                />
+                              ) : null}
+                            </Pressable>
+                          );
+                        })
+                      ) : (
+                        <View style={styles.emptyWrap}>
+                          <Text style={styles.emptyText}>مشتری‌ای یافت نشد</Text>
+                        </View>
+                      )}
+                    </View>
+                  </ScrollView>
+
+                  <View style={styles.addSection}>
+                    {!hasExactMatch && query.trim() ? (
+                      <Pressable onPress={startAdding} style={styles.addRow}>
+                        <View style={styles.addIconWrap}>
+                          <UserPlus
+                            size={theme.sizes.iconSm - 2}
+                            color={theme.colors.primary}
+                            strokeWidth={1.8}
+                          />
+                        </View>
+                        <Text style={styles.addTextPrimary} numberOfLines={1}>
+                          افزودن «{query.trim()}» به عنوان مشتری جدید
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <Pressable onPress={startAdding} style={styles.addRow}>
+                        <Plus
+                          size={theme.sizes.iconSm}
+                          color={theme.iconColors.muted}
+                          strokeWidth={1.8}
+                        />
+                        <Text style={styles.addTextMuted}>مشتری جدید</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                </>
               ) : (
-                <AddMode
-                  newName={newName}
-                  newPhone={newPhone}
-                  onNameChange={setNewName}
-                  onPhoneChange={(t) => setNewPhone(normalizePhone(t))}
-                  saving={saving}
-                  saveError={saveError}
-                  onSave={handleSaveNew}
-                  onBack={() => {
-                    setMode('search');
-                    setSaveError('');
-                  }}
-                />
+                <View style={styles.addBody}>
+                  <View style={styles.addHeaderRow}>
+                    <Pressable
+                      onPress={() => {
+                        setMode('search');
+                        resetForm({ name: '', phone: '', notes: '', tags: [] });
+                      }}>
+                      <Text style={styles.backText}>بازگشت</Text>
+                    </Pressable>
+                    <Text style={styles.addTitle}>ثبت مشتری جدید</Text>
+                  </View>
+
+                  <Input
+                    value={newName}
+                    onChangeText={(text) => setValue('name', text)}
+                    placeholder="نام مشتری"
+                  />
+
+                  <Input
+                    value={displayPhone(newPhone)}
+                    onChangeText={(text) => setValue('phone', text)}
+                    placeholder="شماره تماس (۰۹…)"
+                    keyboardType="phone-pad"
+                    style={{ textAlign: 'left', writingDirection: 'ltr' }}
+                  />
+
+                  {errors.name ? <Text style={styles.errorText}>{errors.name.message}</Text> : null}
+                  {errors.phone ? <Text style={styles.errorText}>{errors.phone.message}</Text> : null}
+                  {errors.root ? <Text style={styles.errorText}>{errors.root.message}</Text> : null}
+
+                  <Button
+                    disabled={isSubmitting || !newName.trim() || !newPhone.trim()}
+                    onPress={() => void handleSaveNew()}
+                    style={styles.fullWidth}>
+                    {isSubmitting ? (
+                      <ActivityIndicator size="small" color={theme.colors.primaryForeground} />
+                    ) : (
+                      <Plus
+                        size={theme.sizes.iconSm - 2}
+                        color={theme.colors.primaryForeground}
+                        strokeWidth={2}
+                      />
+                    )}
+                    <Text style={styles.submitText}>
+                      {isSubmitting ? 'در حال ذخیره…' : 'ذخیره و انتخاب'}
+                    </Text>
+                  </Button>
+                </View>
               )}
             </KeyboardAvoidingView>
           </Pressable>
         </Pressable>
       </Modal>
     </>
-  );
-}
-
-function SearchMode({
-  query,
-  onQueryChange,
-  filtered,
-  value,
-  onSelect,
-  hasExactMatch,
-  onStartAdding,
-}: {
-  query: string;
-  onQueryChange: (q: string) => void;
-  filtered: Client[];
-  value: string;
-  onSelect: (id: string) => void;
-  hasExactMatch: boolean;
-  onStartAdding: () => void;
-}) {
-  return (
-    <>
-      <View
-        style={tw(
-          'mx-4 flex-row items-center gap-2 rounded-lg border border-border bg-background px-3'
-        )}>
-        <Search size={16} color={saloora.sage.hex} strokeWidth={1.6} />
-        <TextInput
-          value={query}
-          onChangeText={onQueryChange}
-          placeholder="جستجو نام یا شماره…"
-          placeholderTextColor="#767A6F"
-          autoFocus
-          style={[
-            tw('flex-1 py-2.5 text-sm text-foreground'),
-            {
-              fontFamily: 'Vazirmatn_400Regular',
-              textAlign: 'right',
-              includeFontPadding: false,
-            },
-          ]}
-        />
-        {query ? (
-          <Pressable onPress={() => onQueryChange('')} hitSlop={8}>
-            <X size={14} color={saloora.sage.hex} strokeWidth={1.8} />
-          </Pressable>
-        ) : null}
-      </View>
-
-      <ScrollView style={[tw('mt-2'), { maxHeight: 320 }]} keyboardShouldPersistTaps="handled">
-        <View style={tw('px-2')}>
-          {filtered.length > 0 ? (
-            filtered.map((client) => {
-              const isSelected = client.id === value;
-              return (
-                <Pressable
-                  key={client.id}
-                  onPress={() => onSelect(client.id)}
-                  style={tw(
-                    'flex-row items-center gap-3 rounded-lg px-3 py-3',
-                    isSelected && 'bg-primary/10'
-                  )}>
-                  <View style={tw('flex-1')}>
-                    <Text
-                      style={[
-                        tw('text-sm text-foreground'),
-                        { fontFamily: 'Vazirmatn_600SemiBold', textAlign: 'right' },
-                      ]}
-                      numberOfLines={1}>
-                      {client.name}
-                    </Text>
-                    <Text
-                      style={[
-                        tw('mt-0.5 text-xs text-muted-foreground'),
-                        {
-                          fontFamily: 'Vazirmatn_400Regular',
-                          writingDirection: 'ltr',
-                          textAlign: 'right',
-                        },
-                      ]}>
-                      {client.isPlaceholder ? 'اطلاعات ناقص' : displayPhone(client.phone)}
-                    </Text>
-                  </View>
-                  {isSelected ? <Check size={16} color={saloora.plum.hex} strokeWidth={2} /> : null}
-                </Pressable>
-              );
-            })
-          ) : (
-            <View style={tw('px-3 py-6')}>
-              <Text
-                style={[
-                  tw('text-center text-sm text-muted-foreground'),
-                  { fontFamily: 'Vazirmatn_400Regular' },
-                ]}>
-                مشتری‌ای یافت نشد
-              </Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
-
-      <View style={tw('mt-2 border-t border-border px-2 pt-2')}>
-        {!hasExactMatch && query.trim() ? (
-          <Pressable
-            onPress={onStartAdding}
-            style={tw('flex-row items-center gap-3 rounded-lg px-3 py-3')}>
-            <View style={tw('h-8 w-8 items-center justify-center rounded-lg bg-primary/10')}>
-              <UserPlus size={14} color={saloora.plum.hex} strokeWidth={1.8} />
-            </View>
-            <Text
-              style={[
-                tw('flex-1 text-sm text-primary'),
-                { fontFamily: 'Vazirmatn_600SemiBold', textAlign: 'right' },
-              ]}
-              numberOfLines={1}>
-              افزودن «{query.trim()}» به عنوان مشتری جدید
-            </Text>
-          </Pressable>
-        ) : (
-          <Pressable
-            onPress={onStartAdding}
-            style={tw('flex-row items-center gap-3 rounded-lg px-3 py-3')}>
-            <Plus size={16} color={saloora.sage.hex} strokeWidth={1.8} />
-            <Text
-              style={[
-                tw('flex-1 text-sm text-muted-foreground'),
-                { fontFamily: 'Vazirmatn_500Medium', textAlign: 'right' },
-              ]}>
-              مشتری جدید
-            </Text>
-          </Pressable>
-        )}
-      </View>
-    </>
-  );
-}
-
-function AddMode({
-  newName,
-  newPhone,
-  onNameChange,
-  onPhoneChange,
-  saving,
-  saveError,
-  onSave,
-  onBack,
-}: {
-  newName: string;
-  newPhone: string;
-  onNameChange: (v: string) => void;
-  onPhoneChange: (v: string) => void;
-  saving: boolean;
-  saveError: string;
-  onSave: () => void;
-  onBack: () => void;
-}) {
-  return (
-    <View style={tw('px-4 gap-3')}>
-      <View style={tw('flex-row items-center justify-between')}>
-        <Pressable onPress={onBack}>
-          <Text
-            style={[tw('text-xs text-muted-foreground'), { fontFamily: 'Vazirmatn_500Medium' }]}>
-            بازگشت
-          </Text>
-        </Pressable>
-        <Text style={[tw('text-sm text-foreground'), { fontFamily: 'Vazirmatn_600SemiBold' }]}>
-          ثبت مشتری جدید
-        </Text>
-      </View>
-
-      <Input value={newName} onChangeText={onNameChange} placeholder="نام مشتری" />
-
-      <Input
-        value={displayPhone(newPhone)}
-        onChangeText={onPhoneChange}
-        placeholder="شماره تماس (۰۹…)"
-        keyboardType="phone-pad"
-        style={{ textAlign: 'left', writingDirection: 'ltr' }}
-      />
-
-      {saveError ? (
-        <Text
-          style={[
-            tw('text-xs text-destructive'),
-            { fontFamily: 'Vazirmatn_500Medium', textAlign: 'right' },
-          ]}>
-          {saveError}
-        </Text>
-      ) : null}
-
-      <Button
-        disabled={saving || !newName.trim() || !newPhone.trim()}
-        onPress={onSave}
-        style={tw('w-full')}>
-        {saving ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        ) : (
-          <Plus size={14} color="#FFFFFF" strokeWidth={2} />
-        )}
-        <Text
-          style={[tw('text-sm text-primary-foreground'), { fontFamily: 'Vazirmatn_600SemiBold' }]}>
-          {saving ? 'در حال ذخیره…' : 'ذخیره و انتخاب'}
-        </Text>
-      </Button>
-    </View>
   );
 }

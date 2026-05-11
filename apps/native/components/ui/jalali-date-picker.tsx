@@ -11,20 +11,108 @@ import {
   formatJalaliDate,
   toJalali,
 } from '@repo/salon-core/jalali';
-import { saloora } from '@repo/brand-tokens/colors';
 import { Button } from './button';
+import { useTheme, useThemeStyles, withAlpha } from '../../theme';
 
-import { tw } from '../../lib/utils';
 const numFmt = new Intl.NumberFormat('fa-IR');
 
 export type JalaliDatePickerProps = {
   value: string;
   onChange: (gregorian: string) => void;
-  className?: string;
 };
 
-export function JalaliDatePicker({ value, onChange, className }: JalaliDatePickerProps) {
+export function JalaliDatePicker({ value, onChange }: JalaliDatePickerProps) {
   const [open, setOpen] = React.useState(false);
+  const { theme } = useTheme();
+  const styles = useThemeStyles((t) => ({
+    trigger: {
+      height: t.sizes.controlMd,
+      width: '100%' as const,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      borderRadius: t.radius.sm,
+      borderWidth: t.sizes.hairline,
+      borderColor: t.colors.input,
+      backgroundColor: 'transparent',
+      paddingHorizontal: t.spacing.lg,
+    },
+    triggerText: { fontSize: t.fontSize.base, fontFamily: t.fonts.sans },
+    triggerTextValue: { color: t.colors.foreground },
+    triggerTextPlaceholder: { color: t.colors.mutedForeground },
+    backdrop: {
+      flex: 1,
+      justifyContent: 'flex-end' as const,
+      backgroundColor: withAlpha('#000000', 0.4),
+    },
+    sheet: {
+      borderTopLeftRadius: t.radius.xl,
+      borderTopRightRadius: t.radius.xl,
+      backgroundColor: t.colors.card,
+      paddingBottom: t.spacing['3xl'],
+      paddingTop: t.spacing.xl,
+    },
+    titleWrap: { paddingHorizontal: t.spacing.xl, paddingBottom: t.spacing.lg },
+    title: {
+      fontSize: t.fontSize.lg,
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sansBold,
+    },
+    subtitle: {
+      fontSize: t.fontSize.sm,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sans,
+    },
+    body: { paddingHorizontal: t.spacing.xl, paddingBottom: t.spacing.md },
+    navRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+    },
+    navButton: {
+      height: t.sizes.avatarMd,
+      width: t.sizes.avatarMd,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      borderRadius: t.radius.sm,
+    },
+    monthLabel: {
+      fontSize: t.fontSize.lg,
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    weekdayRow: { flexDirection: 'row' as const, marginTop: t.spacing.md },
+    weekdayCell: { flex: 1, paddingVertical: t.spacing.xs },
+    weekdayText: {
+      textAlign: 'center' as const,
+      fontSize: t.fontSize.sm,
+      color: t.colors.mutedForeground,
+      fontFamily: t.fonts.sansMedium,
+    },
+    weeks: { gap: t.spacing.xs, marginTop: t.spacing.xs },
+    weekRow: { flexDirection: 'row' as const, gap: t.spacing.xs },
+    dayCell: {
+      flex: 1,
+      aspectRatio: 1,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      borderRadius: t.radius.lg,
+    },
+    dayCellToday: { backgroundColor: t.colors.accent },
+    dayCellSelected: { backgroundColor: t.colors.primary },
+    dayText: {
+      fontSize: t.fontSize.base,
+      fontFamily: t.fonts.sansMedium,
+      color: t.colors.foreground,
+    },
+    dayTextSelected: { color: t.colors.primaryForeground },
+    footer: { paddingHorizontal: t.spacing.xl, paddingTop: t.spacing.md },
+    footerButtonText: {
+      fontSize: t.fontSize.base,
+      color: t.colors.foreground,
+      fontFamily: t.fonts.sansMedium,
+    },
+  }));
 
   const selected = React.useMemo(() => (value ? parseGregorianToJalali(value) : null), [value]);
   const todayJalali = React.useMemo(() => {
@@ -80,81 +168,52 @@ export function JalaliDatePicker({ value, onChange, className }: JalaliDatePicke
 
   return (
     <>
-      <Pressable
-        onPress={handleOpen}
-        style={tw(
-          'h-9 w-full flex-row items-center justify-between rounded-md border border-input bg-transparent px-3',
-          className
-        )}>
+      <Pressable onPress={handleOpen} style={styles.trigger}>
         <Text
           style={[
-            tw('text-sm', value ? 'text-foreground' : 'text-muted-foreground'),
-            { fontFamily: 'Vazirmatn_400Regular' },
+            styles.triggerText,
+            value ? styles.triggerTextValue : styles.triggerTextPlaceholder,
           ]}>
           {displayText}
         </Text>
-        <CalendarIcon size={16} color={saloora.sage.hex} strokeWidth={1.6} />
+        <CalendarIcon size={theme.sizes.iconSm} color={theme.iconColors.muted} strokeWidth={1.6} />
       </Pressable>
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <Pressable onPress={() => setOpen(false)} style={tw('flex-1 justify-end bg-black/40')}>
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
-            style={tw('rounded-t-2xl bg-card pb-6 pt-4')}>
-            <View style={tw('px-4 pb-3')}>
-              <Text style={[tw('text-base text-foreground'), { fontFamily: 'Vazirmatn_700Bold' }]}>
-                انتخاب تاریخ
-              </Text>
-              <Text
-                style={[
-                  tw('text-xs text-muted-foreground'),
-                  { fontFamily: 'Vazirmatn_400Regular' },
-                ]}>
-                روز مورد نظر را انتخاب کنید
-              </Text>
+        <Pressable onPress={() => setOpen(false)} style={styles.backdrop}>
+          <Pressable onPress={(e) => e.stopPropagation()} style={styles.sheet}>
+            <View style={styles.titleWrap}>
+              <Text style={styles.title}>انتخاب تاریخ</Text>
+              <Text style={styles.subtitle}>روز مورد نظر را انتخاب کنید</Text>
             </View>
 
-            <View style={tw('px-4 pb-2')}>
-              <View style={tw('flex-row items-center justify-between')}>
-                <Pressable
-                  onPress={goNext}
-                  style={tw('h-10 w-10 items-center justify-center rounded-md')}>
-                  <ChevronRight size={20} color={saloora.plum.hex} />
+            <View style={styles.body}>
+              <View style={styles.navRow}>
+                <Pressable onPress={goNext} style={styles.navButton}>
+                  <ChevronRight size={theme.sizes.iconMd} color={theme.colors.foreground} />
                 </Pressable>
-                <Text
-                  style={[
-                    tw('text-base text-foreground'),
-                    { fontFamily: 'Vazirmatn_600SemiBold' },
-                  ]}>
+                <Text style={styles.monthLabel}>
                   {JALALI_MONTHS[viewMonth - 1]} {numFmt.format(viewYear)}
                 </Text>
-                <Pressable
-                  onPress={goPrev}
-                  style={tw('h-10 w-10 items-center justify-center rounded-md')}>
-                  <ChevronLeft size={20} color={saloora.plum.hex} />
+                <Pressable onPress={goPrev} style={styles.navButton}>
+                  <ChevronLeft size={theme.sizes.iconMd} color={theme.colors.foreground} />
                 </Pressable>
               </View>
 
-              <View style={tw('flex-row mt-2')}>
+              <View style={styles.weekdayRow}>
                 {JALALI_WEEKDAYS_SHORT.map((wd) => (
-                  <View key={wd} style={tw('flex-1 py-1')}>
-                    <Text
-                      style={[
-                        tw('text-center text-xs text-muted-foreground'),
-                        { fontFamily: 'Vazirmatn_500Medium' },
-                      ]}>
-                      {wd}
-                    </Text>
+                  <View key={wd} style={styles.weekdayCell}>
+                    <Text style={styles.weekdayText}>{wd}</Text>
                   </View>
                 ))}
               </View>
 
-              <View style={tw('gap-1 mt-1')}>
+              <View style={styles.weeks}>
                 {weeks.map((week, wi) => (
-                  <View key={wi} style={tw('flex-row gap-1')}>
+                  <View key={wi} style={styles.weekRow}>
                     {week.map((day, di) => {
                       if (day === null) {
-                        return <View key={di} style={tw('flex-1 aspect-square')} />;
+                        return <View key={di} style={styles.dayCell} />;
                       }
                       const isToday =
                         viewYear === todayJalali.jy &&
@@ -169,19 +228,13 @@ export function JalaliDatePicker({ value, onChange, className }: JalaliDatePicke
                         <Pressable
                           key={di}
                           onPress={() => handleDayClick(day)}
-                          style={tw(
-                            'flex-1 aspect-square items-center justify-center rounded-xl',
-                            isToday && !isSelected && 'bg-accent',
-                            isSelected && 'bg-primary'
-                          )}>
+                          style={[
+                            styles.dayCell,
+                            isToday && !isSelected ? styles.dayCellToday : null,
+                            isSelected ? styles.dayCellSelected : null,
+                          ]}>
                           <Text
-                            style={[
-                              tw(
-                                'text-sm',
-                                isSelected ? 'text-primary-foreground' : 'text-foreground'
-                              ),
-                              { fontFamily: 'Vazirmatn_500Medium' },
-                            ]}>
+                            style={[styles.dayText, isSelected ? styles.dayTextSelected : null]}>
                             {numFmt.format(day)}
                           </Text>
                         </Pressable>
@@ -192,7 +245,7 @@ export function JalaliDatePicker({ value, onChange, className }: JalaliDatePicke
               </View>
             </View>
 
-            <View style={tw('px-4 pt-2')}>
+            <View style={styles.footer}>
               <Button
                 variant="outline"
                 onPress={() => {
@@ -203,10 +256,7 @@ export function JalaliDatePicker({ value, onChange, className }: JalaliDatePicke
                   onChange(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
                   setOpen(false);
                 }}>
-                <Text
-                  style={[tw('text-sm text-foreground'), { fontFamily: 'Vazirmatn_500Medium' }]}>
-                  امروز
-                </Text>
+                <Text style={styles.footerButtonText}>امروز</Text>
               </Button>
             </View>
           </Pressable>
