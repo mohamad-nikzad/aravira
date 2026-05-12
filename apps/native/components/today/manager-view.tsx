@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AlertTriangle, CalendarDays, Clock, Users } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { AlertTriangle, CalendarDays, Clock, Plus, Search, Users } from 'lucide-react-native';
 import type { AppointmentWithDetails, TodayData, TodayAttentionItem } from '@repo/salon-core/types';
 import { formatJalaliFullDate } from '@repo/salon-core/jalali';
 import { Badge } from '../ui/badge';
@@ -66,6 +67,7 @@ export function ManagerTodayView({
   data?: TodayData;
   isLoading: boolean;
 }) {
+  const router = useRouter();
   const { theme } = useTheme();
   const styles = useThemeStyles((t) => ({
     safe: { backgroundColor: t.colors.background, flex: 1 },
@@ -92,6 +94,40 @@ export function ManagerTodayView({
       fontFamily: t.fonts.sans,
     },
     datePickerWrap: { marginTop: t.spacing.lg },
+    actionRow: {
+      flexDirection: 'row' as const,
+      gap: t.spacing.md,
+      marginTop: t.spacing.lg,
+    },
+    actionBtn: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      gap: t.spacing.xs,
+      borderRadius: t.radius.lg,
+      borderWidth: t.sizes.hairline,
+      paddingVertical: t.spacing.sm,
+      paddingHorizontal: t.spacing.md,
+      flex: 1,
+    },
+    actionBtnPrimary: {
+      backgroundColor: t.colors.primary,
+      borderColor: t.colors.primary,
+    },
+    actionBtnOutline: {
+      backgroundColor: 'transparent',
+      borderColor: t.colors.border,
+    },
+    actionTextPrimary: {
+      color: t.colors.primaryForeground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sansSemiBold,
+    },
+    actionTextOutline: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sansMedium,
+    },
     scroll: { padding: t.spacing.xl, gap: t.spacing.xl },
     skelGap: { gap: t.spacing.lg },
     statRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: t.spacing.lg },
@@ -261,6 +297,47 @@ export function ManagerTodayView({
         <View style={styles.datePickerWrap}>
           <JalaliDatePicker value={date} onChange={setDate} />
         </View>
+        <View style={styles.actionRow}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.push({
+                pathname: '/(tabs)/calendar',
+                params: { intent: 'create', date },
+              })
+            }
+            style={[styles.actionBtn, styles.actionBtnPrimary]}>
+            <Plus
+              size={theme.sizes.iconSm}
+              color={theme.colors.primaryForeground}
+              strokeWidth={2}
+            />
+            <Text style={styles.actionTextPrimary}>نوبت جدید</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.push({
+                pathname: '/(tabs)/calendar',
+                params: { intent: 'availability', date },
+              })
+            }
+            style={[styles.actionBtn, styles.actionBtnOutline]}>
+            <Search size={theme.sizes.iconSm} color={theme.colors.foreground} strokeWidth={1.8} />
+            <Text style={styles.actionTextOutline}>زمان خالی</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/(tabs)/calendar', params: { date } })}
+            style={[styles.actionBtn, styles.actionBtnOutline]}>
+            <CalendarDays
+              size={theme.sizes.iconSm}
+              color={theme.colors.foreground}
+              strokeWidth={1.8}
+            />
+            <Text style={styles.actionTextOutline}>تقویم</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.scroll}>
@@ -297,8 +374,8 @@ export function ManagerTodayView({
                   <Text style={styles.sectionTitle}>نیاز به توجه</Text>
                 </View>
                 <View style={styles.attentionList}>
-                  {attentionItems.map((item) => (
-                    <View key={item.id} style={styles.attentionItem}>
+                  {attentionItems.map((item) => {
+                    const inner = (
                       <View style={styles.attentionRow}>
                         <View style={styles.attentionBody}>
                           <Text style={styles.attentionTitle}>{item.title}</Text>
@@ -312,8 +389,28 @@ export function ManagerTodayView({
                           ))}
                         </View>
                       </View>
-                    </View>
-                  ))}
+                    );
+                    if (item.clientId) {
+                      const clientId = item.clientId;
+                      return (
+                        <Pressable
+                          key={item.id}
+                          accessibilityRole="button"
+                          onPress={() => router.push(`/clients/${clientId}` as never)}
+                          style={({ pressed }) => [
+                            styles.attentionItem,
+                            pressed ? { opacity: 0.85 } : null,
+                          ]}>
+                          {inner}
+                        </Pressable>
+                      );
+                    }
+                    return (
+                      <View key={item.id} style={styles.attentionItem}>
+                        {inner}
+                      </View>
+                    );
+                  })}
                 </View>
               </Card>
             ) : null}
@@ -334,6 +431,12 @@ export function ManagerTodayView({
                       key={appointment.id}
                       appointment={appointment}
                       meta={appointment.staff.name}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/(tabs)/calendar',
+                          params: { appointmentId: appointment.id, date: appointment.date },
+                        })
+                      }
                     />
                   ))
                 )}

@@ -11,23 +11,71 @@ export type {
 } from './auth'
 export { createTodayApi } from './today'
 export type { TodayApi } from './today'
+export { createDashboardApi } from './dashboard'
+export type { DashboardApi, DashboardData } from './dashboard'
+export { createOnboardingApi } from './onboarding'
+export type {
+  OnboardingAction,
+  OnboardingApi,
+  OnboardingResponse,
+  OnboardingStatus,
+} from './onboarding'
+export { createRetentionApi } from './retention'
+export type {
+  RetentionApi,
+  RetentionQueueResponse,
+  UpdateRetentionItemResponse,
+} from './retention'
+export { createBusinessSettingsApi } from './business-settings'
+export type {
+  BusinessSettingsApi,
+  BusinessSettingsResponse,
+  UpdateBusinessSettingsInput,
+} from './business-settings'
 export { createClientsApi } from './clients'
 export type {
+  ClientResponse,
   ClientsApi,
   ClientsResponse,
+  CreateClientFollowUpInput,
+  CreateClientFollowUpResponse,
   CreateClientInput,
   CreateClientResponse,
+  UpdateClientInput,
 } from './clients'
 export { createStaffApi } from './staff'
-export type { StaffApi, StaffResponse } from './staff'
+export type {
+  CreateStaffInput,
+  CreateStaffResponse,
+  StaffApi,
+  StaffMemberResponse,
+  StaffResponse,
+  StaffScheduleResponse,
+  UpdateStaffScheduleInput,
+  UpdateStaffServicesInput,
+} from './staff'
 export { createServicesApi } from './services'
-export type { ServicesApi, ServicesResponse } from './services'
+export type {
+  CreateServiceInput,
+  ServiceResponse,
+  ServicesApi,
+  ServicesResponse,
+  UpdateServiceInput,
+} from './services'
 export { createAppointmentsApi } from './appointments'
 export type {
+  AppointmentAvailabilityInput,
+  AppointmentResponse,
   AppointmentsApi,
   AppointmentsRangeResponse,
+  CompletePlaceholderClientInput,
+  CompletePlaceholderClientResponse,
   CreateAppointmentInput,
   CreateAppointmentResponse,
+  DeleteAppointmentResponse,
+  UpdateAppointmentInput,
+  UpdateAppointmentResponse,
+  UpdateAppointmentStatusResponse,
 } from './appointments'
 export { endpoints } from './endpoints'
 export { ApiError, NetworkError } from './errors'

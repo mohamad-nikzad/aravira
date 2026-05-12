@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { ApiError } from '@repo/api-client';
+import type { SignupInput, SignupResponse } from '@repo/api-client';
 import type { User, UserRole } from '@repo/salon-core/types';
 import { authApi } from '../lib/api';
 import { clearStoredToken, getStoredToken, setStoredToken } from '../lib/secure-storage';
@@ -11,6 +12,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
   login: (input: { phone: string; password: string }) => Promise<AuthUser>;
+  signup: (input: SignupInput) => Promise<SignupResponse>;
   logout: () => Promise<void>;
 };
 
@@ -63,6 +65,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return result.user;
   }, []);
 
+  const signup = React.useCallback(async (input: SignupInput) => {
+    const result = await authApi.signup(input);
+    if (!result.token) {
+      throw new Error('Signup succeeded, but the API did not return a session token.');
+    }
+    await setStoredToken(result.token);
+    setUser(result.user);
+    return result;
+  }, []);
+
   const logout = React.useCallback(async () => {
     try {
       await authApi.logout();
@@ -74,8 +86,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = React.useMemo<AuthContextValue>(
-    () => ({ user, loading, login, logout }),
-    [user, loading, login, logout]
+    () => ({ user, loading, login, signup, logout }),
+    [user, loading, login, signup, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { CalendarDays, Clock } from 'lucide-react-native';
 import type { AppointmentWithDetails, TodayData } from '@repo/salon-core/types';
 import { formatJalaliFullDate } from '@repo/salon-core/jalali';
@@ -49,6 +50,7 @@ export function StaffTodayView({
   todayLoading: boolean;
   tomorrowLoading: boolean;
 }) {
+  const router = useRouter();
   const [clockHm, setClockHm] = React.useState(() => salonCurrentHm());
   const { theme } = useTheme();
   const styles = useThemeStyles((t) => ({
@@ -355,6 +357,12 @@ export function StaffTodayView({
                       appointment={appointment}
                       meta={appointment.status === 'completed' ? 'انجام شده' : 'مشتری امروز'}
                       tone={currentAppointment?.id === appointment.id ? 'highlight' : 'default'}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/(tabs)/calendar',
+                          params: { appointmentId: appointment.id, date: appointment.date },
+                        })
+                      }
                     />
                   ))
                 )}
@@ -385,6 +393,12 @@ export function StaffTodayView({
                       key={appointment.id}
                       appointment={appointment}
                       meta="برنامه فردا"
+                      onPress={() =>
+                        router.push({
+                          pathname: '/(tabs)/calendar',
+                          params: { appointmentId: appointment.id, date: appointment.date },
+                        })
+                      }
                     />
                   ))
                 )}

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import type { AppointmentWithDetails, TodayAttentionItem } from '@repo/salon-core/types';
 import { APPOINTMENT_STATUS } from '@repo/salon-core/types';
 import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-digits';
@@ -73,11 +73,13 @@ export function AppointmentCard({
   meta,
   tone = 'default',
   children,
+  onPress,
 }: {
   appointment: AppointmentWithDetails;
   meta: string;
   tone?: 'default' | 'highlight';
   children?: React.ReactNode;
+  onPress?: () => void;
 }) {
   const styles = useThemeStyles((t) => ({
     card: {
@@ -130,8 +132,21 @@ export function AppointmentCard({
     statusBadge: { paddingHorizontal: t.spacing.md, paddingVertical: t.spacing.xs / 2 },
     statusBadgeText: { fontSize: t.fontSize.xs },
   }));
+  const Container: React.ComponentType<{
+    children: React.ReactNode;
+    style: unknown;
+  }> = onPress
+    ? ({ children: c, style }) => (
+        <Pressable
+          onPress={onPress}
+          accessibilityRole="button"
+          style={({ pressed }) => [style, pressed ? { opacity: 0.85 } : null] as never}>
+          {c}
+        </Pressable>
+      )
+    : ({ children: c, style }) => <View style={style as never}>{c}</View>;
   return (
-    <View style={[styles.card, tone === 'highlight' ? styles.cardHighlight : null]}>
+    <Container style={[styles.card, tone === 'highlight' ? styles.cardHighlight : null]}>
       <View style={styles.header}>
         <View style={styles.body}>
           <View style={styles.nameRow}>
@@ -158,15 +173,12 @@ export function AppointmentCard({
             </Text>
           ) : null}
         </View>
-        <Badge
-          variant="outline"
-          style={styles.statusBadge}
-          textStyle={styles.statusBadgeText}>
+        <Badge variant="outline" style={styles.statusBadge} textStyle={styles.statusBadgeText}>
           {APPOINTMENT_STATUS[appointment.status].label}
         </Badge>
       </View>
       {children}
-    </View>
+    </Container>
   );
 }
 

@@ -3,6 +3,10 @@ import {
   createApiClient,
   createAuthApi,
   createTodayApi,
+  createDashboardApi,
+  createOnboardingApi,
+  createRetentionApi,
+  createBusinessSettingsApi,
   createClientsApi,
   createStaffApi,
   createServicesApi,
@@ -27,6 +31,10 @@ export const apiClient = createApiClient({
 
 export const authApi = createAuthApi(apiClient);
 export const todayApi = createTodayApi(apiClient);
+export const dashboardApi = createDashboardApi(apiClient);
+export const onboardingApi = createOnboardingApi(apiClient);
+export const retentionApi = createRetentionApi(apiClient);
+export const businessSettingsApi = createBusinessSettingsApi(apiClient);
 export const clientsApi = createClientsApi(apiClient);
 export const staffApi = createStaffApi(apiClient);
 export const servicesApi = createServicesApi(apiClient);

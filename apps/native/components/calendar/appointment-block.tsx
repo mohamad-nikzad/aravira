@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { AppointmentWithDetails } from '@repo/salon-core/types';
 import { formatPersianTime } from '@repo/salon-core/persian-digits';
+import { useTheme, withAlpha } from '../../theme';
 import { FONTS, staffBorder, staffHex, staffSoftBg, statusPalette } from './helpers';
 
 export type AppointmentBlockProps = {
@@ -24,6 +25,7 @@ export function AppointmentBlock({
   onPress,
   compact = false,
 }: AppointmentBlockProps) {
+  const { theme, appointmentStatus } = useTheme();
   const stripe = staffHex(appointment.staff.color);
   const tint = staffSoftBg(appointment.staff.color);
   const border = staffBorder(appointment.staff.color);
@@ -32,6 +34,7 @@ export function AppointmentBlock({
 
   const isCancelled = status === 'cancelled' || status === 'no-show';
   const palette = statusPalette(status);
+  const themedStatus = appointmentStatus(status);
 
   return (
     <Pressable
@@ -43,8 +46,8 @@ export function AppointmentBlock({
           height: Math.max(22, heightPx - 2),
           left: `${leftPercent}%`,
           width: `${widthPercent}%`,
-          backgroundColor: isCancelled ? '#FAFAFA' : tint,
-          borderColor: isCancelled ? '#E5E5E5' : border,
+          backgroundColor: isCancelled ? theme.colors.muted : tint,
+          borderColor: isCancelled ? theme.colors.border : border,
           borderWidth: 1,
           borderRadius: 10,
           overflow: 'hidden',
@@ -59,7 +62,7 @@ export function AppointmentBlock({
           bottom: 0,
           right: 0,
           width: 3,
-          backgroundColor: isCancelled ? '#BDBDBD' : stripe,
+          backgroundColor: isCancelled ? theme.colors.mutedForeground : stripe,
         }}
       />
       <View style={{ paddingHorizontal: 8, paddingVertical: 4, paddingRight: 11 }}>
@@ -68,7 +71,9 @@ export function AppointmentBlock({
           style={{
             fontFamily: FONTS.semi,
             fontSize: compact ? 10 : 11,
-            color: isCancelled ? '#737373' : palette.text,
+            color: isCancelled
+              ? theme.colors.mutedForeground
+              : themedStatus.foreground || palette.text,
             textDecorationLine: status === 'cancelled' ? 'line-through' : 'none',
           }}>
           {appointment.client.name}
@@ -80,7 +85,9 @@ export function AppointmentBlock({
               style={{
                 fontFamily: FONTS.reg,
                 fontSize: compact ? 9 : 10,
-                color: isCancelled ? '#A3A3A3' : '#6B3A4A99',
+                color: isCancelled
+                  ? withAlpha(theme.colors.mutedForeground, 0.75)
+                  : theme.colors.mutedForeground,
                 marginTop: 1,
               }}>
               {appointment.service.name}
@@ -91,7 +98,9 @@ export function AppointmentBlock({
                 style={{
                   fontFamily: FONTS.med,
                   fontSize: 10,
-                  color: isCancelled ? '#A3A3A3' : '#767A6F',
+                  color: isCancelled
+                    ? withAlpha(theme.colors.mutedForeground, 0.75)
+                    : theme.colors.mutedForeground,
                   marginTop: 1,
                   writingDirection: 'ltr',
                 }}>

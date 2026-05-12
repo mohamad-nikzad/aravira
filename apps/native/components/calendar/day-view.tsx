@@ -2,7 +2,7 @@ import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-digits';
 import { salonCurrentHm, salonTodayYmd } from '@repo/salon-core/salon-local-time';
-import { saloora } from '@repo/brand-tokens/colors';
+import { useTheme, withAlpha } from '../../theme';
 import { AppointmentBlock } from './appointment-block';
 import { AXIS_WIDTH, PX_PER_MINUTE, layoutAppointments, ySnapToHm } from './time-grid';
 import {
@@ -17,6 +17,7 @@ import type { CalendarViewProps } from './types';
 
 export function DayView(props: CalendarViewProps) {
   const { cursorYmd, appointments, hours, staffFilter, onSelectAppointment, onSlotPress } = props;
+  const { theme } = useTheme();
 
   const dayList = React.useMemo(
     () =>
@@ -82,7 +83,7 @@ export function DayView(props: CalendarViewProps) {
                   style={{
                     fontFamily: FONTS.med,
                     fontSize: 10,
-                    color: saloora.sage.hex,
+                    color: theme.colors.mutedForeground,
                     writingDirection: 'ltr',
                   }}>
                   {formatPersianTime(hm)}
@@ -106,8 +107,10 @@ export function DayView(props: CalendarViewProps) {
                   left: 0,
                   right: 0,
                   height: 1,
-                  backgroundColor: '#E5D9DB',
-                  opacity: 0.6,
+                  backgroundColor: withAlpha(
+                    theme.colors.border,
+                    theme.mode === 'dark' ? 0.8 : 0.6
+                  ),
                 }}
               />
             );
@@ -125,7 +128,10 @@ export function DayView(props: CalendarViewProps) {
                   left: 0,
                   right: 0,
                   height: 1,
-                  backgroundColor: '#F4EFE7',
+                  backgroundColor: withAlpha(
+                    theme.colors.muted,
+                    theme.mode === 'dark' ? 0.45 : 0.75
+                  ),
                 }}
               />
             );
@@ -140,7 +146,7 @@ export function DayView(props: CalendarViewProps) {
                 left: -4,
                 right: 0,
                 height: 2,
-                backgroundColor: saloora.rose.hex,
+                backgroundColor: theme.colors.ring,
                 zIndex: 5,
               }}>
               <View
@@ -151,7 +157,7 @@ export function DayView(props: CalendarViewProps) {
                   width: 8,
                   height: 8,
                   borderRadius: 4,
-                  backgroundColor: saloora.rose.hex,
+                  backgroundColor: theme.colors.ring,
                 }}
               />
             </View>
@@ -195,6 +201,8 @@ export function DayView(props: CalendarViewProps) {
 }
 
 function DayEmptyState() {
+  const { theme } = useTheme();
+
   return (
     <View
       pointerEvents="none"
@@ -210,12 +218,12 @@ function DayEmptyState() {
           paddingHorizontal: 16,
           paddingVertical: 10,
           borderRadius: 16,
-          backgroundColor: '#F8EFF099',
+          backgroundColor: withAlpha(theme.colors.card, theme.mode === 'dark' ? 0.7 : 0.6),
           borderWidth: 1,
-          borderColor: '#E5D9DB',
+          borderColor: theme.colors.border,
           borderStyle: 'dashed',
         }}>
-        <Text style={{ fontFamily: FONTS.med, fontSize: 12, color: saloora.sage.hex }}>
+        <Text style={{ fontFamily: FONTS.med, fontSize: 12, color: theme.colors.mutedForeground }}>
           نوبتی برای این روز ثبت نشده
         </Text>
       </View>
@@ -224,13 +232,15 @@ function DayEmptyState() {
 }
 
 function CountFooter({ count }: { count: number }) {
+  const { theme } = useTheme();
+
   return (
     <View
       style={{
         alignItems: 'center',
         paddingVertical: 16,
       }}>
-      <Text style={{ fontFamily: FONTS.reg, fontSize: 11, color: saloora.sage.hex }}>
+      <Text style={{ fontFamily: FONTS.reg, fontSize: 11, color: theme.colors.mutedForeground }}>
         {count === 0 ? 'بدون نوبت' : `${toPersianDigits(count)} نوبت در این روز`}
       </Text>
     </View>

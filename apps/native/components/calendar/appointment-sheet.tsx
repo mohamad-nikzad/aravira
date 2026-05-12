@@ -1,13 +1,32 @@
 import * as React from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import { Clock, Phone, Scissors, StickyNote, User as UserIcon, X } from 'lucide-react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
+import {
+  Clock,
+  Phone,
+  Pencil,
+  Scissors,
+  StickyNote,
+  Trash2,
+  User as UserIcon,
+  UserPlus,
+  X,
+} from 'lucide-react-native';
 import { APPOINTMENT_STATUS, type AppointmentWithDetails } from '@repo/salon-core/types';
 import { ApiError } from '@repo/api-client';
 import { appointmentsApi } from '../../lib/api';
 import { useAuth } from '../auth-provider';
 import { formatJalaliFullDate } from '@repo/salon-core/jalali';
 import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-digits';
-import { saloora } from '@repo/brand-tokens/colors';
+import { useTheme, withAlpha } from '../../theme';
 import { FONTS, hmToMinutes, staffBorder, staffHex, staffSoftBg, statusPalette } from './helpers';
 
 export type AppointmentSheetChange =
@@ -18,12 +37,17 @@ export function AppointmentSheet({
   appointment,
   onClose,
   onChange,
+  onEdit,
+  onCompleteClient,
 }: {
   appointment: AppointmentWithDetails | null;
   onClose: () => void;
   onChange?: (change: AppointmentSheetChange) => void;
+  onEdit?: (appointment: AppointmentWithDetails) => void;
+  onCompleteClient?: (appointment: AppointmentWithDetails) => void;
 }) {
   const visible = appointment != null;
+  const { theme } = useTheme();
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -32,19 +56,25 @@ export function AppointmentSheet({
         style={{
           flex: 1,
           justifyContent: 'flex-end',
-          backgroundColor: 'rgba(43, 22, 27, 0.45)',
+          backgroundColor: withAlpha(theme.colors.background, theme.mode === 'dark' ? 0.72 : 0.45),
         }}>
         <Pressable
           onPress={(e) => e.stopPropagation()}
           style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: theme.colors.card,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
             paddingBottom: 32,
             maxHeight: '85%',
           }}>
           {appointment ? (
-            <SheetContent appointment={appointment} onClose={onClose} onChange={onChange} />
+            <SheetContent
+              appointment={appointment}
+              onClose={onClose}
+              onChange={onChange}
+              onEdit={onEdit}
+              onCompleteClient={onCompleteClient}
+            />
           ) : null}
         </Pressable>
       </Pressable>
@@ -56,23 +86,61 @@ function SheetContent({
   appointment,
   onClose,
   onChange,
+  onEdit,
+  onCompleteClient,
 }: {
   appointment: AppointmentWithDetails;
   onClose: () => void;
   onChange?: (change: AppointmentSheetChange) => void;
+  onEdit?: (appointment: AppointmentWithDetails) => void;
+  onCompleteClient?: (appointment: AppointmentWithDetails) => void;
 }) {
   const { user } = useAuth();
+  const { theme, appointmentStatus } = useTheme();
   const isManager = user?.role === 'manager';
   const isOwnAppointment = user?.role === 'staff' && appointment.staffId === user.id;
   const canChangeStatus = isManager || isOwnAppointment;
 
   const [pending, setPending] = React.useState<AppointmentWithDetails['status'] | null>(null);
   const [error, setError] = React.useState<string>('');
+  const [deleting, setDeleting] = React.useState(false);
 
   React.useEffect(() => {
     setPending(null);
     setError('');
+    setDeleting(false);
   }, [appointment.id]);
+
+  const handleCallPhone = () => {
+    const phone = appointment.client.phone;
+    if (!phone) return;
+    const url = `tel:${phone}`;
+    void Linking.canOpenURL(url).then((can) => {
+      if (can) Linking.openURL(url);
+      else Alert.alert('شماره در دسترس نیست');
+    });
+  };
+
+  const performDelete = async () => {
+    setError('');
+    setDeleting(true);
+    try {
+      await appointmentsApi.delete(appointment.id);
+      onChange?.({ type: 'deleted', id: appointment.id });
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'حذف نوبت انجام نشد');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDelete = () => {
+    Alert.alert('حذف نوبت', 'آیا از حذف این نوبت مطمئن هستید؟', [
+      { text: 'انصراف', style: 'cancel' },
+      { text: 'حذف', style: 'destructive', onPress: () => void performDelete() },
+    ]);
+  };
 
   const handleStatusChange = async (next: AppointmentWithDetails['status']) => {
     setError('');
@@ -93,6 +161,7 @@ function SheetContent({
   };
 
   const palette = statusPalette(appointment.status);
+  const themedStatus = appointmentStatus(appointment.status);
   const stripe = staffHex(appointment.staff.color);
   const tint = staffSoftBg(appointment.staff.color);
   const border = staffBorder(appointment.staff.color);
@@ -111,7 +180,7 @@ function SheetContent({
           width: 40,
           height: 4,
           borderRadius: 2,
-          backgroundColor: '#E5D9DB',
+          backgroundColor: theme.colors.border,
           marginBottom: 12,
         }}
       />
@@ -123,7 +192,7 @@ function SheetContent({
             style={{
               fontFamily: FONTS.bold,
               fontSize: 18,
-              color: saloora.plum.hex,
+              color: theme.colors.foreground,
               textDecorationLine: appointment.status === 'cancelled' ? 'line-through' : 'none',
             }}>
             {appointment.client.name}
@@ -132,7 +201,7 @@ function SheetContent({
             style={{
               fontFamily: FONTS.reg,
               fontSize: 12,
-              color: saloora.sage.hex,
+              color: theme.colors.mutedForeground,
             }}>
             {formatJalaliFullDate(appointment.date)}
           </Text>
@@ -146,9 +215,9 @@ function SheetContent({
             borderRadius: 16,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#F4EFE7',
+            backgroundColor: theme.colors.muted,
           }}>
-          <X size={16} color={saloora.plum.hex} strokeWidth={2} />
+          <X size={16} color={theme.colors.foreground} strokeWidth={2} />
         </Pressable>
       </View>
 
@@ -160,15 +229,15 @@ function SheetContent({
           paddingHorizontal: 10,
           paddingVertical: 4,
           borderRadius: 999,
-          backgroundColor: palette.bg,
+          backgroundColor: themedStatus.background || palette.bg,
           borderWidth: 1,
-          borderColor: palette.border,
+          borderColor: themedStatus.border || palette.border,
         }}>
         <Text
           style={{
             fontFamily: FONTS.semi,
             fontSize: 11,
-            color: palette.text,
+            color: themedStatus.foreground || palette.text,
           }}>
           {APPOINTMENT_STATUS[appointment.status].label}
         </Text>
@@ -179,16 +248,16 @@ function SheetContent({
         style={{
           marginTop: 16,
           flexDirection: 'row',
-          backgroundColor: isCancelled ? '#FAFAFA' : tint,
+          backgroundColor: isCancelled ? theme.colors.muted : tint,
           borderRadius: 16,
           borderWidth: 1,
-          borderColor: isCancelled ? '#E5E5E5' : border,
+          borderColor: isCancelled ? theme.colors.border : border,
           overflow: 'hidden',
         }}>
         <View
           style={{
             width: 4,
-            backgroundColor: isCancelled ? '#BDBDBD' : stripe,
+            backgroundColor: isCancelled ? theme.colors.mutedForeground : stripe,
           }}
         />
         <View
@@ -204,18 +273,18 @@ function SheetContent({
               width: 36,
               height: 36,
               borderRadius: 10,
-              backgroundColor: '#FFFFFFCC',
+              backgroundColor: withAlpha(theme.colors.card, 0.78),
               alignItems: 'center',
               justifyContent: 'center',
             }}>
-            <Clock size={18} color={saloora.plum.hex} strokeWidth={1.8} />
+            <Clock size={18} color={theme.colors.foreground} strokeWidth={1.8} />
           </View>
           <View style={{ flex: 1 }}>
             <Text
               style={{
                 fontFamily: FONTS.bold,
                 fontSize: 16,
-                color: saloora.plum.hex,
+                color: theme.colors.foreground,
                 writingDirection: 'ltr',
               }}>
               {formatPersianTime(appointment.startTime)} – {formatPersianTime(appointment.endTime)}
@@ -224,7 +293,7 @@ function SheetContent({
               style={{
                 fontFamily: FONTS.reg,
                 fontSize: 11,
-                color: saloora.sage.hex,
+                color: theme.colors.mutedForeground,
                 marginTop: 2,
               }}>
               مدت زمان: {toPersianDigits(durationMin)} دقیقه
@@ -236,7 +305,7 @@ function SheetContent({
       {/* Detail rows */}
       <View style={{ marginTop: 14, gap: 10 }}>
         <DetailRow
-          icon={<Scissors size={16} color={saloora.plum.hex} strokeWidth={1.8} />}
+          icon={<Scissors size={16} color={theme.colors.foreground} strokeWidth={1.8} />}
           label="خدمت"
           value={appointment.service.name}
           hint={
@@ -246,7 +315,7 @@ function SheetContent({
           }
         />
         <DetailRow
-          icon={<UserIcon size={16} color={saloora.plum.hex} strokeWidth={1.8} />}
+          icon={<UserIcon size={16} color={theme.colors.foreground} strokeWidth={1.8} />}
           label="آرایشگر"
           value={appointment.staff.name}
           rightDecor={
@@ -261,16 +330,18 @@ function SheetContent({
           }
         />
         {appointment.client.phone ? (
-          <DetailRow
-            icon={<Phone size={16} color={saloora.plum.hex} strokeWidth={1.8} />}
-            label="تلفن مشتری"
-            value={appointment.client.phone}
-            valueLtr
-          />
+          <Pressable onPress={handleCallPhone} accessibilityLabel="تماس با مشتری">
+            <DetailRow
+              icon={<Phone size={16} color={theme.colors.foreground} strokeWidth={1.8} />}
+              label="تماس با مشتری"
+              value={appointment.client.phone}
+              valueLtr
+            />
+          </Pressable>
         ) : null}
         {appointment.notes ? (
           <DetailRow
-            icon={<StickyNote size={16} color={saloora.plum.hex} strokeWidth={1.8} />}
+            icon={<StickyNote size={16} color={theme.colors.foreground} strokeWidth={1.8} />}
             label="یادداشت"
             value={appointment.notes}
             multiline
@@ -287,13 +358,105 @@ function SheetContent({
         />
       ) : null}
 
+      {isManager ? (
+        <View
+          style={{
+            marginTop: 16,
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 8,
+          }}>
+          {appointment.client.isPlaceholder && onCompleteClient ? (
+            <Pressable
+              onPress={() => onCompleteClient(appointment)}
+              style={({ pressed }) => ({
+                flexGrow: 1,
+                flexBasis: '45%',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                minHeight: 44,
+                paddingHorizontal: 14,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: theme.colors.primary,
+                backgroundColor: theme.colors.primary,
+                opacity: pressed ? 0.85 : 1,
+              })}>
+              <UserPlus size={16} color={theme.colors.primaryForeground} strokeWidth={2} />
+              <Text
+                style={{
+                  fontFamily: FONTS.semi,
+                  fontSize: 13,
+                  color: theme.colors.primaryForeground,
+                }}>
+                تکمیل اطلاعات مشتری
+              </Text>
+            </Pressable>
+          ) : null}
+          {onEdit ? (
+            <Pressable
+              onPress={() => onEdit(appointment)}
+              style={({ pressed }) => ({
+                flexGrow: 1,
+                flexBasis: '45%',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                minHeight: 44,
+                paddingHorizontal: 14,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.card,
+                opacity: pressed ? 0.85 : 1,
+              })}>
+              <Pencil size={16} color={theme.colors.foreground} strokeWidth={2} />
+              <Text
+                style={{ fontFamily: FONTS.semi, fontSize: 13, color: theme.colors.foreground }}>
+                ویرایش
+              </Text>
+            </Pressable>
+          ) : null}
+          <Pressable
+            onPress={handleDelete}
+            disabled={deleting}
+            style={({ pressed }) => ({
+              flexGrow: 1,
+              flexBasis: '45%',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              minHeight: 44,
+              paddingHorizontal: 14,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: withAlpha(theme.colors.destructive, 0.4),
+              backgroundColor: theme.colors.card,
+              opacity: deleting ? 0.6 : pressed ? 0.85 : 1,
+            })}>
+            {deleting ? (
+              <ActivityIndicator size="small" color={theme.colors.destructive} />
+            ) : (
+              <Trash2 size={16} color={theme.colors.destructive} strokeWidth={2} />
+            )}
+            <Text style={{ fontFamily: FONTS.semi, fontSize: 13, color: theme.colors.destructive }}>
+              حذف نوبت
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       {error ? (
         <Text
           style={{
             marginTop: 12,
             fontFamily: FONTS.med,
             fontSize: 12,
-            color: saloora.rose.hex,
+            color: theme.colors.destructive,
             textAlign: 'center',
           }}>
           {error}
@@ -314,6 +477,7 @@ function StatusActions({
   pending: AppointmentWithDetails['status'] | null;
   onPress: (next: AppointmentWithDetails['status']) => void;
 }) {
+  const { theme } = useTheme();
   type Action = {
     key: AppointmentWithDetails['status'];
     label: string;
@@ -342,7 +506,7 @@ function StatusActions({
       {actions.map((action) => {
         const isPending = pending === action.key;
         const disabled = pending != null;
-        const palette = actionPalette(action.tone);
+        const palette = actionPalette(action.tone, theme);
         return (
           <Pressable
             key={action.key}
@@ -379,25 +543,28 @@ function StatusActions({
   );
 }
 
-function actionPalette(tone: 'primary' | 'neutral' | 'danger') {
+function actionPalette(
+  tone: 'primary' | 'neutral' | 'danger',
+  theme: ReturnType<typeof useTheme>['theme']
+) {
   if (tone === 'primary') {
     return {
-      bg: saloora.plum.hex,
-      border: saloora.plum.hex,
-      text: '#FFFFFF',
+      bg: theme.colors.primary,
+      border: theme.colors.primary,
+      text: theme.colors.primaryForeground,
     };
   }
   if (tone === 'danger') {
     return {
-      bg: '#FFFFFF',
-      border: saloora.rose.hex + '66',
-      text: saloora.rose.hex,
+      bg: theme.colors.card,
+      border: withAlpha(theme.colors.destructive, 0.4),
+      text: theme.colors.destructive,
     };
   }
   return {
-    bg: '#FFFFFF',
-    border: '#E5D9DB',
-    text: saloora.plum.hex,
+    bg: theme.colors.card,
+    border: theme.colors.border,
+    text: theme.colors.foreground,
   };
 }
 
@@ -418,16 +585,18 @@ function DetailRow({
   valueLtr?: boolean;
   rightDecor?: React.ReactNode;
 }) {
+  const { theme } = useTheme();
+
   return (
     <View
       style={{
         flexDirection: 'row',
         alignItems: 'flex-start',
         gap: 12,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.colors.card,
         borderRadius: 14,
         borderWidth: 1,
-        borderColor: '#E5D9DB80',
+        borderColor: withAlpha(theme.colors.border, 0.6),
         padding: 12,
       }}>
       <View
@@ -437,7 +606,7 @@ function DetailRow({
           borderRadius: 8,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#F8EFF0',
+          backgroundColor: theme.colors.muted,
         }}>
         {icon}
       </View>
@@ -446,7 +615,7 @@ function DetailRow({
           style={{
             fontFamily: FONTS.med,
             fontSize: 10,
-            color: saloora.sage.hex,
+            color: theme.colors.mutedForeground,
             marginBottom: 2,
           }}>
           {label}
@@ -456,7 +625,7 @@ function DetailRow({
           style={{
             fontFamily: FONTS.semi,
             fontSize: 13,
-            color: saloora.plum.hex,
+            color: theme.colors.foreground,
             writingDirection: valueLtr ? 'ltr' : 'rtl',
           }}>
           {value}
@@ -466,7 +635,7 @@ function DetailRow({
             style={{
               fontFamily: FONTS.reg,
               fontSize: 11,
-              color: saloora.sage.hex,
+              color: theme.colors.mutedForeground,
               marginTop: 2,
             }}>
             {hint}

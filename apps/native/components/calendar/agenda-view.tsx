@@ -4,8 +4,8 @@ import { CalendarX } from 'lucide-react-native';
 import { formatJalaliFullDate, parseGregorianToJalali } from '@repo/salon-core/jalali';
 import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-digits';
 import { addDaysYmd, salonTodayYmd } from '@repo/salon-core/salon-local-time';
-import { saloora } from '@repo/brand-tokens/colors';
 import { APPOINTMENT_STATUS, type AppointmentWithDetails } from '@repo/salon-core/types';
+import { useTheme, withAlpha } from '../../theme';
 import {
   FONTS,
   appointmentsByDay,
@@ -23,6 +23,7 @@ const RANGE_DAYS = 14;
 
 export function AgendaView(props: CalendarViewProps) {
   const { cursorYmd, appointments, staffFilter, onSelectAppointment } = props;
+  const { theme } = useTheme();
   const todayYmd = salonTodayYmd();
 
   const filtered = React.useMemo(
@@ -55,18 +56,18 @@ export function AgendaView(props: CalendarViewProps) {
             width: 64,
             height: 64,
             borderRadius: 32,
-            backgroundColor: saloora.mist.hex,
+            backgroundColor: theme.colors.card,
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 14,
           }}>
-          <CalendarX size={26} color={saloora.plum.hex} strokeWidth={1.6} />
+          <CalendarX size={26} color={theme.colors.primary} strokeWidth={1.6} />
         </View>
         <Text
           style={{
             fontFamily: FONTS.semi,
             fontSize: 14,
-            color: saloora.plum.hex,
+            color: theme.colors.foreground,
             marginBottom: 6,
           }}>
           نوبتی در دو هفته‌ی پیش‌رو ثبت نشده
@@ -75,7 +76,7 @@ export function AgendaView(props: CalendarViewProps) {
           style={{
             fontFamily: FONTS.reg,
             fontSize: 12,
-            color: saloora.sage.hex,
+            color: theme.colors.mutedForeground,
             textAlign: 'center',
           }}>
           از نمای روز یا ماه برای پیمایش بیشتر استفاده کنید.
@@ -112,6 +113,7 @@ function DaySection({
   isToday: boolean;
   onSelectAppointment: (appointment: AppointmentWithDetails) => void;
 }) {
+  const { theme } = useTheme();
   const j = parseGregorianToJalali(ymd);
   const dow = (new Date(ymd + 'T12:00:00').getDay() + 1) % 7;
   const isFriday = dow === 6;
@@ -136,15 +138,19 @@ function DaySection({
             justifyContent: 'center',
             paddingVertical: 6,
             borderRadius: 12,
-            backgroundColor: isToday ? saloora.plum.hex : '#FFFFFF',
+            backgroundColor: isToday ? theme.colors.primary : theme.colors.card,
             borderWidth: 1,
-            borderColor: isToday ? saloora.plum.hex : '#E5D9DB99',
+            borderColor: isToday ? theme.colors.primary : withAlpha(theme.colors.border, 0.7),
           }}>
           <Text
             style={{
               fontFamily: FONTS.bold,
               fontSize: 16,
-              color: isToday ? '#FFFFFF' : isFriday ? saloora.rose.hex : saloora.plum.hex,
+              color: isToday
+                ? theme.colors.primaryForeground
+                : isFriday
+                  ? theme.colors.ring
+                  : theme.colors.foreground,
             }}>
             {numFmt.format(j.jd)}
           </Text>
@@ -152,7 +158,9 @@ function DaySection({
             style={{
               fontFamily: FONTS.med,
               fontSize: 9,
-              color: isToday ? '#FFFFFFCC' : saloora.sage.hex,
+              color: isToday
+                ? withAlpha(theme.colors.primaryForeground, 0.8)
+                : theme.colors.mutedForeground,
               marginTop: 1,
             }}>
             {['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'][dow]}
@@ -163,7 +171,7 @@ function DaySection({
             style={{
               fontFamily: FONTS.semi,
               fontSize: 13,
-              color: saloora.plum.hex,
+              color: theme.colors.foreground,
             }}
             numberOfLines={1}>
             {formatJalaliFullDate(ymd)}
@@ -172,7 +180,7 @@ function DaySection({
             style={{
               fontFamily: FONTS.reg,
               fontSize: 11,
-              color: saloora.sage.hex,
+              color: theme.colors.mutedForeground,
               marginTop: 2,
             }}>
             {toPersianDigits(items.length)} نوبت · {toPersianDigits(Math.round(totalMinutes / 60))}{' '}
@@ -185,9 +193,9 @@ function DaySection({
               paddingHorizontal: 8,
               paddingVertical: 3,
               borderRadius: 999,
-              backgroundColor: saloora.rose.hex + '22',
+              backgroundColor: withAlpha(theme.colors.ring, 0.14),
             }}>
-            <Text style={{ fontFamily: FONTS.semi, fontSize: 10, color: saloora.rose.hex }}>
+            <Text style={{ fontFamily: FONTS.semi, fontSize: 10, color: theme.colors.ring }}>
               امروز
             </Text>
           </View>
@@ -210,6 +218,7 @@ function AgendaRow({
   appointment: AppointmentWithDetails;
   onPress: () => void;
 }) {
+  const { theme, appointmentStatus } = useTheme();
   const palette = statusPalette(appointment.status);
   const stripeHex = staffHex(appointment.staff.color);
   const tint = staffSoftBg(appointment.staff.color);
@@ -221,17 +230,17 @@ function AgendaRow({
       onPress={onPress}
       style={({ pressed }) => ({
         flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.colors.card,
         borderRadius: 14,
         borderWidth: 1,
-        borderColor: isCancelled ? '#E5E5E5' : border,
+        borderColor: isCancelled ? theme.colors.border : border,
         overflow: 'hidden',
         opacity: pressed ? 0.85 : 1,
       })}>
       <View
         style={{
           width: 4,
-          backgroundColor: isCancelled ? '#BDBDBD' : stripeHex,
+          backgroundColor: isCancelled ? theme.colors.mutedForeground : stripeHex,
         }}
       />
       <View
@@ -248,7 +257,7 @@ function AgendaRow({
             paddingVertical: 4,
             paddingHorizontal: 8,
             borderRadius: 8,
-            backgroundColor: isCancelled ? '#F5F5F5' : tint,
+            backgroundColor: isCancelled ? theme.colors.muted : tint,
             alignItems: 'center',
             minWidth: 64,
           }}>
@@ -256,7 +265,7 @@ function AgendaRow({
             style={{
               fontFamily: FONTS.bold,
               fontSize: 12,
-              color: isCancelled ? '#737373' : saloora.plum.hex,
+              color: isCancelled ? theme.colors.mutedForeground : theme.colors.foreground,
               writingDirection: 'ltr',
             }}>
             {formatPersianTime(appointment.startTime)}
@@ -265,7 +274,9 @@ function AgendaRow({
             style={{
               fontFamily: FONTS.reg,
               fontSize: 9,
-              color: isCancelled ? '#A3A3A3' : saloora.sage.hex,
+              color: isCancelled
+                ? withAlpha(theme.colors.mutedForeground, 0.75)
+                : theme.colors.mutedForeground,
               writingDirection: 'ltr',
               marginTop: 1,
             }}>
@@ -279,7 +290,7 @@ function AgendaRow({
             style={{
               fontFamily: FONTS.semi,
               fontSize: 13,
-              color: saloora.plum.hex,
+              color: theme.colors.foreground,
               textDecorationLine: appointment.status === 'cancelled' ? 'line-through' : 'none',
             }}>
             {appointment.client.name}
@@ -289,7 +300,7 @@ function AgendaRow({
             style={{
               fontFamily: FONTS.reg,
               fontSize: 11,
-              color: saloora.sage.hex,
+              color: theme.colors.mutedForeground,
             }}>
             {appointment.service.name} · {appointment.staff.name}
           </Text>
@@ -300,13 +311,13 @@ function AgendaRow({
             paddingHorizontal: 7,
             paddingVertical: 3,
             borderRadius: 999,
-            backgroundColor: palette.bg,
+            backgroundColor: appointmentStatus(appointment.status).background || palette.bg,
           }}>
           <Text
             style={{
               fontFamily: FONTS.semi,
               fontSize: 10,
-              color: palette.text,
+              color: appointmentStatus(appointment.status).foreground || palette.text,
             }}>
             {APPOINTMENT_STATUS[appointment.status].label}
           </Text>

@@ -320,7 +320,11 @@ export function ClientPicker({ clients, value, onChange, onClientCreated }: Clie
               {mode === 'search' ? (
                 <>
                   <View style={styles.searchBar}>
-                    <Search size={theme.sizes.iconSm} color={theme.iconColors.muted} strokeWidth={1.6} />
+                    <Search
+                      size={theme.sizes.iconSm}
+                      color={theme.iconColors.muted}
+                      strokeWidth={1.6}
+                    />
                     <TextInput
                       value={query}
                       onChangeText={setQuery}
@@ -331,7 +335,11 @@ export function ClientPicker({ clients, value, onChange, onClientCreated }: Clie
                     />
                     {query ? (
                       <Pressable onPress={() => setQuery('')} hitSlop={8}>
-                        <X size={theme.sizes.iconSm - 2} color={theme.iconColors.muted} strokeWidth={1.8} />
+                        <X
+                          size={theme.sizes.iconSm - 2}
+                          color={theme.iconColors.muted}
+                          strokeWidth={1.8}
+                        />
                       </Pressable>
                     ) : null}
                   </View>
@@ -431,7 +439,9 @@ export function ClientPicker({ clients, value, onChange, onClientCreated }: Clie
                   />
 
                   {errors.name ? <Text style={styles.errorText}>{errors.name.message}</Text> : null}
-                  {errors.phone ? <Text style={styles.errorText}>{errors.phone.message}</Text> : null}
+                  {errors.phone ? (
+                    <Text style={styles.errorText}>{errors.phone.message}</Text>
+                  ) : null}
                   {errors.root ? <Text style={styles.errorText}>{errors.root.message}</Text> : null}
 
                   <Button

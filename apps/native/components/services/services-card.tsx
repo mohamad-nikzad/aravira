@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { Pencil, Plus } from 'lucide-react-native';
 import type { Service } from '@repo/salon-core/types';
 import { SERVICE_CATEGORIES } from '@repo/salon-core/types';
 import { toPersianDigits } from '@repo/salon-core/persian-digits';
@@ -9,13 +10,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
 import { servicesApi } from '../../lib/api';
 import { useAsyncResource } from '../../lib/hooks/use-async-resource';
-import { useThemeStyles, withAlpha } from '../../theme';
+import { useTheme, useThemeStyles, withAlpha } from '../../theme';
+import { ServiceFormModal } from './service-form-modal';
 
 export function ServicesCard() {
-  const { data, loading } = useAsyncResource<{ services: Service[] }>('services', (signal) =>
-    servicesApi.list({ includeInactive: true, signal })
+  const { theme } = useTheme();
+  const { data, loading, reload } = useAsyncResource<{ services: Service[] }>(
+    'services',
+    (signal) => servicesApi.list({ includeInactive: true, signal })
   );
   const services = data?.services ?? [];
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [editingService, setEditingService] = React.useState<Service | null>(null);
+
   const styles = useThemeStyles((t) => ({
     card: { gap: t.spacing.lg, padding: t.spacing.xl },
     header: {
@@ -48,46 +55,99 @@ export function ServicesCard() {
       fontFamily: t.fonts.sans,
     },
     badge: { paddingHorizontal: t.spacing.sm, paddingVertical: 0 },
+    addBtn: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.xs,
+      borderRadius: t.radius.md,
+      borderWidth: t.sizes.hairline,
+      borderColor: withAlpha(t.colors.border, 0.6),
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: t.spacing.sm,
+    },
+    addBtnText: {
+      color: t.colors.foreground,
+      fontSize: t.fontSize.sm,
+      fontFamily: t.fonts.sansMedium,
+    },
+    editIcon: { padding: t.spacing.xs },
   }));
 
+  const openCreate = () => {
+    setEditingService(null);
+    setModalOpen(true);
+  };
+  const openEdit = (svc: Service) => {
+    setEditingService(svc);
+    setModalOpen(true);
+  };
+
   return (
-    <Card style={styles.card}>
-      <CardHeader style={styles.header}>
-        <CardTitle color="mutedForeground" variant="label" weight="medium">
-          خدمات
-        </CardTitle>
-      </CardHeader>
-      <CardContent style={styles.content}>
-        {loading && !data ? (
-          <View style={styles.skeletonWrap}>
-            <Skeleton height={48} width="100%" radius={12} />
-            <Skeleton height={48} width="100%" radius={12} />
-          </View>
-        ) : services.length === 0 ? (
-          <AppText color="mutedForeground">هنوز خدمتی ثبت نشده.</AppText>
-        ) : (
-          services.map((s) => {
-            const category = SERVICE_CATEGORIES[s.category]?.label ?? s.category;
-            return (
-              <View key={s.id} style={styles.row}>
-                <View style={styles.rowBody}>
-                  <Text style={styles.name} numberOfLines={1}>
-                    {s.name}
-                  </Text>
-                  <Text style={styles.meta}>
-                    {category} · {toPersianDigits(s.duration)} دقیقه
-                  </Text>
+    <>
+      <Card style={styles.card}>
+        <CardHeader style={styles.header}>
+          <CardTitle color="mutedForeground" variant="label" weight="medium">
+            خدمات
+          </CardTitle>
+          <Pressable accessibilityRole="button" onPress={openCreate} style={styles.addBtn}>
+            <Plus size={theme.sizes.iconSm} color={theme.colors.foreground} strokeWidth={1.8} />
+            <Text style={styles.addBtnText}>جدید</Text>
+          </Pressable>
+        </CardHeader>
+        <CardContent style={styles.content}>
+          {loading && !data ? (
+            <View style={styles.skeletonWrap}>
+              <Skeleton height={48} width="100%" radius={12} />
+              <Skeleton height={48} width="100%" radius={12} />
+            </View>
+          ) : services.length === 0 ? (
+            <AppText color="mutedForeground">هنوز خدمتی ثبت نشده.</AppText>
+          ) : (
+            services.map((s) => {
+              const category = SERVICE_CATEGORIES[s.category]?.label ?? s.category;
+              return (
+                <View key={s.id} style={styles.row}>
+                  <View style={styles.rowBody}>
+                    <Text style={styles.name} numberOfLines={1}>
+                      {s.name}
+                    </Text>
+                    <Text style={styles.meta}>
+                      {category} · {toPersianDigits(s.duration)} دقیقه
+                    </Text>
+                  </View>
+                  {!s.active ? (
+                    <Badge variant="secondary" style={styles.badge}>
+                      غیرفعال
+                    </Badge>
+                  ) : null}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="ویرایش خدمت"
+                    onPress={() => openEdit(s)}
+                    style={styles.editIcon}>
+                    <Pencil
+                      size={theme.sizes.iconSm}
+                      color={theme.iconColors.muted}
+                      strokeWidth={1.6}
+                    />
+                  </Pressable>
                 </View>
-                {!s.active ? (
-                  <Badge variant="secondary" style={styles.badge}>
-                    غیرفعال
-                  </Badge>
-                ) : null}
-              </View>
-            );
-          })
-        )}
-      </CardContent>
-    </Card>
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
+
+      <ServiceFormModal
+        open={modalOpen}
+        service={editingService}
+        onClose={() => setModalOpen(false)}
+        onSaved={() => {
+          setModalOpen(false);
+          setEditingService(null);
+          reload();
+        }}
+      />
+    </>
   );
 }

@@ -62,7 +62,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setThemeMode = React.useCallback(async (nextMode: ThemeMode) => {
     setMode(nextMode);
-    await AsyncStorage.setItem(THEME_STORAGE_KEY, nextMode);
+    try {
+      await AsyncStorage.setItem(THEME_STORAGE_KEY, nextMode);
+    } catch {
+      /* Persisting the theme is best-effort when native storage is unavailable. */
+    }
   }, []);
 
   const toggleTheme = React.useCallback(async () => {

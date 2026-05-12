@@ -17,8 +17,6 @@ import {
   APPOINTMENT_DURATION_BOUNDS,
   durationMinutesFromRange,
   endTimeFromDuration,
-  formatTimeHm,
-  parseTimeHm,
   validateAppointmentWindow,
 } from '@repo/salon-core/appointment-time';
 import {
@@ -57,35 +55,31 @@ function formatPrice(price: number) {
   return `${numFmt.format(price)} تومان`;
 }
 
-export type AppointmentCreateModalProps = {
+export type AppointmentEditResult =
+  | { type: 'updated'; appointment: AppointmentWithDetails }
+  | { type: 'deleted'; id: string };
+
+export type AppointmentEditModalProps = {
   open: boolean;
   onClose: () => void;
-  initialDate: string;
-  initialTime?: string;
-  initialStaffId?: string;
-  initialServiceId?: string;
-  initialClientId?: string;
+  appointment: AppointmentWithDetails | null;
   staff: User[];
   services: Service[];
   clients: Client[];
-  onSuccess: (appointment: AppointmentWithDetails) => void;
+  onSuccess: (result: AppointmentEditResult) => void;
   onClientCreated?: (client: Client) => void;
 };
 
-export function AppointmentCreateModal({
+export function AppointmentEditModal({
   open,
   onClose,
-  initialDate,
-  initialTime,
-  initialStaffId,
-  initialServiceId,
-  initialClientId,
+  appointment,
   staff,
   services,
   clients,
   onSuccess,
   onClientCreated,
-}: AppointmentCreateModalProps) {
+}: AppointmentEditModalProps) {
   const [showDetails, setShowDetails] = React.useState(false);
   const [localClients, setLocalClients] = React.useState<Client[]>(clients);
   const wasOpenRef = React.useRef(false);
@@ -93,12 +87,12 @@ export function AppointmentCreateModal({
     resolver: zodResolver(appointmentFormSchema, undefined, { raw: true }),
     defaultValues: {
       useTemporaryClient: false,
-      clientId: initialClientId ?? '',
-      staffId: initialStaffId ?? '',
-      serviceId: initialServiceId ?? '',
-      date: initialDate,
-      startTime: formatTimeHm(parseTimeHm(initialTime ?? '09:00')),
-      endTime: endTimeFromDuration(formatTimeHm(parseTimeHm(initialTime ?? '09:00')), 45),
+      clientId: '',
+      staffId: '',
+      serviceId: '',
+      date: '',
+      startTime: '09:00',
+      endTime: '09:45',
       durationMinutes: 45,
       notes: '',
       temporaryClientName: '',
@@ -305,36 +299,29 @@ export function AppointmentCreateModal({
   const staffRoleOnly = React.useMemo(() => staff.filter((m) => m.role === 'staff'), [staff]);
 
   const resetForm = React.useCallback(() => {
-    const initialService = initialServiceId
-      ? services.find((s) => s.id === initialServiceId)
-      : undefined;
-    const defaultDuration = initialService?.duration ?? 45;
-    const st = formatTimeHm(parseTimeHm(initialTime ?? '09:00'));
+    if (!appointment) return;
+    setLocalClients(
+      appointment.client.isPlaceholder && !clients.some((c) => c.id === appointment.client.id)
+        ? [appointment.client, ...clients]
+        : clients
+    );
     reset({
-      useTemporaryClient: false,
-      clientId: initialClientId ?? '',
-      staffId: initialStaffId ?? '',
-      serviceId: initialServiceId ?? '',
-      date: initialDate,
-      startTime: st,
-      endTime: endTimeFromDuration(st, defaultDuration),
-      durationMinutes: defaultDuration,
-      notes: '',
-      temporaryClientName: '',
-      temporaryClientNotes: '',
+      useTemporaryClient: appointment.client.isPlaceholder,
+      temporaryClientName: appointment.client.isPlaceholder ? appointment.client.name : '',
+      temporaryClientNotes: appointment.client.isPlaceholder
+        ? (appointment.client.notes ?? '')
+        : '',
+      clientId: appointment.client.isPlaceholder ? '' : appointment.clientId,
+      staffId: appointment.staffId,
+      serviceId: appointment.serviceId,
+      date: appointment.date,
+      startTime: appointment.startTime,
+      endTime: appointment.endTime,
+      durationMinutes: durationMinutesFromRange(appointment.startTime, appointment.endTime),
+      notes: appointment.notes ?? '',
     });
     setShowDetails(false);
-    setLocalClients(clients);
-  }, [
-    clients,
-    initialClientId,
-    initialDate,
-    initialTime,
-    initialStaffId,
-    initialServiceId,
-    reset,
-    services,
-  ]);
+  }, [appointment, clients, reset]);
 
   React.useEffect(() => {
     if (open && !wasOpenRef.current) resetForm();
@@ -408,6 +395,7 @@ export function AppointmentCreateModal({
   };
 
   const onSubmit = handleSubmit(async (values) => {
+    if (!appointment) return;
     const localCheck = validateAppointmentWindow(values.startTime, values.endTime);
     if (!localCheck.ok) {
       setError('root', { message: localCheck.error });
@@ -415,8 +403,12 @@ export function AppointmentCreateModal({
     }
     try {
       const payload = appointmentFormSchema.parse(values);
-      const { appointment } = await appointmentsApi.create(payload);
-      onSuccess(appointment);
+      const result = await appointmentsApi.update(appointment.id, payload);
+      if (result.removedAppointmentId) {
+        onSuccess({ type: 'deleted', id: result.removedAppointmentId });
+      } else if (result.appointment) {
+        onSuccess({ type: 'updated', appointment: result.appointment });
+      }
     } catch (err) {
       const msg =
         err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'خطایی رخ داد';
@@ -474,8 +466,8 @@ export function AppointmentCreateModal({
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <View style={styles.flex1}>
-            <Text style={styles.headerTitle}>نوبت جدید</Text>
-            <Text style={styles.headerSubtitle}>خدمت، پرسنل و زمان نوبت را انتخاب کنید</Text>
+            <Text style={styles.headerTitle}>ویرایش نوبت</Text>
+            <Text style={styles.headerSubtitle}>اطلاعات نوبت را به‌روز کنید</Text>
           </View>
           <Pressable onPress={onClose} accessibilityLabel="بستن" style={styles.closeBtn}>
             <X size={theme.sizes.iconSm} color={theme.colors.foreground} strokeWidth={2} />
@@ -698,7 +690,9 @@ export function AppointmentCreateModal({
           <View style={styles.footer}>
             <Button onPress={onSubmit} disabled={submitDisabled}>
               {isSubmitting ? <Spinner color={theme.colors.primaryForeground} /> : null}
-              <Text style={styles.submitText}>{isSubmitting ? 'در حال ثبت…' : 'ثبت نوبت'}</Text>
+              <Text style={styles.submitText}>
+                {isSubmitting ? 'در حال ذخیره…' : 'ذخیره تغییرات'}
+              </Text>
             </Button>
             <Button variant="outline" onPress={onClose} disabled={isSubmitting}>
               <Text style={styles.cancelText}>انصراف</Text>

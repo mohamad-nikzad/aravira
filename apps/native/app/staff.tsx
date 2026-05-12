@@ -2,15 +2,27 @@ import * as React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowRight, Phone, Search, Shield, User as UserIcon } from 'lucide-react-native';
-import type { User } from '@repo/salon-core/types';
+import {
+  ArrowRight,
+  Clock3,
+  ListChecks,
+  Phone,
+  Plus,
+  Search,
+  Shield,
+  User as UserIcon,
+} from 'lucide-react-native';
+import type { Service, User } from '@repo/salon-core/types';
 import { displayPhone } from '@repo/salon-core/phone';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
 import { useAuth } from '../components/auth-provider';
-import { staffApi } from '../lib/api';
+import { servicesApi, staffApi } from '../lib/api';
+import { StaffFormModal } from '../components/staff/staff-form-modal';
+import { StaffServicesModal } from '../components/staff/staff-services-modal';
+import { StaffScheduleModal } from '../components/staff/staff-schedule-modal';
 import { useAsyncResource } from '../lib/hooks/use-async-resource';
 import { useTheme, useThemeStyles, withAlpha } from '../theme';
 
@@ -27,6 +39,9 @@ export default function StaffScreen() {
   const { user } = useAuth();
   const { theme } = useTheme();
   const [search, setSearch] = React.useState('');
+  const [showCreate, setShowCreate] = React.useState(false);
+  const [servicesStaff, setServicesStaff] = React.useState<User | null>(null);
+  const [scheduleStaff, setScheduleStaff] = React.useState<User | null>(null);
   const styles = useThemeStyles((t) => ({
     safe: { backgroundColor: t.colors.background, flex: 1 },
     header: {
@@ -149,13 +164,47 @@ export default function StaffScreen() {
       color: t.colors.foreground,
       fontSize: t.fontSize.base,
     },
+    addBtn: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.xs,
+      borderRadius: t.radius.lg,
+      backgroundColor: t.colors.primary,
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.sm,
+    },
+    addBtnText: {
+      color: t.colors.primaryForeground,
+      fontFamily: t.fonts.sansSemiBold,
+      fontSize: t.fontSize.sm,
+    },
+    rowActions: {
+      flexDirection: 'row' as const,
+      gap: t.spacing.sm,
+      marginInlineStart: t.spacing.sm,
+    },
+    rowActionBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: t.radius.lg,
+      borderWidth: t.sizes.hairline,
+      borderColor: t.colors.border,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      backgroundColor: t.colors.card,
+    },
   }));
 
   const key = user?.role === 'manager' ? 'staff' : null;
-  const { data, loading } = useAsyncResource<{ staff: User[] }>(key, (signal) =>
+  const { data, loading, reload } = useAsyncResource<{ staff: User[] }>(key, (signal) =>
     staffApi.list({ signal })
   );
+  const servicesKey = user?.role === 'manager' ? 'staff-services-list' : null;
+  const servicesResource = useAsyncResource<{ services: Service[] }>(servicesKey, (signal) =>
+    servicesApi.list({ signal })
+  );
   const staff = data?.staff ?? [];
+  const services = servicesResource.data?.services ?? [];
   const filtered = React.useMemo(
     () =>
       staff.filter(
@@ -185,6 +234,13 @@ export default function StaffScreen() {
             </Text>
           </View>
         </View>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setShowCreate(true)}
+          style={styles.addBtn}>
+          <Plus size={theme.sizes.iconSm} color={theme.colors.primaryForeground} strokeWidth={2} />
+          <Text style={styles.addBtnText}>پرسنل جدید</Text>
+        </Pressable>
       </View>
 
       <View style={styles.searchBar}>
@@ -251,11 +307,64 @@ export default function StaffScreen() {
                     <Text style={styles.phoneText}>{displayPhone(member.phone)}</Text>
                   </View>
                 </View>
+
+                {member.role === 'staff' ? (
+                  <View style={styles.rowActions}>
+                    <Pressable
+                      accessibilityLabel={`ساعت کاری ${member.name}`}
+                      onPress={() => setScheduleStaff(member)}
+                      style={styles.rowActionBtn}>
+                      <Clock3
+                        size={theme.sizes.iconSm}
+                        color={theme.colors.foreground}
+                        strokeWidth={1.8}
+                      />
+                    </Pressable>
+                    <Pressable
+                      accessibilityLabel={`خدمات ${member.name}`}
+                      onPress={() => setServicesStaff(member)}
+                      style={styles.rowActionBtn}>
+                      <ListChecks
+                        size={theme.sizes.iconSm}
+                        color={theme.colors.foreground}
+                        strokeWidth={1.8}
+                      />
+                    </Pressable>
+                  </View>
+                ) : null}
               </View>
             ))}
           </View>
         </ScrollView>
       )}
+
+      <StaffFormModal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onSaved={() => {
+          setShowCreate(false);
+          reload();
+        }}
+      />
+      <StaffServicesModal
+        open={servicesStaff != null}
+        staff={servicesStaff}
+        services={services}
+        onClose={() => setServicesStaff(null)}
+        onSaved={() => {
+          setServicesStaff(null);
+          reload();
+        }}
+      />
+      <StaffScheduleModal
+        open={scheduleStaff != null}
+        staff={scheduleStaff}
+        onClose={() => setScheduleStaff(null)}
+        onSaved={() => {
+          setScheduleStaff(null);
+          reload();
+        }}
+      />
     </SafeAreaView>
   );
 }

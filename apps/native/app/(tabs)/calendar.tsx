@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AlertCircle, Plus, RefreshCw } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { AlertCircle, Plus, RefreshCw, Search } from 'lucide-react-native';
 import {
   jalaliMonthLength,
   jalaliToGregorianStr,
@@ -17,7 +18,13 @@ import type {
 } from '@repo/salon-core/types';
 import { Skeleton } from '../../components/ui/skeleton';
 import { useAuth } from '../../components/auth-provider';
-import { appointmentsApi, clientsApi, servicesApi, staffApi } from '../../lib/api';
+import {
+  appointmentsApi,
+  businessSettingsApi,
+  clientsApi,
+  servicesApi,
+  staffApi,
+} from '../../lib/api';
 import { useAsyncResource } from '../../lib/hooks/use-async-resource';
 import { CalendarHeader } from '../../components/calendar/calendar-header';
 import { ViewSwitcher } from '../../components/calendar/view-switcher';
@@ -28,6 +35,9 @@ import { MonthView } from '../../components/calendar/month-view';
 import { AgendaView } from '../../components/calendar/agenda-view';
 import { AppointmentSheet } from '../../components/calendar/appointment-sheet';
 import { AppointmentCreateModal } from '../../components/calendar/appointment-create-modal';
+import { AppointmentEditModal } from '../../components/calendar/appointment-edit-modal';
+import { AvailabilityModal } from '../../components/calendar/availability-modal';
+import { CompleteClientModal } from '../../components/calendar/complete-client-modal';
 import { defaultBusinessHours, weekStartYmd } from '../../components/calendar/helpers';
 import type { CalendarView } from '../../components/calendar/types';
 import { useTheme, useThemeStyles, withAlpha } from '../../theme';
@@ -51,6 +61,16 @@ function computeRange(view: CalendarView, cursorYmd: string): { start: string; e
 export default function CalendarScreen() {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const router = useRouter();
+  const params = useLocalSearchParams<{
+    date?: string;
+    clientId?: string;
+    appointmentId?: string;
+    intent?: string;
+    time?: string;
+    staffId?: string;
+    serviceId?: string;
+  }>();
   const todayYmd = React.useMemo(() => salonTodayYmd(), []);
   const [view, setView] = React.useState<CalendarView>('day');
   const [cursorYmd, setCursorYmd] = React.useState<string>(todayYmd);
@@ -61,7 +81,16 @@ export default function CalendarScreen() {
   const [createPrefill, setCreatePrefill] = React.useState<{
     date: string;
     time?: string;
+    clientId?: string;
+    staffId?: string;
+    serviceId?: string;
   } | null>(null);
+  const [editingAppointment, setEditingAppointment] = React.useState<AppointmentWithDetails | null>(
+    null
+  );
+  const [completingClientFor, setCompletingClientFor] =
+    React.useState<AppointmentWithDetails | null>(null);
+  const [availabilityOpen, setAvailabilityOpen] = React.useState(false);
 
   const isManager = user?.role === 'manager';
 
@@ -102,6 +131,25 @@ export default function CalendarScreen() {
       shadowRadius: 8,
       zIndex: 10,
     },
+    fabSecondary: {
+      position: 'absolute' as const,
+      bottom: t.spacing.xl + FAB_SIZE + t.spacing.md,
+      left: t.spacing.xl,
+      width: FAB_SIZE,
+      height: FAB_SIZE,
+      borderRadius: t.radius.full,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      backgroundColor: t.colors.card,
+      borderWidth: t.sizes.hairline,
+      borderColor: t.colors.border,
+      elevation: 6,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      zIndex: 10,
+    },
   }));
 
   const range = React.useMemo(() => computeRange(view, cursorYmd), [view, cursorYmd]);
@@ -135,6 +183,13 @@ export default function CalendarScreen() {
     []
   );
 
+  const settingsKey = user ? `calendar-business-settings:${user.id}` : null;
+  const settingsResource = useAsyncResource<{ settings: BusinessHours }>(
+    settingsKey,
+    (signal) => businessSettingsApi.get({ signal }),
+    []
+  );
+
   const appointments = apptsResource.data?.appointments ?? [];
   const staff = React.useMemo(() => staffResource.data?.staff ?? [], [staffResource.data]);
   const staffMap = React.useMemo(() => {
@@ -143,7 +198,69 @@ export default function CalendarScreen() {
     return m;
   }, [staff]);
 
-  const hours: BusinessHours = React.useMemo(() => defaultBusinessHours(null), []);
+  const hours: BusinessHours = React.useMemo(
+    () => defaultBusinessHours(settingsResource.data?.settings ?? null),
+    [settingsResource.data]
+  );
+
+  const dateParam = typeof params.date === 'string' ? params.date : undefined;
+  const clientIdParam = typeof params.clientId === 'string' ? params.clientId : undefined;
+  const appointmentIdParam =
+    typeof params.appointmentId === 'string' ? params.appointmentId : undefined;
+  const intentParam = typeof params.intent === 'string' ? params.intent : undefined;
+  const timeParam = typeof params.time === 'string' ? params.time : undefined;
+  const staffIdParam = typeof params.staffId === 'string' ? params.staffId : undefined;
+  const serviceIdParam = typeof params.serviceId === 'string' ? params.serviceId : undefined;
+  const handledParamsRef = React.useRef<string>('');
+
+  React.useEffect(() => {
+    if (!isManager) return;
+    const key = `${dateParam ?? ''}|${clientIdParam ?? ''}|${appointmentIdParam ?? ''}|${intentParam ?? ''}|${timeParam ?? ''}|${staffIdParam ?? ''}|${serviceIdParam ?? ''}`;
+    if (!key.trim() || handledParamsRef.current === key) return;
+    handledParamsRef.current = key;
+
+    if (dateParam) {
+      setCursorYmd(dateParam);
+      setView('day');
+    }
+    if (intentParam === 'availability') {
+      setAvailabilityOpen(true);
+    } else if (intentParam === 'create' || clientIdParam) {
+      setCreatePrefill({
+        date: dateParam ?? cursorYmd,
+        time: timeParam,
+        clientId: clientIdParam,
+        staffId: staffIdParam,
+        serviceId: serviceIdParam,
+      });
+      setCreateOpen(true);
+    } else if (appointmentIdParam) {
+      void appointmentsApi
+        .get(appointmentIdParam)
+        .then((res) => setSelectedAppointment(res.appointment))
+        .catch(() => undefined);
+    }
+    router.setParams({
+      date: undefined,
+      clientId: undefined,
+      appointmentId: undefined,
+      intent: undefined,
+      time: undefined,
+      staffId: undefined,
+      serviceId: undefined,
+    });
+  }, [
+    appointmentIdParam,
+    clientIdParam,
+    cursorYmd,
+    dateParam,
+    intentParam,
+    isManager,
+    router,
+    serviceIdParam,
+    staffIdParam,
+    timeParam,
+  ]);
 
   const handleSelectDay = React.useCallback((ymd: string) => {
     setCursorYmd(ymd);
@@ -218,18 +335,33 @@ export default function CalendarScreen() {
         )}
 
         {isManager ? (
-          <Pressable
-            onPress={() => {
-              setCreatePrefill(null);
-              setCreateOpen(true);
-            }}
-            accessibilityLabel="نوبت جدید"
-            style={({ pressed }) => [
-              styles.fab,
-              pressed ? { opacity: theme.states.pressed.opacity } : null,
-            ]}>
-            <Plus size={theme.sizes.iconLg + 2} color={theme.colors.primaryForeground} strokeWidth={2.2} />
-          </Pressable>
+          <>
+            <Pressable
+              onPress={() => setAvailabilityOpen(true)}
+              accessibilityLabel="بررسی زمان خالی"
+              style={({ pressed }) => [
+                styles.fabSecondary,
+                pressed ? { opacity: theme.states.pressed.opacity } : null,
+              ]}>
+              <Search size={theme.sizes.iconLg} color={theme.colors.foreground} strokeWidth={2} />
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setCreatePrefill(null);
+                setCreateOpen(true);
+              }}
+              accessibilityLabel="نوبت جدید"
+              style={({ pressed }) => [
+                styles.fab,
+                pressed ? { opacity: theme.states.pressed.opacity } : null,
+              ]}>
+              <Plus
+                size={theme.sizes.iconLg + 2}
+                color={theme.colors.primaryForeground}
+                strokeWidth={2.2}
+              />
+            </Pressable>
+          </>
         ) : null}
       </View>
 
@@ -240,24 +372,80 @@ export default function CalendarScreen() {
           setSelectedAppointment(null);
           apptsResource.reload();
         }}
+        onEdit={(appt) => {
+          setSelectedAppointment(null);
+          setEditingAppointment(appt);
+        }}
+        onCompleteClient={(appt) => {
+          setSelectedAppointment(null);
+          setCompletingClientFor(appt);
+        }}
       />
 
       {isManager ? (
-        <AppointmentCreateModal
-          open={createOpen}
-          onClose={() => setCreateOpen(false)}
-          initialDate={createPrefill?.date ?? cursorYmd}
-          initialTime={createPrefill?.time}
-          initialStaffId={staffFilter ?? undefined}
-          staff={staff}
-          services={servicesResource.data?.services ?? []}
-          clients={clientsResource.data?.clients ?? []}
-          onSuccess={() => {
-            setCreateOpen(false);
-            apptsResource.reload();
-          }}
-          onClientCreated={() => clientsResource.reload()}
-        />
+        <>
+          <AppointmentCreateModal
+            open={createOpen}
+            onClose={() => setCreateOpen(false)}
+            initialDate={createPrefill?.date ?? cursorYmd}
+            initialTime={createPrefill?.time}
+            initialStaffId={createPrefill?.staffId ?? staffFilter ?? undefined}
+            initialServiceId={createPrefill?.serviceId}
+            initialClientId={createPrefill?.clientId}
+            staff={staff}
+            services={servicesResource.data?.services ?? []}
+            clients={clientsResource.data?.clients ?? []}
+            onSuccess={() => {
+              setCreateOpen(false);
+              apptsResource.reload();
+            }}
+            onClientCreated={() => clientsResource.reload()}
+          />
+
+          <AppointmentEditModal
+            open={editingAppointment != null}
+            onClose={() => setEditingAppointment(null)}
+            appointment={editingAppointment}
+            staff={staff}
+            services={servicesResource.data?.services ?? []}
+            clients={clientsResource.data?.clients ?? []}
+            onSuccess={() => {
+              setEditingAppointment(null);
+              apptsResource.reload();
+            }}
+            onClientCreated={() => clientsResource.reload()}
+          />
+
+          <CompleteClientModal
+            open={completingClientFor != null}
+            onClose={() => setCompletingClientFor(null)}
+            appointment={completingClientFor}
+            onSuccess={() => {
+              setCompletingClientFor(null);
+              clientsResource.reload();
+              apptsResource.reload();
+            }}
+          />
+
+          <AvailabilityModal
+            open={availabilityOpen}
+            onClose={() => setAvailabilityOpen(false)}
+            initialDate={cursorYmd}
+            staff={staff}
+            services={servicesResource.data?.services ?? []}
+            onSelectSlot={({ slot, serviceId }) => {
+              setAvailabilityOpen(false);
+              setCursorYmd(slot.date);
+              setCreatePrefill({
+                date: slot.date,
+                time: slot.startTime,
+                staffId: slot.staffId,
+                serviceId,
+              });
+              setCreateOpen(true);
+            }}
+          />
+        </>
       ) : null}
     </SafeAreaView>
   );
@@ -360,11 +548,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   return (
     <View style={styles.wrap}>
       <View style={styles.iconWrap}>
-        <AlertCircle
-          size={theme.sizes.iconLg}
-          color={theme.colors.destructive}
-          strokeWidth={1.8}
-        />
+        <AlertCircle size={theme.sizes.iconLg} color={theme.colors.destructive} strokeWidth={1.8} />
       </View>
       <Text style={styles.message}>{message}</Text>
       <Pressable

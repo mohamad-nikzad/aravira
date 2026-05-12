@@ -10,7 +10,7 @@ import {
 import { formatPersianTime } from '@repo/salon-core/persian-digits';
 import { JALALI_WEEKDAYS_SHORT, parseGregorianToJalali } from '@repo/salon-core/jalali';
 import { salonCurrentHm, salonTodayYmd } from '@repo/salon-core/salon-local-time';
-import { saloora } from '@repo/brand-tokens/colors';
+import { useTheme, withAlpha } from '../../theme';
 import { AppointmentBlock } from './appointment-block';
 import { AXIS_WIDTH, PX_PER_MINUTE, layoutAppointments, ySnapToHm } from './time-grid';
 import {
@@ -27,6 +27,7 @@ import {
 import type { CalendarViewProps } from './types';
 
 export function WeekView(props: CalendarViewProps) {
+  const { theme } = useTheme();
   const {
     cursorYmd,
     appointments,
@@ -85,9 +86,9 @@ export function WeekView(props: CalendarViewProps) {
           paddingTop: 6,
           paddingBottom: 8,
           paddingHorizontal: 12,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: theme.colors.card,
           borderBottomWidth: 1,
-          borderBottomColor: '#E5D9DB99',
+          borderBottomColor: withAlpha(theme.colors.border, 0.7),
         }}>
         <View style={{ width: AXIS_WIDTH }} />
         {days.map((ymd) => {
@@ -105,7 +106,7 @@ export function WeekView(props: CalendarViewProps) {
                 style={{
                   fontFamily: FONTS.med,
                   fontSize: 10,
-                  color: isFriday ? saloora.rose.hex : saloora.sage.hex,
+                  color: isFriday ? theme.colors.ring : theme.colors.mutedForeground,
                 }}>
                 {JALALI_WEEKDAYS_SHORT[dow]}
               </Text>
@@ -117,13 +118,17 @@ export function WeekView(props: CalendarViewProps) {
                   borderRadius: 14,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: isToday ? saloora.plum.hex : 'transparent',
+                  backgroundColor: isToday ? theme.colors.primary : 'transparent',
                 }}>
                 <Text
                   style={{
                     fontFamily: FONTS.bold,
                     fontSize: 12,
-                    color: isToday ? '#FFFFFF' : isFriday ? saloora.rose.hex : saloora.plum.hex,
+                    color: isToday
+                      ? theme.colors.primaryForeground
+                      : isFriday
+                        ? theme.colors.ring
+                        : theme.colors.foreground,
                   }}>
                   {numFmt.format(j.jd)}
                 </Text>
@@ -134,7 +139,7 @@ export function WeekView(props: CalendarViewProps) {
                   height: 4,
                   width: 4,
                   borderRadius: 2,
-                  backgroundColor: count > 0 ? saloora.rose.hex : 'transparent',
+                  backgroundColor: count > 0 ? theme.colors.ring : 'transparent',
                 }}
               />
             </Pressable>
@@ -171,7 +176,7 @@ export function WeekView(props: CalendarViewProps) {
                     style={{
                       fontFamily: FONTS.med,
                       fontSize: 9,
-                      color: saloora.sage.hex,
+                      color: theme.colors.mutedForeground,
                       writingDirection: 'ltr',
                     }}>
                     {formatPersianTime(hm)}
@@ -195,8 +200,10 @@ export function WeekView(props: CalendarViewProps) {
                     left: 0,
                     right: 0,
                     height: 1,
-                    backgroundColor: '#E5D9DB',
-                    opacity: 0.5,
+                    backgroundColor: withAlpha(
+                      theme.colors.border,
+                      theme.mode === 'dark' ? 0.8 : 0.55
+                    ),
                   }}
                 />
               );
@@ -211,7 +218,7 @@ export function WeekView(props: CalendarViewProps) {
                   left: 0,
                   right: 0,
                   height: 2,
-                  backgroundColor: saloora.rose.hex,
+                  backgroundColor: theme.colors.ring,
                   zIndex: 5,
                   opacity: 0.8,
                 }}
@@ -229,9 +236,11 @@ export function WeekView(props: CalendarViewProps) {
                     flex: 1,
                     position: 'relative',
                     height: totalHeight,
-                    backgroundColor: isToday ? '#F8EFF066' : 'transparent',
+                    backgroundColor: isToday
+                      ? withAlpha(theme.colors.primary, 0.12)
+                      : 'transparent',
                     borderLeftWidth: idx === days.length - 1 ? 0 : 1,
-                    borderLeftColor: '#E5D9DB55',
+                    borderLeftColor: withAlpha(theme.colors.border, 0.55),
                   }}>
                   {onSlotPress ? (
                     <View

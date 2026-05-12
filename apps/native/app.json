@@ -21,6 +21,9 @@
       "router": {
         "origin": false
       },
+      "eas": {
+        "projectId": "9b8bb93b-1e87-4d75-8b28-4d678c273ca0"
+      },
       "apiBaseUrl": "https://aravira-saloon.vercel.app",
       "webBaseUrl": "https://aravira-saloon.vercel.app"
     },

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { JALALI_WEEKDAYS_SHORT, parseGregorianToJalali } from '@repo/salon-core/jalali';
 import { salonTodayYmd } from '@repo/salon-core/salon-local-time';
-import { saloora } from '@repo/brand-tokens/colors';
+import { useTheme, withAlpha } from '../../theme';
 import {
   FONTS,
   appointmentsByDay,
@@ -15,6 +15,7 @@ import type { CalendarViewProps } from './types';
 
 export function MonthView(props: CalendarViewProps) {
   const { cursorYmd, appointments, staffFilter, onSelectDay } = props;
+  const { theme } = useTheme();
 
   const j = React.useMemo(() => parseGregorianToJalali(cursorYmd), [cursorYmd]);
   const grid = React.useMemo(() => jalaliMonthGrid(j.jy, j.jm), [j.jy, j.jm]);
@@ -35,7 +36,7 @@ export function MonthView(props: CalendarViewProps) {
               style={{
                 fontFamily: FONTS.semi,
                 fontSize: 11,
-                color: i === 6 ? saloora.rose.hex : saloora.sage.hex,
+                color: i === 6 ? theme.colors.ring : theme.colors.mutedForeground,
               }}>
               {wd}
             </Text>
@@ -43,7 +44,7 @@ export function MonthView(props: CalendarViewProps) {
         ))}
       </View>
 
-      <View style={{ borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+      <View style={{ borderRadius: 16, overflow: 'hidden', backgroundColor: theme.colors.card }}>
         {grid.map((row, ri) => (
           <View key={ri} style={{ flexDirection: 'row' }}>
             {row.map((cell, ci) => {
@@ -59,10 +60,10 @@ export function MonthView(props: CalendarViewProps) {
                 if (distinctStaff.length >= 4) break;
               }
               const dayTextColor = !cell.inCurrentMonth
-                ? '#C7BAB9'
+                ? withAlpha(theme.colors.mutedForeground, theme.mode === 'dark' ? 0.45 : 0.5)
                 : isFriday
-                  ? saloora.rose.hex
-                  : saloora.plum.hex;
+                  ? theme.colors.ring
+                  : theme.colors.foreground;
 
               return (
                 <Pressable
@@ -74,10 +75,14 @@ export function MonthView(props: CalendarViewProps) {
                     paddingVertical: 6,
                     paddingHorizontal: 4,
                     borderTopWidth: ri === 0 ? 0 : 1,
-                    borderTopColor: '#F0E5E7',
+                    borderTopColor: withAlpha(theme.colors.border, 0.75),
                     borderLeftWidth: ci === row.length - 1 ? 0 : 1,
-                    borderLeftColor: '#F0E5E7',
-                    backgroundColor: pressed ? '#F4EFE7' : isCursor ? '#ECD3D766' : 'transparent',
+                    borderLeftColor: withAlpha(theme.colors.border, 0.75),
+                    backgroundColor: pressed
+                      ? theme.colors.muted
+                      : isCursor
+                        ? withAlpha(theme.colors.accent, theme.mode === 'dark' ? 0.35 : 0.4)
+                        : 'transparent',
                     alignItems: 'center',
                   })}>
                   <View
@@ -87,13 +92,13 @@ export function MonthView(props: CalendarViewProps) {
                       borderRadius: 13,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: isToday ? saloora.plum.hex : 'transparent',
+                      backgroundColor: isToday ? theme.colors.primary : 'transparent',
                     }}>
                     <Text
                       style={{
                         fontFamily: cell.inCurrentMonth ? FONTS.semi : FONTS.reg,
                         fontSize: 13,
-                        color: isToday ? '#FFFFFF' : dayTextColor,
+                        color: isToday ? theme.colors.primaryForeground : dayTextColor,
                       }}>
                       {numFmt.format(cell.jd)}
                     </Text>
@@ -127,7 +132,9 @@ export function MonthView(props: CalendarViewProps) {
                       style={{
                         fontFamily: FONTS.med,
                         fontSize: 9,
-                        color: cell.inCurrentMonth ? saloora.sage.hex : '#C7BAB9',
+                        color: cell.inCurrentMonth
+                          ? theme.colors.mutedForeground
+                          : withAlpha(theme.colors.mutedForeground, 0.5),
                         marginTop: 3,
                       }}>
                       {numFmt.format(dayItems.length)} نوبت
@@ -142,7 +149,7 @@ export function MonthView(props: CalendarViewProps) {
 
       {/* Hint */}
       <View style={{ marginTop: 12, alignItems: 'center' }}>
-        <Text style={{ fontFamily: FONTS.reg, fontSize: 11, color: saloora.sage.hex }}>
+        <Text style={{ fontFamily: FONTS.reg, fontSize: 11, color: theme.colors.mutedForeground }}>
           روی هر روز بزنید تا برنامه آن روز را ببینید
         </Text>
       </View>
