@@ -1,15 +1,5 @@
 import * as React from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Check, ChevronDown, Plus, Search, UserPlus, X } from 'lucide-react-native';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,6 +7,8 @@ import { ApiError } from '@repo/api-client';
 import type { Client } from '@repo/salon-core/types';
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone';
 import { clientFormSchema, type ClientFormInput } from '@repo/salon-core/forms/client';
+import { AppSheet, confirmDirtyDismiss } from '../ui/app-sheet';
+import { ModalHeader } from '../ui/modal-header';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { clientsApi } from '../../lib/api';
@@ -67,39 +59,6 @@ export function ClientPicker({ clients, value, onChange, onClientCreated }: Clie
     },
     triggerTextSelected: { color: t.colors.foreground },
     triggerTextPlaceholder: { color: t.colors.mutedForeground },
-    backdrop: {
-      flex: 1,
-      justifyContent: 'flex-end' as const,
-      backgroundColor: withAlpha('#000000', 0.4),
-    },
-    sheet: {
-      borderTopLeftRadius: t.radius.xl,
-      borderTopRightRadius: t.radius.xl,
-      backgroundColor: t.colors.card,
-      paddingBottom: t.spacing['3xl'],
-      paddingTop: t.spacing.xl,
-      maxHeight: '85%' as const,
-    },
-    headerRow: {
-      paddingHorizontal: t.spacing.xl,
-      paddingBottom: t.spacing.lg,
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      justifyContent: 'space-between' as const,
-    },
-    headerTitle: {
-      fontSize: t.fontSize.lg,
-      color: t.colors.foreground,
-      fontFamily: t.fonts.sansBold,
-    },
-    closeBtn: {
-      height: t.sizes.avatarSm,
-      width: t.sizes.avatarSm,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      borderRadius: t.radius.full,
-      backgroundColor: t.colors.muted,
-    },
     searchBar: {
       marginHorizontal: t.spacing.xl,
       flexDirection: 'row' as const,
@@ -290,9 +249,28 @@ export function ClientPicker({ clients, value, onChange, onClientCreated }: Clie
       }`
     : 'انتخاب مشتری…';
 
+  const isFormDirty = React.useCallback(
+    () => mode === 'add' && Boolean(newName.trim() || newPhone.trim()),
+    [mode, newName, newPhone]
+  );
+
+  const requestClose = React.useCallback(async (): Promise<boolean> => {
+    if (!isFormDirty()) return true;
+    return confirmDirtyDismiss();
+  }, [isFormDirty]);
+
+  const handleCloseRequest = async () => {
+    const ok = await requestClose();
+    if (ok) handleClose();
+  };
+
   return (
     <>
-      <Pressable onPress={handleOpen} style={styles.trigger}>
+      <Pressable
+        onPress={handleOpen}
+        accessibilityRole="button"
+        accessibilityLabel="انتخاب مشتری"
+        style={styles.trigger}>
         <Text
           style={[
             styles.triggerText,
@@ -304,169 +282,154 @@ export function ClientPicker({ clients, value, onChange, onClientCreated }: Clie
         <ChevronDown size={theme.sizes.iconSm} color={theme.iconColors.muted} strokeWidth={1.6} />
       </Pressable>
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={handleClose}>
-        <Pressable onPress={handleClose} style={styles.backdrop}>
-          <Pressable onPress={(e) => e.stopPropagation()} style={styles.sheet}>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-              <View style={styles.headerRow}>
-                <Text style={styles.headerTitle}>
-                  {mode === 'add' ? 'مشتری جدید' : 'انتخاب مشتری'}
-                </Text>
-                <Pressable onPress={handleClose} style={styles.closeBtn}>
-                  <X size={theme.sizes.iconSm} color={theme.colors.foreground} strokeWidth={2} />
+      <AppSheet
+        visible={open}
+        onClose={handleClose}
+        onRequestDismiss={requestClose}
+        dismissOnBackdropPress
+        hideHandle>
+        <ModalHeader
+          title={mode === 'add' ? 'مشتری جدید' : 'انتخاب مشتری'}
+          onClose={() => void handleCloseRequest()}
+          borderless
+        />
+
+        {mode === 'search' ? (
+          <>
+            <View style={styles.searchBar}>
+              <Search size={theme.sizes.iconSm} color={theme.iconColors.muted} strokeWidth={1.6} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="جستجو نام یا شماره…"
+                placeholderTextColor={theme.colors.mutedForeground}
+                autoFocus
+                style={styles.searchInput}
+              />
+              {query ? (
+                <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                  <X
+                    size={theme.sizes.iconSm - 2}
+                    color={theme.iconColors.muted}
+                    strokeWidth={1.8}
+                  />
                 </Pressable>
-              </View>
+              ) : null}
+            </View>
 
-              {mode === 'search' ? (
-                <>
-                  <View style={styles.searchBar}>
-                    <Search
-                      size={theme.sizes.iconSm}
-                      color={theme.iconColors.muted}
-                      strokeWidth={1.6}
-                    />
-                    <TextInput
-                      value={query}
-                      onChangeText={setQuery}
-                      placeholder="جستجو نام یا شماره…"
-                      placeholderTextColor={theme.colors.mutedForeground}
-                      autoFocus
-                      style={styles.searchInput}
-                    />
-                    {query ? (
-                      <Pressable onPress={() => setQuery('')} hitSlop={8}>
-                        <X
-                          size={theme.sizes.iconSm - 2}
-                          color={theme.iconColors.muted}
-                          strokeWidth={1.8}
-                        />
-                      </Pressable>
-                    ) : null}
-                  </View>
-
-                  <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
-                    <View style={styles.listInner}>
-                      {filtered.length > 0 ? (
-                        filtered.map((client) => {
-                          const isSelected = client.id === value;
-                          return (
-                            <Pressable
-                              key={client.id}
-                              onPress={() => handleSelect(client.id)}
-                              style={[
-                                styles.clientRow,
-                                isSelected ? styles.clientRowSelected : null,
-                              ]}>
-                              <View style={styles.flex1}>
-                                <Text style={styles.clientName} numberOfLines={1}>
-                                  {client.name}
-                                </Text>
-                                <Text style={styles.clientPhone}>
-                                  {client.isPlaceholder
-                                    ? 'اطلاعات ناقص'
-                                    : displayPhone(client.phone)}
-                                </Text>
-                              </View>
-                              {isSelected ? (
-                                <Check
-                                  size={theme.sizes.iconSm}
-                                  color={theme.colors.primary}
-                                  strokeWidth={2}
-                                />
-                              ) : null}
-                            </Pressable>
-                          );
-                        })
-                      ) : (
-                        <View style={styles.emptyWrap}>
-                          <Text style={styles.emptyText}>مشتری‌ای یافت نشد</Text>
+            <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
+              <View style={styles.listInner}>
+                {filtered.length > 0 ? (
+                  filtered.map((client) => {
+                    const isSelected = client.id === value;
+                    return (
+                      <Pressable
+                        key={client.id}
+                        onPress={() => handleSelect(client.id)}
+                        style={[styles.clientRow, isSelected ? styles.clientRowSelected : null]}>
+                        <View style={styles.flex1}>
+                          <Text style={styles.clientName} numberOfLines={1}>
+                            {client.name}
+                          </Text>
+                          <Text style={styles.clientPhone}>
+                            {client.isPlaceholder ? 'اطلاعات ناقص' : displayPhone(client.phone)}
+                          </Text>
                         </View>
-                      )}
-                    </View>
-                  </ScrollView>
-
-                  <View style={styles.addSection}>
-                    {!hasExactMatch && query.trim() ? (
-                      <Pressable onPress={startAdding} style={styles.addRow}>
-                        <View style={styles.addIconWrap}>
-                          <UserPlus
-                            size={theme.sizes.iconSm - 2}
+                        {isSelected ? (
+                          <Check
+                            size={theme.sizes.iconSm}
                             color={theme.colors.primary}
-                            strokeWidth={1.8}
+                            strokeWidth={2}
                           />
-                        </View>
-                        <Text style={styles.addTextPrimary} numberOfLines={1}>
-                          افزودن «{query.trim()}» به عنوان مشتری جدید
-                        </Text>
+                        ) : null}
                       </Pressable>
-                    ) : (
-                      <Pressable onPress={startAdding} style={styles.addRow}>
-                        <Plus
-                          size={theme.sizes.iconSm}
-                          color={theme.iconColors.muted}
-                          strokeWidth={1.8}
-                        />
-                        <Text style={styles.addTextMuted}>مشتری جدید</Text>
-                      </Pressable>
-                    )}
+                    );
+                  })
+                ) : (
+                  <View style={styles.emptyWrap}>
+                    <Text style={styles.emptyText}>مشتری‌ای یافت نشد</Text>
                   </View>
-                </>
+                )}
+              </View>
+            </ScrollView>
+
+            <View style={styles.addSection}>
+              {!hasExactMatch && query.trim() ? (
+                <Pressable onPress={startAdding} style={styles.addRow}>
+                  <View style={styles.addIconWrap}>
+                    <UserPlus
+                      size={theme.sizes.iconSm - 2}
+                      color={theme.colors.primary}
+                      strokeWidth={1.8}
+                    />
+                  </View>
+                  <Text style={styles.addTextPrimary} numberOfLines={1}>
+                    افزودن «{query.trim()}» به عنوان مشتری جدید
+                  </Text>
+                </Pressable>
               ) : (
-                <View style={styles.addBody}>
-                  <View style={styles.addHeaderRow}>
-                    <Pressable
-                      onPress={() => {
-                        setMode('search');
-                        resetForm({ name: '', phone: '', notes: '', tags: [] });
-                      }}>
-                      <Text style={styles.backText}>بازگشت</Text>
-                    </Pressable>
-                    <Text style={styles.addTitle}>ثبت مشتری جدید</Text>
-                  </View>
-
-                  <Input
-                    value={newName}
-                    onChangeText={(text) => setValue('name', text)}
-                    placeholder="نام مشتری"
+                <Pressable onPress={startAdding} style={styles.addRow}>
+                  <Plus
+                    size={theme.sizes.iconSm}
+                    color={theme.iconColors.muted}
+                    strokeWidth={1.8}
                   />
-
-                  <Input
-                    value={displayPhone(newPhone)}
-                    onChangeText={(text) => setValue('phone', text)}
-                    placeholder="شماره تماس (۰۹…)"
-                    keyboardType="phone-pad"
-                    style={{ textAlign: 'left', writingDirection: 'ltr' }}
-                  />
-
-                  {errors.name ? <Text style={styles.errorText}>{errors.name.message}</Text> : null}
-                  {errors.phone ? (
-                    <Text style={styles.errorText}>{errors.phone.message}</Text>
-                  ) : null}
-                  {errors.root ? <Text style={styles.errorText}>{errors.root.message}</Text> : null}
-
-                  <Button
-                    disabled={isSubmitting || !newName.trim() || !newPhone.trim()}
-                    onPress={() => void handleSaveNew()}
-                    style={styles.fullWidth}>
-                    {isSubmitting ? (
-                      <ActivityIndicator size="small" color={theme.colors.primaryForeground} />
-                    ) : (
-                      <Plus
-                        size={theme.sizes.iconSm - 2}
-                        color={theme.colors.primaryForeground}
-                        strokeWidth={2}
-                      />
-                    )}
-                    <Text style={styles.submitText}>
-                      {isSubmitting ? 'در حال ذخیره…' : 'ذخیره و انتخاب'}
-                    </Text>
-                  </Button>
-                </View>
+                  <Text style={styles.addTextMuted}>مشتری جدید</Text>
+                </Pressable>
               )}
-            </KeyboardAvoidingView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+            </View>
+          </>
+        ) : (
+          <View style={styles.addBody}>
+            <View style={styles.addHeaderRow}>
+              <Pressable
+                onPress={() => {
+                  setMode('search');
+                  resetForm({ name: '', phone: '', notes: '', tags: [] });
+                }}>
+                <Text style={styles.backText}>بازگشت</Text>
+              </Pressable>
+              <Text style={styles.addTitle}>ثبت مشتری جدید</Text>
+            </View>
+
+            <Input
+              value={newName}
+              onChangeText={(text) => setValue('name', text)}
+              placeholder="نام مشتری"
+            />
+
+            <Input
+              value={displayPhone(newPhone)}
+              onChangeText={(text) => setValue('phone', text)}
+              placeholder="شماره تماس (۰۹…)"
+              keyboardType="phone-pad"
+              style={{ textAlign: 'left', writingDirection: 'ltr' }}
+            />
+
+            {errors.name ? <Text style={styles.errorText}>{errors.name.message}</Text> : null}
+            {errors.phone ? <Text style={styles.errorText}>{errors.phone.message}</Text> : null}
+            {errors.root ? <Text style={styles.errorText}>{errors.root.message}</Text> : null}
+
+            <Button
+              disabled={isSubmitting || !newName.trim() || !newPhone.trim()}
+              onPress={() => void handleSaveNew()}
+              style={styles.fullWidth}>
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color={theme.colors.primaryForeground} />
+              ) : (
+                <Plus
+                  size={theme.sizes.iconSm - 2}
+                  color={theme.colors.primaryForeground}
+                  strokeWidth={2}
+                />
+              )}
+              <Text style={styles.submitText}>
+                {isSubmitting ? 'در حال ذخیره…' : 'ذخیره و انتخاب'}
+              </Text>
+            </Button>
+          </View>
+        )}
+      </AppSheet>
     </>
   );
 }

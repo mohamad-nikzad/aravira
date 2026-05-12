@@ -1,16 +1,7 @@
 import * as React from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight, Clock3, Search, Sparkles, X } from 'lucide-react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ChevronLeft, ChevronRight, Clock3, Search, Sparkles } from 'lucide-react-native';
+import { AppModal } from '../ui/app-modal';
 import {
   AVAILABILITY_EMPTY_REASONS,
   type AvailabilityEmptyReason,
@@ -242,33 +233,7 @@ export function AvailabilityModal({
   };
 
   const styles = useThemeStyles((t) => ({
-    safe: { flex: 1, backgroundColor: t.colors.background },
-    header: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      justifyContent: 'space-between' as const,
-      borderBottomWidth: t.sizes.hairline,
-      borderBottomColor: t.colors.border,
-      paddingHorizontal: t.spacing.xl,
-      paddingVertical: t.spacing.lg,
-    },
     flex1: { flex: 1 },
-    title: { fontSize: t.fontSize.lg, fontFamily: t.fonts.sansBold, color: t.colors.foreground },
-    subtitle: {
-      marginTop: t.spacing.xs / 2,
-      fontSize: t.fontSize.sm,
-      color: t.colors.mutedForeground,
-      fontFamily: t.fonts.sans,
-    },
-    closeBtn: {
-      height: t.sizes.avatarSm,
-      width: t.sizes.avatarSm,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      borderRadius: t.radius.full,
-      backgroundColor: t.colors.muted,
-    },
-    body: { padding: t.spacing.xl, gap: t.spacing.lg, paddingBottom: t.spacing['3xl'] },
     label: {
       fontSize: t.fontSize.sm,
       fontFamily: t.fonts.sansSemiBold,
@@ -379,222 +344,200 @@ export function AvailabilityModal({
   const submitDisabled = !serviceId || loadingMode === 'day';
 
   return (
-    <Modal
+    <AppModal
       visible={open}
-      animationType="slide"
-      onRequestClose={onClose}
-      presentationStyle="pageSheet">
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.header}>
-          <View style={styles.flex1}>
-            <Text style={styles.title}>بررسی زمان خالی</Text>
-            <Text style={styles.subtitle}>خدمت و تاریخ را انتخاب کنید.</Text>
-          </View>
-          <Pressable onPress={onClose} accessibilityLabel="بستن" style={styles.closeBtn}>
-            <X size={theme.sizes.iconSm} color={theme.colors.foreground} strokeWidth={2} />
-          </Pressable>
+      onClose={onClose}
+      header={{ title: 'بررسی زمان خالی', subtitle: 'خدمت و تاریخ را انتخاب کنید.' }}>
+      <View style={styles.field}>
+        <Text style={styles.label}>خدمت</Text>
+        <Select
+          title="انتخاب خدمت"
+          placeholder="انتخاب خدمت"
+          value={serviceId}
+          onChange={handleServiceChange}
+          groups={serviceGroups}
+        />
+      </View>
+
+      <View style={styles.field}>
+        <Text style={styles.label}>پرسنل</Text>
+        <Select
+          title="انتخاب پرسنل"
+          placeholder={serviceId ? 'انتخاب پرسنل' : 'اول خدمت را انتخاب کنید'}
+          value={staffSelection}
+          onChange={(v) => {
+            setStaffSelection(v);
+            clearResults();
+          }}
+          options={staffOptions}
+        />
+      </View>
+
+      <View style={styles.field}>
+        <Text style={styles.label}>تاریخ</Text>
+        <JalaliDatePicker value={date} onChange={handleDateChange} />
+      </View>
+
+      <Button onPress={() => void runSearch('day')} disabled={submitDisabled}>
+        {loadingMode === 'day' ? (
+          <Spinner color={theme.colors.primaryForeground} />
+        ) : (
+          <Search
+            size={theme.sizes.iconSm}
+            color={theme.colors.primaryForeground}
+            strokeWidth={2}
+          />
+        )}
+        <Text
+          style={{
+            marginInlineStart: 8,
+            color: theme.colors.primaryForeground,
+            fontFamily: theme.fonts.sansSemiBold,
+            fontSize: theme.fontSize.base,
+          }}>
+          {loadingMode === 'day' ? 'در حال بررسی…' : 'بررسی زمان'}
+        </Text>
+      </Button>
+
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      {hasResults ? (
+        <View style={styles.notice}>
+          <Text style={styles.noticeText}>
+            این زمان‌ها پیشنهادی هستند و تایید نهایی هنگام ثبت نوبت انجام می‌شود.
+          </Text>
         </View>
+      ) : null}
 
-        <KeyboardAvoidingView
-          style={styles.flex1}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-            <View style={styles.field}>
-              <Text style={styles.label}>خدمت</Text>
-              <Select
-                title="انتخاب خدمت"
-                placeholder="انتخاب خدمت"
-                value={serviceId}
-                onChange={handleServiceChange}
-                groups={serviceGroups}
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>پرسنل</Text>
-              <Select
-                title="انتخاب پرسنل"
-                placeholder={serviceId ? 'انتخاب پرسنل' : 'اول خدمت را انتخاب کنید'}
-                value={staffSelection}
-                onChange={(v) => {
-                  setStaffSelection(v);
-                  clearResults();
-                }}
-                options={staffOptions}
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>تاریخ</Text>
-              <JalaliDatePicker value={date} onChange={handleDateChange} />
-            </View>
-
-            <Button onPress={() => void runSearch('day')} disabled={submitDisabled}>
-              {loadingMode === 'day' ? (
-                <Spinner color={theme.colors.primaryForeground} />
-              ) : (
-                <Search
-                  size={theme.sizes.iconSm}
-                  color={theme.colors.primaryForeground}
-                  strokeWidth={2}
-                />
-              )}
-              <Text
-                style={{
-                  marginInlineStart: 8,
-                  color: theme.colors.primaryForeground,
-                  fontFamily: theme.fonts.sansSemiBold,
-                  fontSize: theme.fontSize.base,
-                }}>
-                {loadingMode === 'day' ? 'در حال بررسی…' : 'بررسی زمان'}
+      {dayResponse ? (
+        <>
+          <View style={styles.dayHeader}>
+            <View>
+              <Text style={styles.dayHeaderText}>{formatJalaliFullDate(date)}</Text>
+              <Text style={styles.dayHeaderHint}>
+                {groupedSlots.length > 0
+                  ? `${toPersianDigits(dayResponse.slots.length)} زمان`
+                  : 'بدون زمان'}
               </Text>
-            </Button>
-
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            {hasResults ? (
-              <View style={styles.notice}>
-                <Text style={styles.noticeText}>
-                  این زمان‌ها پیشنهادی هستند و تایید نهایی هنگام ثبت نوبت انجام می‌شود.
-                </Text>
-              </View>
-            ) : null}
-
-            {dayResponse ? (
-              <>
-                <View style={styles.dayHeader}>
-                  <View>
-                    <Text style={styles.dayHeaderText}>{formatJalaliFullDate(date)}</Text>
-                    <Text style={styles.dayHeaderHint}>
-                      {groupedSlots.length > 0
-                        ? `${toPersianDigits(dayResponse.slots.length)} زمان`
-                        : 'بدون زمان'}
-                    </Text>
-                  </View>
-                </View>
-
-                {groupedSlots.length > 0 ? (
-                  groupedSlots.map((group) => (
-                    <View key={group.staffId} style={styles.group}>
-                      <View>
-                        <Text style={styles.groupHeader}>{group.staffName}</Text>
-                        <Text style={styles.groupSub}>
-                          {toPersianDigits(group.slots.length)} زمان قابل رزرو
-                        </Text>
-                      </View>
-                      {group.slots.map((slot) => (
-                        <Pressable
-                          key={`${slot.staffId}:${slot.date}:${slot.startTime}`}
-                          onPress={() => onSelectSlot({ slot, serviceId })}
-                          style={({ pressed }) => [
-                            styles.slot,
-                            pressed ? { opacity: theme.states.pressed.opacity } : null,
-                          ]}>
-                          <View>
-                            <Text style={styles.slotMain}>
-                              {formatPersianTime(slot.startTime)} تا{' '}
-                              {formatPersianTime(slot.endTime)}
-                            </Text>
-                            <Text style={styles.slotSub}>رزرو با {slot.staffName}</Text>
-                          </View>
-                          <Sparkles
-                            size={theme.sizes.iconSm}
-                            color={theme.colors.primary}
-                            strokeWidth={1.8}
-                          />
-                        </Pressable>
-                      ))}
-                    </View>
-                  ))
-                ) : (
-                  <View style={styles.emptyCard}>
-                    <Text style={styles.emptyTitle}>زمان خالی پیدا نشد</Text>
-                    <Text style={styles.emptyText}>{emptyReasonCopy(dayResponse.emptyReason)}</Text>
-                    <Button
-                      variant="outline"
-                      onPress={() => void runSearch('nearest')}
-                      disabled={!serviceId || loadingMode === 'nearest'}>
-                      {loadingMode === 'nearest' ? (
-                        <ActivityIndicator size="small" color={theme.colors.foreground} />
-                      ) : (
-                        <Clock3
-                          size={theme.sizes.iconSm}
-                          color={theme.colors.foreground}
-                          strokeWidth={1.8}
-                        />
-                      )}
-                      <Text
-                        style={{
-                          marginInlineStart: 8,
-                          color: theme.colors.foreground,
-                          fontFamily: theme.fonts.sansSemiBold,
-                          fontSize: theme.fontSize.sm,
-                        }}>
-                        {loadingMode === 'nearest' ? 'در حال جستجو…' : 'نزدیک‌ترین زمان را پیدا کن'}
-                      </Text>
-                    </Button>
-
-                    {nearestResponse?.slot ? (
-                      <Pressable
-                        onPress={() => onSelectSlot({ slot: nearestResponse.slot!, serviceId })}
-                        style={styles.nearest}>
-                        <Text style={styles.groupHeader}>نزدیک‌ترین زمان</Text>
-                        <Text style={styles.groupSub}>
-                          {formatJalaliFullDate(nearestResponse.slot.date)}
-                        </Text>
-                        <Text style={styles.slotMain}>
-                          {formatPersianTime(nearestResponse.slot.startTime)} تا{' '}
-                          {formatPersianTime(nearestResponse.slot.endTime)}
-                        </Text>
-                        <Text style={styles.slotSub}>با {nearestResponse.slot.staffName}</Text>
-                      </Pressable>
-                    ) : nearestResponse ? (
-                      <Text style={styles.emptyText}>
-                        {emptyReasonCopy(nearestResponse.emptyReason)}
-                      </Text>
-                    ) : null}
-                  </View>
-                )}
-              </>
-            ) : null}
-
-            <View style={styles.navRow}>
-              <Button variant="outline" onPress={() => handleDayNav(-1)} style={styles.navBtn}>
-                <ChevronRight
-                  size={theme.sizes.iconSm}
-                  color={theme.colors.foreground}
-                  strokeWidth={1.8}
-                />
-                <Text
-                  style={{
-                    marginInlineStart: 6,
-                    color: theme.colors.foreground,
-                    fontFamily: theme.fonts.sansSemiBold,
-                    fontSize: theme.fontSize.sm,
-                  }}>
-                  روز قبل
-                </Text>
-              </Button>
-              <Button variant="outline" onPress={() => handleDayNav(1)} style={styles.navBtn}>
-                <Text
-                  style={{
-                    marginInlineEnd: 6,
-                    color: theme.colors.foreground,
-                    fontFamily: theme.fonts.sansSemiBold,
-                    fontSize: theme.fontSize.sm,
-                  }}>
-                  روز بعد
-                </Text>
-                <ChevronLeft
-                  size={theme.sizes.iconSm}
-                  color={theme.colors.foreground}
-                  strokeWidth={1.8}
-                />
-              </Button>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Modal>
+          </View>
+
+          {groupedSlots.length > 0 ? (
+            groupedSlots.map((group) => (
+              <View key={group.staffId} style={styles.group}>
+                <View>
+                  <Text style={styles.groupHeader}>{group.staffName}</Text>
+                  <Text style={styles.groupSub}>
+                    {toPersianDigits(group.slots.length)} زمان قابل رزرو
+                  </Text>
+                </View>
+                {group.slots.map((slot) => (
+                  <Pressable
+                    key={`${slot.staffId}:${slot.date}:${slot.startTime}`}
+                    onPress={() => onSelectSlot({ slot, serviceId })}
+                    style={({ pressed }) => [
+                      styles.slot,
+                      pressed ? { opacity: theme.states.pressed.opacity } : null,
+                    ]}>
+                    <View>
+                      <Text style={styles.slotMain}>
+                        {formatPersianTime(slot.startTime)} تا {formatPersianTime(slot.endTime)}
+                      </Text>
+                      <Text style={styles.slotSub}>رزرو با {slot.staffName}</Text>
+                    </View>
+                    <Sparkles
+                      size={theme.sizes.iconSm}
+                      color={theme.colors.primary}
+                      strokeWidth={1.8}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>زمان خالی پیدا نشد</Text>
+              <Text style={styles.emptyText}>{emptyReasonCopy(dayResponse.emptyReason)}</Text>
+              <Button
+                variant="outline"
+                onPress={() => void runSearch('nearest')}
+                disabled={!serviceId || loadingMode === 'nearest'}>
+                {loadingMode === 'nearest' ? (
+                  <ActivityIndicator size="small" color={theme.colors.foreground} />
+                ) : (
+                  <Clock3
+                    size={theme.sizes.iconSm}
+                    color={theme.colors.foreground}
+                    strokeWidth={1.8}
+                  />
+                )}
+                <Text
+                  style={{
+                    marginInlineStart: 8,
+                    color: theme.colors.foreground,
+                    fontFamily: theme.fonts.sansSemiBold,
+                    fontSize: theme.fontSize.sm,
+                  }}>
+                  {loadingMode === 'nearest' ? 'در حال جستجو…' : 'نزدیک‌ترین زمان را پیدا کن'}
+                </Text>
+              </Button>
+
+              {nearestResponse?.slot ? (
+                <Pressable
+                  onPress={() => onSelectSlot({ slot: nearestResponse.slot!, serviceId })}
+                  style={styles.nearest}>
+                  <Text style={styles.groupHeader}>نزدیک‌ترین زمان</Text>
+                  <Text style={styles.groupSub}>
+                    {formatJalaliFullDate(nearestResponse.slot.date)}
+                  </Text>
+                  <Text style={styles.slotMain}>
+                    {formatPersianTime(nearestResponse.slot.startTime)} تا{' '}
+                    {formatPersianTime(nearestResponse.slot.endTime)}
+                  </Text>
+                  <Text style={styles.slotSub}>با {nearestResponse.slot.staffName}</Text>
+                </Pressable>
+              ) : nearestResponse ? (
+                <Text style={styles.emptyText}>{emptyReasonCopy(nearestResponse.emptyReason)}</Text>
+              ) : null}
+            </View>
+          )}
+        </>
+      ) : null}
+
+      <View style={styles.navRow}>
+        <Button variant="outline" onPress={() => handleDayNav(-1)} style={styles.navBtn}>
+          <ChevronRight
+            size={theme.sizes.iconSm}
+            color={theme.colors.foreground}
+            strokeWidth={1.8}
+          />
+          <Text
+            style={{
+              marginInlineStart: 6,
+              color: theme.colors.foreground,
+              fontFamily: theme.fonts.sansSemiBold,
+              fontSize: theme.fontSize.sm,
+            }}>
+            روز قبل
+          </Text>
+        </Button>
+        <Button variant="outline" onPress={() => handleDayNav(1)} style={styles.navBtn}>
+          <Text
+            style={{
+              marginInlineEnd: 6,
+              color: theme.colors.foreground,
+              fontFamily: theme.fonts.sansSemiBold,
+              fontSize: theme.fontSize.sm,
+            }}>
+            روز بعد
+          </Text>
+          <ChevronLeft
+            size={theme.sizes.iconSm}
+            color={theme.colors.foreground}
+            strokeWidth={1.8}
+          />
+        </Button>
+      </View>
+    </AppModal>
   );
 }

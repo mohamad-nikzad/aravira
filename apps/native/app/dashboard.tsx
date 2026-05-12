@@ -30,8 +30,6 @@ function formatPrice(n: number) {
   return `${numFmt.format(n)} تومان`;
 }
 
-const BAR_COLORS = ['#0d9488', '#22c55e', '#f59e0b', '#8b5cf6', '#f43f5e'];
-
 function ProgressBar({ value, max, color }: { value: number; max: number; color: string }) {
   const styles = useThemeStyles((t) => ({
     track: {
@@ -211,7 +209,7 @@ export default function DashboardScreen() {
       alignItems: 'center' as const,
       gap: t.spacing.xs,
     },
-    legendSwatch: { width: 10, height: 10, borderRadius: 5 },
+    legendSwatch: { width: 10, height: 10, borderRadius: t.radius.full },
     legendLabel: {
       color: t.colors.mutedForeground,
       fontSize: t.fontSize.xs,
@@ -377,7 +375,7 @@ export default function DashboardScreen() {
                       <ProgressBar
                         value={svc.count}
                         max={maxServiceCount}
-                        color={BAR_COLORS[i % BAR_COLORS.length]}
+                        color={theme.charts[i % theme.charts.length]}
                       />
                     </View>
                   ))}

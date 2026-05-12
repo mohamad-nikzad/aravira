@@ -49,6 +49,8 @@ const sizes = {
   hairline: 1,
 } as const;
 
+const chartPalette = ['#0d9488', '#22c55e', '#f59e0b', '#8b5cf6', '#f43f5e'] as const;
+
 const fontWeights = {
   regular: '400',
   medium: '500',
@@ -63,7 +65,7 @@ function createTheme(mode: ThemeMode): Theme {
     mode,
     colors,
     brand: tokens.colors.brand,
-    radius: { ...tokens.radius, full: 999 },
+    radius: { ...tokens.radius, xxs: 2, xs: 4, '2xl': 20, '3xl': 24, '4xl': 32, full: 999 },
     spacing,
     fontSize,
     sizes,
@@ -76,6 +78,39 @@ function createTheme(mode: ThemeMode): Theme {
       destructive: colors.destructive,
       onPrimary: colors.primaryForeground,
       onAccent: colors.accentForeground,
+    },
+    scrim: withAlpha('#000000', mode === 'dark' ? 0.6 : 0.4),
+    shadowColor: '#000000',
+    charts: chartPalette,
+    elevation: {
+      none: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
+      },
+      sm: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: mode === 'dark' ? 0.32 : 0.08,
+        shadowRadius: 14,
+        elevation: 2,
+      },
+      md: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: mode === 'dark' ? 0.45 : 0.15,
+        shadowRadius: 8,
+        elevation: 6,
+      },
+      lg: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: mode === 'dark' ? 0.55 : 0.2,
+        shadowRadius: 8,
+        elevation: 8,
+      },
     },
     statusBarStyle: mode === 'dark' ? 'light' : 'dark',
     navigationTheme: {

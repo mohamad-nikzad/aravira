@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import {
   JALALI_MONTHS,
@@ -11,8 +11,10 @@ import {
   formatJalaliDate,
   toJalali,
 } from '@repo/salon-core/jalali';
+import { AppSheet } from './app-sheet';
+import { ModalHeader } from './modal-header';
 import { Button } from './button';
-import { useTheme, useThemeStyles, withAlpha } from '../../theme';
+import { useTheme, useThemeStyles } from '../../theme';
 
 const numFmt = new Intl.NumberFormat('fa-IR');
 
@@ -40,29 +42,6 @@ export function JalaliDatePicker({ value, onChange }: JalaliDatePickerProps) {
     triggerText: { fontSize: t.fontSize.base, fontFamily: t.fonts.sans },
     triggerTextValue: { color: t.colors.foreground },
     triggerTextPlaceholder: { color: t.colors.mutedForeground },
-    backdrop: {
-      flex: 1,
-      justifyContent: 'flex-end' as const,
-      backgroundColor: withAlpha('#000000', 0.4),
-    },
-    sheet: {
-      borderTopLeftRadius: t.radius.xl,
-      borderTopRightRadius: t.radius.xl,
-      backgroundColor: t.colors.card,
-      paddingBottom: t.spacing['3xl'],
-      paddingTop: t.spacing.xl,
-    },
-    titleWrap: { paddingHorizontal: t.spacing.xl, paddingBottom: t.spacing.lg },
-    title: {
-      fontSize: t.fontSize.lg,
-      color: t.colors.foreground,
-      fontFamily: t.fonts.sansBold,
-    },
-    subtitle: {
-      fontSize: t.fontSize.sm,
-      color: t.colors.mutedForeground,
-      fontFamily: t.fonts.sans,
-    },
     body: { paddingHorizontal: t.spacing.xl, paddingBottom: t.spacing.md },
     navRow: {
       flexDirection: 'row' as const,
@@ -168,7 +147,11 @@ export function JalaliDatePicker({ value, onChange }: JalaliDatePickerProps) {
 
   return (
     <>
-      <Pressable onPress={handleOpen} style={styles.trigger}>
+      <Pressable
+        onPress={handleOpen}
+        accessibilityRole="button"
+        accessibilityLabel="انتخاب تاریخ"
+        style={styles.trigger}>
         <Text
           style={[
             styles.triggerText,
@@ -179,89 +162,86 @@ export function JalaliDatePicker({ value, onChange }: JalaliDatePickerProps) {
         <CalendarIcon size={theme.sizes.iconSm} color={theme.iconColors.muted} strokeWidth={1.6} />
       </Pressable>
 
-      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <Pressable onPress={() => setOpen(false)} style={styles.backdrop}>
-          <Pressable onPress={(e) => e.stopPropagation()} style={styles.sheet}>
-            <View style={styles.titleWrap}>
-              <Text style={styles.title}>انتخاب تاریخ</Text>
-              <Text style={styles.subtitle}>روز مورد نظر را انتخاب کنید</Text>
-            </View>
+      <AppSheet visible={open} onClose={() => setOpen(false)}>
+        <ModalHeader
+          title="انتخاب تاریخ"
+          subtitle="روز مورد نظر را انتخاب کنید"
+          onClose={() => setOpen(false)}
+          borderless
+        />
 
-            <View style={styles.body}>
-              <View style={styles.navRow}>
-                <Pressable onPress={goNext} style={styles.navButton}>
-                  <ChevronRight size={theme.sizes.iconMd} color={theme.colors.foreground} />
-                </Pressable>
-                <Text style={styles.monthLabel}>
-                  {JALALI_MONTHS[viewMonth - 1]} {numFmt.format(viewYear)}
-                </Text>
-                <Pressable onPress={goPrev} style={styles.navButton}>
-                  <ChevronLeft size={theme.sizes.iconMd} color={theme.colors.foreground} />
-                </Pressable>
+        <View style={styles.body}>
+          <View style={styles.navRow}>
+            <Pressable onPress={goNext} style={styles.navButton}>
+              <ChevronRight size={theme.sizes.iconMd} color={theme.colors.foreground} />
+            </Pressable>
+            <Text style={styles.monthLabel}>
+              {JALALI_MONTHS[viewMonth - 1]} {numFmt.format(viewYear)}
+            </Text>
+            <Pressable onPress={goPrev} style={styles.navButton}>
+              <ChevronLeft size={theme.sizes.iconMd} color={theme.colors.foreground} />
+            </Pressable>
+          </View>
+
+          <View style={styles.weekdayRow}>
+            {JALALI_WEEKDAYS_SHORT.map((wd) => (
+              <View key={wd} style={styles.weekdayCell}>
+                <Text style={styles.weekdayText}>{wd}</Text>
               </View>
+            ))}
+          </View>
 
-              <View style={styles.weekdayRow}>
-                {JALALI_WEEKDAYS_SHORT.map((wd) => (
-                  <View key={wd} style={styles.weekdayCell}>
-                    <Text style={styles.weekdayText}>{wd}</Text>
-                  </View>
-                ))}
+          <View style={styles.weeks}>
+            {weeks.map((week, wi) => (
+              <View key={wi} style={styles.weekRow}>
+                {week.map((day, di) => {
+                  if (day === null) {
+                    return <View key={di} style={styles.dayCell} />;
+                  }
+                  const isToday =
+                    viewYear === todayJalali.jy &&
+                    viewMonth === todayJalali.jm &&
+                    day === todayJalali.jd;
+                  const isSelected =
+                    selected &&
+                    viewYear === selected.jy &&
+                    viewMonth === selected.jm &&
+                    day === selected.jd;
+                  return (
+                    <Pressable
+                      key={di}
+                      onPress={() => handleDayClick(day)}
+                      style={[
+                        styles.dayCell,
+                        isToday && !isSelected ? styles.dayCellToday : null,
+                        isSelected ? styles.dayCellSelected : null,
+                      ]}>
+                      <Text style={[styles.dayText, isSelected ? styles.dayTextSelected : null]}>
+                        {numFmt.format(day)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
+            ))}
+          </View>
+        </View>
 
-              <View style={styles.weeks}>
-                {weeks.map((week, wi) => (
-                  <View key={wi} style={styles.weekRow}>
-                    {week.map((day, di) => {
-                      if (day === null) {
-                        return <View key={di} style={styles.dayCell} />;
-                      }
-                      const isToday =
-                        viewYear === todayJalali.jy &&
-                        viewMonth === todayJalali.jm &&
-                        day === todayJalali.jd;
-                      const isSelected =
-                        selected &&
-                        viewYear === selected.jy &&
-                        viewMonth === selected.jm &&
-                        day === selected.jd;
-                      return (
-                        <Pressable
-                          key={di}
-                          onPress={() => handleDayClick(day)}
-                          style={[
-                            styles.dayCell,
-                            isToday && !isSelected ? styles.dayCellToday : null,
-                            isSelected ? styles.dayCellSelected : null,
-                          ]}>
-                          <Text
-                            style={[styles.dayText, isSelected ? styles.dayTextSelected : null]}>
-                            {numFmt.format(day)}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.footer}>
-              <Button
-                variant="outline"
-                onPress={() => {
-                  const now = new Date();
-                  const y = now.getFullYear();
-                  const m = now.getMonth() + 1;
-                  const d = now.getDate();
-                  onChange(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
-                  setOpen(false);
-                }}>
-                <Text style={styles.footerButtonText}>امروز</Text>
-              </Button>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        <View style={styles.footer}>
+          <Button
+            variant="outline"
+            onPress={() => {
+              const now = new Date();
+              const y = now.getFullYear();
+              const m = now.getMonth() + 1;
+              const d = now.getDate();
+              onChange(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+              setOpen(false);
+            }}>
+            <Text style={styles.footerButtonText}>امروز</Text>
+          </Button>
+        </View>
+      </AppSheet>
     </>
   );
 }

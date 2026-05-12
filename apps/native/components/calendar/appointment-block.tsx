@@ -49,7 +49,7 @@ export function AppointmentBlock({
           backgroundColor: isCancelled ? theme.colors.muted : tint,
           borderColor: isCancelled ? theme.colors.border : border,
           borderWidth: 1,
-          borderRadius: 10,
+          borderRadius: theme.radius.md,
           overflow: 'hidden',
           opacity: pressed ? 0.85 : 1,
         },

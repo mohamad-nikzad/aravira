@@ -156,7 +156,7 @@ export function DayView(props: CalendarViewProps) {
                   top: -3,
                   width: 8,
                   height: 8,
-                  borderRadius: 4,
+                  borderRadius: theme.radius.full,
                   backgroundColor: theme.colors.ring,
                 }}
               />
@@ -217,7 +217,7 @@ function DayEmptyState() {
         style={{
           paddingHorizontal: 16,
           paddingVertical: 10,
-          borderRadius: 16,
+          borderRadius: theme.radius.xl,
           backgroundColor: withAlpha(theme.colors.card, theme.mode === 'dark' ? 0.7 : 0.6),
           borderWidth: 1,
           borderColor: theme.colors.border,

@@ -1,14 +1,6 @@
 import * as React from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  Modal,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { AppSheet } from '../ui/app-sheet';
 import {
   Clock,
   Phone,
@@ -47,38 +39,19 @@ export function AppointmentSheet({
   onCompleteClient?: (appointment: AppointmentWithDetails) => void;
 }) {
   const visible = appointment != null;
-  const { theme } = useTheme();
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable
-        onPress={onClose}
-        style={{
-          flex: 1,
-          justifyContent: 'flex-end',
-          backgroundColor: withAlpha(theme.colors.background, theme.mode === 'dark' ? 0.72 : 0.45),
-        }}>
-        <Pressable
-          onPress={(e) => e.stopPropagation()}
-          style={{
-            backgroundColor: theme.colors.card,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            paddingBottom: 32,
-            maxHeight: '85%',
-          }}>
-          {appointment ? (
-            <SheetContent
-              appointment={appointment}
-              onClose={onClose}
-              onChange={onChange}
-              onEdit={onEdit}
-              onCompleteClient={onCompleteClient}
-            />
-          ) : null}
-        </Pressable>
-      </Pressable>
-    </Modal>
+    <AppSheet visible={visible} onClose={onClose} hideHandle>
+      {appointment ? (
+        <SheetContent
+          appointment={appointment}
+          onClose={onClose}
+          onChange={onChange}
+          onEdit={onEdit}
+          onCompleteClient={onCompleteClient}
+        />
+      ) : null}
+    </AppSheet>
   );
 }
 
@@ -179,7 +152,7 @@ function SheetContent({
           alignSelf: 'center',
           width: 40,
           height: 4,
-          borderRadius: 2,
+          borderRadius: theme.radius.full,
           backgroundColor: theme.colors.border,
           marginBottom: 12,
         }}
@@ -212,7 +185,7 @@ function SheetContent({
           style={{
             width: 32,
             height: 32,
-            borderRadius: 16,
+            borderRadius: theme.radius.full,
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: theme.colors.muted,
@@ -228,7 +201,7 @@ function SheetContent({
           marginTop: 12,
           paddingHorizontal: 10,
           paddingVertical: 4,
-          borderRadius: 999,
+          borderRadius: theme.radius.full,
           backgroundColor: themedStatus.background || palette.bg,
           borderWidth: 1,
           borderColor: themedStatus.border || palette.border,
@@ -249,7 +222,7 @@ function SheetContent({
           marginTop: 16,
           flexDirection: 'row',
           backgroundColor: isCancelled ? theme.colors.muted : tint,
-          borderRadius: 16,
+          borderRadius: theme.radius.xl,
           borderWidth: 1,
           borderColor: isCancelled ? theme.colors.border : border,
           overflow: 'hidden',
@@ -272,7 +245,7 @@ function SheetContent({
             style={{
               width: 36,
               height: 36,
-              borderRadius: 10,
+              borderRadius: theme.radius.md,
               backgroundColor: withAlpha(theme.colors.card, 0.78),
               alignItems: 'center',
               justifyContent: 'center',
@@ -323,7 +296,7 @@ function SheetContent({
               style={{
                 width: 14,
                 height: 14,
-                borderRadius: 7,
+                borderRadius: theme.radius.full,
                 backgroundColor: stripe,
               }}
             />
@@ -378,7 +351,7 @@ function SheetContent({
                 gap: 8,
                 minHeight: 44,
                 paddingHorizontal: 14,
-                borderRadius: 12,
+                borderRadius: theme.radius.lg,
                 borderWidth: 1,
                 borderColor: theme.colors.primary,
                 backgroundColor: theme.colors.primary,
@@ -407,7 +380,7 @@ function SheetContent({
                 gap: 8,
                 minHeight: 44,
                 paddingHorizontal: 14,
-                borderRadius: 12,
+                borderRadius: theme.radius.lg,
                 borderWidth: 1,
                 borderColor: theme.colors.border,
                 backgroundColor: theme.colors.card,
@@ -432,7 +405,7 @@ function SheetContent({
               gap: 8,
               minHeight: 44,
               paddingHorizontal: 14,
-              borderRadius: 12,
+              borderRadius: theme.radius.lg,
               borderWidth: 1,
               borderColor: withAlpha(theme.colors.destructive, 0.4),
               backgroundColor: theme.colors.card,
@@ -521,7 +494,7 @@ function StatusActions({
               gap: 8,
               minHeight: 44,
               paddingHorizontal: 14,
-              borderRadius: 12,
+              borderRadius: theme.radius.lg,
               borderWidth: 1,
               borderColor: palette.border,
               backgroundColor: palette.bg,
@@ -594,7 +567,7 @@ function DetailRow({
         alignItems: 'flex-start',
         gap: 12,
         backgroundColor: theme.colors.card,
-        borderRadius: 14,
+        borderRadius: theme.radius.lg,
         borderWidth: 1,
         borderColor: withAlpha(theme.colors.border, 0.6),
         padding: 12,
@@ -603,7 +576,7 @@ function DetailRow({
         style={{
           width: 28,
           height: 28,
-          borderRadius: 8,
+          borderRadius: theme.radius.sm,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: theme.colors.muted,

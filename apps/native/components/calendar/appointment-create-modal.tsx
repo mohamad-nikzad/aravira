@@ -1,15 +1,8 @@
 import * as React from 'react';
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Check, X } from 'lucide-react-native';
+import { Pressable, Text, View } from 'react-native';
+import { Check } from 'lucide-react-native';
+import { AppModal } from '../ui/app-modal';
+import { confirmDirtyDismiss } from '../ui/app-sheet';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { AppointmentWithDetails, Client, Service, User } from '@repo/salon-core/types';
@@ -124,41 +117,7 @@ export function AppointmentCreateModal({
   const temporaryClientName = watch('temporaryClientName') ?? '';
   const { theme } = useTheme();
   const styles = useThemeStyles((t) => ({
-    safe: { flex: 1, backgroundColor: t.colors.background },
-    header: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      justifyContent: 'space-between' as const,
-      borderBottomWidth: t.sizes.hairline,
-      borderBottomColor: t.colors.border,
-      paddingHorizontal: t.spacing.xl,
-      paddingVertical: t.spacing.lg,
-    },
     flex1: { flex: 1, width: '100%' },
-    headerTitle: {
-      fontSize: t.fontSize.lg,
-      color: t.colors.foreground,
-      fontFamily: t.fonts.sansBold,
-    },
-    headerSubtitle: {
-      marginTop: t.spacing.xs / 2,
-      fontSize: t.fontSize.sm,
-      color: t.colors.mutedForeground,
-      fontFamily: t.fonts.sans,
-    },
-    closeBtn: {
-      height: t.sizes.avatarSm,
-      width: t.sizes.avatarSm,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      borderRadius: t.radius.full,
-      backgroundColor: t.colors.muted,
-    },
-    scrollContent: {
-      padding: t.spacing.xl,
-      paddingBottom: t.spacing['3xl'],
-      gap: t.spacing.xl,
-    },
     temporaryRow: {
       marginBottom: t.spacing.md,
       flexDirection: 'row' as const,
@@ -267,13 +226,6 @@ export function AppointmentCreateModal({
       fontSize: t.fontSize.sm,
       color: t.colors.destructive,
       fontFamily: t.fonts.sansSemiBold,
-    },
-    footer: {
-      gap: t.spacing.md,
-      borderTopWidth: t.sizes.hairline,
-      borderTopColor: t.colors.border,
-      backgroundColor: t.colors.background,
-      padding: t.spacing.xl,
     },
     submitText: {
       fontSize: t.fontSize.base,
@@ -465,247 +417,224 @@ export function AppointmentCreateModal({
     </View>
   );
 
+  const { formState } = form;
+  const requestDismiss = React.useCallback(async () => {
+    if (formState.isSubmitting) return false;
+    if (!formState.isDirty) return true;
+    return confirmDirtyDismiss();
+  }, [formState.isDirty, formState.isSubmitting]);
+
   return (
-    <Modal
+    <AppModal
       visible={open}
-      animationType="slide"
-      onRequestClose={onClose}
-      presentationStyle="pageSheet">
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <View style={styles.header}>
-          <View style={styles.flex1}>
-            <Text style={styles.headerTitle}>نوبت جدید</Text>
-            <Text style={styles.headerSubtitle}>خدمت، پرسنل و زمان نوبت را انتخاب کنید</Text>
+      onClose={onClose}
+      onRequestDismiss={requestDismiss}
+      header={{ title: 'نوبت جدید', subtitle: 'خدمت، پرسنل و زمان نوبت را انتخاب کنید' }}
+      footer={
+        <>
+          <Button onPress={onSubmit} disabled={submitDisabled}>
+            {isSubmitting ? <Spinner color={theme.colors.primaryForeground} /> : null}
+            <Text style={styles.submitText}>{isSubmitting ? 'در حال ثبت…' : 'ثبت نوبت'}</Text>
+          </Button>
+          <Button variant="outline" onPress={onClose} disabled={isSubmitting}>
+            <Text style={styles.cancelText}>انصراف</Text>
+          </Button>
+        </>
+      }>
+      <Field label="مشتری">
+        <Pressable
+          onPress={() => {
+            const next = !useTemporaryClient;
+            setValue('useTemporaryClient', next, {
+              shouldDirty: true,
+              shouldValidate: true,
+            });
+            if (next) {
+              setValue('clientId', '', { shouldDirty: true });
+            } else {
+              setValue('temporaryClientName', '', { shouldDirty: true });
+              setValue('temporaryClientNotes', '', { shouldDirty: true });
+            }
+          }}
+          style={styles.temporaryRow}>
+          <View
+            style={[
+              styles.checkbox,
+              useTemporaryClient ? styles.checkboxActive : styles.checkboxInactive,
+            ]}>
+            {useTemporaryClient ? (
+              <Check size={12} color={theme.colors.primaryForeground} strokeWidth={3} />
+            ) : null}
           </View>
-          <Pressable onPress={onClose} accessibilityLabel="بستن" style={styles.closeBtn}>
-            <X size={theme.sizes.iconSm} color={theme.colors.foreground} strokeWidth={2} />
-          </Pressable>
+          <View style={styles.flex1}>
+            <Text style={styles.checkboxLabel}>بعداً اطلاعات مشتری را کامل می‌کنم</Text>
+            <Text style={styles.checkboxHint}>برای این حالت فقط نام لازم است.</Text>
+          </View>
+        </Pressable>
+
+        {useTemporaryClient ? (
+          <View style={styles.temporaryFields}>
+            <FormTextField
+              control={control}
+              name="temporaryClientName"
+              label="نام مشتری"
+              placeholder="مثلاً دوستِ سارا"
+            />
+            <FormTextField
+              control={control}
+              name="temporaryClientNotes"
+              label="یادداشت (اختیاری)"
+              placeholder="مثلاً شماره را بعداً می‌گیرم"
+            />
+          </View>
+        ) : (
+          <ClientPicker
+            clients={localClients}
+            value={clientId}
+            onChange={(id) =>
+              setValue('clientId', id, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+            onClientCreated={handleClientCreated}
+          />
+        )}
+        {errors.clientId ? <Text style={styles.errorText}>{errors.clientId.message}</Text> : null}
+      </Field>
+
+      <Field label="پرسنل">
+        <Controller
+          control={control}
+          name="staffId"
+          render={({ field }) => (
+            <Select
+              title="انتخاب پرسنل"
+              placeholder="انتخاب پرسنل"
+              value={field.value ?? ''}
+              onChange={handleStaffChange}
+              options={staffOptions}
+            />
+          )}
+        />
+        {errors.staffId ? <Text style={styles.errorText}>{errors.staffId.message}</Text> : null}
+      </Field>
+
+      <Field label="خدمت">
+        <Controller
+          control={control}
+          name="serviceId"
+          render={({ field }) => (
+            <Select
+              title="انتخاب خدمت"
+              placeholder="انتخاب خدمت"
+              value={field.value ?? ''}
+              onChange={handleServiceChange}
+              groups={serviceGroups}
+            />
+          )}
+        />
+        {errors.serviceId ? <Text style={styles.errorText}>{errors.serviceId.message}</Text> : null}
+      </Field>
+
+      <View style={styles.twoCol}>
+        <View style={styles.flex1}>
+          <FormJalaliDateField control={control} name="date" label="تاریخ" />
         </View>
-
-        <KeyboardAvoidingView
-          style={styles.flex1}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled">
-            <Field label="مشتری">
-              <Pressable
-                onPress={() => {
-                  const next = !useTemporaryClient;
-                  setValue('useTemporaryClient', next, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  });
-                  if (next) {
-                    setValue('clientId', '', { shouldDirty: true });
-                  } else {
-                    setValue('temporaryClientName', '', { shouldDirty: true });
-                    setValue('temporaryClientNotes', '', { shouldDirty: true });
-                  }
-                }}
-                style={styles.temporaryRow}>
-                <View
-                  style={[
-                    styles.checkbox,
-                    useTemporaryClient ? styles.checkboxActive : styles.checkboxInactive,
-                  ]}>
-                  {useTemporaryClient ? (
-                    <Check size={12} color={theme.colors.primaryForeground} strokeWidth={3} />
-                  ) : null}
-                </View>
-                <View style={styles.flex1}>
-                  <Text style={styles.checkboxLabel}>بعداً اطلاعات مشتری را کامل می‌کنم</Text>
-                  <Text style={styles.checkboxHint}>برای این حالت فقط نام لازم است.</Text>
-                </View>
-              </Pressable>
-
-              {useTemporaryClient ? (
-                <View style={styles.temporaryFields}>
-                  <FormTextField
-                    control={control}
-                    name="temporaryClientName"
-                    label="نام مشتری"
-                    placeholder="مثلاً دوستِ سارا"
-                  />
-                  <FormTextField
-                    control={control}
-                    name="temporaryClientNotes"
-                    label="یادداشت (اختیاری)"
-                    placeholder="مثلاً شماره را بعداً می‌گیرم"
-                  />
-                </View>
-              ) : (
-                <ClientPicker
-                  clients={localClients}
-                  value={clientId}
-                  onChange={(id) =>
-                    setValue('clientId', id, {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    })
-                  }
-                  onClientCreated={handleClientCreated}
+        <View style={styles.flex1}>
+          <Field label="شروع">
+            <Controller
+              control={control}
+              name="startTime"
+              render={({ field }) => (
+                <TimePicker
+                  value={field.value ?? '09:00'}
+                  onChange={handleStartTimeChange}
+                  label="ساعت شروع"
                 />
               )}
-              {errors.clientId ? (
-                <Text style={styles.errorText}>{errors.clientId.message}</Text>
-              ) : null}
-            </Field>
+            />
+            {errors.startTime ? (
+              <Text style={styles.errorText}>{errors.startTime.message}</Text>
+            ) : null}
+          </Field>
+        </View>
+      </View>
 
-            <Field label="پرسنل">
-              <Controller
-                control={control}
-                name="staffId"
-                render={({ field }) => (
-                  <Select
-                    title="انتخاب پرسنل"
-                    placeholder="انتخاب پرسنل"
-                    value={field.value ?? ''}
-                    onChange={handleStaffChange}
-                    options={staffOptions}
-                  />
-                )}
-              />
-              {errors.staffId ? (
-                <Text style={styles.errorText}>{errors.staffId.message}</Text>
-              ) : null}
-            </Field>
-
-            <Field label="خدمت">
-              <Controller
-                control={control}
-                name="serviceId"
-                render={({ field }) => (
-                  <Select
-                    title="انتخاب خدمت"
-                    placeholder="انتخاب خدمت"
-                    value={field.value ?? ''}
-                    onChange={handleServiceChange}
-                    groups={serviceGroups}
-                  />
-                )}
-              />
-              {errors.serviceId ? (
-                <Text style={styles.errorText}>{errors.serviceId.message}</Text>
-              ) : null}
-            </Field>
-
-            <View style={styles.twoCol}>
-              <View style={styles.flex1}>
-                <FormJalaliDateField control={control} name="date" label="تاریخ" />
-              </View>
-              <View style={styles.flex1}>
-                <Field label="شروع">
-                  <Controller
-                    control={control}
-                    name="startTime"
-                    render={({ field }) => (
-                      <TimePicker
-                        value={field.value ?? '09:00'}
-                        onChange={handleStartTimeChange}
-                        label="ساعت شروع"
-                      />
-                    )}
-                  />
-                  {errors.startTime ? (
-                    <Text style={styles.errorText}>{errors.startTime.message}</Text>
-                  ) : null}
-                </Field>
-              </View>
-            </View>
-
-            <View style={styles.detailsCard}>
-              <Pressable onPress={() => setShowDetails((v) => !v)} style={styles.detailsHeader}>
-                <Text style={styles.detailsHeaderText}>جزئیات زمان و توضیحات</Text>
-                <View style={styles.detailsSummary}>
-                  <Text style={styles.detailsSummaryTextLtr}>{toPersianDigits(endTime)}</Text>
-                  <Text style={styles.detailsSummaryText}>
-                    {toPersianDigits(durationMinutes)} دقیقه
-                  </Text>
-                </View>
-              </Pressable>
-
-              {showDetails ? (
-                <View style={styles.detailsBody}>
-                  <SubField label="مدت (دقیقه)">
-                    <View style={styles.presetRow}>
-                      {DURATION_PRESETS.map((m) => {
-                        const active = durationMinutes === m;
-                        return (
-                          <Pressable
-                            key={m}
-                            onPress={() => applyDuration(m)}
-                            style={[
-                              styles.preset,
-                              active ? styles.presetActive : styles.presetInactive,
-                            ]}>
-                            <Text
-                              style={[
-                                styles.presetText,
-                                active ? styles.presetTextActive : styles.presetTextInactive,
-                              ]}>
-                              {numFmt.format(m)}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                    <Input
-                      value={toPersianDigits(durationMinutes)}
-                      onChangeText={(t) => {
-                        const v = parseLocalizedInt(t, durationMinutes);
-                        if (!Number.isFinite(v)) return;
-                        applyDuration(v);
-                      }}
-                      keyboardType="number-pad"
-                    />
-                    {errors.durationMinutes ? (
-                      <Text style={styles.errorText}>{errors.durationMinutes.message}</Text>
-                    ) : null}
-                  </SubField>
-
-                  <SubField label="پایان">
-                    <Controller
-                      control={control}
-                      name="endTime"
-                      render={({ field }) => (
-                        <TimePicker
-                          value={field.value ?? endTime}
-                          onChange={applyEndTime}
-                          label="ساعت پایان"
-                        />
-                      )}
-                    />
-                    <Text style={styles.endHint}>تغییر پایان، مدت را هم‌زمان به‌روز می‌کند.</Text>
-                    {errors.endTime ? (
-                      <Text style={styles.errorText}>{errors.endTime.message}</Text>
-                    ) : null}
-                  </SubField>
-
-                  <FormTextField
-                    control={control}
-                    name="notes"
-                    label="توضیحات (اختیاری)"
-                    placeholder="توضیحات اضافی…"
-                  />
-                </View>
-              ) : null}
-            </View>
-
-            <FormRootError message={errors.root?.message} />
-          </ScrollView>
-
-          <View style={styles.footer}>
-            <Button onPress={onSubmit} disabled={submitDisabled}>
-              {isSubmitting ? <Spinner color={theme.colors.primaryForeground} /> : null}
-              <Text style={styles.submitText}>{isSubmitting ? 'در حال ثبت…' : 'ثبت نوبت'}</Text>
-            </Button>
-            <Button variant="outline" onPress={onClose} disabled={isSubmitting}>
-              <Text style={styles.cancelText}>انصراف</Text>
-            </Button>
+      <View style={styles.detailsCard}>
+        <Pressable onPress={() => setShowDetails((v) => !v)} style={styles.detailsHeader}>
+          <Text style={styles.detailsHeaderText}>جزئیات زمان و توضیحات</Text>
+          <View style={styles.detailsSummary}>
+            <Text style={styles.detailsSummaryTextLtr}>{toPersianDigits(endTime)}</Text>
+            <Text style={styles.detailsSummaryText}>{toPersianDigits(durationMinutes)} دقیقه</Text>
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Modal>
+        </Pressable>
+
+        {showDetails ? (
+          <View style={styles.detailsBody}>
+            <SubField label="مدت (دقیقه)">
+              <View style={styles.presetRow}>
+                {DURATION_PRESETS.map((m) => {
+                  const active = durationMinutes === m;
+                  return (
+                    <Pressable
+                      key={m}
+                      onPress={() => applyDuration(m)}
+                      style={[styles.preset, active ? styles.presetActive : styles.presetInactive]}>
+                      <Text
+                        style={[
+                          styles.presetText,
+                          active ? styles.presetTextActive : styles.presetTextInactive,
+                        ]}>
+                        {numFmt.format(m)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Input
+                value={toPersianDigits(durationMinutes)}
+                onChangeText={(t) => {
+                  const v = parseLocalizedInt(t, durationMinutes);
+                  if (!Number.isFinite(v)) return;
+                  applyDuration(v);
+                }}
+                keyboardType="number-pad"
+              />
+              {errors.durationMinutes ? (
+                <Text style={styles.errorText}>{errors.durationMinutes.message}</Text>
+              ) : null}
+            </SubField>
+
+            <SubField label="پایان">
+              <Controller
+                control={control}
+                name="endTime"
+                render={({ field }) => (
+                  <TimePicker
+                    value={field.value ?? endTime}
+                    onChange={applyEndTime}
+                    label="ساعت پایان"
+                  />
+                )}
+              />
+              <Text style={styles.endHint}>تغییر پایان، مدت را هم‌زمان به‌روز می‌کند.</Text>
+              {errors.endTime ? (
+                <Text style={styles.errorText}>{errors.endTime.message}</Text>
+              ) : null}
+            </SubField>
+
+            <FormTextField
+              control={control}
+              name="notes"
+              label="توضیحات (اختیاری)"
+              placeholder="توضیحات اضافی…"
+            />
+          </View>
+        ) : null}
+      </View>
+
+      <FormRootError message={errors.root?.message} />
+    </AppModal>
   );
 }

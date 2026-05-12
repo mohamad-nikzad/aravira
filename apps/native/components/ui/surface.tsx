@@ -18,11 +18,7 @@ function Surface({ elevated = false, style, ...props }: SurfaceProps) {
           borderColor: theme.colors.border,
           borderRadius: theme.radius.xl,
           borderWidth: 1,
-          shadowColor: theme.colors.foreground,
-          shadowOpacity: elevated ? 0.08 : 0,
-          shadowRadius: elevated ? 14 : 0,
-          shadowOffset: { width: 0, height: elevated ? 6 : 0 },
-          elevation: elevated ? 2 : 0,
+          ...(elevated ? theme.elevation.sm : theme.elevation.none),
         },
         style,
       ]}

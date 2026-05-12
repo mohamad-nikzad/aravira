@@ -1,7 +1,9 @@
 import * as React from 'react';
-import { FlatList, Modal, Pressable, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { Clock } from 'lucide-react-native';
 import { toPersianDigits } from '@repo/salon-core/persian-digits';
+import { AppSheet } from './app-sheet';
+import { ModalHeader } from './modal-header';
 import { Button } from './button';
 import { useTheme, useThemeStyles, withAlpha } from '../../theme';
 
@@ -56,24 +58,6 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
       fontFamily: t.fonts.sansMedium,
       fontVariant: ['tabular-nums' as const],
       writingDirection: 'ltr' as const,
-    },
-    backdrop: {
-      flex: 1,
-      justifyContent: 'flex-end' as const,
-      backgroundColor: withAlpha('#000000', 0.4),
-    },
-    sheet: {
-      borderTopLeftRadius: t.radius.xl,
-      borderTopRightRadius: t.radius.xl,
-      backgroundColor: t.colors.card,
-      paddingBottom: t.spacing['3xl'],
-      paddingTop: t.spacing.xl,
-    },
-    titleWrap: { paddingHorizontal: t.spacing.xl, paddingBottom: t.spacing.lg },
-    title: {
-      fontSize: t.fontSize.lg,
-      color: t.colors.foreground,
-      fontFamily: t.fonts.sansBold,
     },
     wheelsRow: {
       flexDirection: 'row' as const,
@@ -130,43 +114,41 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
 
   return (
     <>
-      <Pressable onPress={handleOpen} style={styles.trigger}>
+      <Pressable
+        onPress={handleOpen}
+        accessibilityRole="button"
+        accessibilityLabel={label ?? 'انتخاب زمان'}
+        style={styles.trigger}>
         <Text style={styles.triggerText}>{toPersianDigits(value || '09:00')}</Text>
         <Clock size={theme.sizes.iconSm} color={theme.iconColors.muted} strokeWidth={1.6} />
       </Pressable>
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable onPress={() => setOpen(false)} style={styles.backdrop}>
-          <Pressable onPress={(e) => e.stopPropagation()} style={styles.sheet}>
-            <View style={styles.titleWrap}>
-              <Text style={styles.title}>{label ?? 'انتخاب زمان'}</Text>
-            </View>
+      <AppSheet visible={open} onClose={() => setOpen(false)}>
+        <ModalHeader title={label ?? 'انتخاب زمان'} onClose={() => setOpen(false)} borderless />
 
-            <View style={styles.wheelsRow}>
-              <Wheel listRef={hourRef} data={HOURS} value={hour} onChange={setHour} width="50%" />
-              <View style={styles.colonWrap}>
-                <Text style={styles.colon}>:</Text>
-              </View>
-              <Wheel
-                listRef={minuteRef}
-                data={MINUTES}
-                value={minute}
-                onChange={setMinute}
-                width="50%"
-              />
-            </View>
+        <View style={styles.wheelsRow}>
+          <Wheel listRef={hourRef} data={HOURS} value={hour} onChange={setHour} width="50%" />
+          <View style={styles.colonWrap}>
+            <Text style={styles.colon}>:</Text>
+          </View>
+          <Wheel
+            listRef={minuteRef}
+            data={MINUTES}
+            value={minute}
+            onChange={setMinute}
+            width="50%"
+          />
+        </View>
 
-            <View style={styles.actions}>
-              <Button variant="outline" style={styles.actionFlex} onPress={() => setOpen(false)}>
-                <Text style={styles.cancelText}>انصراف</Text>
-              </Button>
-              <Button style={styles.actionFlex} onPress={handleConfirm}>
-                <Text style={styles.confirmText}>تأیید</Text>
-              </Button>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        <View style={styles.actions}>
+          <Button variant="outline" style={styles.actionFlex} onPress={() => setOpen(false)}>
+            <Text style={styles.cancelText}>انصراف</Text>
+          </Button>
+          <Button style={styles.actionFlex} onPress={handleConfirm}>
+            <Text style={styles.confirmText}>تأیید</Text>
+          </Button>
+        </View>
+      </AppSheet>
     </>
   );
 }

@@ -54,10 +54,15 @@ export type Theme = {
     sage: string;
   };
   radius: {
+    xxs: number;
+    xs: number;
     sm: number;
     md: number;
     lg: number;
     xl: number;
+    '2xl': number;
+    '3xl': number;
+    '4xl': number;
     base: number;
     full: number;
   };
@@ -110,6 +115,15 @@ export type Theme = {
     mono: string;
   };
   iconColors: Record<IconColorRole, string>;
+  scrim: string;
+  shadowColor: string;
+  charts: readonly string[];
+  elevation: {
+    none: ViewStyle;
+    sm: ViewStyle;
+    md: ViewStyle;
+    lg: ViewStyle;
+  };
   statusBarStyle: 'light' | 'dark';
   navigationTheme: {
     dark: boolean;

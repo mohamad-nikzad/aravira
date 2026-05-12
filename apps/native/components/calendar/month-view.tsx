@@ -44,7 +44,12 @@ export function MonthView(props: CalendarViewProps) {
         ))}
       </View>
 
-      <View style={{ borderRadius: 16, overflow: 'hidden', backgroundColor: theme.colors.card }}>
+      <View
+        style={{
+          borderRadius: theme.radius.xl,
+          overflow: 'hidden',
+          backgroundColor: theme.colors.card,
+        }}>
         {grid.map((row, ri) => (
           <View key={ri} style={{ flexDirection: 'row' }}>
             {row.map((cell, ci) => {
@@ -89,7 +94,7 @@ export function MonthView(props: CalendarViewProps) {
                     style={{
                       width: 26,
                       height: 26,
-                      borderRadius: 13,
+                      borderRadius: theme.radius.full,
                       alignItems: 'center',
                       justifyContent: 'center',
                       backgroundColor: isToday ? theme.colors.primary : 'transparent',
@@ -119,7 +124,7 @@ export function MonthView(props: CalendarViewProps) {
                         style={{
                           width: 5,
                           height: 5,
-                          borderRadius: 2.5,
+                          borderRadius: theme.radius.full,
                           backgroundColor: staffHex(color),
                         }}
                       />

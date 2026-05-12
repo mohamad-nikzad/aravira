@@ -1,7 +1,9 @@
 import * as React from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Check, ChevronDown } from 'lucide-react-native';
 import { useTheme, useThemeStyles, withAlpha } from '../../theme';
+import { AppSheet } from './app-sheet';
+import { ModalHeader } from './modal-header';
 import { AppText } from './app-text';
 
 export type SelectOption = {
@@ -58,28 +60,6 @@ export function Select({
     },
     triggerTextSelected: { color: t.colors.foreground },
     triggerTextPlaceholder: { color: t.colors.mutedForeground },
-    backdrop: {
-      flex: 1,
-      justifyContent: 'flex-end' as const,
-      backgroundColor: withAlpha('#000000', 0.4),
-    },
-    sheet: {
-      borderTopLeftRadius: t.radius.xl,
-      borderTopRightRadius: t.radius.xl,
-      backgroundColor: t.colors.card,
-      paddingBottom: t.spacing['3xl'],
-      paddingTop: t.spacing.xl,
-      maxHeight: '80%' as const,
-    },
-    titleWrap: {
-      paddingHorizontal: t.spacing.xl,
-      paddingBottom: t.spacing.lg,
-    },
-    title: {
-      fontSize: t.fontSize.lg,
-      color: t.colors.foreground,
-      fontFamily: t.fonts.sansBold,
-    },
     list: { maxHeight: 480 },
     listInner: {
       paddingHorizontal: t.spacing.md,
@@ -108,6 +88,9 @@ export function Select({
       <Pressable
         onPress={() => !disabled && setOpen(true)}
         disabled={disabled}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !!disabled, expanded: open }}
+        accessibilityLabel={title ?? placeholder}
         style={[styles.trigger, disabled && styles.triggerDisabled]}>
         <AppText
           style={[
@@ -120,36 +103,15 @@ export function Select({
         <ChevronDown size={theme.sizes.iconSm} color={theme.iconColors.muted} strokeWidth={1.6} />
       </Pressable>
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable onPress={() => setOpen(false)} style={styles.backdrop}>
-          <Pressable onPress={(e) => e.stopPropagation()} style={styles.sheet}>
-            {title ? (
-              <View style={styles.titleWrap}>
-                <Text style={styles.title}>{title}</Text>
-              </View>
-            ) : null}
-
-            <ScrollView style={styles.list}>
-              <View style={styles.listInner}>
-                {groups
-                  ? groups.map((g, gi) => (
-                      <View key={gi}>
-                        {g.label ? <Text style={styles.groupLabel}>{g.label}</Text> : null}
-                        {g.options.map((opt) => (
-                          <OptionRow
-                            key={opt.value}
-                            option={opt}
-                            selected={opt.value === value}
-                            onPress={() => {
-                              if (opt.disabled) return;
-                              onChange(opt.value);
-                              setOpen(false);
-                            }}
-                          />
-                        ))}
-                      </View>
-                    ))
-                  : (options ?? []).map((opt) => (
+      <AppSheet visible={open} onClose={() => setOpen(false)}>
+        {title ? <ModalHeader title={title} onClose={() => setOpen(false)} borderless /> : null}
+        <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
+          <View style={styles.listInner}>
+            {groups
+              ? groups.map((g, gi) => (
+                  <View key={gi}>
+                    {g.label ? <Text style={styles.groupLabel}>{g.label}</Text> : null}
+                    {g.options.map((opt) => (
                       <OptionRow
                         key={opt.value}
                         option={opt}
@@ -161,11 +123,23 @@ export function Select({
                         }}
                       />
                     ))}
-              </View>
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+                  </View>
+                ))
+              : (options ?? []).map((opt) => (
+                  <OptionRow
+                    key={opt.value}
+                    option={opt}
+                    selected={opt.value === value}
+                    onPress={() => {
+                      if (opt.disabled) return;
+                      onChange(opt.value);
+                      setOpen(false);
+                    }}
+                  />
+                ))}
+          </View>
+        </ScrollView>
+      </AppSheet>
     </>
   );
 }
@@ -186,6 +160,7 @@ function OptionRow({
       alignItems: 'center' as const,
       paddingHorizontal: t.spacing.lg,
       paddingVertical: t.spacing.lg,
+      minHeight: t.sizes.controlLg,
       borderRadius: t.radius.md,
       gap: t.spacing.md,
     },
@@ -208,6 +183,9 @@ function OptionRow({
     <Pressable
       onPress={onPress}
       disabled={option.disabled}
+      accessibilityRole="button"
+      accessibilityState={{ selected, disabled: !!option.disabled }}
+      accessibilityLabel={option.label}
       style={({ pressed }) => [
         styles.row,
         {

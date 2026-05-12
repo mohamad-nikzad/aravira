@@ -55,7 +55,7 @@ export function AgendaView(props: CalendarViewProps) {
           style={{
             width: 64,
             height: 64,
-            borderRadius: 32,
+            borderRadius: theme.radius.full,
             backgroundColor: theme.colors.card,
             alignItems: 'center',
             justifyContent: 'center',
@@ -137,7 +137,7 @@ function DaySection({
             alignItems: 'center',
             justifyContent: 'center',
             paddingVertical: 6,
-            borderRadius: 12,
+            borderRadius: theme.radius.lg,
             backgroundColor: isToday ? theme.colors.primary : theme.colors.card,
             borderWidth: 1,
             borderColor: isToday ? theme.colors.primary : withAlpha(theme.colors.border, 0.7),
@@ -192,7 +192,7 @@ function DaySection({
             style={{
               paddingHorizontal: 8,
               paddingVertical: 3,
-              borderRadius: 999,
+              borderRadius: theme.radius.full,
               backgroundColor: withAlpha(theme.colors.ring, 0.14),
             }}>
             <Text style={{ fontFamily: FONTS.semi, fontSize: 10, color: theme.colors.ring }}>
@@ -231,7 +231,7 @@ function AgendaRow({
       style={({ pressed }) => ({
         flexDirection: 'row',
         backgroundColor: theme.colors.card,
-        borderRadius: 14,
+        borderRadius: theme.radius.lg,
         borderWidth: 1,
         borderColor: isCancelled ? theme.colors.border : border,
         overflow: 'hidden',
@@ -256,7 +256,7 @@ function AgendaRow({
           style={{
             paddingVertical: 4,
             paddingHorizontal: 8,
-            borderRadius: 8,
+            borderRadius: theme.radius.sm,
             backgroundColor: isCancelled ? theme.colors.muted : tint,
             alignItems: 'center',
             minWidth: 64,
@@ -310,7 +310,7 @@ function AgendaRow({
           style={{
             paddingHorizontal: 7,
             paddingVertical: 3,
-            borderRadius: 999,
+            borderRadius: theme.radius.full,
             backgroundColor: appointmentStatus(appointment.status).background || palette.bg,
           }}>
           <Text

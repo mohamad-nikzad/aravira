@@ -115,7 +115,7 @@ export function WeekView(props: CalendarViewProps) {
                   marginTop: 4,
                   width: 28,
                   height: 28,
-                  borderRadius: 14,
+                  borderRadius: theme.radius.full,
                   alignItems: 'center',
                   justifyContent: 'center',
                   backgroundColor: isToday ? theme.colors.primary : 'transparent',
@@ -138,7 +138,7 @@ export function WeekView(props: CalendarViewProps) {
                   marginTop: 3,
                   height: 4,
                   width: 4,
-                  borderRadius: 2,
+                  borderRadius: theme.radius.full,
                   backgroundColor: count > 0 ? theme.colors.ring : 'transparent',
                 }}
               />

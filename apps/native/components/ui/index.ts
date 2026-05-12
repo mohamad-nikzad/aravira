@@ -1,3 +1,5 @@
+export * from './app-modal';
+export * from './app-sheet';
 export * from './app-text';
 export * from './avatar';
 export * from './badge';
@@ -6,6 +8,8 @@ export * from './card';
 export * from './input';
 export * from './jalali-date-picker';
 export * from './label';
+export * from './modal-footer';
+export * from './modal-header';
 export * from './separator';
 export * from './skeleton';
 export * from './spinner';
