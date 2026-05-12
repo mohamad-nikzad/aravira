@@ -102,6 +102,8 @@ function RootLayoutContent() {
               <Stack.Screen name="business-hours" />
               <Stack.Screen name="onboarding" />
               <Stack.Screen name="retention" />
+              <Stack.Screen name="notifications" />
+              <Stack.Screen name="push-settings" />
               <Stack.Screen name="clients/[id]" />
               <Stack.Screen name="login" />
               <Stack.Screen name="signup" />

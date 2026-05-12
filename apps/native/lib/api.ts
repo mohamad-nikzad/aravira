@@ -11,6 +11,8 @@ import {
   createStaffApi,
   createServicesApi,
   createAppointmentsApi,
+  createNotificationsApi,
+  createNotificationPreferencesApi,
 } from '@repo/api-client';
 import { getStoredToken } from './secure-storage';
 
@@ -39,3 +41,5 @@ export const clientsApi = createClientsApi(apiClient);
 export const staffApi = createStaffApi(apiClient);
 export const servicesApi = createServicesApi(apiClient);
 export const appointmentsApi = createAppointmentsApi(apiClient);
+export const notificationsApi = createNotificationsApi(apiClient);
+export const notificationPreferencesApi = createNotificationPreferencesApi(apiClient);

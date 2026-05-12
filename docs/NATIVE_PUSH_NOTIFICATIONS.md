@@ -138,33 +138,33 @@ Goal: create real server-side notifications for the first production event.
 Acceptance:
 
 - [x] Manager-created appointment for another staff member creates exactly one
-  unread notification.
+      unread notification.
 - [x] Self-created appointment does not notify the same user.
 - [x] Notification data includes the appointment id, date, route, title, and body.
 
-### Phase 3 — Native Inbox And Settings
+### Phase 3 — Native Inbox And Settings (Done)
 
 Goal: make notifications visible and controllable in the native app.
 
-- Replace `apps/native/app/push-settings.tsx` with notification settings that
-  reflect real channels:
+- [x] Replace `apps/native/app/push-settings.tsx` with notification settings that
+      reflect real channels:
   - appointment alerts on/off.
   - local device alerts on/off.
   - SMS alerts shown as unavailable until configured.
-- Add a notification inbox screen/list:
+- [x] Add a notification inbox screen/list:
   - unread and recent notifications.
   - read/read-all actions.
   - tap routes to the relevant app destination.
-- Add an unread badge in the settings area or bottom navigation.
-- Add native API client wiring for notifications and preferences.
+- [x] Add an unread badge in the settings area or bottom navigation.
+- [x] Add native API client wiring for notifications and preferences.
 
 Acceptance:
 
-- Staff can see unread and recent notifications.
-- Tapping an appointment notification opens the calendar appointment.
-- Read/read-all updates are persisted on the server.
-- SMS controls are visible only as unavailable/future-ready, not as a working
-  toggle.
+- [x] Staff can see unread and recent notifications.
+- [x] Tapping an appointment notification opens the calendar appointment.
+- [x] Read/read-all updates are persisted on the server.
+- [x] SMS controls are visible only as unavailable/future-ready, not as a working
+      toggle.
 
 ### Phase 4 — Local Device Alerts After Sync
 

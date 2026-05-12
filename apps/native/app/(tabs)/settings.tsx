@@ -20,6 +20,8 @@ import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { useAuth } from '../../components/auth-provider';
 import { ServicesCard } from '../../components/services/services-card';
+import { notificationsApi } from '../../lib/api';
+import { useAsyncResource } from '../../lib/hooks/use-async-resource';
 import { useTheme, useThemeStyles, withAlpha } from '../../theme';
 
 function getInitials(name: string) {
@@ -76,6 +78,12 @@ export default function SettingsScreen() {
   const { theme, mode, toggleTheme } = useTheme();
   const isManager = user?.role === 'manager';
   const isDark = mode === 'dark';
+  const unreadResource = useAsyncResource(
+    user ? `settings-unread-notifications:${user.id}` : null,
+    (signal) => notificationsApi.list({ unreadOnly: true }, { signal }),
+    [user?.id]
+  );
+  const unreadNotifications = unreadResource.data?.notifications.length ?? 0;
 
   const styles = useThemeStyles((t) => ({
     safe: { backgroundColor: t.colors.background, flex: 1 },
@@ -159,6 +167,8 @@ export default function SettingsScreen() {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       gap: t.spacing.lg,
+      flex: 1,
+      minWidth: 0,
     },
     navHint: {
       color: t.colors.mutedForeground,
@@ -272,6 +282,28 @@ export default function SettingsScreen() {
           <CardContent style={styles.cardContent}>
             <Pressable
               accessibilityRole="button"
+              onPress={() => router.push('/notifications' as never)}
+              style={styles.navRow}>
+              <View style={styles.navLeft}>
+                <Bell
+                  size={theme.sizes.iconSm + 2}
+                  color={theme.colors.primary}
+                  strokeWidth={1.8}
+                />
+                <View>
+                  <Text style={styles.label}>صندوق اعلان‌ها</Text>
+                  <Text style={styles.navHint}>اعلان‌های خوانده‌نشده و اخیر</Text>
+                </View>
+              </View>
+              {unreadNotifications > 0 ? <Badge>{String(unreadNotifications)}</Badge> : null}
+              <ChevronLeft
+                size={theme.sizes.iconSm + 2}
+                color={theme.iconColors.muted}
+                strokeWidth={1.6}
+              />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
               onPress={() => router.push('/push-settings' as never)}
               style={styles.navRow}>
               <View style={styles.navLeft}>
@@ -281,8 +313,8 @@ export default function SettingsScreen() {
                   strokeWidth={1.8}
                 />
                 <View>
-                  <Text style={styles.label}>اعلان نوبت‌ها</Text>
-                  <Text style={styles.navHint}>تنظیم اعلان‌های روی این دستگاه</Text>
+                  <Text style={styles.label}>تنظیم اعلان‌ها</Text>
+                  <Text style={styles.navHint}>کانال‌های داخل برنامه، محلی و پیامک</Text>
                 </View>
               </View>
               <ChevronLeft

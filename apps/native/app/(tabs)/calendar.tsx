@@ -214,7 +214,6 @@ export default function CalendarScreen() {
   const handledParamsRef = React.useRef<string>('');
 
   React.useEffect(() => {
-    if (!isManager) return;
     const key = `${dateParam ?? ''}|${clientIdParam ?? ''}|${appointmentIdParam ?? ''}|${intentParam ?? ''}|${timeParam ?? ''}|${staffIdParam ?? ''}|${serviceIdParam ?? ''}`;
     if (!key.trim() || handledParamsRef.current === key) return;
     handledParamsRef.current = key;
@@ -223,9 +222,9 @@ export default function CalendarScreen() {
       setCursorYmd(dateParam);
       setView('day');
     }
-    if (intentParam === 'availability') {
+    if (intentParam === 'availability' && isManager) {
       setAvailabilityOpen(true);
-    } else if (intentParam === 'create' || clientIdParam) {
+    } else if (isManager && (intentParam === 'create' || clientIdParam)) {
       setCreatePrefill({
         date: dateParam ?? cursorYmd,
         time: timeParam,

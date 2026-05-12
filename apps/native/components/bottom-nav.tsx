@@ -32,7 +32,8 @@ export function BottomNav({
   state,
   navigation,
   role = 'manager',
-}: BottomTabBarProps & { role?: 'manager' | 'staff' }) {
+  unreadNotifications = 0,
+}: BottomTabBarProps & { role?: 'manager' | 'staff'; unreadNotifications?: number }) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
@@ -70,6 +71,13 @@ export function BottomNav({
                   color={isActive ? theme.iconColors.primary : theme.iconColors.muted}
                   strokeWidth={isActive ? 2.2 : 1.7}
                 />
+                {item.name === 'settings' && unreadNotifications > 0 ? (
+                  <View style={styles.badge}>
+                    <AppText variant="caption" weight="bold" color="primaryForeground">
+                      {unreadNotifications > 9 ? '۹+' : String(unreadNotifications)}
+                    </AppText>
+                  </View>
+                ) : null}
               </View>
               <AppText
                 numberOfLines={1}
@@ -109,6 +117,7 @@ function createStyles(theme: Theme) {
       borderRadius: theme.radius.md,
       height: 32,
       justifyContent: 'center',
+      position: 'relative',
       width: 32,
     },
     iconFrameActive: {
@@ -126,6 +135,18 @@ function createStyles(theme: Theme) {
     },
     label: {
       paddingHorizontal: 4,
+    },
+    badge: {
+      alignItems: 'center',
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.card,
+      borderRadius: theme.radius.full,
+      borderWidth: 1,
+      minWidth: 18,
+      paddingHorizontal: 4,
+      position: 'absolute',
+      right: -8,
+      top: -6,
     },
   });
 }
