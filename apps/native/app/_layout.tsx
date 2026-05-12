@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from '../components/auth-provider';
 import { AuthGate } from '../components/auth-gate';
+import { NativeNotificationProvider } from '../lib/notification-sync';
 import { ThemeProvider, lightTheme, useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import {
@@ -90,25 +91,27 @@ function RootLayoutContent() {
         <StatusBar style={theme.statusBarStyle} />
         <AuthProvider>
           <AuthGate>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: {
-                  backgroundColor: theme.navigationTheme.colors.background,
-                },
-              }}>
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="staff" />
-              <Stack.Screen name="business-hours" />
-              <Stack.Screen name="onboarding" />
-              <Stack.Screen name="retention" />
-              <Stack.Screen name="notifications" />
-              <Stack.Screen name="push-settings" />
-              <Stack.Screen name="clients/[id]" />
-              <Stack.Screen name="login" />
-              <Stack.Screen name="signup" />
-              <Stack.Screen name="+not-found" />
-            </Stack>
+            <NativeNotificationProvider>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: {
+                    backgroundColor: theme.navigationTheme.colors.background,
+                  },
+                }}>
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="staff" />
+                <Stack.Screen name="business-hours" />
+                <Stack.Screen name="onboarding" />
+                <Stack.Screen name="retention" />
+                <Stack.Screen name="notifications" />
+                <Stack.Screen name="push-settings" />
+                <Stack.Screen name="clients/[id]" />
+                <Stack.Screen name="login" />
+                <Stack.Screen name="signup" />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+            </NativeNotificationProvider>
           </AuthGate>
         </AuthProvider>
       </SafeAreaProvider>

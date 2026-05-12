@@ -26,6 +26,7 @@ import {
   staffApi,
 } from '../../lib/api';
 import { useAsyncResource } from '../../lib/hooks/use-async-resource';
+import { useNotificationSync } from '../../lib/notification-sync';
 import { CalendarHeader } from '../../components/calendar/calendar-header';
 import { ViewSwitcher } from '../../components/calendar/view-switcher';
 import { StaffFilter } from '../../components/calendar/staff-filter';
@@ -61,6 +62,7 @@ function computeRange(view: CalendarView, cursorYmd: string): { start: string; e
 export default function CalendarScreen() {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { syncUnreadNotifications } = useNotificationSync();
   const router = useRouter();
   const params = useLocalSearchParams<{
     date?: string;
@@ -191,6 +193,12 @@ export default function CalendarScreen() {
   );
 
   const appointments = apptsResource.data?.appointments ?? [];
+
+  React.useEffect(() => {
+    if (!apptsResource.data) return;
+    void syncUnreadNotifications('calendar-refresh');
+  }, [apptsResource.data, syncUnreadNotifications]);
+
   const staff = React.useMemo(() => staffResource.data?.staff ?? [], [staffResource.data]);
   const staffMap = React.useMemo(() => {
     const m = new Map<string, User>();

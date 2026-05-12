@@ -4,11 +4,13 @@ import type { TodayData } from '@repo/salon-core/types';
 import { useAuth } from '../../components/auth-provider';
 import { todayApi } from '../../lib/api';
 import { useAsyncResource } from '../../lib/hooks/use-async-resource';
+import { useNotificationSync } from '../../lib/notification-sync';
 import { ManagerTodayView } from '../../components/today/manager-view';
 import { StaffTodayView } from '../../components/today/staff-view';
 
 export default function TodayScreen() {
   const { user } = useAuth();
+  const { syncUnreadNotifications } = useNotificationSync();
   const initialToday = React.useMemo(() => salonTodayYmd(), []);
   const [managerDate, setManagerDate] = React.useState(initialToday);
 
@@ -34,6 +36,11 @@ export default function TodayScreen() {
     (signal) => todayApi.get(tomorrowYmd, { signal }),
     [tomorrowYmd]
   );
+
+  React.useEffect(() => {
+    if (!manager.data && !staffToday.data && !staffTomorrow.data) return;
+    void syncUnreadNotifications('today-refresh');
+  }, [manager.data, staffToday.data, staffTomorrow.data, syncUnreadNotifications]);
 
   if (!user) return null;
 

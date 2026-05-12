@@ -166,26 +166,26 @@ Acceptance:
 - [x] SMS controls are visible only as unavailable/future-ready, not as a working
       toggle.
 
-### Phase 4 — Local Device Alerts After Sync
+### Phase 4 — Local Device Alerts After Sync (Done)
 
 Goal: provide native device-level alerts without relying on Expo Push, FCM, or
 APNS remote delivery.
 
-- Add local notification support in the native app.
-- Add a lightweight sync hook:
-  - fetch unread notifications on launch.
-  - fetch on foreground.
-  - fetch after today/calendar refresh.
-  - detect newly seen unread notification ids.
-  - show a local notification for new unread items when local alerts are enabled.
-- Route local notification taps to the stored notification route.
+- [x] Add local notification support in the native app.
+- [x] Add a lightweight sync hook:
+  - [x] fetch unread notifications on launch.
+  - [x] fetch on foreground.
+  - [x] fetch after today/calendar refresh.
+  - [x] detect newly seen unread notification ids.
+  - [x] show a local notification for new unread items when local alerts are enabled.
+- [x] Route local notification taps to the stored notification route.
 
 Acceptance:
 
-- A newly synced unread appointment notification can display a local device alert.
-- Local alerts respect `local_alerts_enabled`.
-- Re-syncing the same unread notification does not repeatedly alert.
-- Tap routing works from the local notification.
+- [x] A newly synced unread appointment notification can display a local device alert.
+- [x] Local alerts respect `local_alerts_enabled`.
+- [x] Re-syncing the same unread notification does not repeatedly alert.
+- [x] Tap routing works from the local notification.
 
 ### Phase 5 — Development Test Path
 
