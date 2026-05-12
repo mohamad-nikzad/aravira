@@ -121,7 +121,7 @@ Acceptance:
 - Preferences can be read and updated per user.
 - Existing PWA web push behavior is unchanged.
 
-### Phase 2 — Appointment-Created Trigger
+### Phase 2 — Appointment-Created Trigger (Done)
 
 Goal: create real server-side notifications for the first production event.
 
@@ -137,10 +137,10 @@ Goal: create real server-side notifications for the first production event.
 
 Acceptance:
 
-- Manager-created appointment for another staff member creates exactly one
+- [x] Manager-created appointment for another staff member creates exactly one
   unread notification.
-- Self-created appointment does not notify the same user.
-- Notification data includes the appointment id, date, route, title, and body.
+- [x] Self-created appointment does not notify the same user.
+- [x] Notification data includes the appointment id, date, route, title, and body.
 
 ### Phase 3 — Native Inbox And Settings
 

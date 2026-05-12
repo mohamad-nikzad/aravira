@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   getTenantManagerRequest: vi.fn(),
   getAllClients: vi.fn(),
   createClient: vi.fn(),
+  setClientTags: vi.fn(),
   createPlaceholderClient: vi.fn(),
   completePlaceholderAppointmentClient: vi.fn(),
   cancelIncompletePlaceholderAppointment: vi.fn(),
@@ -36,6 +37,7 @@ const mocks = vi.hoisted(() => ({
   validateUpdateAppointmentIntake: vi.fn(),
   sendWebPushToUser: vi.fn(),
   isWebPushConfigured: vi.fn(),
+  createNotificationForUser: vi.fn(),
 }))
 
 vi.mock('@repo/auth/tenant', () => ({
@@ -55,6 +57,7 @@ function isClientProvidedEntityId(id: string | undefined): id is string {
 vi.mock('@repo/database/clients', () => ({
   getAllClients: mocks.getAllClients,
   createClient: mocks.createClient,
+  setClientTags: mocks.setClientTags,
   createPlaceholderClient: mocks.createPlaceholderClient,
   completePlaceholderAppointmentClient: mocks.completePlaceholderAppointmentClient,
   cancelIncompletePlaceholderAppointment: mocks.cancelIncompletePlaceholderAppointment,
@@ -87,6 +90,10 @@ vi.mock('@repo/database/appointments', () => ({
 vi.mock('@/lib/push', () => ({
   sendWebPushToUser: mocks.sendWebPushToUser,
   isWebPushConfigured: mocks.isWebPushConfigured,
+}))
+
+vi.mock('@/lib/notifications', () => ({
+  createNotificationForUser: mocks.createNotificationForUser,
 }))
 
 const salonManager = {
@@ -154,6 +161,19 @@ beforeEach(() => {
     return { ok: true, user }
   })
   mocks.isWebPushConfigured.mockReturnValue(false)
+  mocks.setClientTags.mockResolvedValue([])
+  mocks.createNotificationForUser.mockResolvedValue({
+    id: 'notification-a',
+    salonId: 'salon-a',
+    userId: 'staff-a',
+    type: 'appointment_created',
+    title: 'نوبت جدید',
+    body: 'Client A، Cut، 2026-04-18 ساعت 09:00',
+    route: '/(tabs)/calendar?date=2026-04-18&appointmentId=appointment-a',
+    data: {},
+    readAt: null,
+    createdAt: new Date('2026-04-18T05:30:00.000Z'),
+  })
   mocks.validateCreateAppointmentIntake.mockResolvedValue({
     ok: true,
     command: {
@@ -374,6 +394,93 @@ describe('tenant isolation route checks', () => {
       notes: undefined,
       requestedAppointmentId: undefined,
     })
+  })
+
+  it('creates one unread appointment notification for another assigned staff member', async () => {
+    mocks.createAppointment.mockResolvedValue({
+      id: 'appointment-a',
+      clientId: 'client-a',
+      staffId: 'staff-a',
+      serviceId: 'service-a',
+      date: '2026-04-18',
+      startTime: '09:00',
+      endTime: '09:45',
+      status: 'scheduled',
+    })
+
+    const response = await createAppointmentRoute(
+      jsonRequest({
+        clientId: 'client-a',
+        staffId: 'staff-a',
+        serviceId: 'service-a',
+        date: '2026-04-18',
+        startTime: '09:00',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(mocks.createNotificationForUser).toHaveBeenCalledTimes(1)
+    expect(mocks.createNotificationForUser).toHaveBeenCalledWith({
+      salonId: 'salon-a',
+      userId: 'staff-a',
+      type: 'appointment_created',
+      title: 'نوبت جدید',
+      body: 'Client A، Cut، 2026-04-18 ساعت 09:00',
+      route: '/(tabs)/calendar?date=2026-04-18&appointmentId=appointment-a',
+      data: {
+        appointmentId: 'appointment-a',
+        date: '2026-04-18',
+        route: '/(tabs)/calendar?date=2026-04-18&appointmentId=appointment-a',
+        title: 'نوبت جدید',
+        body: 'Client A، Cut، 2026-04-18 ساعت 09:00',
+        clientId: 'client-a',
+        staffId: 'staff-a',
+        serviceId: 'service-a',
+        startTime: '09:00',
+      },
+    })
+  })
+
+  it('does not create an appointment notification for a self-created appointment', async () => {
+    mocks.validateCreateAppointmentIntake.mockResolvedValueOnce({
+      ok: true,
+      command: {
+        clientId: 'client-a',
+        staffId: 'manager-a',
+        serviceId: 'service-a',
+        date: '2026-04-18',
+        startTime: '09:00',
+        endTime: '09:45',
+        status: 'scheduled',
+        notes: undefined,
+      },
+      client: { id: 'client-a', salonId: 'salon-a', name: 'Client A', phone: '09120000010', isPlaceholder: false },
+      staff: { id: 'manager-a', salonId: 'salon-a', role: 'manager' },
+      service: { id: 'service-a', name: 'Cut', active: true, duration: 45 },
+    })
+    mocks.createAppointment.mockResolvedValue({
+      id: 'appointment-a',
+      clientId: 'client-a',
+      staffId: 'manager-a',
+      serviceId: 'service-a',
+      date: '2026-04-18',
+      startTime: '09:00',
+      endTime: '09:45',
+      status: 'scheduled',
+    })
+
+    const response = await createAppointmentRoute(
+      jsonRequest({
+        clientId: 'client-a',
+        staffId: 'manager-a',
+        serviceId: 'service-a',
+        date: '2026-04-18',
+        startTime: '09:00',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(mocks.createNotificationForUser).not.toHaveBeenCalled()
   })
 
   it('creates placeholder clients only inside the authenticated salon scope', async () => {

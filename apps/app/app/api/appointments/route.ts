@@ -11,6 +11,7 @@ import {
 } from '@repo/database/clients'
 import { appointmentCreateSchema } from '@repo/salon-core/forms/appointment'
 import { sendWebPushToUser, isWebPushConfigured } from '@/lib/push'
+import { createNotificationForUser } from '@/lib/notifications'
 import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant'
 
 export async function GET(request: Request) {
@@ -119,6 +120,32 @@ export async function POST(request: Request) {
       user.salonId,
       user.userId,
     )
+
+    if (intake.staff.id !== user.userId) {
+      const route = `/(tabs)/calendar?date=${appointment.date}&appointmentId=${appointment.id}`
+      const title = 'نوبت جدید'
+      const body = `${intake.client.name}، ${intake.service.name}، ${appointment.date} ساعت ${appointment.startTime}`
+
+      await createNotificationForUser({
+        salonId: user.salonId,
+        userId: intake.staff.id,
+        type: 'appointment_created',
+        title,
+        body,
+        route,
+        data: {
+          appointmentId: appointment.id,
+          date: appointment.date,
+          route,
+          title,
+          body,
+          clientId: appointment.clientId,
+          staffId: appointment.staffId,
+          serviceId: appointment.serviceId,
+          startTime: appointment.startTime,
+        },
+      })
+    }
 
     if (isWebPushConfigured() && intake.staff.id !== user.userId) {
       void sendWebPushToUser(intake.staff.id, {
