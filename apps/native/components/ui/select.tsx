@@ -41,7 +41,7 @@ export function Select({
   const { theme } = useTheme();
   const styles = useThemeStyles((t) => ({
     trigger: {
-      height: t.sizes.controlMd,
+      height: t.sizes.controlLg,
       width: '100%' as const,
       flexDirection: 'row' as const,
       alignItems: 'center' as const,

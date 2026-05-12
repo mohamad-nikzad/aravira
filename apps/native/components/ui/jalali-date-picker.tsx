@@ -28,7 +28,7 @@ export function JalaliDatePicker({ value, onChange }: JalaliDatePickerProps) {
   const { theme } = useTheme();
   const styles = useThemeStyles((t) => ({
     trigger: {
-      height: t.sizes.controlMd,
+      height: t.sizes.controlLg,
       width: '100%' as const,
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
@@ -49,8 +49,8 @@ export function JalaliDatePicker({ value, onChange }: JalaliDatePickerProps) {
       justifyContent: 'space-between' as const,
     },
     navButton: {
-      height: t.sizes.avatarMd,
-      width: t.sizes.avatarMd,
+      height: t.sizes.controlLg,
+      width: t.sizes.controlLg,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       borderRadius: t.radius.sm,

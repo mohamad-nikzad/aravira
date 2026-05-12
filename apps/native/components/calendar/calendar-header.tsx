@@ -64,8 +64,8 @@ export function CalendarHeader({ view, cursorYmd, todayYmd, onCursorChange }: Ca
     },
     navButton: {
       backgroundColor: withAlpha(t.colors.muted, 0.6),
-      height: t.sizes.controlMd,
-      width: t.sizes.controlMd,
+      height: t.sizes.controlLg,
+      width: t.sizes.controlLg,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       borderRadius: t.radius.lg,
@@ -92,7 +92,10 @@ export function CalendarHeader({ view, cursorYmd, todayYmd, onCursorChange }: Ca
       borderRadius: t.radius.full,
       borderWidth: t.sizes.hairline,
       paddingHorizontal: t.spacing.lg,
-      paddingVertical: t.spacing.xs,
+      paddingVertical: t.spacing.sm,
+      minHeight: t.sizes.controlLg - 12,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
     },
     todayChipDisabled: {
       borderColor: withAlpha(t.colors.border, 0.6),
@@ -150,8 +153,17 @@ export function CalendarHeader({ view, cursorYmd, todayYmd, onCursorChange }: Ca
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        <Pressable onPress={goPrev} accessibilityLabel="قبلی" style={styles.navButton}>
-          <ChevronRight size={theme.sizes.iconSm + 2} color={theme.colors.foreground} strokeWidth={1.8} />
+        <Pressable
+          onPress={goPrev}
+          accessibilityRole="button"
+          accessibilityLabel="قبلی"
+          hitSlop={6}
+          style={styles.navButton}>
+          <ChevronRight
+            size={theme.sizes.iconSm + 2}
+            color={theme.colors.foreground}
+            strokeWidth={1.8}
+          />
         </Pressable>
 
         <View style={styles.titleWrap}>
@@ -161,8 +173,17 @@ export function CalendarHeader({ view, cursorYmd, todayYmd, onCursorChange }: Ca
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
 
-        <Pressable onPress={goNext} accessibilityLabel="بعدی" style={styles.navButton}>
-          <ChevronLeft size={theme.sizes.iconSm + 2} color={theme.colors.foreground} strokeWidth={1.8} />
+        <Pressable
+          onPress={goNext}
+          accessibilityRole="button"
+          accessibilityLabel="بعدی"
+          hitSlop={6}
+          style={styles.navButton}>
+          <ChevronLeft
+            size={theme.sizes.iconSm + 2}
+            color={theme.colors.foreground}
+            strokeWidth={1.8}
+          />
         </Pressable>
       </View>
 
@@ -170,6 +191,10 @@ export function CalendarHeader({ view, cursorYmd, todayYmd, onCursorChange }: Ca
         <Pressable
           onPress={() => onCursorChange(todayYmd)}
           disabled={isToday}
+          accessibilityRole="button"
+          accessibilityLabel="رفتن به امروز"
+          accessibilityState={{ disabled: isToday }}
+          hitSlop={8}
           style={[styles.todayChip, isToday ? styles.todayChipDisabled : styles.todayChipEnabled]}>
           <Text
             style={[

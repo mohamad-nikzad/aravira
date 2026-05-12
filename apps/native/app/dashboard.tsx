@@ -126,8 +126,8 @@ export default function DashboardScreen() {
       paddingVertical: t.spacing.lg,
     },
     backBtn: {
-      height: t.sizes.avatarMd,
-      width: t.sizes.avatarMd,
+      height: t.sizes.controlLg,
+      width: t.sizes.controlLg,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       borderRadius: t.radius.xl,

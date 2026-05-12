@@ -152,8 +152,8 @@ export default function ClientsScreen() {
     },
     tagBadge: { paddingHorizontal: t.spacing.sm, paddingVertical: 0 },
     actionBtn: {
-      height: t.sizes.avatarMd,
-      width: t.sizes.avatarMd,
+      height: t.sizes.controlLg,
+      width: t.sizes.controlLg,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       borderRadius: t.radius.full,
@@ -162,17 +162,15 @@ export default function ClientsScreen() {
   }));
 
   const key = user?.role === 'manager' ? 'clients' : null;
-  const { data, error, loading, reload } = useAsyncResource<{ clients: Client[] }>(
-    key,
-    (signal) => clientsApi.list({ signal })
+  const { data, error, loading, reload } = useAsyncResource<{ clients: Client[] }>(key, (signal) =>
+    clientsApi.list({ signal })
   );
   const clients = data?.clients ?? [];
   const filtered = React.useMemo(
     () =>
       clients.filter(
         (c) =>
-          c.name.toLowerCase().includes(search.toLowerCase()) ||
-          (c.phone ?? '').includes(search)
+          c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone ?? '').includes(search)
       ),
     [clients, search]
   );
@@ -221,7 +219,11 @@ export default function ClientsScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>مشتریان</Text>
         <Button size="sm" onPress={openCreate} style={styles.addBtn}>
-          <Plus size={theme.sizes.iconSm} color={theme.colors.primaryForeground} strokeWidth={1.8} />
+          <Plus
+            size={theme.sizes.iconSm}
+            color={theme.colors.primaryForeground}
+            strokeWidth={1.8}
+          />
           <Text style={styles.addBtnText}>جدید</Text>
         </Button>
       </View>

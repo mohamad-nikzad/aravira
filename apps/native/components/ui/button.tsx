@@ -9,12 +9,19 @@ type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghos
 type ButtonSize = 'default' | 'sm' | 'lg' | 'icon' | 'icon-sm' | 'icon-lg';
 
 const buttonSizeStyles: Record<ButtonSize, ViewStyle> = {
-  default: { minHeight: 36, paddingHorizontal: 16 },
+  default: { minHeight: 44, paddingHorizontal: 16 },
   sm: { minHeight: 32, paddingHorizontal: 12 },
-  lg: { minHeight: 40, paddingHorizontal: 24 },
-  icon: { height: 36, width: 36 },
+  lg: { minHeight: 48, paddingHorizontal: 24 },
+  icon: { height: 44, width: 44 },
   'icon-sm': { height: 32, width: 32 },
-  'icon-lg': { height: 40, width: 40 },
+  'icon-lg': { height: 48, width: 48 },
+};
+
+// Compact sizes get hitSlop padding so the effective touch target stays at
+// least 44pt even when the visual control is smaller for density reasons.
+const buttonHitSlop: Partial<Record<ButtonSize, number>> = {
+  sm: 6,
+  'icon-sm': 6,
 };
 
 export type ButtonProps = PressableProps & {
@@ -56,6 +63,8 @@ function Button({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
+      hitSlop={buttonHitSlop[size]}
       disabled={disabled}
       style={(state) => [
         {

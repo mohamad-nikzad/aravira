@@ -62,8 +62,8 @@ export default function StaffScreen() {
       gap: t.spacing.lg,
     },
     backButton: {
-      height: t.sizes.avatarMd,
-      width: t.sizes.avatarMd,
+      height: t.sizes.controlLg,
+      width: t.sizes.controlLg,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       borderRadius: t.radius.xl,
@@ -184,8 +184,8 @@ export default function StaffScreen() {
       marginInlineStart: t.spacing.sm,
     },
     rowActionBtn: {
-      width: 36,
-      height: 36,
+      width: t.sizes.controlLg,
+      height: t.sizes.controlLg,
       borderRadius: t.radius.lg,
       borderWidth: t.sizes.hairline,
       borderColor: t.colors.border,

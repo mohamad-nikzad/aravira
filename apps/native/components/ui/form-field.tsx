@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Pressable, Switch, Text, View, type ViewStyle } from 'react-native';
+import { Pressable, Switch, Text, TextInput, View, type ViewStyle } from 'react-native';
 import {
   Controller,
   type Control,
@@ -7,10 +7,11 @@ import {
   type FieldPathValue,
   type FieldValues,
 } from 'react-hook-form';
+import { Eye, EyeOff } from 'lucide-react-native';
 
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone';
 
-import { useThemeStyles } from '../../theme';
+import { useTheme, useThemeStyles } from '../../theme';
 import { Badge } from './badge';
 import { Input, type InputProps } from './input';
 import { JalaliDatePicker } from './jalali-date-picker';
@@ -70,9 +71,7 @@ function FieldShell({
   return (
     <View style={[styles.field, style]}>
       {label ? <Label style={styles.label}>{label}</Label> : null}
-      {description ? (
-        <Text style={descriptionStyles.description}>{description}</Text>
-      ) : null}
+      {description ? <Text style={descriptionStyles.description}>{description}</Text> : null}
       {children}
       {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
     </View>
@@ -99,19 +98,60 @@ type FormTextFieldProps<
   Omit<InputProps, 'value' | 'onChangeText' | 'onBlur'> &
   Common;
 
-export function FormTextField<
-  TFieldValues extends FieldValues,
-  TName extends FieldPath<TFieldValues>,
->({
-  control,
-  name,
-  label,
-  description,
-  style,
-  ...inputProps
-}: FormTextFieldProps<TFieldValues, TName>) {
+function PasswordVisibilityToggle({
+  visible,
+  onToggle,
+}: {
+  visible: boolean;
+  onToggle: () => void;
+}) {
+  const { theme } = useTheme();
+  return (
+    <Pressable
+      onPress={onToggle}
+      accessibilityRole="button"
+      accessibilityLabel={visible ? 'پنهان کردن رمز عبور' : 'نمایش رمز عبور'}
+      hitSlop={8}
+      style={{
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+      {visible ? (
+        <EyeOff size={20} color={theme.colors.mutedForeground} strokeWidth={1.8} />
+      ) : (
+        <Eye size={20} color={theme.colors.mutedForeground} strokeWidth={1.8} />
+      )}
+    </Pressable>
+  );
+}
+
+function FormTextFieldImpl<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
+  {
+    control,
+    name,
+    label,
+    description,
+    style,
+    secureTextEntry,
+    ...inputProps
+  }: FormTextFieldProps<TFieldValues, TName>,
+  ref: React.Ref<TextInput>
+) {
   const styles = useThemeStyles((t) => ({ input: { fontFamily: t.fonts.sans } }));
-  const { style: inputStyle, ...rest } = inputProps as InputProps;
+  const { style: inputStyle, rightAdornment, ...rest } = inputProps as InputProps;
+  const [passwordVisible, setPasswordVisible] = React.useState(false);
+  const isPassword = Boolean(secureTextEntry);
+  const adornment = isPassword ? (
+    <PasswordVisibilityToggle
+      visible={passwordVisible}
+      onToggle={() => setPasswordVisible((v) => !v)}
+    />
+  ) : (
+    rightAdornment
+  );
+
   return (
     <Controller
       control={control}
@@ -123,9 +163,13 @@ export function FormTextField<
           errorMessage={fieldState.error?.message}
           style={style}>
           <Input
+            ref={ref}
             value={(field.value as string | undefined) ?? ''}
             onChangeText={field.onChange}
             onBlur={field.onBlur}
+            secureTextEntry={isPassword && !passwordVisible}
+            error={Boolean(fieldState.error)}
+            rightAdornment={adornment}
             {...rest}
             style={[styles.input, inputStyle]}
           />
@@ -134,6 +178,13 @@ export function FormTextField<
     />
   );
 }
+
+export const FormTextField = React.forwardRef(FormTextFieldImpl) as <
+  TFieldValues extends FieldValues,
+  TName extends FieldPath<TFieldValues>,
+>(
+  props: FormTextFieldProps<TFieldValues, TName> & { ref?: React.Ref<TextInput> }
+) => React.ReactElement;
 
 /* -------------------------------------------------------------------------- */
 /*  FormPhoneField — displays Persian-friendly digits, stores normalized      */
@@ -146,17 +197,20 @@ type FormPhoneFieldProps<
   Omit<InputProps, 'value' | 'onChangeText' | 'onBlur' | 'keyboardType'> &
   Common;
 
-export function FormPhoneField<
+function FormPhoneFieldImpl<
   TFieldValues extends FieldValues,
   TName extends FieldPath<TFieldValues>,
->({
-  control,
-  name,
-  label,
-  description,
-  style,
-  ...inputProps
-}: FormPhoneFieldProps<TFieldValues, TName>) {
+>(
+  {
+    control,
+    name,
+    label,
+    description,
+    style,
+    ...inputProps
+  }: FormPhoneFieldProps<TFieldValues, TName>,
+  ref: React.Ref<TextInput>
+) {
   const styles = useThemeStyles((t) => ({
     input: { fontFamily: t.fonts.sans, textAlign: 'left' as const },
   }));
@@ -172,6 +226,7 @@ export function FormPhoneField<
           errorMessage={fieldState.error?.message}
           style={style}>
           <Input
+            ref={ref}
             value={displayPhone((field.value as string | undefined) ?? '')}
             onChangeText={(text) => field.onChange(normalizePhone(text))}
             onBlur={field.onBlur}
@@ -179,6 +234,7 @@ export function FormPhoneField<
             autoCapitalize="none"
             autoCorrect={false}
             placeholder={placeholder ?? '۰۹۱۲…'}
+            error={Boolean(fieldState.error)}
             {...rest}
             style={[styles.input, inputStyle]}
           />
@@ -187,6 +243,13 @@ export function FormPhoneField<
     />
   );
 }
+
+export const FormPhoneField = React.forwardRef(FormPhoneFieldImpl) as <
+  TFieldValues extends FieldValues,
+  TName extends FieldPath<TFieldValues>,
+>(
+  props: FormPhoneFieldProps<TFieldValues, TName> & { ref?: React.Ref<TextInput> }
+) => React.ReactElement;
 
 /* -------------------------------------------------------------------------- */
 /*  FormSelectField                                                           */
@@ -256,13 +319,7 @@ type FormJalaliDateFieldProps<
 export function FormJalaliDateField<
   TFieldValues extends FieldValues,
   TName extends FieldPath<TFieldValues>,
->({
-  control,
-  name,
-  label,
-  description,
-  style,
-}: FormJalaliDateFieldProps<TFieldValues, TName>) {
+>({ control, name, label, description, style }: FormJalaliDateFieldProps<TFieldValues, TName>) {
   return (
     <Controller
       control={control}
@@ -443,9 +500,7 @@ export function FormSwitchField<
           <View style={styles.row}>
             <View style={textStyles.body}>
               {label ? <Label style={styles.label}>{label}</Label> : null}
-              {description ? (
-                <Text style={textStyles.description}>{description}</Text>
-              ) : null}
+              {description ? <Text style={textStyles.description}>{description}</Text> : null}
             </View>
             <Switch
               value={Boolean(field.value)}

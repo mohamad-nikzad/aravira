@@ -27,6 +27,7 @@ export function ViewSwitcher({
     },
     item: {
       flex: 1,
+      minHeight: t.sizes.controlLg - 8,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       borderRadius: t.radius.lg,
@@ -47,6 +48,9 @@ export function ViewSwitcher({
           <Pressable
             key={v.key}
             onPress={() => onChange(v.key)}
+            accessibilityRole="button"
+            accessibilityLabel={v.label}
+            accessibilityState={{ selected: active }}
             style={({ pressed }) => [
               styles.item,
               active ? styles.itemActive : null,

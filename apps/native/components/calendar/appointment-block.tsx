@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { AppointmentWithDetails } from '@repo/salon-core/types';
 import { formatPersianTime } from '@repo/salon-core/persian-digits';
+import { APPOINTMENT_STATUS } from '@repo/salon-core/types';
 import { useTheme, withAlpha } from '../../theme';
 import { FONTS, staffBorder, staffHex, staffSoftBg, statusPalette } from './helpers';
 
@@ -36,9 +37,15 @@ export function AppointmentBlock({
   const palette = statusPalette(status);
   const themedStatus = appointmentStatus(status);
 
+  const statusLabel = APPOINTMENT_STATUS[status]?.label ?? '';
+  const a11yLabel = `${appointment.client.name}، ${appointment.service.name}، ${appointment.staff.name}، ${formatPersianTime(appointment.startTime)} تا ${formatPersianTime(appointment.endTime)}، ${statusLabel}`;
+
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
+      accessibilityHint="مشاهده جزئیات نوبت"
       style={({ pressed }) => [
         {
           position: 'absolute',

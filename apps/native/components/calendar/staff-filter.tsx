@@ -32,6 +32,7 @@ export function StaffFilter({
       borderWidth: t.sizes.hairline,
       paddingHorizontal: t.spacing.lg,
       paddingVertical: t.spacing.sm,
+      minHeight: t.sizes.controlLg - 8,
     },
     chipActive: {
       borderColor: withAlpha(t.colors.primary, 0.6),
@@ -52,6 +53,7 @@ export function StaffFilter({
       borderWidth: t.sizes.hairline,
       paddingHorizontal: t.spacing.md,
       paddingVertical: t.spacing.xs,
+      minHeight: t.sizes.controlLg - 8,
     },
     staffChipActive: { backgroundColor: withAlpha(t.colors.primary, 0.05) },
     staffChipInactive: { backgroundColor: t.colors.card },

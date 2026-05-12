@@ -70,7 +70,13 @@ export function ServicesCard() {
       fontSize: t.fontSize.sm,
       fontFamily: t.fonts.sansMedium,
     },
-    editIcon: { padding: t.spacing.xs },
+    editIcon: {
+      minHeight: t.sizes.controlLg,
+      minWidth: t.sizes.controlLg,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      padding: t.spacing.xs,
+    },
   }));
 
   const openCreate = () => {

@@ -182,9 +182,10 @@ function SheetContent({
         <Pressable
           onPress={onClose}
           accessibilityLabel="بستن"
+          hitSlop={6}
           style={{
-            width: 32,
-            height: 32,
+            width: 44,
+            height: 44,
             borderRadius: theme.radius.full,
             alignItems: 'center',
             justifyContent: 'center',

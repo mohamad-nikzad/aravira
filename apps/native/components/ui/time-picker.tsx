@@ -41,7 +41,7 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
   const { theme } = useTheme();
   const styles = useThemeStyles((t) => ({
     trigger: {
-      height: t.sizes.controlMd,
+      height: t.sizes.controlLg,
       width: '100%' as const,
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
@@ -195,6 +195,7 @@ function Wheel({
         data={data}
         keyExtractor={(it) => String(it)}
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
         snapToInterval={ITEM_HEIGHT}
         decelerationRate="fast"
         contentContainerStyle={styles.list}

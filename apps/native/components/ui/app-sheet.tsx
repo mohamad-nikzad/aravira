@@ -9,7 +9,6 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeStyles } from '../../theme';
 
 export type AppSheetProps = {
@@ -38,6 +37,11 @@ export type AppSheetProps = {
   backdropAccessibilityLabel?: string;
 };
 
+const SHEET_BOTTOM_PADDING = Platform.select({
+  android: 72,
+  default: 24,
+});
+
 export function AppSheet({
   visible,
   onClose,
@@ -50,19 +54,29 @@ export function AppSheet({
   contentStyle,
   backdropAccessibilityLabel = 'بستن',
 }: AppSheetProps) {
-  const insets = useSafeAreaInsets();
   const styles = useThemeStyles((t) => ({
     backdrop: {
       flex: 1,
       justifyContent: 'flex-end' as const,
       backgroundColor: t.scrim,
+      position: 'relative' as const,
+    },
+    backdropDismissArea: {
+      position: 'absolute' as const,
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      zIndex: 0,
     },
     sheet: {
       borderTopLeftRadius: t.radius['2xl'],
       borderTopRightRadius: t.radius['2xl'],
       backgroundColor: t.colors.card,
       paddingTop: t.spacing.md,
+      paddingBottom: SHEET_BOTTOM_PADDING,
       overflow: 'hidden' as const,
+      zIndex: 1,
     },
     handleWrap: {
       alignItems: 'center' as const,
@@ -74,6 +88,10 @@ export function AppSheet({
       height: 4,
       borderRadius: t.radius.full,
       backgroundColor: t.colors.border,
+    },
+    contentWrap: {
+      flexShrink: 1,
+      width: '100%' as const,
     },
   }));
 
@@ -92,13 +110,11 @@ export function AppSheet({
   };
 
   const sheetContent = (
-    <Pressable
-      onPress={(e) => e.stopPropagation()}
+    <View
       style={[
         styles.sheet,
         {
           maxHeight: `${Math.round(maxHeightFraction * 100)}%`,
-          paddingBottom: Math.max(insets.bottom, 12),
         },
         contentStyle,
       ]}>
@@ -107,24 +123,33 @@ export function AppSheet({
           <View style={styles.handle} />
         </View>
       )}
-      {children}
-    </Pressable>
+      {keyboardAvoiding ? (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.contentWrap}>
+          {children}
+        </KeyboardAvoidingView>
+      ) : (
+        children
+      )}
+    </View>
   );
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={requestClose}>
-      <Pressable
-        accessibilityLabel={backdropAccessibilityLabel}
-        onPress={handleBackdropPress}
-        style={styles.backdrop}>
-        {keyboardAvoiding ? (
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            {sheetContent}
-          </KeyboardAvoidingView>
-        ) : (
-          sheetContent
-        )}
-      </Pressable>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={requestClose}
+      statusBarTranslucent>
+      <View style={styles.backdrop}>
+        <Pressable
+          accessibilityLabel={backdropAccessibilityLabel}
+          onPress={handleBackdropPress}
+          style={styles.backdropDismissArea}
+        />
+        {sheetContent}
+      </View>
     </Modal>
   );
 }
