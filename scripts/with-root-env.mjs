@@ -46,6 +46,19 @@ function loadRootEnv() {
   }
 }
 
+function withWorkspaceBin(env) {
+  const pathKey = Object.keys(env).find((key) => key.toLowerCase() === 'path') ?? 'PATH'
+  const workspaceBin = path.join(repoRoot, 'node_modules', '.bin')
+  const currentPath = env[pathKey]
+
+  return {
+    ...env,
+    [pathKey]: currentPath
+      ? `${workspaceBin}${path.delimiter}${currentPath}`
+      : workspaceBin,
+  }
+}
+
 const [command, ...args] = process.argv.slice(2)
 
 if (!command) {
@@ -57,7 +70,7 @@ loadRootEnv()
 
 const child = spawn(command, args, {
   cwd: process.cwd(),
-  env: process.env,
+  env: withWorkspaceBin(process.env),
   stdio: 'inherit',
 })
 
