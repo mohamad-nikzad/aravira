@@ -13,6 +13,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { clientsApi } from '../../lib/api';
 import { useTheme, useThemeStyles, withAlpha } from '../../theme';
+import { AppText } from '../ui';
 
 type Mode = 'search' | 'add';
 
@@ -41,7 +42,7 @@ export function ClientPicker({ clients, value, onChange, onClientCreated }: Clie
   const { theme } = useTheme();
   const styles = useThemeStyles((t) => ({
     trigger: {
-      height: t.sizes.avatarMd,
+      height: t.sizes.controlLg,
       width: '100%' as const,
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
@@ -52,13 +53,7 @@ export function ClientPicker({ clients, value, onChange, onClientCreated }: Clie
       backgroundColor: t.colors.background,
       paddingHorizontal: t.spacing.lg,
     },
-    triggerText: {
-      flex: 1,
-      fontSize: t.fontSize.base,
-      fontFamily: t.fonts.sansMedium,
-    },
-    triggerTextSelected: { color: t.colors.foreground },
-    triggerTextPlaceholder: { color: t.colors.mutedForeground },
+    triggerText: { flex: 1, fontSize: t.fontSize.base },
     searchBar: {
       marginHorizontal: t.spacing.xl,
       flexDirection: 'row' as const,
@@ -271,14 +266,13 @@ export function ClientPicker({ clients, value, onChange, onClientCreated }: Clie
         accessibilityRole="button"
         accessibilityLabel="انتخاب مشتری"
         style={styles.trigger}>
-        <Text
-          style={[
-            styles.triggerText,
-            selectedClient ? styles.triggerTextSelected : styles.triggerTextPlaceholder,
-          ]}
+        <AppText
+          weight="medium"
+          color={selectedClient ? 'foreground' : 'mutedForeground'}
+          style={styles.triggerText}
           numberOfLines={1}>
           {triggerLabel}
-        </Text>
+        </AppText>
         <ChevronDown size={theme.sizes.iconSm} color={theme.iconColors.muted} strokeWidth={1.6} />
       </Pressable>
 

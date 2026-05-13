@@ -28,7 +28,7 @@ import { Input } from '../ui/input';
 import { Select, type SelectGroup, type SelectOption } from '../ui/select';
 import { TimePicker } from '../ui/time-picker';
 import { Spinner } from '../ui/spinner';
-import { FormJalaliDateField, FormRootError, FormTextField } from '../ui/form-field';
+import { FormJalaliDateField, FormRootError, FormTextField, FormTimeField } from '../ui/form-field';
 import { appointmentsApi } from '../../lib/api';
 import { ClientPicker } from './client-picker';
 import { useTheme, useThemeStyles } from '../../theme';
@@ -299,13 +299,15 @@ export function AppointmentEditModal({
     }
   };
 
-  const handleStartTimeChange = (st: string) => {
-    setValue('startTime', st, { shouldDirty: true, shouldValidate: true });
-    setValue('endTime', endTimeFromDuration(st, durationMinutes), {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-  };
+  const syncEndTimeWithStart = React.useCallback(
+    (st: string) => {
+      setValue('endTime', endTimeFromDuration(st, durationMinutes), {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    },
+    [durationMinutes, setValue],
+  );
 
   const handleServiceChange = (id: string) => {
     setValue('serviceId', id, { shouldDirty: true, shouldValidate: true });
@@ -536,22 +538,13 @@ export function AppointmentEditModal({
           <FormJalaliDateField control={control} name="date" label="تاریخ" />
         </View>
         <View style={styles.flex1}>
-          <Field label="شروع">
-            <Controller
-              control={control}
-              name="startTime"
-              render={({ field }) => (
-                <TimePicker
-                  value={field.value ?? '09:00'}
-                  onChange={handleStartTimeChange}
-                  label="ساعت شروع"
-                />
-              )}
-            />
-            {errors.startTime ? (
-              <Text style={styles.errorText}>{errors.startTime.message}</Text>
-            ) : null}
-          </Field>
+          <FormTimeField
+            control={control}
+            name="startTime"
+            label="شروع"
+            pickerLabel="ساعت شروع"
+            onTimeChange={syncEndTimeWithStart}
+          />
         </View>
       </View>
 

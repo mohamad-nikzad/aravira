@@ -148,6 +148,11 @@ export function ManagerTodayView({
       color: t.colors.foreground,
       fontSize: t.fontSize.base,
       fontFamily: t.fonts.sansSemiBold,
+      // RTL row + icon: without flex + minWidth, RN can under-measure Text and clip the line tail.
+      flex: 1,
+      minWidth: 0,
+      writingDirection: 'rtl' as const,
+      includeFontPadding: false,
     },
     attentionList: { gap: t.spacing.md },
     attentionItem: {

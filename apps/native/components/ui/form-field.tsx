@@ -351,6 +351,7 @@ type FormTimeFieldProps<
   Common & {
     pickerLabel?: string;
     fallback?: string;
+    onTimeChange?: (value: string) => void;
   };
 
 export function FormTimeField<
@@ -364,6 +365,7 @@ export function FormTimeField<
   style,
   pickerLabel,
   fallback = '09:00',
+  onTimeChange,
 }: FormTimeFieldProps<TFieldValues, TName>) {
   return (
     <Controller
@@ -377,7 +379,10 @@ export function FormTimeField<
           style={style}>
           <TimePicker
             value={(field.value as string | undefined) || fallback}
-            onChange={field.onChange}
+            onChange={(next) => {
+              field.onChange(next);
+              onTimeChange?.(next);
+            }}
             label={pickerLabel ?? label}
           />
         </FieldShell>

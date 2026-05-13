@@ -41,6 +41,7 @@ function Badge({ variant = 'default', children, style, textStyle, ...props }: Ba
           borderRadius: theme.radius.md,
           borderWidth: variant === 'outline' ? 1 : 0,
           flexDirection: 'row',
+          flexShrink: 0,
           paddingHorizontal: 8,
           paddingVertical: 2,
         },
@@ -49,7 +50,11 @@ function Badge({ variant = 'default', children, style, textStyle, ...props }: Ba
       ]}
       {...props}>
       {typeof children === 'string' ? (
-        <AppText color={textColor} variant="caption" weight="medium" style={textStyle}>
+        <AppText
+          color={textColor}
+          variant="caption"
+          weight="medium"
+          style={[{ flexShrink: 0 }, textStyle]}>
           {children}
         </AppText>
       ) : (

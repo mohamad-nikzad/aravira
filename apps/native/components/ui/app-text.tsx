@@ -27,7 +27,7 @@ function AppText({
   variant = 'body',
   color = 'foreground',
   weight = 'regular',
-  align = 'right',
+  align = 'auto',
   style,
   ...props
 }: AppTextProps) {
@@ -47,7 +47,9 @@ function AppText({
           color: theme.colors[color],
           fontFamily,
           writingDirection: 'rtl',
-          textAlign: align,
+          // Do not pass textAlign: 'auto' — with writingDirection 'rtl' in flex rows, RN can
+          // under-measure width and clip Persian tails (e.g. "در" instead of "در انتظار").
+          ...(align === 'auto' ? null : { textAlign: align }),
           includeFontPadding: false,
         },
         variantStyles[variant],

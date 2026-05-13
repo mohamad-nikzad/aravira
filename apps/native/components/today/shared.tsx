@@ -97,7 +97,6 @@ export function AppointmentCard({
     header: {
       flexDirection: 'row' as const,
       alignItems: 'flex-start' as const,
-      justifyContent: 'space-between' as const,
       gap: t.spacing.lg,
     },
     body: { minWidth: 0, flex: 1, gap: t.spacing.xs },
@@ -129,7 +128,10 @@ export function AppointmentCard({
       fontFamily: t.fonts.sans,
       writingDirection: 'ltr' as const,
     },
-    statusBadge: { paddingHorizontal: t.spacing.md, paddingVertical: t.spacing.xs / 2 },
+    statusBadge: {
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: t.spacing.xs / 2,
+    },
     statusBadgeText: { fontSize: t.fontSize.xs },
   }));
   const Container: React.ComponentType<{
