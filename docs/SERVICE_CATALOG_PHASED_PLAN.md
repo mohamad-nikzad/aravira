@@ -171,10 +171,18 @@ Some Phase 2 work was added before Phase 1 was finished. Keep that work, but tre
 
 ### Phase 3: Starter Templates
 
+Status: complete.
+
 - Define editable Persian starter templates in shared code, not in UI-only code.
 - Include initial templates for `ناخن`, `مو`, and `پوست`.
 - Make import idempotent by stable names per salon: running it twice must not duplicate the same category/family/service rows.
 - Done when a fresh salon can click one action and receive editable catalog rows such as `ناخن > کاشت ناخن > کاشت با پودر`.
+
+#### Phase 3 Completion Notes
+
+- Editable Persian starter templates now live in shared salon-core code as `PERSIAN_STARTER_SERVICE_TEMPLATES`.
+- Initial templates cover `ناخن`, `مو`, and `پوست`, including `ناخن > کاشت ناخن > کاشت با پودر`.
+- The database import action consumes the shared templates and continues to reuse existing category, family, and service rows by stable per-salon names.
 
 ### Phase 4: Web Manager Catalog UI
 

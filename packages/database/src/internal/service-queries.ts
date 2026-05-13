@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray } from 'drizzle-orm'
+import { PERSIAN_STARTER_SERVICE_TEMPLATES } from '@repo/salon-core/starter-service-templates'
 import type { Service, ServiceCategory, ServiceFamily } from '@repo/salon-core/types'
 import { getDb } from '../client'
 import { serviceCategories, serviceFamilies, services } from '../schema'
@@ -296,44 +297,6 @@ export async function updateServiceFamily(
   return (await getAllServiceFamilies(salonId, true)).find((item) => item.id === row.id)
 }
 
-const starterTemplates = [
-  {
-    category: 'ناخن',
-    families: [
-      {
-        name: 'کاشت ناخن',
-        services: [
-          { name: 'کاشت با پودر', duration: 90, price: 800000, color: 'rose' },
-          { name: 'کاشت با لاک ژل', duration: 90, price: 850000, color: 'violet' },
-          { name: 'کاشت دست و پا', duration: 150, price: 1300000, color: 'gold', kind: 'combo' as const },
-        ],
-      },
-      {
-        name: 'ترمیم ناخن',
-        services: [{ name: 'ترمیم ساده', duration: 75, price: 550000, color: 'mint' }],
-      },
-    ],
-  },
-  {
-    category: 'مو',
-    families: [
-      {
-        name: 'کوتاهی و براشینگ',
-        services: [{ name: 'کوتاهی مو', duration: 45, price: 350000, color: 'coral' }],
-      },
-    ],
-  },
-  {
-    category: 'پوست',
-    families: [
-      {
-        name: 'پاکسازی',
-        services: [{ name: 'پاکسازی صورت', duration: 60, price: 650000, color: 'mint' }],
-      },
-    ],
-  },
-]
-
 export async function importStarterServiceTemplates(salonId: string): Promise<{
   categories: ServiceCategory[]
   families: ServiceFamily[]
@@ -343,7 +306,7 @@ export async function importStarterServiceTemplates(salonId: string): Promise<{
   const families: ServiceFamily[] = []
   const importedServices: Service[] = []
 
-  for (const categoryTemplate of starterTemplates) {
+  for (const categoryTemplate of PERSIAN_STARTER_SERVICE_TEMPLATES) {
     let category = (await getAllServiceCategories(salonId, true)).find(
       (item) => item.name === categoryTemplate.category
     )
