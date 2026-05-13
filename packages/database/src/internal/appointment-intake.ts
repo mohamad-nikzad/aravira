@@ -16,8 +16,11 @@ import {
 import { getUserById } from './user-queries'
 import { getScheduleOverlapFlags } from './appointment-queries'
 
-type AppointmentCommand = Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }
-type AppointmentPatch = Partial<Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>>
+type SnapshotKeys = 'bookedServiceName' | 'bookedServiceDuration' | 'bookedServicePrice'
+type AppointmentCommand = Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | SnapshotKeys> & {
+  id?: string
+}
+type AppointmentPatch = Partial<Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | SnapshotKeys>>
 
 type AppointmentIntakeFailure = {
   ok: false

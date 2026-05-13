@@ -18,6 +18,8 @@ import {
   clients,
   locations,
   resources,
+  serviceCategories,
+  serviceFamilies,
   salons,
   services,
   staffSchedules,
@@ -53,6 +55,14 @@ function minutesToHm(total: number): string {
   const h = Math.floor(n / 60)
   const min = n % 60
   return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
+}
+
+function appointmentSnapshot(service: { name: string; duration: number; price: number }) {
+  return {
+    bookedServiceName: service.name,
+    bookedServiceDuration: service.duration,
+    bookedServicePrice: service.price,
+  }
 }
 
 const tagColors: Record<string, string> = {
@@ -194,7 +204,12 @@ async function seedRetentionAndFeaturesDemo(salonId: string) {
     reviewedAt: null,
   })
 
-  const aptRows: (typeof appointments.$inferInsert)[] = [
+  const aptRows: Array<
+    Omit<
+      typeof appointments.$inferInsert,
+      'bookedServiceName' | 'bookedServiceDuration' | 'bookedServicePrice'
+    >
+  > = [
     {
       salonId,
       clientId: cInactive.id,
@@ -377,7 +392,13 @@ async function seedRetentionAndFeaturesDemo(salonId: string) {
     },
   ]
 
-  await db.insert(appointments).values(aptRows)
+  const servicesById = new Map(svcRows.map((service) => [service.id, service]))
+  await db.insert(appointments).values(
+    aptRows.map((row) => ({
+      ...row,
+      ...appointmentSnapshot(servicesById.get(row.serviceId)!),
+    }))
+  )
 
   const days = [0, 1, 2, 3, 4, 5, 6] as const
   for (const dayOfWeek of days) {
@@ -563,54 +584,117 @@ async function main() {
     ])
     .onConflictDoNothing()
 
-  const serviceRows = [
-    {
-      name: 'کوتاهی مو',
-      category: 'hair' as const,
-      duration: 45,
-      price: 500_000,
-      color: 'bg-staff-1',
-      active: true,
-    },
-    {
-      name: 'رنگ مو',
-      category: 'hair' as const,
-      duration: 120,
-      price: 1_500_000,
-      color: 'bg-staff-1',
-      active: true,
-    },
-    {
-      name: 'مانیکور',
-      category: 'nails' as const,
-      duration: 30,
-      price: 300_000,
-      color: 'bg-staff-2',
-      active: true,
-    },
-    {
-      name: 'پاکسازی صورت',
-      category: 'skincare' as const,
-      duration: 60,
-      price: 800_000,
-      color: 'bg-staff-3',
-      active: true,
-    },
-    {
-      name: 'ماساژ سوئدی',
-      category: 'spa' as const,
-      duration: 60,
-      price: 900_000,
-      color: 'bg-staff-4',
-      active: true,
-    },
-  ]
-
   const [{ value: serviceCount }] = await db
     .select({ value: count() })
     .from(services)
     .where(eq(services.salonId, primarySalon.id))
   if (serviceCount === 0) {
+    const [hairCategory] = await db
+      .insert(serviceCategories)
+      .values({ salonId: primarySalon.id, name: 'مو', active: true })
+      .onConflictDoUpdate({
+        target: [serviceCategories.salonId, serviceCategories.name],
+        set: { active: true, updatedAt: new Date() },
+      })
+      .returning()
+    const [nailCategory] = await db
+      .insert(serviceCategories)
+      .values({ salonId: primarySalon.id, name: 'ناخن', active: true })
+      .onConflictDoUpdate({
+        target: [serviceCategories.salonId, serviceCategories.name],
+        set: { active: true, updatedAt: new Date() },
+      })
+      .returning()
+    const [skinCategory] = await db
+      .insert(serviceCategories)
+      .values({ salonId: primarySalon.id, name: 'پوست', active: true })
+      .onConflictDoUpdate({
+        target: [serviceCategories.salonId, serviceCategories.name],
+        set: { active: true, updatedAt: new Date() },
+      })
+      .returning()
+    const [spaCategory] = await db
+      .insert(serviceCategories)
+      .values({ salonId: primarySalon.id, name: 'اسپا', active: true })
+      .onConflictDoUpdate({
+        target: [serviceCategories.salonId, serviceCategories.name],
+        set: { active: true, updatedAt: new Date() },
+      })
+      .returning()
+    const [hairFamily] = await db
+      .insert(serviceFamilies)
+      .values({ salonId: primarySalon.id, categoryId: hairCategory.id, name: 'خدمات مو', active: true })
+      .onConflictDoUpdate({
+        target: [serviceFamilies.salonId, serviceFamilies.categoryId, serviceFamilies.name],
+        set: { active: true, updatedAt: new Date() },
+      })
+      .returning()
+    const [nailFamily] = await db
+      .insert(serviceFamilies)
+      .values({ salonId: primarySalon.id, categoryId: nailCategory.id, name: 'خدمات ناخن', active: true })
+      .onConflictDoUpdate({
+        target: [serviceFamilies.salonId, serviceFamilies.categoryId, serviceFamilies.name],
+        set: { active: true, updatedAt: new Date() },
+      })
+      .returning()
+    const [skinFamily] = await db
+      .insert(serviceFamilies)
+      .values({ salonId: primarySalon.id, categoryId: skinCategory.id, name: 'خدمات پوست', active: true })
+      .onConflictDoUpdate({
+        target: [serviceFamilies.salonId, serviceFamilies.categoryId, serviceFamilies.name],
+        set: { active: true, updatedAt: new Date() },
+      })
+      .returning()
+    const [spaFamily] = await db
+      .insert(serviceFamilies)
+      .values({ salonId: primarySalon.id, categoryId: spaCategory.id, name: 'ماساژ', active: true })
+      .onConflictDoUpdate({
+        target: [serviceFamilies.salonId, serviceFamilies.categoryId, serviceFamilies.name],
+        set: { active: true, updatedAt: new Date() },
+      })
+      .returning()
+    const serviceRows = [
+      {
+        familyId: hairFamily.id,
+        name: 'کوتاهی مو',
+        duration: 45,
+        price: 500_000,
+        color: 'bg-staff-1',
+        active: true,
+      },
+      {
+        familyId: hairFamily.id,
+        name: 'رنگ مو',
+        duration: 120,
+        price: 1_500_000,
+        color: 'bg-staff-1',
+        active: true,
+      },
+      {
+        familyId: nailFamily.id,
+        name: 'مانیکور',
+        duration: 30,
+        price: 300_000,
+        color: 'bg-staff-2',
+        active: true,
+      },
+      {
+        familyId: skinFamily.id,
+        name: 'پاکسازی صورت',
+        duration: 60,
+        price: 800_000,
+        color: 'bg-staff-3',
+        active: true,
+      },
+      {
+        familyId: spaFamily.id,
+        name: 'ماساژ سوئدی',
+        duration: 60,
+        price: 900_000,
+        color: 'bg-staff-4',
+        active: true,
+      },
+    ]
     await db.insert(services).values(serviceRows.map((row) => ({ ...row, salonId: primarySalon.id })))
   }
 
@@ -784,6 +868,7 @@ async function main() {
         clientId: allClients[0].id,
         staffId: staffA.id,
         serviceId: hairService.id,
+        ...appointmentSnapshot(hairService),
         date: formatDate(today),
         startTime: '09:00',
         endTime: '09:45',
@@ -796,6 +881,7 @@ async function main() {
         clientId: allClients[1].id,
         staffId: staffB.id,
         serviceId: manicureService.id,
+        ...appointmentSnapshot(manicureService),
         date: formatDate(today),
         startTime: '10:00',
         endTime: '10:30',
@@ -808,6 +894,7 @@ async function main() {
         clientId: allClients[2].id,
         staffId: staffA.id,
         serviceId: colorService.id,
+        ...appointmentSnapshot(colorService),
         date: formatDate(today),
         startTime: '14:00',
         endTime: '16:00',
@@ -820,6 +907,7 @@ async function main() {
         clientId: allClients[3].id,
         staffId: staffB.id,
         serviceId: skincareService.id,
+        ...appointmentSnapshot(skincareService),
         date: formatDate(tomorrow),
         startTime: '11:00',
         endTime: '12:00',
@@ -851,10 +939,31 @@ async function main() {
     .from(services)
     .where(eq(services.salonId, secondSalon.id))
   if (secondServiceCount === 0) {
+    const [secondHairCategory] = await db
+      .insert(serviceCategories)
+      .values({ salonId: secondSalon.id, name: 'مو', active: true })
+      .onConflictDoUpdate({
+        target: [serviceCategories.salonId, serviceCategories.name],
+        set: { active: true, updatedAt: new Date() },
+      })
+      .returning()
+    const [secondHairFamily] = await db
+      .insert(serviceFamilies)
+      .values({
+        salonId: secondSalon.id,
+        categoryId: secondHairCategory.id,
+        name: 'خدمات مو',
+        active: true,
+      })
+      .onConflictDoUpdate({
+        target: [serviceFamilies.salonId, serviceFamilies.categoryId, serviceFamilies.name],
+        set: { active: true, updatedAt: new Date() },
+      })
+      .returning()
     await db.insert(services).values({
       salonId: secondSalon.id,
+      familyId: secondHairFamily.id,
       name: 'براشینگ',
-      category: 'hair',
       duration: 45,
       price: 450_000,
       color: 'bg-staff-2',

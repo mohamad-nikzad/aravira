@@ -17,15 +17,17 @@ export async function PATCH(
     const { id } = await params
     const parsed = serviceUpdateSchema.safeParse(await request.json())
     if (!parsed.success) return validationErrorResponse(parsed.error)
-    const { name, category, duration, price, color, active } = parsed.data
+    const { name, familyId, duration, price, color, active, description, kind } = parsed.data
 
     const patch: Partial<Service> = {}
     if (name !== undefined) patch.name = name
-    if (category !== undefined) patch.category = category
+    if (familyId !== undefined) patch.familyId = familyId
     if (duration !== undefined) patch.duration = duration
     if (price !== undefined) patch.price = price
     if (color !== undefined) patch.color = color
     if (active !== undefined) patch.active = Boolean(active)
+    if (description !== undefined) patch.description = description
+    if (kind !== undefined) patch.kind = kind
 
     const service = await updateService(id, user.salonId, patch)
     if (!service) {

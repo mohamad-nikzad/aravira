@@ -157,7 +157,7 @@ describe('api modules', () => {
 
     await api.create({
       name: 'Cut',
-      category: 'hair',
+      familyId: 'family-1',
       duration: 45,
       price: 100,
       color: 'rose',
@@ -168,7 +168,7 @@ describe('api modules', () => {
       method: 'POST',
       body: {
         name: 'Cut',
-        category: 'hair',
+        familyId: 'family-1',
         duration: 45,
         price: 100,
         color: 'rose',
@@ -181,6 +181,29 @@ describe('api modules', () => {
       path: '/api/services/service-1',
       method: 'PATCH',
       body: { active: false },
+    })
+
+    await api.categories.list({ includeInactive: true })
+    expectLastCall(calls, { path: '/api/service-categories?all=1' })
+
+    await api.categories.create({ name: 'ناخن', active: true })
+    expectLastCall(calls, {
+      path: '/api/service-categories',
+      method: 'POST',
+      body: { name: 'ناخن', active: true },
+    })
+
+    await api.families.create({ categoryId: 'category-1', name: 'کاشت ناخن', active: true })
+    expectLastCall(calls, {
+      path: '/api/service-families',
+      method: 'POST',
+      body: { categoryId: 'category-1', name: 'کاشت ناخن', active: true },
+    })
+
+    await api.importStarterTemplates()
+    expectLastCall(calls, {
+      path: '/api/services/import-starter-templates',
+      method: 'POST',
     })
   })
 

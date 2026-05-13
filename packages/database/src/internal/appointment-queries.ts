@@ -5,6 +5,17 @@ import { getDb } from '../client'
 import { appointments, clients, services, users } from '../schema'
 import { attachAppointmentDetails, rowToAppointment } from './row-mappers'
 import { isClientProvidedEntityId } from './client-queries'
+import { getServiceById } from './service-queries'
+
+type SnapshotKeys = 'bookedServiceName' | 'bookedServiceDuration' | 'bookedServicePrice'
+
+function snapshotFromService(service: { name: string; duration: number; price: number }) {
+  return {
+    bookedServiceName: service.name,
+    bookedServiceDuration: service.duration,
+    bookedServicePrice: service.price,
+  }
+}
 
 export async function getAppointmentsByDateRange(
   salonId: string,
@@ -122,11 +133,13 @@ export async function getAppointmentById(
 }
 
 export async function createAppointment(
-  apt: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'> & { id?: string },
+  apt: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | SnapshotKeys> & { id?: string },
   salonId: string,
   createdByUserId?: string
 ): Promise<Appointment> {
   const db = getDb()
+  const service = await getServiceById(apt.serviceId, salonId)
+  if (!service) throw new Error('service not found')
   const values: typeof appointments.$inferInsert = {
     salonId,
     clientId: apt.clientId,
@@ -135,6 +148,7 @@ export async function createAppointment(
     date: apt.date,
     startTime: apt.startTime,
     endTime: apt.endTime,
+    ...snapshotFromService(service),
     status: apt.status,
     notes: apt.notes,
     createdByUserId: createdByUserId ?? null,
@@ -149,7 +163,7 @@ export async function createAppointment(
 export async function updateAppointment(
   id: string,
   salonId: string,
-  data: Partial<Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>>
+  data: Partial<Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | SnapshotKeys>>
 ): Promise<Appointment | undefined> {
   const db = getDb()
   const patch: Partial<typeof appointments.$inferInsert> = {
@@ -157,7 +171,12 @@ export async function updateAppointment(
   }
   if (data.clientId !== undefined) patch.clientId = data.clientId
   if (data.staffId !== undefined) patch.staffId = data.staffId
-  if (data.serviceId !== undefined) patch.serviceId = data.serviceId
+  if (data.serviceId !== undefined) {
+    const service = await getServiceById(data.serviceId, salonId)
+    if (!service) throw new Error('service not found')
+    patch.serviceId = data.serviceId
+    Object.assign(patch, snapshotFromService(service))
+  }
   if (data.date !== undefined) patch.date = data.date
   if (data.startTime !== undefined) patch.startTime = data.startTime
   if (data.endTime !== undefined) patch.endTime = data.endTime

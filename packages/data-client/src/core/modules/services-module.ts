@@ -20,15 +20,34 @@ type ServiceOneResponse = { service: Service }
 
 export type ServiceCreateInput = {
   name: string
-  category: Service['category']
+  familyId?: string
+  category?: Service['category']
+  categoryId?: string | null
+  categoryName?: string | null
+  familyName?: string | null
   duration: number
   price: number
   color: string
   active?: boolean
+  description?: string | null
+  kind?: Service['kind']
 }
 
 export type ServiceUpdateInput = Partial<
-  Pick<Service, 'name' | 'category' | 'duration' | 'price' | 'color' | 'active'>
+  Pick<
+    Service,
+    | 'name'
+    | 'familyId'
+    | 'categoryId'
+    | 'categoryName'
+    | 'familyName'
+    | 'duration'
+    | 'price'
+    | 'color'
+    | 'active'
+    | 'description'
+    | 'kind'
+  >
 >
 
 export interface ServicesModuleDeps {
@@ -169,11 +188,13 @@ export function createServicesModule(
         const data = await transport.json<ServiceOneResponse>('POST', '/api/services', {
           body: {
             name: input.name,
-            category: input.category,
+            familyId: input.familyId,
             duration: input.duration,
             price: input.price,
             color: input.color,
             active: input.active !== false,
+            description: input.description,
+            kind: input.kind ?? 'standard',
           },
         })
         const service = data.service
@@ -184,14 +205,23 @@ export function createServicesModule(
       }
 
       const id = newOfflineEntityId()
+      if (!input.familyId) {
+        throw new DataClientHttpError('خانواده خدمت را انتخاب کنید', 400, null)
+      }
       const service: Service = {
         id,
         name: input.name,
-        category: input.category,
+        category: input.category ?? 'hair',
+        familyId: input.familyId,
+        familyName: input.familyName ?? null,
+        categoryId: input.categoryId ?? null,
+        categoryName: input.categoryName ?? null,
         duration: input.duration,
         price: input.price,
         color: input.color,
         active: input.active !== false,
+        description: input.description ?? null,
+        kind: input.kind ?? 'standard',
       }
 
       await mutationQueue.runAtomically(async (txQueue, txStorage) => {
@@ -216,11 +246,13 @@ export function createServicesModule(
             id,
             body: {
               name: input.name,
-              category: input.category,
+              familyId: input.familyId,
               duration: input.duration,
               price: input.price,
               color: input.color,
               active: input.active !== false,
+              description: input.description,
+              kind: input.kind ?? 'standard',
             },
             service,
           },
@@ -254,11 +286,16 @@ export function createServicesModule(
       const next: Service = {
         ...existing,
         ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.category !== undefined ? { category: input.category } : {}),
+        ...(input.familyId !== undefined ? { familyId: input.familyId } : {}),
+        ...(input.familyName !== undefined ? { familyName: input.familyName } : {}),
+        ...(input.categoryId !== undefined ? { categoryId: input.categoryId } : {}),
+        ...(input.categoryName !== undefined ? { categoryName: input.categoryName } : {}),
         ...(input.duration !== undefined ? { duration: input.duration } : {}),
         ...(input.price !== undefined ? { price: input.price } : {}),
         ...(input.color !== undefined ? { color: input.color } : {}),
         ...(input.active !== undefined ? { active: input.active } : {}),
+        ...(input.description !== undefined ? { description: input.description } : {}),
+        ...(input.kind !== undefined ? { kind: input.kind } : {}),
       }
 
       const pend = await mutationQueue.listForLocalOverlay()
@@ -284,11 +321,13 @@ export function createServicesModule(
               id,
               body: {
                 name: next.name,
-                category: next.category,
+                familyId: next.familyId,
                 duration: next.duration,
                 price: next.price,
                 color: next.color,
                 active: next.active,
+                description: next.description,
+                kind: next.kind,
               },
               service: next,
             },

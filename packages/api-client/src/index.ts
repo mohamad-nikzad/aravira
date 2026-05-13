@@ -57,9 +57,18 @@ export type {
 export { createServicesApi } from './services'
 export type {
   CreateServiceInput,
+  CreateServiceCategoryInput,
+  CreateServiceFamilyInput,
+  ImportStarterServiceTemplatesResponse,
+  ServiceCategoriesResponse,
+  ServiceCategoryResponse,
+  ServiceFamiliesResponse,
+  ServiceFamilyResponse,
   ServiceResponse,
   ServicesApi,
   ServicesResponse,
+  UpdateServiceCategoryInput,
+  UpdateServiceFamilyInput,
   UpdateServiceInput,
 } from './services'
 export { createAppointmentsApi } from './appointments'

@@ -13,12 +13,17 @@ import {
   requiredTextSchema,
 } from './primitives'
 
-const serviceCategoryKeys = Object.keys(SERVICE_CATEGORIES) as [
+export const catalogEntityIdSchema = z
+  .string({ required_error: formMessages.required })
+  .trim()
+  .min(1, formMessages.required)
+
+const legacyServiceCategoryKeys = Object.keys(SERVICE_CATEGORIES) as [
   keyof typeof SERVICE_CATEGORIES,
   ...(keyof typeof SERVICE_CATEGORIES)[],
 ]
 
-export const serviceCategorySchema = z.enum(serviceCategoryKeys, {
+export const serviceCategorySchema = z.enum(legacyServiceCategoryKeys, {
   required_error: formMessages.required,
   invalid_type_error: formMessages.required,
 })
@@ -31,11 +36,14 @@ export const calendarColorIdSchema = z
 
 export const serviceFormSchema = z.object({
   name: requiredTextSchema,
+  familyId: catalogEntityIdSchema.optional(),
   category: serviceCategorySchema.default('hair'),
   duration: durationMinutesSchema,
   price: nonNegativeMoneySchema,
   color: calendarColorIdSchema.default(STAFF_COLORS[0]),
   active: z.boolean().default(true),
+  description: z.string().trim().optional(),
+  kind: z.enum(['standard', 'combo']).default('standard'),
 })
 
 export const serviceCreateSchema = serviceFormSchema.extend({
@@ -44,10 +52,42 @@ export const serviceCreateSchema = serviceFormSchema.extend({
 
 export const serviceUpdateSchema = z.object({
   name: requiredTextSchema.optional(),
-  category: serviceCategorySchema.optional(),
+  familyId: catalogEntityIdSchema.optional(),
   duration: durationMinutesSchema.optional(),
   price: nonNegativeMoneySchema.optional(),
   color: calendarColorIdSchema.optional(),
+  active: z.boolean().optional(),
+  description: z.string().trim().optional(),
+  kind: z.enum(['standard', 'combo']).optional(),
+})
+
+export const serviceCategoryFormSchema = z.object({
+  name: requiredTextSchema,
+  active: z.boolean().default(true),
+})
+
+export const serviceCategoryCreateSchema = serviceCategoryFormSchema.extend({
+  id: z.string().optional(),
+})
+
+export const serviceCategoryUpdateSchema = z.object({
+  name: requiredTextSchema.optional(),
+  active: z.boolean().optional(),
+})
+
+export const serviceFamilyFormSchema = z.object({
+  categoryId: catalogEntityIdSchema,
+  name: requiredTextSchema,
+  active: z.boolean().default(true),
+})
+
+export const serviceFamilyCreateSchema = serviceFamilyFormSchema.extend({
+  id: z.string().optional(),
+})
+
+export const serviceFamilyUpdateSchema = z.object({
+  categoryId: catalogEntityIdSchema.optional(),
+  name: requiredTextSchema.optional(),
   active: z.boolean().optional(),
 })
 
@@ -57,3 +97,11 @@ export type ServiceCreateInput = z.input<typeof serviceCreateSchema>
 export type ServiceCreatePayload = z.output<typeof serviceCreateSchema>
 export type ServiceUpdateInput = z.input<typeof serviceUpdateSchema>
 export type ServiceUpdatePayload = z.output<typeof serviceUpdateSchema>
+export type ServiceCategoryCreateInput = z.input<typeof serviceCategoryCreateSchema>
+export type ServiceCategoryCreatePayload = z.output<typeof serviceCategoryCreateSchema>
+export type ServiceCategoryUpdateInput = z.input<typeof serviceCategoryUpdateSchema>
+export type ServiceCategoryUpdatePayload = z.output<typeof serviceCategoryUpdateSchema>
+export type ServiceFamilyCreateInput = z.input<typeof serviceFamilyCreateSchema>
+export type ServiceFamilyCreatePayload = z.output<typeof serviceFamilyCreateSchema>
+export type ServiceFamilyUpdateInput = z.input<typeof serviceFamilyUpdateSchema>
+export type ServiceFamilyUpdatePayload = z.output<typeof serviceFamilyUpdateSchema>

@@ -6,6 +6,8 @@ import type {
   ClientFollowUp,
   ClientTag,
   Service,
+  ServiceCategory,
+  ServiceFamily,
   StaffSchedule,
   User,
 } from '@repo/salon-core/types'
@@ -36,11 +38,14 @@ export function rowToService(row: typeof services.$inferSelect): Service {
   return {
     id: row.id,
     name: row.name,
-    category: row.category as Service['category'],
+    category: 'hair',
+    familyId: row.familyId,
     duration: row.duration,
     price: row.price,
     color: row.color,
     active: row.active,
+    description: row.description,
+    kind: row.kind,
   }
 }
 
@@ -86,6 +91,9 @@ export function rowToAppointment(row: typeof appointments.$inferSelect): Appoint
     clientId: row.clientId,
     staffId: row.staffId,
     serviceId: row.serviceId,
+    bookedServiceName: row.bookedServiceName,
+    bookedServiceDuration: row.bookedServiceDuration,
+    bookedServicePrice: row.bookedServicePrice,
     date: row.date,
     startTime: row.startTime,
     endTime: row.endTime,
@@ -130,4 +138,64 @@ export function attachAppointmentDetails(row: {
     staff: rowToUser(row.staff),
     service: rowToService(row.service),
   }
+}
+
+export function rowToServiceCategory(row: {
+  id: string
+  name: string
+  active: boolean
+  createdAt: Date
+  updatedAt: Date
+}): ServiceCategory {
+  return {
+    id: row.id,
+    name: row.name,
+    active: row.active,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+}
+
+export function rowToServiceFamily(row: {
+  id: string
+  categoryId: string
+  categoryName?: string | null
+  name: string
+  active: boolean
+  createdAt: Date
+  updatedAt: Date
+}): ServiceFamily {
+  return {
+    id: row.id,
+    categoryId: row.categoryId,
+    categoryName: row.categoryName ?? null,
+    name: row.name,
+    active: row.active,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+}
+
+export function joinedRowToService(row: {
+  service: typeof services.$inferSelect
+  family?: { id: string; name: string } | null
+  category?: { id: string; name: string } | null
+}): Service {
+  return {
+    ...rowToService(row.service),
+    category: legacyCategoryFromCatalogName(row.category?.name),
+    familyId: row.family?.id ?? row.service.familyId ?? null,
+    familyName: row.family?.name ?? null,
+    categoryId: row.category?.id ?? null,
+    categoryName: row.category?.name ?? null,
+    description: row.service.description,
+    kind: row.service.kind,
+  }
+}
+
+function legacyCategoryFromCatalogName(name: string | null | undefined): Service['category'] {
+  if (name === 'ناخن') return 'nails'
+  if (name === 'پوست') return 'skincare'
+  if (name === 'اسپا') return 'spa'
+  return 'hair'
 }

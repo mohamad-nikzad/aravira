@@ -90,6 +90,9 @@ describe('createDataClient', () => {
       clientId: salonClient.id,
       staffId: staff.id,
       serviceId: service.id,
+      bookedServiceName: service.name,
+      bookedServiceDuration: service.duration,
+      bookedServicePrice: service.price,
       date: '2026-04-27',
       startTime: '10:00',
       endTime: '10:30',
@@ -167,6 +170,55 @@ describe('createDataClient', () => {
       '/api/appointments',
       expect.anything()
     )
+  })
+
+  it('preserves catalog category and family fields on offline service creates', async () => {
+    const transport = {
+      json: vi.fn(async () => {
+        throw new Error('network should not be used')
+      }),
+    } as unknown as HttpTransportPort
+
+    const client = createDataClient({
+      persistence: 'memory',
+      transport,
+      isOnline: () => false,
+    })
+
+    const service = await client.services.create({
+      name: 'کاشت با پودر',
+      category: 'nails',
+      categoryId: 'category-1',
+      categoryName: 'ناخن',
+      familyId: 'family-1',
+      familyName: 'کاشت ناخن',
+      duration: 90,
+      price: 800000,
+      color: 'rose',
+      active: true,
+      description: 'قابل ویرایش توسط مدیر',
+      kind: 'standard',
+    })
+    const listed = await client.services.list({ includeInactive: true })
+    const state = await client.sync.getState()
+
+    expect(service).toMatchObject({
+      name: 'کاشت با پودر',
+      categoryId: 'category-1',
+      categoryName: 'ناخن',
+      familyId: 'family-1',
+      familyName: 'کاشت ناخن',
+      description: 'قابل ویرایش توسط مدیر',
+      kind: 'standard',
+    })
+    expect(listed[0]).toMatchObject({
+      categoryId: 'category-1',
+      categoryName: 'ناخن',
+      familyId: 'family-1',
+      familyName: 'کاشت ناخن',
+    })
+    expect(state.pendingCount).toBe(1)
+    expect(transport.json).not.toHaveBeenCalled()
   })
 
   it('can complete a placeholder appointment while offline', async () => {
@@ -297,6 +349,9 @@ describe('createDataClient', () => {
       clientId: placeholderClient.id,
       staffId: staff.id,
       serviceId: service.id,
+      bookedServiceName: service.name,
+      bookedServiceDuration: service.duration,
+      bookedServicePrice: service.price,
       date: '2026-04-27',
       startTime: '10:00',
       endTime: '10:30',
@@ -439,6 +494,9 @@ describe('createDataClient', () => {
       clientId: 'client-2',
       staffId: staff.id,
       serviceId: service.id,
+      bookedServiceName: service.name,
+      bookedServiceDuration: service.duration,
+      bookedServicePrice: service.price,
       date: '2026-04-27',
       startTime: '11:00',
       endTime: '11:30',

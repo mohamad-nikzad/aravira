@@ -1,5 +1,12 @@
-import type { Service } from '@repo/salon-core/types'
-import type { ServiceCreatePayload, ServiceUpdatePayload } from '@repo/salon-core/forms/service'
+import type { Service, ServiceCategory, ServiceFamily } from '@repo/salon-core/types'
+import type {
+  ServiceCategoryCreateInput as ServiceCategoryCreateFormInput,
+  ServiceCategoryUpdateInput as ServiceCategoryUpdateFormInput,
+  ServiceCreateInput as ServiceCreateFormInput,
+  ServiceFamilyCreateInput as ServiceFamilyCreateFormInput,
+  ServiceFamilyUpdateInput as ServiceFamilyUpdateFormInput,
+  ServiceUpdateInput as ServiceUpdateFormInput,
+} from '@repo/salon-core/forms/service'
 import type { ApiClient } from './client'
 import { endpoints } from './endpoints'
 
@@ -11,8 +18,34 @@ export type ServiceResponse = {
   service: Service
 }
 
-export type CreateServiceInput = ServiceCreatePayload
-export type UpdateServiceInput = ServiceUpdatePayload
+export type ServiceCategoriesResponse = {
+  categories: ServiceCategory[]
+}
+
+export type ServiceCategoryResponse = {
+  category: ServiceCategory
+}
+
+export type ServiceFamiliesResponse = {
+  families: ServiceFamily[]
+}
+
+export type ServiceFamilyResponse = {
+  family: ServiceFamily
+}
+
+export type ImportStarterServiceTemplatesResponse = {
+  categories: ServiceCategory[]
+  families: ServiceFamily[]
+  services: Service[]
+}
+
+export type CreateServiceInput = ServiceCreateFormInput
+export type UpdateServiceInput = ServiceUpdateFormInput
+export type CreateServiceCategoryInput = ServiceCategoryCreateFormInput
+export type UpdateServiceCategoryInput = ServiceCategoryUpdateFormInput
+export type CreateServiceFamilyInput = ServiceFamilyCreateFormInput
+export type UpdateServiceFamilyInput = ServiceFamilyUpdateFormInput
 
 export function createServicesApi(client: ApiClient) {
   return {
@@ -38,6 +71,59 @@ export function createServicesApi(client: ApiClient) {
         body: input,
         signal: opts.signal,
       })
+    },
+    categories: {
+      list(opts: { includeInactive?: boolean; signal?: AbortSignal } = {}) {
+        const path = opts.includeInactive
+          ? `${endpoints.serviceCategories}?all=1`
+          : endpoints.serviceCategories
+        return client.request<ServiceCategoriesResponse>(path, { signal: opts.signal })
+      },
+      create(input: CreateServiceCategoryInput, opts: { signal?: AbortSignal } = {}) {
+        return client.request<ServiceCategoryResponse>(endpoints.serviceCategories, {
+          method: 'POST',
+          body: input,
+          signal: opts.signal,
+        })
+      },
+      update(id: string, input: UpdateServiceCategoryInput, opts: { signal?: AbortSignal } = {}) {
+        return client.request<ServiceCategoryResponse>(`${endpoints.serviceCategories}/${id}`, {
+          method: 'PATCH',
+          body: input,
+          signal: opts.signal,
+        })
+      },
+    },
+    families: {
+      list(opts: { includeInactive?: boolean; signal?: AbortSignal } = {}) {
+        const path = opts.includeInactive
+          ? `${endpoints.serviceFamilies}?all=1`
+          : endpoints.serviceFamilies
+        return client.request<ServiceFamiliesResponse>(path, { signal: opts.signal })
+      },
+      create(input: CreateServiceFamilyInput, opts: { signal?: AbortSignal } = {}) {
+        return client.request<ServiceFamilyResponse>(endpoints.serviceFamilies, {
+          method: 'POST',
+          body: input,
+          signal: opts.signal,
+        })
+      },
+      update(id: string, input: UpdateServiceFamilyInput, opts: { signal?: AbortSignal } = {}) {
+        return client.request<ServiceFamilyResponse>(`${endpoints.serviceFamilies}/${id}`, {
+          method: 'PATCH',
+          body: input,
+          signal: opts.signal,
+        })
+      },
+    },
+    importStarterTemplates(opts: { signal?: AbortSignal } = {}) {
+      return client.request<ImportStarterServiceTemplatesResponse>(
+        endpoints.importStarterServiceTemplates,
+        {
+          method: 'POST',
+          signal: opts.signal,
+        }
+      )
     },
   }
 }

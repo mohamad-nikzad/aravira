@@ -20,11 +20,42 @@ export interface User {
 export interface Service {
   id: string
   name: string
+  /** Deprecated legacy bucket kept until the grouped catalog UI fully replaces it. */
   category: 'hair' | 'nails' | 'skincare' | 'spa'
+  categoryId?: string | null
+  categoryName?: string | null
+  familyId?: string | null
+  familyName?: string | null
   duration: number // in minutes
   price: number
   color: string
   active: boolean
+  description?: string | null
+  kind?: 'standard' | 'combo'
+}
+
+export interface ServiceCategory {
+  id: string
+  name: string
+  active: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ServiceFamily {
+  id: string
+  categoryId: string
+  categoryName?: string | null
+  name: string
+  active: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface BookedServiceSnapshot {
+  bookedServiceName: string
+  bookedServiceDuration: number
+  bookedServicePrice: number
 }
 
 export interface Client {
@@ -42,6 +73,9 @@ export interface Appointment {
   clientId: string
   staffId: string
   serviceId: string
+  bookedServiceName: string
+  bookedServiceDuration: number
+  bookedServicePrice: number
   date: string // YYYY-MM-DD
   startTime: string // HH:MM
   endTime: string // HH:MM
