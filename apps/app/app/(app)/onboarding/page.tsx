@@ -24,7 +24,13 @@ import {
 import { Badge } from '@repo/ui/badge'
 import { Button } from '@repo/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card'
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field'
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@repo/ui/field'
 import { Input } from '@repo/ui/input'
 import { TimePicker } from '@repo/ui/time-picker'
 import {
@@ -38,13 +44,29 @@ import { Skeleton } from '@repo/ui/skeleton'
 import { Spinner } from '@repo/ui/spinner'
 import { FormRootError } from '@repo/ui/form'
 import { cn } from '@repo/ui/utils'
-import { SERVICE_CATEGORIES, STAFF_COLORS, type Service } from '@repo/salon-core/types'
+import {
+  SERVICE_CATEGORIES,
+  STAFF_COLORS,
+  type Service,
+} from '@repo/salon-core/types'
 import { calendarColorOptions } from '@repo/brand-tokens/calendar-colors'
 import { displayPhone } from '@repo/salon-core/phone'
-import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
-import { businessSettingsSchema, type BusinessSettingsPayload } from '@repo/salon-core/forms/settings'
-import { serviceFormSchema, type ServiceFormPayload } from '@repo/salon-core/forms/service'
-import { staffCreateSchema, type StaffCreateFormInput } from '@repo/salon-core/forms/staff'
+import {
+  parseLocalizedInt,
+  toPersianDigits,
+} from '@repo/salon-core/persian-digits'
+import {
+  businessSettingsSchema,
+  type BusinessSettingsPayload,
+} from '@repo/salon-core/forms/settings'
+import {
+  serviceFormSchema,
+  type ServiceFormPayload,
+} from '@repo/salon-core/forms/service'
+import {
+  staffCreateSchema,
+  type StaffCreateFormInput,
+} from '@repo/salon-core/forms/staff'
 
 type OnboardingStepKey =
   | 'profileConfirmed'
@@ -129,7 +151,10 @@ function formatNumber(value: number) {
 }
 
 function firstIncompleteStep(onboarding: OnboardingStatus): OnboardingStepKey {
-  return onboardingSteps.find((step) => !onboarding.steps[step.key])?.key ?? 'firstAppointmentCreated'
+  return (
+    onboardingSteps.find((step) => !onboarding.steps[step.key])?.key ??
+    'firstAppointmentCreated'
+  )
 }
 
 function OnboardingSkeleton() {
@@ -178,11 +203,17 @@ function StepNavigation({
             <span
               className={cn(
                 'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
-                isDone ? 'bg-green-500/10 text-green-600' : 'bg-muted text-muted-foreground',
+                isDone
+                  ? 'bg-green-500/10 text-green-600'
+                  : 'bg-muted text-muted-foreground',
                 isActive && !isDone && 'bg-primary/10 text-primary',
               )}
             >
-              {isDone ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+              {isDone ? (
+                <Check className="h-5 w-5" />
+              ) : (
+                <Icon className="h-5 w-5" />
+              )}
             </span>
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-2 text-sm font-bold text-foreground">
@@ -193,7 +224,9 @@ function StepNavigation({
                   </span>
                 )}
               </span>
-              <span className="mt-1 block text-xs leading-5">{step.description}</span>
+              <span className="mt-1 block text-xs leading-5">
+                {step.description}
+              </span>
             </span>
           </button>
         )
@@ -219,14 +252,17 @@ function ProfileStep({
           تایید پروفایل سالن
         </CardTitle>
         <p className="text-sm leading-6 text-muted-foreground">
-          این اطلاعات برای نمایش فضای کاری و لینک عمومی آینده سالن استفاده می‌شود.
+          این اطلاعات برای نمایش فضای کاری و لینک عمومی آینده سالن استفاده
+          می‌شود.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-border/60 bg-muted/30 p-4">
             <p className="text-xs text-muted-foreground">نام سالن</p>
-            <p className="mt-1 font-bold">{onboarding.salon?.name ?? 'ثبت نشده'}</p>
+            <p className="mt-1 font-bold">
+              {onboarding.salon?.name ?? 'ثبت نشده'}
+            </p>
           </div>
           <div className="rounded-2xl border border-border/60 bg-muted/30 p-4">
             <p className="text-xs text-muted-foreground">آدرس کوتاه</p>
@@ -249,7 +285,9 @@ function ProfileStep({
           onClick={onConfirm}
         >
           {pending && <Spinner className="ml-2" />}
-          {onboarding.steps.profileConfirmed ? 'پروفایل تایید شده' : 'تایید پروفایل'}
+          {onboarding.steps.profileConfirmed
+            ? 'پروفایل تایید شده'
+            : 'تایید پروفایل'}
         </Button>
       </CardContent>
     </Card>
@@ -298,7 +336,9 @@ function BusinessHoursStep({
       })
       const data = await response.json()
       if (!response.ok) {
-        setError('root', { message: data.error || 'ذخیره ساعات کاری انجام نشد' })
+        setError('root', {
+          message: data.error || 'ذخیره ساعات کاری انجام نشد',
+        })
         return
       }
       onSaved()
@@ -327,39 +367,63 @@ function BusinessHoursStep({
                 <TimePicker
                   id="onboarding-working-start"
                   value={workingStart}
-                  onChange={(value) => setValue('workingStart', value, { shouldValidate: false })}
+                  onChange={(value) =>
+                    setValue('workingStart', value, { shouldValidate: false })
+                  }
                   label="ساعت شروع"
                 />
-                {errors.workingStart && <FieldError>{errors.workingStart.message}</FieldError>}
+                {errors.workingStart && (
+                  <FieldError>{errors.workingStart.message}</FieldError>
+                )}
               </Field>
               <Field>
                 <FieldLabel htmlFor="onboarding-working-end">پایان</FieldLabel>
                 <TimePicker
                   id="onboarding-working-end"
                   value={workingEnd}
-                  onChange={(value) => setValue('workingEnd', value, { shouldValidate: false })}
+                  onChange={(value) =>
+                    setValue('workingEnd', value, { shouldValidate: false })
+                  }
                   label="ساعت پایان"
                 />
-                {errors.workingEnd && <FieldError>{errors.workingEnd.message}</FieldError>}
+                {errors.workingEnd && (
+                  <FieldError>{errors.workingEnd.message}</FieldError>
+                )}
               </Field>
             </div>
             <Field>
-              <FieldLabel htmlFor="onboarding-slot-duration">فاصله اسلات‌ها</FieldLabel>
+              <FieldLabel htmlFor="onboarding-slot-duration">
+                فاصله اسلات‌ها
+              </FieldLabel>
               <Input
                 id="onboarding-slot-duration"
                 type="text"
                 inputMode="numeric"
                 value={toPersianDigits(slotDurationMinutes)}
                 onChange={(event) =>
-                  setValue('slotDurationMinutes', Math.max(5, parseLocalizedInt(event.target.value, slotDurationMinutes)), {
-                    shouldValidate: false,
-                  })
+                  setValue(
+                    'slotDurationMinutes',
+                    Math.max(
+                      5,
+                      parseLocalizedInt(
+                        event.target.value,
+                        slotDurationMinutes,
+                      ),
+                    ),
+                    {
+                      shouldValidate: false,
+                    },
+                  )
                 }
                 dir="ltr"
                 className="h-11 text-left tabular-nums"
               />
-              <FieldDescription>عدد به دقیقه است؛ مقدار رایج برای سالن‌ها ۳۰ دقیقه است.</FieldDescription>
-              {errors.slotDurationMinutes && <FieldError>{errors.slotDurationMinutes.message}</FieldError>}
+              <FieldDescription>
+                عدد به دقیقه است؛ مقدار رایج برای سالن‌ها ۳۰ دقیقه است.
+              </FieldDescription>
+              {errors.slotDurationMinutes && (
+                <FieldError>{errors.slotDurationMinutes.message}</FieldError>
+              )}
             </Field>
             <FormRootError message={errors.root?.message} />
             <Button className="w-full" disabled={isSubmitting}>
@@ -453,7 +517,9 @@ function ServiceStep({
         <form onSubmit={onSubmit} noValidate>
           <FieldGroup className="gap-4">
             <Field>
-              <FieldLabel htmlFor="onboarding-service-name">نام خدمت</FieldLabel>
+              <FieldLabel htmlFor="onboarding-service-name">
+                نام خدمت
+              </FieldLabel>
               <Input
                 id="onboarding-service-name"
                 placeholder="مثلاً کوتاهی مو"
@@ -463,13 +529,20 @@ function ServiceStep({
               {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
             <Field>
-              <FieldLabel>دسته خدمت</FieldLabel>
-              <Select value={category} onValueChange={(value) => setValue('category', value as Service['category'])}>
+              <FieldLabel>بخش خدمت</FieldLabel>
+              <Select
+                value={category}
+                onValueChange={(value) =>
+                  setValue('category', value as Service['category'])
+                }
+              >
                 <SelectTrigger className="h-11 w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(SERVICE_CATEGORIES) as Service['category'][]).map((key) => (
+                  {(
+                    Object.keys(SERVICE_CATEGORIES) as Service['category'][]
+                  ).map((key) => (
                     <SelectItem key={key} value={key}>
                       {SERVICE_CATEGORIES[key].label}
                     </SelectItem>
@@ -479,17 +552,29 @@ function ServiceStep({
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field>
-                <FieldLabel htmlFor="onboarding-service-duration">مدت</FieldLabel>
+                <FieldLabel htmlFor="onboarding-service-duration">
+                  مدت
+                </FieldLabel>
                 <Input
                   id="onboarding-service-duration"
                   type="text"
                   inputMode="numeric"
-                value={toPersianDigits(duration)}
-                  onChange={(event) => setValue('duration', Math.max(5, parseLocalizedInt(event.target.value, duration)))}
+                  value={toPersianDigits(duration)}
+                  onChange={(event) =>
+                    setValue(
+                      'duration',
+                      Math.max(
+                        5,
+                        parseLocalizedInt(event.target.value, duration),
+                      ),
+                    )
+                  }
                   dir="rtl"
                   className="h-11 text-right tabular-nums"
                 />
-                {errors.duration && <FieldError>{errors.duration.message}</FieldError>}
+                {errors.duration && (
+                  <FieldError>{errors.duration.message}</FieldError>
+                )}
               </Field>
               <Field>
                 <FieldLabel htmlFor="onboarding-service-price">قیمت</FieldLabel>
@@ -498,11 +583,18 @@ function ServiceStep({
                   type="text"
                   inputMode="numeric"
                   value={toPersianDigits(price)}
-                  onChange={(event) => setValue('price', Math.max(0, parseLocalizedInt(event.target.value, price)))}
+                  onChange={(event) =>
+                    setValue(
+                      'price',
+                      Math.max(0, parseLocalizedInt(event.target.value, price)),
+                    )
+                  }
                   dir="rtl"
                   className="h-11 text-right tabular-nums"
                 />
-                {errors.price && <FieldError>{errors.price.message}</FieldError>}
+                {errors.price && (
+                  <FieldError>{errors.price.message}</FieldError>
+                )}
               </Field>
             </div>
             <Field>
@@ -516,7 +608,9 @@ function ServiceStep({
                     onClick={() => setValue('color', item.id)}
                     className={cn(
                       'flex h-9 items-center gap-2 rounded-xl border-2 bg-card px-2 text-xs font-medium',
-                      color === item.id ? 'border-foreground' : 'border-transparent',
+                      color === item.id
+                        ? 'border-foreground'
+                        : 'border-transparent',
                     )}
                   >
                     <span
@@ -599,14 +693,17 @@ function StaffStep({
           {isDone && <Badge variant="secondary">حداقل پرسنل ثبت شده</Badge>}
         </div>
         <p className="text-sm leading-6 text-muted-foreground">
-          هر نوبت باید به یک عضو تیم اختصاص داده شود. بعداً می‌توانید خدمات هر پرسنل را دقیق‌تر تنظیم کنید.
+          هر نوبت باید به یک عضو تیم اختصاص داده شود. بعداً می‌توانید خدمات هر
+          پرسنل را دقیق‌تر تنظیم کنید.
         </p>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} noValidate>
           <FieldGroup className="gap-4">
             <Field>
-              <FieldLabel htmlFor="onboarding-staff-name">نام و نام خانوادگی</FieldLabel>
+              <FieldLabel htmlFor="onboarding-staff-name">
+                نام و نام خانوادگی
+              </FieldLabel>
               <Input
                 id="onboarding-staff-name"
                 placeholder="مثلاً نرگس کاظمی"
@@ -616,7 +713,9 @@ function StaffStep({
               {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
             <Field>
-              <FieldLabel htmlFor="onboarding-staff-phone">شماره موبایل</FieldLabel>
+              <FieldLabel htmlFor="onboarding-staff-phone">
+                شماره موبایل
+              </FieldLabel>
               <Input
                 id="onboarding-staff-phone"
                 type="tel"
@@ -630,7 +729,9 @@ function StaffStep({
               {errors.phone && <FieldError>{errors.phone.message}</FieldError>}
             </Field>
             <Field>
-              <FieldLabel htmlFor="onboarding-staff-password">رمز عبور پرسنل</FieldLabel>
+              <FieldLabel htmlFor="onboarding-staff-password">
+                رمز عبور پرسنل
+              </FieldLabel>
               <Input
                 id="onboarding-staff-password"
                 type="password"
@@ -638,11 +739,20 @@ function StaffStep({
                 className="h-11"
                 {...passwordField}
               />
-              <FieldDescription>پرسنل با همین شماره و رمز وارد پنل خود می‌شود.</FieldDescription>
-              {errors.password && <FieldError>{errors.password.message}</FieldError>}
+              <FieldDescription>
+                پرسنل با همین شماره و رمز وارد پنل خود می‌شود.
+              </FieldDescription>
+              {errors.password && (
+                <FieldError>{errors.password.message}</FieldError>
+              )}
             </Field>
             <FormRootError message={errors.root?.message} />
-            <Button className="w-full" disabled={isSubmitting || !name.trim() || !phone.trim() || !password}>
+            <Button
+              className="w-full"
+              disabled={
+                isSubmitting || !name.trim() || !phone.trim() || !password
+              }
+            >
               {isSubmitting && <Spinner className="ml-2" />}
               {isDone ? 'افزودن پرسنل دیگر' : 'ثبت اولین پرسنل'}
             </Button>
@@ -670,17 +780,23 @@ function FirstAppointmentStep({
           آماده ثبت اولین نوبت
         </CardTitle>
         <p className="text-sm leading-6 text-muted-foreground">
-          بعد از ساخت خدمت و پرسنل، وارد تقویم شوید و اولین نوبت سالن را ثبت کنید.
+          بعد از ساخت خدمت و پرسنل، وارد تقویم شوید و اولین نوبت سالن را ثبت
+          کنید.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
         {!requiredDone && (
           <div className="flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-sm leading-6 text-destructive">
             <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0" />
-            تا وقتی حداقل یک خدمت و یک پرسنل ثبت نشده باشد، دسترسی به تقویم و بقیه برنامه بسته می‌ماند.
+            تا وقتی حداقل یک خدمت و یک پرسنل ثبت نشده باشد، دسترسی به تقویم و
+            بقیه برنامه بسته می‌ماند.
           </div>
         )}
-        <Button className="w-full gap-2" disabled={!requiredDone || pending} onClick={onContinue}>
+        <Button
+          className="w-full gap-2"
+          disabled={!requiredDone || pending}
+          onClick={onContinue}
+        >
           {pending && <Spinner className="ml-2" />}
           ورود به تقویم و ثبت نوبت
           <ArrowLeft className="h-4 w-4" />
@@ -693,16 +809,17 @@ function FirstAppointmentStep({
 export default function OnboardingPage() {
   const router = useRouter()
   const [activeStep, setActiveStep] = useState<OnboardingStepKey | null>(null)
-  const [pendingAction, setPendingAction] = useState<OnboardingAction | null>(null)
+  const [pendingAction, setPendingAction] = useState<OnboardingAction | null>(
+    null,
+  )
   const {
     data,
     isLoading,
     mutate: mutateOnboarding,
   } = useSWR<{ onboarding: OnboardingStatus }>('/api/onboarding', fetcher)
-  const { data: settingsData, mutate: mutateSettings } = useSWR<{ settings: BusinessSettings }>(
-    '/api/settings/business',
-    fetcher,
-  )
+  const { data: settingsData, mutate: mutateSettings } = useSWR<{
+    settings: BusinessSettings
+  }>('/api/settings/business', fetcher)
 
   const onboarding = data?.onboarding
 
@@ -715,7 +832,10 @@ export default function OnboardingPage() {
     })
   }, [onboarding])
 
-  async function updateOnboarding(action: OnboardingAction, redirectTo?: string) {
+  async function updateOnboarding(
+    action: OnboardingAction,
+    redirectTo?: string,
+  ) {
     setPendingAction(action)
     try {
       const response = await fetch('/api/onboarding', {
@@ -746,11 +866,15 @@ export default function OnboardingPage() {
     return <OnboardingSkeleton />
   }
 
-  const doneCount = onboardingSteps.filter((step) => onboarding.steps[step.key]).length
-  const requiredDone = onboarding.steps.servicesAdded && onboarding.steps.staffAdded
+  const doneCount = onboardingSteps.filter(
+    (step) => onboarding.steps[step.key],
+  ).length
+  const requiredDone =
+    onboarding.steps.servicesAdded && onboarding.steps.staffAdded
   const appLocked = !requiredDone
   const progressPercent = Math.round((doneCount / onboardingSteps.length) * 100)
-  const setupClosed = (!!onboarding.completedAt || !!onboarding.skippedAt) && requiredDone
+  const setupClosed =
+    (!!onboarding.completedAt || !!onboarding.skippedAt) && requiredDone
 
   return (
     <div className="flex h-full flex-col bg-background" dir="rtl">
@@ -773,9 +897,12 @@ export default function OnboardingPage() {
               <ListChecks className="h-5 w-5 text-primary" />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-lg font-black tracking-tight">راه‌اندازی سالن</h1>
+              <h1 className="truncate text-lg font-black tracking-tight">
+                راه‌اندازی سالن
+              </h1>
               <p className="truncate text-xs text-muted-foreground">
-                {onboarding.salon?.name ?? 'سالن شما'} را برای اولین نوبت آماده کنید
+                {onboarding.salon?.name ?? 'سالن شما'} را برای اولین نوبت آماده
+                کنید
               </p>
             </div>
           </div>
@@ -804,18 +931,26 @@ export default function OnboardingPage() {
                     <BriefcaseBusiness className="h-6 w-6 text-primary" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-muted-foreground">فضای کاری</p>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      فضای کاری
+                    </p>
                     <h2 className="truncate text-2xl font-black tracking-tight">
                       {onboarding.salon?.name ?? 'سالن شما'}
                     </h2>
                     {onboarding.salon?.slug && (
-                      <p className="mt-1 text-left text-xs text-muted-foreground" dir="ltr">
+                      <p
+                        className="mt-1 text-left text-xs text-muted-foreground"
+                        dir="ltr"
+                      >
                         /{onboarding.salon.slug}
                       </p>
                     )}
                   </div>
                 </div>
-                <Badge variant={appLocked ? 'destructive' : 'secondary'} className="w-fit">
+                <Badge
+                  variant={appLocked ? 'destructive' : 'secondary'}
+                  className="w-fit"
+                >
                   {appLocked ? 'دسترسی برنامه بسته است' : 'آماده استفاده'}
                 </Badge>
               </div>
@@ -824,7 +959,8 @@ export default function OnboardingPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">پیشرفت راه‌اندازی</span>
                   <span className="text-muted-foreground">
-                    {formatNumber(doneCount)} از {formatNumber(onboardingSteps.length)}
+                    {formatNumber(doneCount)} از{' '}
+                    {formatNumber(onboardingSteps.length)}
                   </span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
@@ -838,7 +974,8 @@ export default function OnboardingPage() {
               {appLocked ? (
                 <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm leading-6 text-muted-foreground">
                   <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  برای ورود به تقویم، مشتریان، داشبورد و تنظیمات اصلی، ابتدا یک خدمت و یک پرسنل ثبت کنید.
+                  برای ورود به تقویم، مشتریان، داشبورد و تنظیمات اصلی، ابتدا یک
+                  خدمت و یک پرسنل ثبت کنید.
                 </div>
               ) : (
                 <Button
@@ -888,7 +1025,9 @@ export default function OnboardingPage() {
           {activeStep === 'staffAdded' && (
             <StaffStep
               isDone={onboarding.steps.staffAdded}
-              onCreated={() => refreshAfterRequiredStep('firstAppointmentCreated')}
+              onCreated={() =>
+                refreshAfterRequiredStep('firstAppointmentCreated')
+              }
             />
           )}
 

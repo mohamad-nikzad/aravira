@@ -64,7 +64,9 @@ export type ServiceCategoryCreateInput = {
   active?: boolean
 }
 
-export type ServiceCategoryUpdateInput = Partial<Pick<ServiceCategory, 'name' | 'active'>>
+export type ServiceCategoryUpdateInput = Partial<
+  Pick<ServiceCategory, 'name' | 'active'>
+>
 
 export type ServiceFamilyCreateInput = {
   categoryId: string
@@ -83,17 +85,28 @@ export interface ServicesModuleDeps {
 
 export interface ServicesModule {
   list(options?: { includeInactive?: boolean }): Promise<Service[]>
-  getById(id: string, options?: { includeInactive?: boolean }): Promise<Service | null>
+  getById(
+    id: string,
+    options?: { includeInactive?: boolean },
+  ): Promise<Service | null>
   refresh(options?: { includeInactive?: boolean }): Promise<Service[]>
-  hydrateFromServer(services: Service[], options?: { includeInactive?: boolean }): Promise<void>
-  listLastSyncedAt(options?: { includeInactive?: boolean }): Promise<string | null>
+  hydrateFromServer(
+    services: Service[],
+    options?: { includeInactive?: boolean },
+  ): Promise<void>
+  listLastSyncedAt(options?: {
+    includeInactive?: boolean
+  }): Promise<string | null>
   subscribe(fn: (services: Service[]) => void): () => void
   create(input: ServiceCreateInput): Promise<Service>
   update(id: string, input: ServiceUpdateInput): Promise<Service>
   categories: {
     list(options?: { includeInactive?: boolean }): Promise<ServiceCategory[]>
     create(input: ServiceCategoryCreateInput): Promise<ServiceCategory>
-    update(id: string, input: ServiceCategoryUpdateInput): Promise<ServiceCategory>
+    update(
+      id: string,
+      input: ServiceCategoryUpdateInput,
+    ): Promise<ServiceCategory>
   }
   families: {
     list(options?: { includeInactive?: boolean }): Promise<ServiceFamily[]>
@@ -106,7 +119,7 @@ export interface ServicesModule {
 export function createServicesModule(
   transport: HttpTransportPort,
   storage: LocalDataPort,
-  deps: ServicesModuleDeps = {}
+  deps: ServicesModuleDeps = {},
 ): ServicesModule {
   const mutationQueue = deps.mutationQueue ?? null
   const isOnline = deps.isOnline ?? defaultIsOnline
@@ -114,10 +127,16 @@ export function createServicesModule(
   const listeners = createListenerSet<Service[]>()
 
   async function emitSubscribers() {
-    listeners.notify((await storage.get<Service[]>(COLLECTION, listKey(true))) ?? [])
+    listeners.notify(
+      (await storage.get<Service[]>(COLLECTION, listKey(true))) ?? [],
+    )
   }
 
-  async function persistList(includeInactive: boolean, services: Service[], silent?: boolean) {
+  async function persistList(
+    includeInactive: boolean,
+    services: Service[],
+    silent?: boolean,
+  ) {
     const key = listKey(includeInactive)
     await storage.set(COLLECTION, key, services)
     await writeCacheTimestamp(storage, COLLECTION, key)
@@ -138,15 +157,22 @@ export function createServicesModule(
   }
 
   async function fetchList(includeInactive: boolean): Promise<Service[]> {
-    const data = await transport.json<ServicesResponse>('GET', '/api/services', {
-      query: includeInactive ? { all: '1' } : undefined,
-    })
+    const data = await transport.json<ServicesResponse>(
+      'GET',
+      '/api/services',
+      {
+        query: includeInactive ? { all: '1' } : undefined,
+      },
+    )
     const services = data.services ?? []
     await persistList(includeInactive, services)
     return services
   }
 
-  async function mergeHydrateListFromServer(serverServices: Service[], includeInactive: boolean) {
+  async function mergeHydrateListFromServer(
+    serverServices: Service[],
+    includeInactive: boolean,
+  ) {
     const projected = await projectListWithPendingEntities({
       storage,
       mutationQueue,
@@ -175,7 +201,8 @@ export function createServicesModule(
   }
 
   return {
-    list: (_opts?: { includeInactive?: boolean }) => list(Boolean(_opts?.includeInactive)),
+    list: (_opts?: { includeInactive?: boolean }) =>
+      list(Boolean(_opts?.includeInactive)),
 
     async getById(id: string, opts?: { includeInactive?: boolean }) {
       const key = `id:${id}`
@@ -201,7 +228,10 @@ export function createServicesModule(
       }
 
       try {
-        const data = await transport.json<ServiceOneResponse>('GET', `/api/services/${id}`)
+        const data = await transport.json<ServiceOneResponse>(
+          'GET',
+          `/api/services/${id}`,
+        )
         const svc = data.service ?? null
         if (svc) {
           await storage.set(COLLECTION, key, svc)
@@ -217,11 +247,18 @@ export function createServicesModule(
       fetchList(Boolean(_opts?.includeInactive)),
 
     hydrateFromServer(services, opts) {
-      return mergeHydrateListFromServer(services, Boolean(opts?.includeInactive))
+      return mergeHydrateListFromServer(
+        services,
+        Boolean(opts?.includeInactive),
+      )
     },
 
     listLastSyncedAt(opts) {
-      return readCacheTimestamp(storage, COLLECTION, listKey(Boolean(opts?.includeInactive)))
+      return readCacheTimestamp(
+        storage,
+        COLLECTION,
+        listKey(Boolean(opts?.includeInactive)),
+      )
     },
 
     subscribe(fn) {
@@ -230,18 +267,22 @@ export function createServicesModule(
 
     async create(input) {
       if (!mutationQueue || isOnline()) {
-        const data = await transport.json<ServiceOneResponse>('POST', '/api/services', {
-          body: {
-            name: input.name,
-            familyId: input.familyId,
-            duration: input.duration,
-            price: input.price,
-            color: input.color,
-            active: input.active !== false,
-            description: input.description,
-            kind: input.kind ?? 'standard',
+        const data = await transport.json<ServiceOneResponse>(
+          'POST',
+          '/api/services',
+          {
+            body: {
+              name: input.name,
+              familyId: input.familyId,
+              duration: input.duration,
+              price: input.price,
+              color: input.color,
+              active: input.active !== false,
+              description: input.description,
+              kind: input.kind ?? 'standard',
+            },
           },
-        })
+        )
         const service = data.service
         await invalidateLists()
         await storage.delete(COLLECTION, `id:${service.id}`)
@@ -251,7 +292,7 @@ export function createServicesModule(
 
       const id = newOfflineEntityId()
       if (!input.familyId) {
-        throw new DataClientHttpError('خانواده خدمت را انتخاب کنید', 400, null)
+        throw new DataClientHttpError('گروه خدمات را انتخاب کنید', 400, null)
       }
       const service: Service = {
         id,
@@ -273,14 +314,21 @@ export function createServicesModule(
         await txStorage.set(COLLECTION, `id:${id}`, service)
         const allKey = listKey(true)
         const actKey = listKey(false)
-        const curAll = (await txStorage.get<Service[]>(COLLECTION, allKey)) ?? []
-        const curAct = (await txStorage.get<Service[]>(COLLECTION, actKey)) ?? []
-        await txStorage.set(COLLECTION, allKey, [service, ...curAll.filter((s) => s.id !== id)])
+        const curAll =
+          (await txStorage.get<Service[]>(COLLECTION, allKey)) ?? []
+        const curAct =
+          (await txStorage.get<Service[]>(COLLECTION, actKey)) ?? []
+        await txStorage.set(COLLECTION, allKey, [
+          service,
+          ...curAll.filter((s) => s.id !== id),
+        ])
         await writeCacheTimestamp(txStorage, COLLECTION, allKey)
         await txStorage.set(
           COLLECTION,
           actKey,
-          service.active ? [service, ...curAct.filter((s) => s.id !== id)] : curAct.filter((s) => s.id !== id)
+          service.active
+            ? [service, ...curAct.filter((s) => s.id !== id)]
+            : curAct.filter((s) => s.id !== id),
         )
         await writeCacheTimestamp(txStorage, COLLECTION, actKey)
         await txQueue.enqueue({
@@ -310,9 +358,13 @@ export function createServicesModule(
 
     async update(id, input) {
       if (!mutationQueue || isOnline()) {
-        const data = await transport.json<ServiceOneResponse>('PATCH', `/api/services/${id}`, {
-          body: input,
-        })
+        const data = await transport.json<ServiceOneResponse>(
+          'PATCH',
+          `/api/services/${id}`,
+          {
+            body: input,
+          },
+        )
         const service = data.service
         await storage.set(COLLECTION, `id:${id}`, service)
         await invalidateLists()
@@ -332,30 +384,48 @@ export function createServicesModule(
         ...existing,
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.familyId !== undefined ? { familyId: input.familyId } : {}),
-        ...(input.familyName !== undefined ? { familyName: input.familyName } : {}),
-        ...(input.categoryId !== undefined ? { categoryId: input.categoryId } : {}),
-        ...(input.categoryName !== undefined ? { categoryName: input.categoryName } : {}),
+        ...(input.familyName !== undefined
+          ? { familyName: input.familyName }
+          : {}),
+        ...(input.categoryId !== undefined
+          ? { categoryId: input.categoryId }
+          : {}),
+        ...(input.categoryName !== undefined
+          ? { categoryName: input.categoryName }
+          : {}),
         ...(input.duration !== undefined ? { duration: input.duration } : {}),
         ...(input.price !== undefined ? { price: input.price } : {}),
         ...(input.color !== undefined ? { color: input.color } : {}),
         ...(input.active !== undefined ? { active: input.active } : {}),
-        ...(input.description !== undefined ? { description: input.description } : {}),
+        ...(input.description !== undefined
+          ? { description: input.description }
+          : {}),
         ...(input.kind !== undefined ? { kind: input.kind } : {}),
       }
 
       const pend = await mutationQueue.listForLocalOverlay()
-      const createRow = pend.find((p) => p.entityId === id && p.operation === 'create')
+      const createRow = pend.find(
+        (p) => p.entityId === id && p.operation === 'create',
+      )
 
       await mutationQueue.runAtomically(async (txQueue, txStorage) => {
         await txStorage.set(COLLECTION, `id:${id}`, next)
-        const curAll = (await txStorage.get<Service[]>(COLLECTION, listKey(true))) ?? []
-        const curAct = (await txStorage.get<Service[]>(COLLECTION, listKey(false))) ?? []
-        await txStorage.set(COLLECTION, listKey(true), curAll.map((s) => (s.id === id ? next : s)))
+        const curAll =
+          (await txStorage.get<Service[]>(COLLECTION, listKey(true))) ?? []
+        const curAct =
+          (await txStorage.get<Service[]>(COLLECTION, listKey(false))) ?? []
+        await txStorage.set(
+          COLLECTION,
+          listKey(true),
+          curAll.map((s) => (s.id === id ? next : s)),
+        )
         await writeCacheTimestamp(txStorage, COLLECTION, listKey(true))
         await txStorage.set(
           COLLECTION,
           listKey(false),
-          next.active ? [next, ...curAct.filter((s) => s.id !== id)] : curAct.filter((s) => s.id !== id)
+          next.active
+            ? [next, ...curAct.filter((s) => s.id !== id)]
+            : curAct.filter((s) => s.id !== id),
         )
         await writeCacheTimestamp(txStorage, COLLECTION, listKey(false))
 
@@ -398,9 +468,13 @@ export function createServicesModule(
         const hit = await storage.get<ServiceCategory[]>(COLLECTION, key)
         if (hit !== undefined) return hit
         try {
-          const data = await transport.json<ServiceCategoriesResponse>('GET', '/api/service-categories', {
-            query: includeInactive ? { all: '1' } : undefined,
-          })
+          const data = await transport.json<ServiceCategoriesResponse>(
+            'GET',
+            '/api/service-categories',
+            {
+              query: includeInactive ? { all: '1' } : undefined,
+            },
+          )
           const categories = data.categories ?? []
           await storage.set(COLLECTION, key, categories)
           await writeCacheTimestamp(storage, COLLECTION, key)
@@ -411,18 +485,26 @@ export function createServicesModule(
       },
 
       async create(input) {
-        const data = await transport.json<ServiceCategoryOneResponse>('POST', '/api/service-categories', {
-          body: { name: input.name, active: input.active !== false },
-        })
+        const data = await transport.json<ServiceCategoryOneResponse>(
+          'POST',
+          '/api/service-categories',
+          {
+            body: { name: input.name, active: input.active !== false },
+          },
+        )
         await invalidateCatalogLists()
         void emitSubscribers()
         return data.category
       },
 
       async update(id, input) {
-        const data = await transport.json<ServiceCategoryOneResponse>('PATCH', `/api/service-categories/${id}`, {
-          body: input,
-        })
+        const data = await transport.json<ServiceCategoryOneResponse>(
+          'PATCH',
+          `/api/service-categories/${id}`,
+          {
+            body: input,
+          },
+        )
         await invalidateCatalogLists()
         void emitSubscribers()
         return data.category
@@ -436,9 +518,13 @@ export function createServicesModule(
         const hit = await storage.get<ServiceFamily[]>(COLLECTION, key)
         if (hit !== undefined) return hit
         try {
-          const data = await transport.json<ServiceFamiliesResponse>('GET', '/api/service-families', {
-            query: includeInactive ? { all: '1' } : undefined,
-          })
+          const data = await transport.json<ServiceFamiliesResponse>(
+            'GET',
+            '/api/service-families',
+            {
+              query: includeInactive ? { all: '1' } : undefined,
+            },
+          )
           const families = data.families ?? []
           await storage.set(COLLECTION, key, families)
           await writeCacheTimestamp(storage, COLLECTION, key)
@@ -449,22 +535,30 @@ export function createServicesModule(
       },
 
       async create(input) {
-        const data = await transport.json<ServiceFamilyOneResponse>('POST', '/api/service-families', {
-          body: {
-            categoryId: input.categoryId,
-            name: input.name,
-            active: input.active !== false,
+        const data = await transport.json<ServiceFamilyOneResponse>(
+          'POST',
+          '/api/service-families',
+          {
+            body: {
+              categoryId: input.categoryId,
+              name: input.name,
+              active: input.active !== false,
+            },
           },
-        })
+        )
         await invalidateCatalogLists()
         void emitSubscribers()
         return data.family
       },
 
       async update(id, input) {
-        const data = await transport.json<ServiceFamilyOneResponse>('PATCH', `/api/service-families/${id}`, {
-          body: input,
-        })
+        const data = await transport.json<ServiceFamilyOneResponse>(
+          'PATCH',
+          `/api/service-families/${id}`,
+          {
+            body: input,
+          },
+        )
         await invalidateCatalogLists()
         void emitSubscribers()
         return data.family
@@ -474,7 +568,7 @@ export function createServicesModule(
     async importStarterTemplates() {
       const data = await transport.json<ImportStarterServiceTemplatesResponse>(
         'POST',
-        '/api/services/import-starter-templates'
+        '/api/services/import-starter-templates',
       )
       await invalidateCatalogLists()
       void emitSubscribers()

@@ -45,6 +45,12 @@ describe('eligibleServicesForStaff', () => {
     ]
     expect(eligibleServicesForStaff(member, list).map((s) => s.id)).toEqual(['x'])
   })
+
+  it('treats an empty explicit service list as no eligible services', () => {
+    const member = baseUser({ serviceIds: [] })
+    const list = [svc({ id: 'x', name: 'X', category: 'hair' })]
+    expect(eligibleServicesForStaff(member, list)).toEqual([])
+  })
 })
 
 describe('autoPickServiceForStaff', () => {
@@ -109,5 +115,14 @@ describe('eligibleStaffForService', () => {
     ]
     const e = eligibleStaffForService(staff, 's1')
     expect(e.map((u) => u.id)).toEqual(['1'])
+  })
+
+  it('excludes staff with an empty explicit service list', () => {
+    const staff: User[] = [
+      baseUser({ id: '1', serviceIds: [] }),
+      baseUser({ id: '2', serviceIds: ['s1'] }),
+    ]
+    const e = eligibleStaffForService(staff, 's1')
+    expect(e.map((u) => u.id)).toEqual(['2'])
   })
 })

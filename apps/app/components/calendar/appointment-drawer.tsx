@@ -139,6 +139,64 @@ export function AppointmentDrawer({
     () => services.filter((service) => service.active),
     [services],
   )
+  /** Managers are often unrestricted; autofill only among real staff to avoid false ambiguity. */
+  const staffRoleOnly = useMemo(
+    () => staff.filter((m) => m.role === 'staff'),
+    [staff],
+  )
+  const selectedStaff = useMemo(
+    () => staffRoleOnly.find((member) => member.id === staffId),
+    [staffId, staffRoleOnly],
+  )
+  const selectedService = useMemo(
+    () => activeServices.find((service) => service.id === serviceId),
+    [activeServices, serviceId],
+  )
+  const serviceIdsWithStaff = useMemo(() => {
+    const ids = new Set<string>()
+    for (const service of activeServices) {
+      if (eligibleStaffForService(staffRoleOnly, service.id).length > 0) {
+        ids.add(service.id)
+      }
+    }
+    return ids
+  }, [activeServices, staffRoleOnly])
+  const selectedStaffEligibleServiceIds = useMemo(() => {
+    if (!selectedStaff) return new Set<string>()
+    return new Set(
+      eligibleServicesForStaff(selectedStaff, activeServices).map(
+        (service) => service.id,
+      ),
+    )
+  }, [activeServices, selectedStaff])
+  const staffServiceCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const member of staffRoleOnly) {
+      counts.set(
+        member.id,
+        eligibleServicesForStaff(member, activeServices).length,
+      )
+    }
+    return counts
+  }, [activeServices, staffRoleOnly])
+  const serviceDisabledReason = useCallback(
+    (service: Service) => {
+      if (!serviceIdsWithStaff.has(service.id)) return 'بدون پرسنل'
+      if (selectedStaff && !selectedStaffEligibleServiceIds.has(service.id)) {
+        return 'برای این پرسنل نیست'
+      }
+      return null
+    },
+    [selectedStaff, selectedStaffEligibleServiceIds, serviceIdsWithStaff],
+  )
+  const selectedServiceHasStaff =
+    !selectedService || serviceIdsWithStaff.has(selectedService.id)
+  const selectedStaffHasServices =
+    !staffId || (staffServiceCounts.get(staffId) ?? 0) > 0
+  const selectedStaffCanPerformSelectedService =
+    !staffId ||
+    !serviceId ||
+    Boolean(selectedStaff && selectedStaffEligibleServiceIds.has(serviceId))
 
   useEffect(() => {
     setLocalClients(clients)
@@ -277,6 +335,40 @@ export function AppointmentDrawer({
   }
 
   const onSubmit = handleSubmit(async (values) => {
+    const currentService = activeServices.find(
+      (service) => service.id === values.serviceId,
+    )
+    const currentStaff = staffRoleOnly.find(
+      (member) => member.id === values.staffId,
+    )
+    if (currentService && !serviceIdsWithStaff.has(currentService.id)) {
+      setError('serviceId', {
+        message: 'برای این خدمت هنوز پرسنلی تعریف نشده است.',
+      })
+      return
+    }
+    if (
+      currentStaff &&
+      eligibleServicesForStaff(currentStaff, activeServices).length === 0
+    ) {
+      setError('staffId', {
+        message: 'برای این پرسنل هنوز خدمتی تعریف نشده است.',
+      })
+      return
+    }
+    if (
+      currentStaff &&
+      currentService &&
+      !eligibleServicesForStaff(currentStaff, activeServices).some(
+        (service) => service.id === currentService.id,
+      )
+    ) {
+      setError('staffId', {
+        message: 'این پرسنل نمی‌تواند خدمت انتخاب‌شده را انجام دهد.',
+      })
+      return
+    }
+
     const localCheck = validateAppointmentWindow(
       values.startTime,
       values.endTime,
@@ -322,12 +414,6 @@ export function AppointmentDrawer({
       })
     }
   })
-
-  /** Managers are often unrestricted; autofill only among real staff to avoid false ambiguity. */
-  const staffRoleOnly = useMemo(
-    () => staff.filter((m) => m.role === 'staff'),
-    [staff],
-  )
 
   useEffect(() => {
     if (!open || !date || !startTime || !endTime || !isOnline) return
@@ -493,14 +579,28 @@ export function AppointmentDrawer({
                       <SelectContent>
                         {staffRoleOnly.map((member) => {
                           const unavailable = staffSlotOk[member.id] === false
+                          const noServices =
+                            (staffServiceCounts.get(member.id) ?? 0) === 0
+                          const serviceMismatch =
+                            serviceId &&
+                            !eligibleStaffForService([member], serviceId)
+                              .length
+                          const disabled =
+                            unavailable || noServices || Boolean(serviceMismatch)
                           return (
                             <SelectItem
                               key={member.id}
                               value={member.id}
-                              disabled={unavailable}
+                              disabled={disabled}
                             >
                               {member.name}
-                              {unavailable ? ' (خارج از برنامه)' : ''}
+                              {unavailable
+                                ? ' (خارج از برنامه)'
+                                : noServices
+                                  ? ' (خدمتی ندارد)'
+                                  : serviceMismatch
+                                    ? ' (این خدمت را انجام نمی‌دهد)'
+                                    : ''}
                             </SelectItem>
                           )
                         })}
@@ -523,6 +623,7 @@ export function AppointmentDrawer({
                       services={activeServices}
                       value={field.value || undefined}
                       onChange={handleServiceChange}
+                      getDisabledReason={serviceDisabledReason}
                     />
                   )}
                 />
@@ -665,6 +766,9 @@ export function AppointmentDrawer({
               isSubmitting ||
               !serviceId ||
               !staffId ||
+              !selectedServiceHasStaff ||
+              !selectedStaffHasServices ||
+              !selectedStaffCanPerformSelectedService ||
               (useTemporaryClient ? !temporaryClientName.trim() : !clientId)
             }
           >

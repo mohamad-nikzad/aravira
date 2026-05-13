@@ -108,7 +108,11 @@ export function ServiceDrawer({
 
   useEffect(() => {
     if (!open) return
-    reset(service ? serviceToFormValues(service) : emptyValues(defaultFamilyId ?? families[0]?.id))
+    reset(
+      service
+        ? serviceToFormValues(service)
+        : emptyValues(defaultFamilyId ?? families[0]?.id),
+    )
   }, [defaultFamilyId, families, open, reset, service])
 
   const nameValue = useWatch({ control, name: 'name' })
@@ -123,7 +127,7 @@ export function ServiceDrawer({
     try {
       const payload = serviceFormSchema.parse(values)
       if (!payload.familyId) {
-        setError('familyId', { message: 'خانواده خدمت را انتخاب کنید' })
+        setError('familyId', { message: 'گروه خدمات را انتخاب کنید' })
         return
       }
       if (isEditing) {
@@ -154,7 +158,9 @@ export function ServiceDrawer({
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>{isEditing ? 'ویرایش خدمت' : 'خدمت جدید'}</DrawerTitle>
-          <DrawerDescription>نام، مدت و قیمت را مشخص کنید</DrawerDescription>
+          <DrawerDescription>
+            نام، زمان انجام و قیمت را وارد کنید
+          </DrawerDescription>
         </DrawerHeader>
 
         <form
@@ -168,7 +174,7 @@ export function ServiceDrawer({
               {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
             <Field>
-              <FieldLabel>خانواده خدمت</FieldLabel>
+              <FieldLabel>گروه خدمات</FieldLabel>
               <Controller
                 control={control}
                 name="familyId"
@@ -178,16 +184,20 @@ export function ServiceDrawer({
                     onValueChange={field.onChange}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="انتخاب خانواده خدمت" />
+                      <SelectValue placeholder="انتخاب گروه" />
                     </SelectTrigger>
                     <SelectContent>
                       {families.map((family) => {
                         const categoryName =
                           family.categoryName ??
-                          categories.find((category) => category.id === family.categoryId)?.name
+                          categories.find(
+                            (category) => category.id === family.categoryId,
+                          )?.name
                         return (
                           <SelectItem key={family.id} value={family.id}>
-                            {categoryName ? `${categoryName} / ${family.name}` : family.name}
+                            {categoryName
+                              ? `${categoryName} / ${family.name}`
+                              : family.name}
                           </SelectItem>
                         )
                       })}
@@ -267,8 +277,14 @@ export function ServiceDrawer({
             </div>
             <Field>
               <FieldLabel htmlFor="svc-description">توضیح کوتاه</FieldLabel>
-              <Textarea id="svc-description" rows={3} {...register('description')} />
-              {errors.description && <FieldError>{errors.description.message}</FieldError>}
+              <Textarea
+                id="svc-description"
+                rows={3}
+                {...register('description')}
+              />
+              {errors.description && (
+                <FieldError>{errors.description.message}</FieldError>
+              )}
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field>
@@ -279,7 +295,9 @@ export function ServiceDrawer({
                   render={({ field }) => (
                     <Select
                       value={field.value ?? 'standard'}
-                      onValueChange={(v) => field.onChange(v as ServiceFormInput['kind'])}
+                      onValueChange={(v) =>
+                        field.onChange(v as ServiceFormInput['kind'])
+                      }
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue />

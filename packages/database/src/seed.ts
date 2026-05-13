@@ -8,7 +8,11 @@ import { drizzle } from 'drizzle-orm/postgres-js'
 import { and, asc, count, eq, inArray, like } from 'drizzle-orm'
 import postgres from 'postgres'
 import { getDatabaseUrl } from './config'
-import { addDaysYmd, salonCurrentHm, salonTodayYmd } from '@repo/salon-core/salon-local-time'
+import {
+  addDaysYmd,
+  salonCurrentHm,
+  salonTodayYmd,
+} from '@repo/salon-core/salon-local-time'
 import * as schema from './schema'
 import {
   appointments,
@@ -57,7 +61,11 @@ function minutesToHm(total: number): string {
   return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
 }
 
-function appointmentSnapshot(service: { name: string; duration: number; price: number }) {
+function appointmentSnapshot(service: {
+  name: string
+  duration: number
+  price: number
+}) {
   return {
     bookedServiceName: service.name,
     bookedServiceDuration: service.duration,
@@ -71,6 +79,376 @@ const tagColors: Record<string, string> = {
   'رنگ خاص': 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
   'نیاز به پیگیری': 'bg-cyan-100 text-cyan-800 border-cyan-200',
   بدقول: 'bg-orange-100 text-orange-800 border-orange-200',
+}
+
+type SeedServiceRow = {
+  category: string
+  family: string
+  name: string
+  duration: number
+  price: number
+  color: 'rose' | 'violet' | 'mint' | 'gold' | 'coral'
+}
+
+const primarySeedServices: SeedServiceRow[] = [
+  {
+    category: 'مو',
+    family: 'کوتاهی و براشینگ',
+    name: 'کوتاهی مو',
+    duration: 45,
+    price: 450_000,
+    color: 'coral',
+  },
+  {
+    category: 'مو',
+    family: 'کوتاهی و براشینگ',
+    name: 'براشینگ مو',
+    duration: 45,
+    price: 500_000,
+    color: 'gold',
+  },
+  {
+    category: 'مو',
+    family: 'کوتاهی و براشینگ',
+    name: 'شینیون',
+    duration: 90,
+    price: 1_200_000,
+    color: 'rose',
+  },
+  {
+    category: 'مو',
+    family: 'رنگ و لایت',
+    name: 'رنگ ریشه',
+    duration: 90,
+    price: 900_000,
+    color: 'violet',
+  },
+  {
+    category: 'مو',
+    family: 'رنگ و لایت',
+    name: 'رنگ کامل مو',
+    duration: 150,
+    price: 1_800_000,
+    color: 'rose',
+  },
+  {
+    category: 'مو',
+    family: 'رنگ و لایت',
+    name: 'مش و هایلایت',
+    duration: 180,
+    price: 2_400_000,
+    color: 'gold',
+  },
+  {
+    category: 'مو',
+    family: 'رنگ و لایت',
+    name: 'آمبره و بالیاژ',
+    duration: 210,
+    price: 3_200_000,
+    color: 'mint',
+  },
+  {
+    category: 'مو',
+    family: 'احیا و صافی',
+    name: 'کراتین مو',
+    duration: 180,
+    price: 2_800_000,
+    color: 'coral',
+  },
+  {
+    category: 'مو',
+    family: 'احیا و صافی',
+    name: 'پروتئین تراپی مو',
+    duration: 180,
+    price: 2_400_000,
+    color: 'violet',
+  },
+  {
+    category: 'ناخن',
+    family: 'کاشت و ترمیم',
+    name: 'کاشت پودری',
+    duration: 120,
+    price: 1_100_000,
+    color: 'rose',
+  },
+  {
+    category: 'ناخن',
+    family: 'کاشت و ترمیم',
+    name: 'کاشت ژل',
+    duration: 120,
+    price: 1_250_000,
+    color: 'violet',
+  },
+  {
+    category: 'ناخن',
+    family: 'کاشت و ترمیم',
+    name: 'ترمیم کاشت',
+    duration: 90,
+    price: 750_000,
+    color: 'mint',
+  },
+  {
+    category: 'ناخن',
+    family: 'مانیکور و پدیکور',
+    name: 'مانیکور',
+    duration: 45,
+    price: 450_000,
+    color: 'coral',
+  },
+  {
+    category: 'ناخن',
+    family: 'مانیکور و پدیکور',
+    name: 'پدیکور',
+    duration: 60,
+    price: 650_000,
+    color: 'gold',
+  },
+  {
+    category: 'ناخن',
+    family: 'مانیکور و پدیکور',
+    name: 'لاک ژل دست',
+    duration: 45,
+    price: 500_000,
+    color: 'rose',
+  },
+  {
+    category: 'ناخن',
+    family: 'مانیکور و پدیکور',
+    name: 'لاک ژل پا',
+    duration: 45,
+    price: 550_000,
+    color: 'violet',
+  },
+  {
+    category: 'پوست',
+    family: 'فیشیال و مراقبت',
+    name: 'فیشیال صورت',
+    duration: 75,
+    price: 950_000,
+    color: 'mint',
+  },
+  {
+    category: 'پوست',
+    family: 'فیشیال و مراقبت',
+    name: 'پاکسازی پوست',
+    duration: 60,
+    price: 750_000,
+    color: 'coral',
+  },
+  {
+    category: 'پوست',
+    family: 'فیشیال و مراقبت',
+    name: 'آبرسانی پوست',
+    duration: 45,
+    price: 650_000,
+    color: 'gold',
+  },
+  {
+    category: 'مژه',
+    family: 'اکستنشن مژه',
+    name: 'اکستنشن کلاسیک مژه',
+    duration: 120,
+    price: 1_100_000,
+    color: 'rose',
+  },
+  {
+    category: 'مژه',
+    family: 'اکستنشن مژه',
+    name: 'اکستنشن والیوم مژه',
+    duration: 150,
+    price: 1_450_000,
+    color: 'violet',
+  },
+  {
+    category: 'مژه',
+    family: 'اکستنشن مژه',
+    name: 'ترمیم اکستنشن مژه',
+    duration: 75,
+    price: 700_000,
+    color: 'mint',
+  },
+  {
+    category: 'مژه',
+    family: 'لیفت و لمینت',
+    name: 'لیفت و لمینت مژه',
+    duration: 75,
+    price: 850_000,
+    color: 'gold',
+  },
+  {
+    category: 'ابرو',
+    family: 'اصلاح و فرم دهی',
+    name: 'اصلاح صورت و ابرو',
+    duration: 30,
+    price: 250_000,
+    color: 'coral',
+  },
+  {
+    category: 'ابرو',
+    family: 'اصلاح و فرم دهی',
+    name: 'رنگ ابرو',
+    duration: 30,
+    price: 250_000,
+    color: 'gold',
+  },
+  {
+    category: 'ابرو',
+    family: 'اصلاح و فرم دهی',
+    name: 'لیفت ابرو',
+    duration: 60,
+    price: 750_000,
+    color: 'mint',
+  },
+  {
+    category: 'آرایش دائم',
+    family: 'ابرو',
+    name: 'فیبروز ابرو',
+    duration: 150,
+    price: 2_000_000,
+    color: 'rose',
+  },
+  {
+    category: 'آرایش دائم',
+    family: 'ابرو',
+    name: 'میکروبلیدینگ ابرو',
+    duration: 150,
+    price: 2_200_000,
+    color: 'violet',
+  },
+  {
+    category: 'آرایش دائم',
+    family: 'چشم و لب',
+    name: 'بن مژه',
+    duration: 120,
+    price: 1_500_000,
+    color: 'rose',
+  },
+  {
+    category: 'آرایش دائم',
+    family: 'چشم و لب',
+    name: 'خط چشم دائم',
+    duration: 120,
+    price: 1_700_000,
+    color: 'violet',
+  },
+  {
+    category: 'آرایش دائم',
+    family: 'چشم و لب',
+    name: 'شیدینگ لب',
+    duration: 150,
+    price: 1_900_000,
+    color: 'coral',
+  },
+  {
+    category: 'آرایش دائم',
+    family: 'ریموو',
+    name: 'ریموو تاتو',
+    duration: 90,
+    price: 1_200_000,
+    color: 'mint',
+  },
+  {
+    category: 'اپیلاسیون',
+    family: 'وکس و اپیلاسیون',
+    name: 'وکس صورت',
+    duration: 30,
+    price: 250_000,
+    color: 'gold',
+  },
+  {
+    category: 'اپیلاسیون',
+    family: 'وکس و اپیلاسیون',
+    name: 'اپیلاسیون بدن',
+    duration: 90,
+    price: 900_000,
+    color: 'coral',
+  },
+]
+
+const secondSalonSeedServices: SeedServiceRow[] = [
+  {
+    category: 'مو',
+    family: 'کوتاهی و براشینگ',
+    name: 'براشینگ مو',
+    duration: 45,
+    price: 450_000,
+    color: 'gold',
+  },
+  {
+    category: 'ناخن',
+    family: 'مانیکور و پدیکور',
+    name: 'مانیکور',
+    duration: 45,
+    price: 400_000,
+    color: 'coral',
+  },
+]
+
+async function seedServiceCatalog(salonId: string, rows: SeedServiceRow[]) {
+  const categoryByName = new Map<string, { id: string }>()
+  const familyByPath = new Map<string, { id: string }>()
+
+  for (const row of rows) {
+    let category = categoryByName.get(row.category)
+    if (!category) {
+      const [inserted] = await db
+        .insert(serviceCategories)
+        .values({ salonId, name: row.category, active: true })
+        .onConflictDoUpdate({
+          target: [serviceCategories.salonId, serviceCategories.name],
+          set: { active: true, updatedAt: new Date() },
+        })
+        .returning({ id: serviceCategories.id })
+      category = inserted
+      categoryByName.set(row.category, category)
+    }
+
+    const familyPath = `${row.category}/${row.family}`
+    let family = familyByPath.get(familyPath)
+    if (!family) {
+      const [inserted] = await db
+        .insert(serviceFamilies)
+        .values({
+          salonId,
+          categoryId: category.id,
+          name: row.family,
+          active: true,
+        })
+        .onConflictDoUpdate({
+          target: [
+            serviceFamilies.salonId,
+            serviceFamilies.categoryId,
+            serviceFamilies.name,
+          ],
+          set: { active: true, updatedAt: new Date() },
+        })
+        .returning({ id: serviceFamilies.id })
+      family = inserted
+      familyByPath.set(familyPath, family)
+    }
+
+    await db
+      .insert(services)
+      .values({
+        salonId,
+        familyId: family.id,
+        name: row.name,
+        duration: row.duration,
+        price: row.price,
+        color: row.color,
+        active: true,
+      })
+      .onConflictDoUpdate({
+        target: [services.salonId, services.name],
+        set: {
+          familyId: family.id,
+          duration: row.duration,
+          price: row.price,
+          color: row.color,
+          active: true,
+        },
+      })
+  }
 }
 
 /** Phones 09129900*** — removed and reinserted each run for retention / today / tags demos. */
@@ -90,7 +468,9 @@ async function seedRetentionAndFeaturesDemo(salonId: string) {
   if (demoIds.length > 0) {
     await db.delete(appointments).where(inArray(appointments.clientId, demoIds))
     await db.delete(clientTags).where(inArray(clientTags.clientId, demoIds))
-    await db.delete(clientFollowUps).where(inArray(clientFollowUps.clientId, demoIds))
+    await db
+      .delete(clientFollowUps)
+      .where(inArray(clientFollowUps.clientId, demoIds))
     await db.delete(clients).where(inArray(clients.id, demoIds))
   }
 
@@ -103,22 +483,35 @@ async function seedRetentionAndFeaturesDemo(salonId: string) {
   const staffOrdered = await db
     .select()
     .from(users)
-    .where(and(eq(users.salonId, salonId), eq(users.active, true), eq(users.role, 'staff')))
+    .where(
+      and(
+        eq(users.salonId, salonId),
+        eq(users.active, true),
+        eq(users.role, 'staff'),
+      ),
+    )
     .orderBy(asc(users.name))
-  const staffA = staffOrdered[0]
-  const staffB = staffOrdered[1]
+  const staffA =
+    staffOrdered.find((staff) => staff.phone === '09120000001') ??
+    staffOrdered[0]
+  const staffB =
+    staffOrdered.find((staff) => staff.phone === '09120000002') ??
+    staffOrdered[1]
   if (!manager || !staffA || !staffB) {
     console.warn('Skip feature demo seed: need manager + 2 staff.')
     return
   }
 
-  const svcRows = await db.select().from(services).where(eq(services.salonId, salonId))
+  const svcRows = await db
+    .select()
+    .from(services)
+    .where(eq(services.salonId, salonId))
   const hair = svcRows.find((s) => s.name === 'کوتاهی مو')
-  const color = svcRows.find((s) => s.name === 'رنگ مو')
+  const color = svcRows.find((s) => s.name === 'رنگ کامل مو')
   const manicure = svcRows.find((s) => s.name === 'مانیکور')
-  const skincare = svcRows.find((s) => s.name === 'پاکسازی صورت')
-  const massage = svcRows.find((s) => s.name === 'ماساژ سوئدی')
-  if (!hair || !color || !manicure || !skincare || !massage) {
+  const skincare = svcRows.find((s) => s.name === 'پاکسازی پوست')
+  const lash = svcRows.find((s) => s.name === 'اکستنشن کلاسیک مژه')
+  if (!hair || !color || !manicure || !skincare || !lash) {
     console.warn('Skip feature demo seed: services missing.')
     return
   }
@@ -144,14 +537,46 @@ async function seedRetentionAndFeaturesDemo(salonId: string) {
   }
 
   const demoClientSpecs = [
-    { phone: '09129900101', name: 'دمو غیرفعال', notes: '[seed-demo] آخرین مراجعهٔ تکمیل‌شده بیش از ۶۰ روز پیش' },
-    { phone: '09129900102', name: 'دمو بدون نوبت دوم', notes: '[seed-demo] فقط یک مراجعهٔ انجام‌شده' },
-    { phone: '09129900103', name: 'دمو غیبت', notes: '[seed-demo] دو غیبت برای پیگیری' },
-    { phone: '09129900104', name: 'دمو VIP امروز', notes: '[seed-demo] برچسب VIP + نوبت امروز' },
-    { phone: '09129900105', name: 'دمو بار اول', notes: '[seed-demo] اولین نوبت فقط امروز' },
-    { phone: '09129900106', name: 'دمو آمار', notes: '[seed-demo] لغو و انجام‌شده' },
-    { phone: '09129900107', name: 'دمو ارزشمند', notes: '[seed-demo] چند مراجعهٔ پرهزینه' },
-    { phone: '09129900108', name: 'دمو پیگیری ردشده', notes: '[seed-demo] follow-up dismissed' },
+    {
+      phone: '09129900101',
+      name: 'دمو غیرفعال',
+      notes: '[seed-demo] آخرین مراجعهٔ تکمیل‌شده بیش از ۶۰ روز پیش',
+    },
+    {
+      phone: '09129900102',
+      name: 'دمو بدون نوبت دوم',
+      notes: '[seed-demo] فقط یک مراجعهٔ انجام‌شده',
+    },
+    {
+      phone: '09129900103',
+      name: 'دمو غیبت',
+      notes: '[seed-demo] دو غیبت برای پیگیری',
+    },
+    {
+      phone: '09129900104',
+      name: 'دمو VIP امروز',
+      notes: '[seed-demo] برچسب VIP + نوبت امروز',
+    },
+    {
+      phone: '09129900105',
+      name: 'دمو بار اول',
+      notes: '[seed-demo] اولین نوبت فقط امروز',
+    },
+    {
+      phone: '09129900106',
+      name: 'دمو آمار',
+      notes: '[seed-demo] لغو و انجام‌شده',
+    },
+    {
+      phone: '09129900107',
+      name: 'دمو ارزشمند',
+      notes: '[seed-demo] چند مراجعهٔ پرهزینه',
+    },
+    {
+      phone: '09129900108',
+      name: 'دمو پیگیری ردشده',
+      notes: '[seed-demo] follow-up dismissed',
+    },
   ] as const
 
   const insertedClients = await db
@@ -159,7 +584,8 @@ async function seedRetentionAndFeaturesDemo(salonId: string) {
     .values(demoClientSpecs.map((c) => ({ ...c, salonId })))
     .returning()
 
-  const byPhone = (phone: string) => insertedClients.find((c) => c.phone === phone)!
+  const byPhone = (phone: string) =>
+    insertedClients.find((c) => c.phone === phone)!
   const cInactive = byPhone('09129900101')
   const cNewOnly = byPhone('09129900102')
   const cNoShow = byPhone('09129900103')
@@ -171,8 +597,18 @@ async function seedRetentionAndFeaturesDemo(salonId: string) {
 
   await db.insert(clientTags).values([
     { salonId, clientId: cVipToday.id, label: 'VIP', color: tagColors.VIP },
-    { salonId, clientId: cStats.id, label: 'حساسیت', color: tagColors['حساسیت'] },
-    { salonId, clientId: cHighValue.id, label: 'بدقول', color: tagColors['بدقول'] },
+    {
+      salonId,
+      clientId: cStats.id,
+      label: 'حساسیت',
+      color: tagColors['حساسیت'],
+    },
+    {
+      salonId,
+      clientId: cHighValue.id,
+      label: 'بدقول',
+      color: tagColors['بدقول'],
+    },
   ])
 
   const legacyVip = await db
@@ -358,7 +794,7 @@ async function seedRetentionAndFeaturesDemo(salonId: string) {
       salonId,
       clientId: cHighValue.id,
       staffId: staffB.id,
-      serviceId: massage.id,
+      serviceId: lash.id,
       date: addDaysYmd(todayStr, -15),
       startTime: '11:00',
       endTime: '12:00',
@@ -397,7 +833,7 @@ async function seedRetentionAndFeaturesDemo(salonId: string) {
     aptRows.map((row) => ({
       ...row,
       ...appointmentSnapshot(servicesById.get(row.serviceId)!),
-    }))
+    })),
   )
 
   const days = [0, 1, 2, 3, 4, 5, 6] as const
@@ -414,7 +850,11 @@ async function seedRetentionAndFeaturesDemo(salonId: string) {
         active,
       })
       .onConflictDoUpdate({
-        target: [staffSchedules.salonId, staffSchedules.staffId, staffSchedules.dayOfWeek],
+        target: [
+          staffSchedules.salonId,
+          staffSchedules.staffId,
+          staffSchedules.dayOfWeek,
+        ],
         set: {
           active,
           workingStart: '09:00',
@@ -479,9 +919,18 @@ async function main() {
     .returning()
 
   // Repair early local seeds that were inserted without the leading zero.
-  await db.update(users).set({ phone: '09120000000' }).where(eq(users.phone, '9120000000'))
-  await db.update(users).set({ phone: '09120000001' }).where(eq(users.phone, '9120000001'))
-  await db.update(users).set({ phone: '09120000002' }).where(eq(users.phone, '9120000002'))
+  await db
+    .update(users)
+    .set({ phone: '09120000000' })
+    .where(eq(users.phone, '9120000000'))
+  await db
+    .update(users)
+    .set({ phone: '09120000001' })
+    .where(eq(users.phone, '9120000001'))
+  await db
+    .update(users)
+    .set({ phone: '09120000002' })
+    .where(eq(users.phone, '9120000002'))
 
   await db
     .insert(businessSettings)
@@ -584,119 +1033,7 @@ async function main() {
     ])
     .onConflictDoNothing()
 
-  const [{ value: serviceCount }] = await db
-    .select({ value: count() })
-    .from(services)
-    .where(eq(services.salonId, primarySalon.id))
-  if (serviceCount === 0) {
-    const [hairCategory] = await db
-      .insert(serviceCategories)
-      .values({ salonId: primarySalon.id, name: 'مو', active: true })
-      .onConflictDoUpdate({
-        target: [serviceCategories.salonId, serviceCategories.name],
-        set: { active: true, updatedAt: new Date() },
-      })
-      .returning()
-    const [nailCategory] = await db
-      .insert(serviceCategories)
-      .values({ salonId: primarySalon.id, name: 'ناخن', active: true })
-      .onConflictDoUpdate({
-        target: [serviceCategories.salonId, serviceCategories.name],
-        set: { active: true, updatedAt: new Date() },
-      })
-      .returning()
-    const [skinCategory] = await db
-      .insert(serviceCategories)
-      .values({ salonId: primarySalon.id, name: 'پوست', active: true })
-      .onConflictDoUpdate({
-        target: [serviceCategories.salonId, serviceCategories.name],
-        set: { active: true, updatedAt: new Date() },
-      })
-      .returning()
-    const [spaCategory] = await db
-      .insert(serviceCategories)
-      .values({ salonId: primarySalon.id, name: 'اسپا', active: true })
-      .onConflictDoUpdate({
-        target: [serviceCategories.salonId, serviceCategories.name],
-        set: { active: true, updatedAt: new Date() },
-      })
-      .returning()
-    const [hairFamily] = await db
-      .insert(serviceFamilies)
-      .values({ salonId: primarySalon.id, categoryId: hairCategory.id, name: 'خدمات مو', active: true })
-      .onConflictDoUpdate({
-        target: [serviceFamilies.salonId, serviceFamilies.categoryId, serviceFamilies.name],
-        set: { active: true, updatedAt: new Date() },
-      })
-      .returning()
-    const [nailFamily] = await db
-      .insert(serviceFamilies)
-      .values({ salonId: primarySalon.id, categoryId: nailCategory.id, name: 'خدمات ناخن', active: true })
-      .onConflictDoUpdate({
-        target: [serviceFamilies.salonId, serviceFamilies.categoryId, serviceFamilies.name],
-        set: { active: true, updatedAt: new Date() },
-      })
-      .returning()
-    const [skinFamily] = await db
-      .insert(serviceFamilies)
-      .values({ salonId: primarySalon.id, categoryId: skinCategory.id, name: 'خدمات پوست', active: true })
-      .onConflictDoUpdate({
-        target: [serviceFamilies.salonId, serviceFamilies.categoryId, serviceFamilies.name],
-        set: { active: true, updatedAt: new Date() },
-      })
-      .returning()
-    const [spaFamily] = await db
-      .insert(serviceFamilies)
-      .values({ salonId: primarySalon.id, categoryId: spaCategory.id, name: 'ماساژ', active: true })
-      .onConflictDoUpdate({
-        target: [serviceFamilies.salonId, serviceFamilies.categoryId, serviceFamilies.name],
-        set: { active: true, updatedAt: new Date() },
-      })
-      .returning()
-    const serviceRows = [
-      {
-        familyId: hairFamily.id,
-        name: 'کوتاهی مو',
-        duration: 45,
-        price: 500_000,
-        color: 'bg-staff-1',
-        active: true,
-      },
-      {
-        familyId: hairFamily.id,
-        name: 'رنگ مو',
-        duration: 120,
-        price: 1_500_000,
-        color: 'bg-staff-1',
-        active: true,
-      },
-      {
-        familyId: nailFamily.id,
-        name: 'مانیکور',
-        duration: 30,
-        price: 300_000,
-        color: 'bg-staff-2',
-        active: true,
-      },
-      {
-        familyId: skinFamily.id,
-        name: 'پاکسازی صورت',
-        duration: 60,
-        price: 800_000,
-        color: 'bg-staff-3',
-        active: true,
-      },
-      {
-        familyId: spaFamily.id,
-        name: 'ماساژ سوئدی',
-        duration: 60,
-        price: 900_000,
-        color: 'bg-staff-4',
-        active: true,
-      },
-    ]
-    await db.insert(services).values(serviceRows.map((row) => ({ ...row, salonId: primarySalon.id })))
-  }
+  await seedServiceCatalog(primarySalon.id, primarySeedServices)
 
   const [{ value: userCount }] = await db
     .select({ value: count() })
@@ -710,32 +1047,36 @@ async function main() {
         phone: '09120000000',
         passwordHash,
         role: 'manager',
-        color: 'bg-staff-1',
+        color: 'gold',
+        active: true,
+      },
+      {
+        salonId: primarySalon.id,
+        name: 'نیلوفر کاظمی',
+        phone: '09120000001',
+        passwordHash,
+        role: 'staff',
+        color: 'coral',
         active: true,
       },
       {
         salonId: primarySalon.id,
         name: 'مریم احمدی',
-        phone: '09120000001',
-        passwordHash,
-        role: 'staff',
-        color: 'bg-staff-2',
-        active: true,
-      },
-      {
-        salonId: primarySalon.id,
-        name: 'فاطمه رضایی',
         phone: '09120000002',
         passwordHash,
         role: 'staff',
-        color: 'bg-staff-3',
+        color: 'rose',
         active: true,
       },
     ])
   }
 
   /** Extra demo staff (idempotent) — only one service for autofill smoke tests. */
-  const [existingSara] = await db.select().from(users).where(eq(users.phone, '09120000003')).limit(1)
+  const [existingSara] = await db
+    .select()
+    .from(users)
+    .where(eq(users.phone, '09120000003'))
+    .limit(1)
   if (!existingSara) {
     await db.insert(users).values({
       salonId: primarySalon.id,
@@ -743,7 +1084,24 @@ async function main() {
       phone: '09120000003',
       passwordHash,
       role: 'staff',
-      color: 'bg-staff-4',
+      color: 'violet',
+      active: true,
+    })
+  }
+
+  const [existingElham] = await db
+    .select()
+    .from(users)
+    .where(eq(users.phone, '09120000004'))
+    .limit(1)
+  if (!existingElham) {
+    await db.insert(users).values({
+      salonId: primarySalon.id,
+      name: 'الهام رضایی',
+      phone: '09120000004',
+      passwordHash,
+      role: 'staff',
+      color: 'mint',
       active: true,
     })
   }
@@ -751,7 +1109,11 @@ async function main() {
   const clientRows = [
     { name: 'زهرا کریمی', phone: '09121234567', notes: 'مشتری ثابت' },
     { name: 'نازنین حسینی', phone: '09122345678', notes: null },
-    { name: 'مهسا علیزاده', phone: '09123456789', notes: 'ترجیح می‌دهد عصر مراجعه کند' },
+    {
+      name: 'مهسا علیزاده',
+      phone: '09123456789',
+      notes: 'ترجیح می‌دهد عصر مراجعه کند',
+    },
     { name: 'سمیرا باقری', phone: '09124567890', notes: null },
     { name: 'الهام نوری', phone: '09125678901', notes: 'حساسیت به رنگ' },
   ]
@@ -761,25 +1123,54 @@ async function main() {
     .from(clients)
     .where(eq(clients.salonId, primarySalon.id))
   if (clientCount === 0) {
-    await db.insert(clients).values(clientRows.map((row) => ({ ...row, salonId: primarySalon.id })))
+    await db
+      .insert(clients)
+      .values(clientRows.map((row) => ({ ...row, salonId: primarySalon.id })))
   }
 
-  const allUsers = await db.select().from(users).where(eq(users.salonId, primarySalon.id))
-  const allServices = await db.select().from(services).where(eq(services.salonId, primarySalon.id))
-  const allClients = await db.select().from(clients).where(eq(clients.salonId, primarySalon.id))
+  const allUsers = await db
+    .select()
+    .from(users)
+    .where(eq(users.salonId, primarySalon.id))
+  const allServices = await db
+    .select()
+    .from(services)
+    .where(eq(services.salonId, primarySalon.id))
+  const allClients = await db
+    .select()
+    .from(clients)
+    .where(eq(clients.salonId, primarySalon.id))
 
   const manager = allUsers.find((u) => u.role === 'manager')
   const staffUsersOrdered = await db
     .select()
     .from(users)
-    .where(and(eq(users.salonId, primarySalon.id), eq(users.active, true), eq(users.role, 'staff')))
+    .where(
+      and(
+        eq(users.salonId, primarySalon.id),
+        eq(users.active, true),
+        eq(users.role, 'staff'),
+      ),
+    )
     .orderBy(asc(users.name))
-  const staffA = staffUsersOrdered[0]
-  const staffB = staffUsersOrdered[1]
+  const staffHair = staffUsersOrdered.find(
+    (staff) => staff.phone === '09120000001',
+  )
+  const staffNails = staffUsersOrdered.find(
+    (staff) => staff.phone === '09120000002',
+  )
+  const staffSkin = staffUsersOrdered.find(
+    (staff) => staff.phone === '09120000003',
+  )
+  const staffLashBrow = staffUsersOrdered.find(
+    (staff) => staff.phone === '09120000004',
+  )
+  const staffA = staffHair
+  const staffB = staffNails
 
   /** Full-week hours so calendar bookings on any weekday match E2E + demo (UTC weekday from YYYY-MM-DD). */
   const primaryWeek = [0, 1, 2, 3, 4, 5, 6] as const
-  for (const member of [staffA, staffB].filter(Boolean) as NonNullable<typeof staffA>[]) {
+  for (const member of staffUsersOrdered) {
     for (const dayOfWeek of primaryWeek) {
       await db
         .insert(staffSchedules)
@@ -792,7 +1183,11 @@ async function main() {
           active: true,
         })
         .onConflictDoUpdate({
-          target: [staffSchedules.salonId, staffSchedules.staffId, staffSchedules.dayOfWeek],
+          target: [
+            staffSchedules.salonId,
+            staffSchedules.staffId,
+            staffSchedules.dayOfWeek,
+          ],
           set: {
             active: true,
             workingStart: '09:00',
@@ -803,46 +1198,114 @@ async function main() {
     }
   }
 
+  const serviceByName = new Map(
+    allServices.map((service) => [service.name, service]),
+  )
+  const servicesFor = (names: string[]) =>
+    names
+      .map((name) => serviceByName.get(name))
+      .filter(
+        (
+          service,
+        ): service is NonNullable<ReturnType<typeof serviceByName.get>> =>
+          Boolean(service),
+      )
+
+  const specialistStaff = [
+    staffHair,
+    staffNails,
+    staffSkin,
+    staffLashBrow,
+  ].filter((staff): staff is NonNullable<typeof staffHair> => Boolean(staff))
+  if (specialistStaff.length > 0) {
+    await db.delete(staffServices).where(
+      and(
+        eq(staffServices.salonId, primarySalon.id),
+        inArray(
+          staffServices.staffUserId,
+          specialistStaff.map((staff) => staff.id),
+        ),
+      ),
+    )
+  }
+
+  const specialistAssignments = [
+    {
+      staff: staffHair,
+      services: servicesFor([
+        'کوتاهی مو',
+        'براشینگ مو',
+        'شینیون',
+        'رنگ ریشه',
+        'رنگ کامل مو',
+        'مش و هایلایت',
+        'آمبره و بالیاژ',
+        'کراتین مو',
+        'پروتئین تراپی مو',
+      ]),
+    },
+    {
+      staff: staffNails,
+      services: servicesFor([
+        'کاشت پودری',
+        'کاشت ژل',
+        'ترمیم کاشت',
+        'مانیکور',
+        'پدیکور',
+        'لاک ژل دست',
+        'لاک ژل پا',
+      ]),
+    },
+    {
+      staff: staffSkin,
+      services: servicesFor([
+        'فیشیال صورت',
+        'پاکسازی پوست',
+        'آبرسانی پوست',
+        'وکس صورت',
+        'اپیلاسیون بدن',
+      ]),
+    },
+    {
+      staff: staffLashBrow,
+      services: servicesFor([
+        'اکستنشن کلاسیک مژه',
+        'اکستنشن والیوم مژه',
+        'ترمیم اکستنشن مژه',
+        'لیفت و لمینت مژه',
+        'اصلاح صورت و ابرو',
+        'رنگ ابرو',
+        'لیفت ابرو',
+        'فیبروز ابرو',
+        'میکروبلیدینگ ابرو',
+        'بن مژه',
+        'خط چشم دائم',
+        'شیدینگ لب',
+        'ریموو تاتو',
+      ]),
+    },
+  ]
+  const staffServiceRows = specialistAssignments.flatMap(
+    ({ staff, services: assignedServices }) =>
+      staff
+        ? assignedServices.map((service) => ({
+            salonId: primarySalon.id,
+            staffUserId: staff.id,
+            serviceId: service.id,
+          }))
+        : [],
+  )
+  if (staffServiceRows.length > 0) {
+    await db
+      .insert(staffServices)
+      .values(staffServiceRows)
+      .onConflictDoNothing()
+  }
+
   const hairService = allServices.find((s) => s.name === 'کوتاهی مو')
-  const colorService = allServices.find((s) => s.name === 'رنگ مو')
+  const colorService = allServices.find((s) => s.name === 'رنگ کامل مو')
   const manicureService = allServices.find((s) => s.name === 'مانیکور')
-  const skincareService = allServices.find((s) => s.name === 'پاکسازی صورت')
-  const massageService = allServices.find((s) => s.name === 'ماساژ سوئدی')
-
-  if (
-    staffA &&
-    staffB &&
-    hairService &&
-    colorService &&
-    manicureService &&
-    massageService &&
-    skincareService
-  ) {
-    await db
-      .insert(staffServices)
-      .values([
-        { salonId: primarySalon.id, staffUserId: staffA.id, serviceId: hairService.id },
-        { salonId: primarySalon.id, staffUserId: staffA.id, serviceId: colorService.id },
-        { salonId: primarySalon.id, staffUserId: staffA.id, serviceId: massageService.id },
-        { salonId: primarySalon.id, staffUserId: staffB.id, serviceId: hairService.id },
-        { salonId: primarySalon.id, staffUserId: staffB.id, serviceId: colorService.id },
-        { salonId: primarySalon.id, staffUserId: staffB.id, serviceId: manicureService.id },
-        { salonId: primarySalon.id, staffUserId: staffB.id, serviceId: skincareService.id },
-      ])
-      .onConflictDoNothing()
-  }
-
-  const [staffOneService] = await db
-    .select()
-    .from(users)
-    .where(and(eq(users.salonId, primarySalon.id), eq(users.active, true), eq(users.phone, '09120000003')))
-    .limit(1)
-  if (staffOneService && massageService) {
-    await db
-      .insert(staffServices)
-      .values([{ salonId: primarySalon.id, staffUserId: staffOneService.id, serviceId: massageService.id }])
-      .onConflictDoNothing()
-  }
+  const skincareService = allServices.find((s) => s.name === 'پاکسازی پوست')
 
   const today = new Date()
   const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
@@ -856,6 +1319,7 @@ async function main() {
     manager &&
     staffA &&
     staffB &&
+    staffSkin &&
     hairService &&
     colorService &&
     manicureService &&
@@ -905,7 +1369,7 @@ async function main() {
       {
         salonId: primarySalon.id,
         clientId: allClients[3].id,
-        staffId: staffB.id,
+        staffId: staffSkin.id,
         serviceId: skincareService.id,
         ...appointmentSnapshot(skincareService),
         date: formatDate(tomorrow),
@@ -929,47 +1393,12 @@ async function main() {
       phone: '09130000000',
       passwordHash,
       role: 'manager',
-      color: 'bg-staff-1',
+      color: 'gold',
       active: true,
     })
   }
 
-  const [{ value: secondServiceCount }] = await db
-    .select({ value: count() })
-    .from(services)
-    .where(eq(services.salonId, secondSalon.id))
-  if (secondServiceCount === 0) {
-    const [secondHairCategory] = await db
-      .insert(serviceCategories)
-      .values({ salonId: secondSalon.id, name: 'مو', active: true })
-      .onConflictDoUpdate({
-        target: [serviceCategories.salonId, serviceCategories.name],
-        set: { active: true, updatedAt: new Date() },
-      })
-      .returning()
-    const [secondHairFamily] = await db
-      .insert(serviceFamilies)
-      .values({
-        salonId: secondSalon.id,
-        categoryId: secondHairCategory.id,
-        name: 'خدمات مو',
-        active: true,
-      })
-      .onConflictDoUpdate({
-        target: [serviceFamilies.salonId, serviceFamilies.categoryId, serviceFamilies.name],
-        set: { active: true, updatedAt: new Date() },
-      })
-      .returning()
-    await db.insert(services).values({
-      salonId: secondSalon.id,
-      familyId: secondHairFamily.id,
-      name: 'براشینگ',
-      duration: 45,
-      price: 450_000,
-      color: 'bg-staff-2',
-      active: true,
-    })
-  }
+  await seedServiceCatalog(secondSalon.id, secondSalonSeedServices)
 
   const [{ value: secondClientCount }] = await db
     .select({ value: count() })
@@ -989,8 +1418,12 @@ async function main() {
   console.log('Seed complete.')
   console.log('Manager: 09120000000 / admin123')
   console.log('Second salon manager: 09130000000 / admin123')
-  console.log('Staff: 09120000001, 09120000002, 09120000003 / admin123')
-  console.log('سارا محمودی (09120000003) فقط ماساژ سوئدی — برای تست پیش‌پر یک خدمت.')
+  console.log(
+    'Staff: 09120000001, 09120000002, 09120000003, 09120000004 / admin123',
+  )
+  console.log(
+    'Staff specialties: hair, nails, skin/epilation, lashes/brows/permanent makeup.',
+  )
   await client.end()
 }
 

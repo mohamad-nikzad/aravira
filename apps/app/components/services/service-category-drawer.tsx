@@ -58,7 +58,11 @@ export function ServiceCategoryDrawer({
 
   useEffect(() => {
     if (!open) return
-    reset(category ? { name: category.name, active: category.active } : emptyValues())
+    reset(
+      category
+        ? { name: category.name, active: category.active }
+        : emptyValues(),
+    )
   }, [category, open, reset])
 
   const nameValue = useWatch({ control, name: 'name' })
@@ -91,13 +95,15 @@ export function ServiceCategoryDrawer({
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
         <DrawerHeader>
-          <DrawerTitle>{isEditing ? 'ویرایش دسته' : 'دسته جدید'}</DrawerTitle>
-          <DrawerDescription>نام سطح اصلی کاتالوگ خدمات را وارد کنید</DrawerDescription>
+          <DrawerTitle>{isEditing ? 'ویرایش بخش' : 'بخش جدید'}</DrawerTitle>
+          <DrawerDescription>
+            یک نام ساده مثل مو، ناخن یا پوست وارد کنید
+          </DrawerDescription>
         </DrawerHeader>
         <form onSubmit={onSubmit} className="px-4">
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="service-category-name">نام دسته</FieldLabel>
+              <FieldLabel htmlFor="service-category-name">نام بخش</FieldLabel>
               <Input id="service-category-name" {...register('name')} />
               {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>

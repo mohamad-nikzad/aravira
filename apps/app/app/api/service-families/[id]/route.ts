@@ -6,7 +6,7 @@ import { validationErrorResponse } from '../../validation'
 
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const tenant = await getTenantManagerRequest(request)
@@ -19,18 +19,27 @@ export async function PATCH(
 
     const family = await updateServiceFamily(id, user.salonId, parsed.data)
     if (!family) {
-      return NextResponse.json({ error: 'خانواده خدمت یافت نشد' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'گروه خدمات یافت نشد' },
+        { status: 404 },
+      )
     }
     return NextResponse.json({ family })
   } catch (error: unknown) {
     console.error('Update service family error:', error)
     const msg = error instanceof Error ? error.message : ''
     if (msg.includes('unique') || msg.includes('duplicate')) {
-      return NextResponse.json({ error: 'این نام خانواده برای این دسته قبلاً ثبت شده است' }, { status: 409 })
+      return NextResponse.json(
+        { error: 'این نام گروه برای این بخش قبلاً ثبت شده است' },
+        { status: 409 },
+      )
     }
     if (msg.includes('not found')) {
-      return NextResponse.json({ error: 'دسته خدمت یافت نشد' }, { status: 400 })
+      return NextResponse.json({ error: 'بخش خدمات یافت نشد' }, { status: 400 })
     }
-    return NextResponse.json({ error: 'خطای سرور. لطفاً دوباره تلاش کنید.' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'خطای سرور. لطفاً دوباره تلاش کنید.' },
+      { status: 500 },
+    )
   }
 }

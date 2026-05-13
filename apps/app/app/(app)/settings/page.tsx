@@ -33,10 +33,20 @@ import { SettingsSkeleton } from '@/components/skeletons/settings-skeleton'
 import { StaffPushSettings } from '@/components/pwa/staff-push-settings'
 import { ServiceCatalogManager } from '@/components/services/service-catalog-manager'
 import { Badge } from '@repo/ui/badge'
-import type { Service, ServiceCategory, ServiceFamily } from '@repo/salon-core/types'
+import type {
+  Service,
+  ServiceCategory,
+  ServiceFamily,
+} from '@repo/salon-core/types'
 import { displayPhone } from '@repo/salon-core/phone'
-import { parseLocalizedInt, toPersianDigits } from '@repo/salon-core/persian-digits'
-import { businessSettingsSchema, type BusinessSettingsPayload } from '@repo/salon-core/forms/settings'
+import {
+  parseLocalizedInt,
+  toPersianDigits,
+} from '@repo/salon-core/persian-digits'
+import {
+  businessSettingsSchema,
+  type BusinessSettingsPayload,
+} from '@repo/salon-core/forms/settings'
 
 export default function SettingsPage() {
   const { user, logout } = useAuth()
@@ -47,7 +57,9 @@ export default function SettingsPage() {
   const [mounted, setMounted] = useState(false)
 
   const [services, setServices] = useState<Service[]>([])
-  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([])
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>(
+    [],
+  )
   const [serviceFamilies, setServiceFamilies] = useState<ServiceFamily[]>([])
   const [managerDataReady, setManagerDataReady] = useState(false)
   const {
@@ -151,7 +163,8 @@ export default function SettingsPage() {
     }
   })
 
-  const settingsDataLoading = user?.role === 'manager' && (!dc || !managerDataReady)
+  const settingsDataLoading =
+    user?.role === 'manager' && (!dc || !managerDataReady)
   if (settingsDataLoading) {
     return <SettingsSkeleton />
   }
@@ -165,7 +178,9 @@ export default function SettingsPage() {
     <div className="flex h-full flex-col bg-background">
       <header className="flex items-center gap-4 bg-card px-4 py-3 border-b border-border/50">
         <div>
-          <h1 className="text-lg font-bold">{isManager ? 'بیشتر' : 'تنظیمات'}</h1>
+          <h1 className="text-lg font-bold">
+            {isManager ? 'بیشتر' : 'تنظیمات'}
+          </h1>
           {isManager && (
             <p className="mt-0.5 text-xs text-muted-foreground">
               مدیریت، گزارش‌ها و تنظیمات سالن
@@ -199,10 +214,16 @@ export default function SettingsPage() {
         {isManager && (
           <Card className="border-border/50">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">مدیریت</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                مدیریت
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-between touch-manipulation" asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-between touch-manipulation"
+                asChild
+              >
                 <Link href="/dashboard">
                   <span className="flex items-center gap-2">
                     <LayoutDashboard className="h-4 w-4" />
@@ -211,7 +232,11 @@ export default function SettingsPage() {
                   <ChevronLeft className="h-4 w-4 text-muted-foreground" />
                 </Link>
               </Button>
-              <Button variant="outline" className="w-full justify-between touch-manipulation" asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-between touch-manipulation"
+                asChild
+              >
                 <Link href="/retention">
                   <span className="flex items-center gap-2">
                     <UserRoundSearch className="h-4 w-4" />
@@ -220,7 +245,11 @@ export default function SettingsPage() {
                   <ChevronLeft className="h-4 w-4 text-muted-foreground" />
                 </Link>
               </Button>
-              <Button variant="outline" className="w-full justify-between touch-manipulation" asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-between touch-manipulation"
+                asChild
+              >
                 <Link href="/staff">
                   <span className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
@@ -229,7 +258,11 @@ export default function SettingsPage() {
                   <ChevronLeft className="h-4 w-4 text-muted-foreground" />
                 </Link>
               </Button>
-              <Button variant="outline" className="w-full justify-between touch-manipulation" asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-between touch-manipulation"
+                asChild
+              >
                 <Link href="/onboarding">
                   <span className="flex items-center gap-2">
                     <ListChecks className="h-4 w-4" />
@@ -256,22 +289,30 @@ export default function SettingsPage() {
                     <FieldLabel>شروع</FieldLabel>
                     <TimePicker
                       value={workingStart}
-                      onChange={(value) => setBusinessHoursValue('workingStart', value)}
+                      onChange={(value) =>
+                        setBusinessHoursValue('workingStart', value)
+                      }
                       label="ساعت شروع"
                     />
                     {businessHoursErrors.workingStart && (
-                      <FieldError>{businessHoursErrors.workingStart.message}</FieldError>
+                      <FieldError>
+                        {businessHoursErrors.workingStart.message}
+                      </FieldError>
                     )}
                   </Field>
                   <Field>
                     <FieldLabel>پایان</FieldLabel>
                     <TimePicker
                       value={workingEnd}
-                      onChange={(value) => setBusinessHoursValue('workingEnd', value)}
+                      onChange={(value) =>
+                        setBusinessHoursValue('workingEnd', value)
+                      }
                       label="ساعت پایان"
                     />
                     {businessHoursErrors.workingEnd && (
-                      <FieldError>{businessHoursErrors.workingEnd.message}</FieldError>
+                      <FieldError>
+                        {businessHoursErrors.workingEnd.message}
+                      </FieldError>
                     )}
                   </Field>
                 </div>
@@ -291,7 +332,9 @@ export default function SettingsPage() {
                     className="h-10 text-right tabular-nums"
                   />
                   {businessHoursErrors.slotDurationMinutes && (
-                    <FieldError>{businessHoursErrors.slotDurationMinutes.message}</FieldError>
+                    <FieldError>
+                      {businessHoursErrors.slotDurationMinutes.message}
+                    </FieldError>
                   )}
                 </Field>
               </FieldGroup>
@@ -313,6 +356,7 @@ export default function SettingsPage() {
             services={services}
             categories={serviceCategories}
             families={serviceFamilies}
+            starterImportKey={`saloora:starter-services-used:${user.salonId}`}
             onChanged={() => {
               void refreshCatalog()
               bumpOfflineData()
@@ -322,7 +366,9 @@ export default function SettingsPage() {
 
         <Card className="border-border/50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">ظاهر</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              ظاهر
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
@@ -334,7 +380,11 @@ export default function SettingsPage() {
                 )}
                 <span className="text-sm">حالت تاریک</span>
               </div>
-              <Switch checked={darkMode} disabled={!mounted} onCheckedChange={toggleDarkMode} />
+              <Switch
+                checked={darkMode}
+                disabled={!mounted}
+                onCheckedChange={toggleDarkMode}
+              />
             </div>
           </CardContent>
         </Card>
@@ -362,7 +412,6 @@ export default function SettingsPage() {
           <p className="text-[10px] text-muted-foreground/40">نسخه ۱.۰.۰</p>
         </div>
       </div>
-
     </div>
   )
 }

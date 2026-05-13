@@ -3,25 +3,27 @@ import { PERSIAN_STARTER_SERVICE_TEMPLATES } from './starter-service-templates'
 
 describe('PERSIAN_STARTER_SERVICE_TEMPLATES', () => {
   it('includes the initial editable Persian catalog areas', () => {
-    expect(PERSIAN_STARTER_SERVICE_TEMPLATES.map((template) => template.category)).toEqual([
-      'ناخن',
-      'مو',
-      'پوست',
-    ])
+    expect(
+      PERSIAN_STARTER_SERVICE_TEMPLATES.map((template) => template.category),
+    ).toEqual(['ناخن', 'مو', 'پوست', 'مژه', 'ابرو', 'آرایش دائم', 'اپیلاسیون'])
   })
 
-  it('contains the required nail powder path', () => {
-    const nails = PERSIAN_STARTER_SERVICE_TEMPLATES.find((template) => template.category === 'ناخن')
-    const nailBuild = nails?.families.find((family) => family.name === 'کاشت ناخن')
+  it('contains a common nail extension path', () => {
+    const nails = PERSIAN_STARTER_SERVICE_TEMPLATES.find(
+      (template) => template.category === 'ناخن',
+    )
+    const nailBuild = nails?.families.find(
+      (family) => family.name === 'کاشت و ترمیم',
+    )
 
     expect(nailBuild?.services).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          name: 'کاشت با پودر',
-          duration: 90,
-          price: 800000,
+          name: 'کاشت پودری',
+          duration: 120,
+          price: 0,
         }),
-      ])
+      ]),
     )
   })
 

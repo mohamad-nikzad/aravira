@@ -41,7 +41,9 @@ interface ServiceFamilyDrawerProps {
   onSuccess: () => void
 }
 
-function emptyValues(defaultCategoryId?: string | null): ServiceFamilyCreateInput {
+function emptyValues(
+  defaultCategoryId?: string | null,
+): ServiceFamilyCreateInput {
   return { categoryId: defaultCategoryId ?? '', name: '', active: true }
 }
 
@@ -71,7 +73,11 @@ export function ServiceFamilyDrawer({
     if (!open) return
     reset(
       family
-        ? { categoryId: family.categoryId, name: family.name, active: family.active }
+        ? {
+            categoryId: family.categoryId,
+            name: family.name,
+            active: family.active,
+          }
         : emptyValues(defaultCategoryId ?? categories[0]?.id),
     )
   }, [categories, defaultCategoryId, family, open, reset])
@@ -107,20 +113,24 @@ export function ServiceFamilyDrawer({
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
         <DrawerHeader>
-          <DrawerTitle>{isEditing ? 'ویرایش خانواده خدمت' : 'خانواده خدمت جدید'}</DrawerTitle>
-          <DrawerDescription>خانواده خدمت را زیر یک دسته تعریف کنید</DrawerDescription>
+          <DrawerTitle>
+            {isEditing ? 'ویرایش گروه خدمات' : 'گروه خدمات جدید'}
+          </DrawerTitle>
+          <DrawerDescription>
+            خدمات مشابه را در یک گروه بگذارید
+          </DrawerDescription>
         </DrawerHeader>
         <form onSubmit={onSubmit} className="px-4">
           <FieldGroup>
             <Field>
-              <FieldLabel>دسته</FieldLabel>
+              <FieldLabel>بخش</FieldLabel>
               <Controller
                 control={control}
                 name="categoryId"
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="انتخاب دسته" />
+                      <SelectValue placeholder="انتخاب بخش" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((category) => (
@@ -132,10 +142,12 @@ export function ServiceFamilyDrawer({
                   </Select>
                 )}
               />
-              {errors.categoryId && <FieldError>{errors.categoryId.message}</FieldError>}
+              {errors.categoryId && (
+                <FieldError>{errors.categoryId.message}</FieldError>
+              )}
             </Field>
             <Field>
-              <FieldLabel htmlFor="service-family-name">نام خانواده خدمت</FieldLabel>
+              <FieldLabel htmlFor="service-family-name">نام گروه</FieldLabel>
               <Input id="service-family-name" {...register('name')} />
               {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
@@ -143,7 +155,10 @@ export function ServiceFamilyDrawer({
           </FieldGroup>
         </form>
         <DrawerFooter>
-          <Button onClick={onSubmit} disabled={isSubmitting || !nameValue || !categoryValue}>
+          <Button
+            onClick={onSubmit}
+            disabled={isSubmitting || !nameValue || !categoryValue}
+          >
             {isSubmitting && <Spinner className="ml-2" />}
             {isSubmitting ? '…' : isEditing ? 'ذخیره' : 'افزودن'}
           </Button>

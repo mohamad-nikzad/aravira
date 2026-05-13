@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ChevronDown,
   ChevronLeft,
@@ -13,9 +13,17 @@ import {
 import { Badge } from '@repo/ui/badge'
 import { Button } from '@repo/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@repo/ui/collapsible'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@repo/ui/collapsible'
 import { Spinner } from '@repo/ui/spinner'
-import type { Service, ServiceCategory, ServiceFamily } from '@repo/salon-core/types'
+import type {
+  Service,
+  ServiceCategory,
+  ServiceFamily,
+} from '@repo/salon-core/types'
 import { toPersianDigits } from '@repo/salon-core/persian-digits'
 import { useManagerDataClient } from '@/components/manager-data-client-provider'
 import { ServiceCategoryDrawer } from './service-category-drawer'
@@ -26,6 +34,7 @@ interface ServiceCatalogManagerProps {
   services: Service[]
   categories: ServiceCategory[]
   families: ServiceFamily[]
+  starterImportKey?: string
   onChanged: () => void
 }
 
@@ -33,12 +42,17 @@ type CategoryNode = ServiceCategory & {
   families: Array<ServiceFamily & { services: Service[] }>
 }
 
+const STARTER_SERVICES_USED_KEY = 'saloora:starter-services-used'
+
 function buildCatalog(
   categories: ServiceCategory[],
   families: ServiceFamily[],
   services: Service[],
 ): CategoryNode[] {
-  const familiesByCategory = new Map<string, Array<ServiceFamily & { services: Service[] }>>()
+  const familiesByCategory = new Map<
+    string,
+    Array<ServiceFamily & { services: Service[] }>
+  >()
   const servicesByFamily = new Map<string, Service[]>()
 
   for (const service of services) {
@@ -64,20 +78,33 @@ export function ServiceCatalogManager({
   services,
   categories,
   families,
+  starterImportKey = STARTER_SERVICES_USED_KEY,
   onChanged,
 }: ServiceCatalogManagerProps) {
   const dc = useManagerDataClient()
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false)
   const [familyDrawerOpen, setFamilyDrawerOpen] = useState(false)
   const [serviceDrawerOpen, setServiceDrawerOpen] = useState(false)
-  const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null)
-  const [selectedFamily, setSelectedFamily] = useState<ServiceFamily | null>(null)
+  const [selectedCategory, setSelectedCategory] =
+    useState<ServiceCategory | null>(null)
+  const [selectedFamily, setSelectedFamily] = useState<ServiceFamily | null>(
+    null,
+  )
   const [selectedService, setSelectedService] = useState<Service | null>(null)
-  const [defaultCategoryId, setDefaultCategoryId] = useState<string | null>(null)
+  const [defaultCategoryId, setDefaultCategoryId] = useState<string | null>(
+    null,
+  )
   const [defaultFamilyId, setDefaultFamilyId] = useState<string | null>(null)
-  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({})
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(
+    {},
+  )
   const [openFamilies, setOpenFamilies] = useState<Record<string, boolean>>({})
   const [importing, setImporting] = useState(false)
+  const [starterImportUsed, setStarterImportUsed] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      window.localStorage.getItem(starterImportKey) === '1',
+  )
   const [error, setError] = useState<string | null>(null)
 
   const catalog = useMemo(
@@ -108,22 +135,34 @@ export function ServiceCatalogManager({
     setError(null)
     try {
       await dc.services.importStarterTemplates()
+      window.localStorage.setItem(starterImportKey, '1')
+      setStarterImportUsed(true)
       onChanged()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'افزودن خدمات پیشنهادی انجام نشد')
+      setError(
+        err instanceof Error ? err.message : 'افزودن لیست آماده انجام نشد',
+      )
     } finally {
       setImporting(false)
     }
   }
 
-  const noCatalog = categories.length === 0 && families.length === 0 && services.length === 0
+  const noCatalog =
+    categories.length === 0 && families.length === 0 && services.length === 0
+  const showStarterImport = noCatalog && !starterImportUsed
+
+  useEffect(() => {
+    setStarterImportUsed(window.localStorage.getItem(starterImportKey) === '1')
+  }, [starterImportKey])
 
   return (
     <>
       <Card className="border-border/50">
         <CardHeader className="space-y-3 pb-3">
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">خدمات</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              لیست خدمات
+            </CardTitle>
             <Button
               size="sm"
               variant="secondary"
@@ -131,7 +170,7 @@ export function ServiceCatalogManager({
               onClick={addCategory}
             >
               <FolderPlus className="h-4 w-4" />
-              دسته
+              بخش
             </Button>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -143,7 +182,7 @@ export function ServiceCatalogManager({
               disabled={categories.length === 0}
             >
               <Layers3 className="h-4 w-4" />
-              خانواده
+              گروه
             </Button>
             <Button
               size="sm"
@@ -155,22 +194,30 @@ export function ServiceCatalogManager({
               <Plus className="h-4 w-4" />
               خدمت
             </Button>
-            <Button
-              size="sm"
-              className="justify-center gap-1 touch-manipulation"
-              onClick={importTemplates}
-              disabled={importing}
-            >
-              {importing ? <Spinner className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-              افزودن خدمات پیشنهادی
-            </Button>
+            {showStarterImport ? (
+              <Button
+                size="sm"
+                className="justify-center gap-1 touch-manipulation"
+                onClick={importTemplates}
+                disabled={importing}
+              >
+                {importing ? (
+                  <Spinner className="h-4 w-4" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                شروع با لیست آماده
+              </Button>
+            ) : null}
           </div>
           {error && <p className="text-xs text-destructive">{error}</p>}
         </CardHeader>
         <CardContent className="space-y-2">
           {noCatalog ? (
             <div className="rounded-lg border border-dashed border-border/70 px-3 py-5 text-center">
-              <p className="text-sm text-muted-foreground">هنوز کاتالوگ خدمات ساخته نشده.</p>
+              <p className="text-sm text-muted-foreground">
+                هنوز خدمتی ثبت نشده.
+              </p>
             </div>
           ) : (
             catalog.map((category) => {
@@ -180,13 +227,20 @@ export function ServiceCatalogManager({
                   key={category.id}
                   open={categoryOpen}
                   onOpenChange={(open) =>
-                    setOpenCategories((current) => ({ ...current, [category.id]: open }))
+                    setOpenCategories((current) => ({
+                      ...current,
+                      [category.id]: open,
+                    }))
                   }
                   className="rounded-lg border border-border/50 bg-card/50"
                 >
                   <div className="flex items-center gap-1 px-2 py-2">
                     <CollapsibleTrigger asChild>
-                      <Button variant="ghost" size="icon-sm" className="shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="shrink-0"
+                      >
                         {categoryOpen ? (
                           <ChevronDown className="h-4 w-4" />
                         ) : (
@@ -195,9 +249,11 @@ export function ServiceCatalogManager({
                       </Button>
                     </CollapsibleTrigger>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{category.name}</p>
+                      <p className="truncate text-sm font-semibold">
+                        {category.name}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        {toPersianDigits(category.families.length)} خانواده
+                        {toPersianDigits(category.families.length)} گروه
                       </p>
                     </div>
                     {!category.active && (
@@ -215,14 +271,18 @@ export function ServiceCatalogManager({
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button size="icon-sm" variant="ghost" onClick={() => addFamily(category.id)}>
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      onClick={() => addFamily(category.id)}
+                    >
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                   <CollapsibleContent className="space-y-2 border-t border-border/40 p-2">
                     {category.families.length === 0 ? (
                       <p className="px-2 py-3 text-xs text-muted-foreground">
-                        خانواده‌ای برای این دسته ثبت نشده.
+                        گروهی برای این بخش ثبت نشده.
                       </p>
                     ) : (
                       category.families.map((family) => {
@@ -232,13 +292,20 @@ export function ServiceCatalogManager({
                             key={family.id}
                             open={familyOpen}
                             onOpenChange={(open) =>
-                              setOpenFamilies((current) => ({ ...current, [family.id]: open }))
+                              setOpenFamilies((current) => ({
+                                ...current,
+                                [family.id]: open,
+                              }))
                             }
                             className="rounded-md bg-muted/30"
                           >
                             <div className="flex items-center gap-1 px-2 py-2">
                               <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="icon-sm" className="shrink-0">
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  className="shrink-0"
+                                >
                                   {familyOpen ? (
                                     <ChevronDown className="h-4 w-4" />
                                   ) : (
@@ -247,13 +314,18 @@ export function ServiceCatalogManager({
                                 </Button>
                               </CollapsibleTrigger>
                               <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium">{family.name}</p>
+                                <p className="truncate text-sm font-medium">
+                                  {family.name}
+                                </p>
                                 <p className="text-xs text-muted-foreground">
                                   {toPersianDigits(family.services.length)} خدمت
                                 </p>
                               </div>
                               {!family.active && (
-                                <Badge variant="secondary" className="text-[10px]">
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px]"
+                                >
                                   غیرفعال
                                 </Badge>
                               )}
@@ -278,7 +350,7 @@ export function ServiceCatalogManager({
                             <CollapsibleContent className="space-y-1 px-2 pb-2">
                               {family.services.length === 0 ? (
                                 <p className="rounded-md border border-dashed border-border/50 px-3 py-3 text-xs text-muted-foreground">
-                                  خدمتی در این خانواده نیست.
+                                  خدمتی در این گروه نیست.
                                 </p>
                               ) : (
                                 family.services.map((service) => (
@@ -293,15 +365,22 @@ export function ServiceCatalogManager({
                                       }}
                                     />
                                     <div className="min-w-0 flex-1">
-                                      <p className="truncate text-sm font-medium">{service.name}</p>
+                                      <p className="truncate text-sm font-medium">
+                                        {service.name}
+                                      </p>
                                       <p className="text-xs text-muted-foreground">
-                                        {toPersianDigits(service.duration)} دقیقه ·{' '}
-                                        {toPersianDigits(service.price.toLocaleString('fa-IR'))}{' '}
-                                        تومان
+                                        {toPersianDigits(service.duration)}{' '}
+                                        دقیقه ·{' '}
+                                        {service.price > 0
+                                          ? `${toPersianDigits(service.price.toLocaleString('fa-IR'))} تومان`
+                                          : 'قیمت وارد نشده'}
                                       </p>
                                     </div>
                                     {!service.active && (
-                                      <Badge variant="secondary" className="text-[10px]">
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-[10px]"
+                                      >
                                         غیرفعال
                                       </Badge>
                                     )}

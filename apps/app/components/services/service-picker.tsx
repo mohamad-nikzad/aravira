@@ -1,8 +1,15 @@
-"use client";
+'use client'
 
-import { useMemo, useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
-import { Button } from "@repo/ui/button";
+import { useMemo, useState } from 'react'
+import {
+  Check,
+  ChevronsUpDown,
+  Leaf,
+  Paintbrush,
+  Scissors,
+  Sparkles,
+} from 'lucide-react'
+import { Button } from '@repo/ui/button'
 import {
   Command,
   CommandEmpty,
@@ -10,43 +17,59 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@repo/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/popover";
-import { cn } from "@repo/ui/utils";
-import type { Service } from "@repo/salon-core/types";
-import { toPersianDigits } from "@repo/salon-core/persian-digits";
+} from '@repo/ui/command'
+import { Popover, PopoverContent, PopoverTrigger } from '@repo/ui/popover'
+import { cn } from '@repo/ui/utils'
+import type { Service } from '@repo/salon-core/types'
+import { toPersianDigits } from '@repo/salon-core/persian-digits'
 import {
   formatCompactServiceLabel,
   groupServicesByCatalog,
-} from "@/components/services/service-catalog-groups";
+} from '@/components/services/service-catalog-groups'
 
 interface ServicePickerProps {
-  services: Service[];
-  value?: string;
-  onChange: (serviceId: string) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  showPrice?: boolean;
+  services: Service[]
+  value?: string
+  onChange: (serviceId: string) => void
+  placeholder?: string
+  disabled?: boolean
+  showPrice?: boolean
+  getDisabledReason?: (service: Service) => string | null | undefined
 }
 
 function formatTomans(price: number) {
-  return `${new Intl.NumberFormat("fa-IR").format(price)} تومان`;
+  if (price <= 0) return 'قیمت وارد نشده'
+  return `${new Intl.NumberFormat('fa-IR').format(price)} تومان`
+}
+
+function serviceIconFor(category: Service['category']) {
+  switch (category) {
+    case 'hair':
+      return Scissors
+    case 'nails':
+      return Paintbrush
+    case 'skincare':
+      return Leaf
+    case 'spa':
+      return Sparkles
+  }
 }
 
 export function ServicePicker({
   services,
   value,
   onChange,
-  placeholder = "انتخاب خدمت",
+  placeholder = 'انتخاب خدمت',
   disabled,
   showPrice = true,
+  getDisabledReason,
 }: ServicePickerProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false)
   const selectedService = useMemo(
     () => services.find((service) => service.id === value),
     [services, value],
-  );
-  const groups = useMemo(() => groupServicesByCatalog(services), [services]);
+  )
+  const groups = useMemo(() => groupServicesByCatalog(services), [services])
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -61,8 +84,8 @@ export function ServicePicker({
         >
           <span
             className={cn(
-              "min-w-0 flex-1 truncate",
-              !selectedService && "text-muted-foreground",
+              'min-w-0 flex-1 truncate',
+              !selectedService && 'text-muted-foreground',
             )}
           >
             {selectedService
@@ -75,59 +98,95 @@ export function ServicePicker({
       <PopoverContent
         className="w-[min(28rem,calc(100vw-2rem))] p-0"
         align="start"
+        onWheel={(event) => event.stopPropagation()}
+        onTouchMove={(event) => event.stopPropagation()}
       >
         <Command
           filter={(itemValue, search) => {
-            if (!search.trim()) return 1;
+            if (!search.trim()) return 1
             return itemValue
-              .toLocaleLowerCase("fa")
-              .includes(search.toLocaleLowerCase("fa"))
+              .toLocaleLowerCase('fa')
+              .includes(search.toLocaleLowerCase('fa'))
               ? 1
-              : 0;
+              : 0
           }}
         >
-          <CommandInput placeholder="جستجوی دسته، خانواده یا خدمت..." />
-          <CommandList className="max-h-88">
+          <CommandInput placeholder="جستجوی بخش، گروه یا خدمت..." />
+          <CommandList
+            data-vaul-no-drag
+            className="max-h-[min(22rem,var(--radix-popover-content-available-height))] touch-pan-y overscroll-contain overflow-y-auto"
+          >
             <CommandEmpty>خدمتی پیدا نشد.</CommandEmpty>
             {groups.map((category) => (
               <CommandGroup
                 key={category.categoryId}
                 heading={category.categoryName}
+                className="pb-1 pt-1 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2"
               >
                 {category.families.map((family) => (
-                  <div key={family.familyId} className="py-1">
-                    <div className="px-2 pb-1 pt-1 text-[11px] font-medium text-muted-foreground">
-                      {family.familyName}
+                  <div
+                    key={family.familyId}
+                    className="mb-1"
+                  >
+                    <div className="flex items-center gap-1.5 px-2 pb-0.5 pt-1 text-[11px] font-medium text-muted-foreground">
+                      {(() => {
+                        const Icon = serviceIconFor(
+                          family.services[0]?.category ?? 'spa',
+                        )
+                        return (
+                          <Icon
+                            aria-hidden="true"
+                            className="size-3.5 shrink-0 opacity-70"
+                          />
+                        )
+                      })()}
+                      <span className="min-w-0 truncate">
+                        {family.familyName}
+                      </span>
                     </div>
-                    {family.services.map((service) => (
-                      <CommandItem
-                        key={service.id}
-                        value={`${category.categoryName} ${family.familyName} ${service.name} ${service.id}`}
-                        onSelect={() => {
-                          onChange(service.id);
-                          setOpen(false);
-                        }}
-                        className="items-start gap-3 py-2"
-                      >
-                        <Check
-                          className={cn(
-                            "mt-0.5 size-4",
-                            value === service.id ? "opacity-100" : "opacity-0",
-                          )}
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium">
-                            {service.name}
-                          </span>
-                          <span className="block truncate text-xs text-muted-foreground">
-                            {toPersianDigits(service.duration)} دقیقه
-                            {showPrice
-                              ? ` · ${formatTomans(service.price)}`
-                              : ""}
-                          </span>
-                        </span>
-                      </CommandItem>
-                    ))}
+                    <div className="relative mr-2 space-y-0.5 pr-2 before:absolute before:right-0 before:bottom-1 before:top-1 before:w-px before:bg-muted-foreground/35">
+                      {family.services.map((service) => {
+                        const disabledReason = getDisabledReason?.(service)
+                        return (
+                          <CommandItem
+                            key={service.id}
+                            value={`${category.categoryName} ${family.familyName} ${service.name} ${service.id}`}
+                            disabled={Boolean(disabledReason)}
+                            onSelect={() => {
+                              if (disabledReason) return
+                              onChange(service.id)
+                              setOpen(false)
+                            }}
+                            className="relative rounded-md py-1.5 pl-8 pr-1.5 before:absolute before:right-[-0.5rem] before:top-1/2 before:h-px before:w-1.5 before:bg-muted-foreground/35"
+                          >
+                            <Check
+                              className={cn(
+                                'absolute left-2 top-2 size-4 shrink-0',
+                                value === service.id
+                                  ? 'opacity-100'
+                                  : 'opacity-0',
+                              )}
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-medium">
+                                {service.name}
+                              </span>
+                              <span className="block truncate text-xs text-muted-foreground">
+                                {toPersianDigits(service.duration)} دقیقه
+                                {showPrice
+                                  ? ` · ${formatTomans(service.price)}`
+                                  : ''}
+                              </span>
+                            </span>
+                            {disabledReason ? (
+                              <span className="mt-0.5 shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                                {disabledReason}
+                              </span>
+                            ) : null}
+                          </CommandItem>
+                        )
+                      })}
+                    </div>
                   </div>
                 ))}
               </CommandGroup>
@@ -136,5 +195,5 @@ export function ServicePicker({
         </Command>
       </PopoverContent>
     </Popover>
-  );
+  )
 }
