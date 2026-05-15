@@ -10,6 +10,7 @@ import {
   Layers3,
   Pencil,
   Plus,
+  PackageCheck,
   Search,
   Sparkles,
 } from "lucide-react";
@@ -566,6 +567,15 @@ export function ServiceCatalogManager({
                                             غیرفعال
                                           </Badge>
                                         )}
+                                        {service.kind === "combo" && (
+                                          <Badge
+                                            variant="outline"
+                                            className="gap-1 text-[10px]"
+                                          >
+                                            <PackageCheck className="h-3 w-3" />
+                                            پکیج
+                                          </Badge>
+                                        )}
                                       </div>
                                       <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground sm:mt-1 sm:gap-1.5 sm:text-[11px]">
                                         <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 sm:px-2">
@@ -646,6 +656,7 @@ export function ServiceCatalogManager({
           if (!open) setSelectedService(null);
         }}
         service={selectedService}
+        services={services}
         categories={categories}
         families={families}
         defaultFamilyId={defaultFamilyId}

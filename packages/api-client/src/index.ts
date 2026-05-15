@@ -56,6 +56,7 @@ export type {
 } from './staff'
 export { createServicesApi } from './services'
 export type {
+  ComboComponentsResponse,
   CreateServiceInput,
   CreateServiceCategoryInput,
   CreateServiceFamilyInput,
@@ -67,6 +68,7 @@ export type {
   ServiceResponse,
   ServicesApi,
   ServicesResponse,
+  UpdateComboComponentsInput,
   UpdateServiceCategoryInput,
   UpdateServiceFamilyInput,
   UpdateServiceInput,

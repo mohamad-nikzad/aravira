@@ -569,6 +569,9 @@ export function ServicesCard() {
                                           {!service.active ? (
                                             <Badge variant="secondary">غیرفعال</Badge>
                                           ) : null}
+                                          {service.kind === 'combo' ? (
+                                            <Badge variant="outline">پکیج</Badge>
+                                          ) : null}
                                           <Pressable
                                             accessibilityRole="button"
                                             onPress={() => {
@@ -630,6 +633,7 @@ export function ServicesCard() {
       <ServiceFormModal
         open={serviceModalOpen}
         service={editingService}
+        services={services}
         categories={categories}
         families={families}
         defaultFamilyId={defaultFamilyId}

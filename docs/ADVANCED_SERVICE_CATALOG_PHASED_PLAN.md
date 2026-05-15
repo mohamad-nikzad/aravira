@@ -325,6 +325,8 @@ Status: completed in this slice.
 
 ### Phase 1.2: Combo APIs And Data Client
 
+Status: completed in this slice.
+
 - Add combo component API routes.
 - Add shared validation schemas.
 - Add API-client/data-client methods.
@@ -333,6 +335,8 @@ Status: completed in this slice.
 - Done when managers can read and save combo composition through the data layer.
 
 ### Phase 1.3: Combo Manager UI
+
+Status: completed in this slice.
 
 - Update web service drawer to show combo component editor when `kind = 'combo'`.
 - Add component picker using the grouped service picker, excluding the combo itself and other combos.
@@ -343,6 +347,8 @@ Status: completed in this slice.
 - Done when managers can create and maintain fixed packages from web and native settings.
 
 ### Phase 1.4: Combo Booking And Reporting
+
+Status: completed in this slice.
 
 - Keep appointment create/edit payload as one `serviceId`.
 - Allow combo services in appointment create/edit, availability, and staff assignment.

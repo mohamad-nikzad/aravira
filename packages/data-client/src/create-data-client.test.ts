@@ -221,6 +221,47 @@ describe('createDataClient', () => {
     expect(transport.json).not.toHaveBeenCalled()
   })
 
+  it('reads and saves combo components through the services module', async () => {
+    const combo = {
+      comboServiceId: 'combo-1',
+      components: [],
+      totalDuration: 0,
+      totalPrice: 0,
+    }
+    const transport = {
+      json: vi.fn(async (method, path) => {
+        if (method === 'GET' && path === '/api/services/combo-1/combo-components') {
+          return { combo }
+        }
+        if (method === 'PUT' && path === '/api/services/combo-1/combo-components') {
+          return {
+            combo: {
+              ...combo,
+              components: [{ componentServiceId: 'service-1' }],
+              totalDuration: 45,
+              totalPrice: 100,
+            },
+          }
+        }
+        throw new Error(`Unexpected request ${method} ${path}`)
+      }),
+    } as unknown as HttpTransportPort
+
+    const client = createDataClient({ persistence: 'memory', transport })
+
+    await expect(client.services.comboComponents.get('combo-1')).resolves.toEqual(combo)
+    await expect(
+      client.services.comboComponents.update('combo-1', {
+        componentServiceIds: ['service-1'],
+      })
+    ).resolves.toMatchObject({ totalDuration: 45, totalPrice: 100 })
+    expect(transport.json).toHaveBeenCalledWith(
+      'PUT',
+      '/api/services/combo-1/combo-components',
+      { body: { componentServiceIds: ['service-1'] } }
+    )
+  })
+
   it('can complete a placeholder appointment while offline', async () => {
     const transport = {
       json: vi.fn(async () => {

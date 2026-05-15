@@ -175,4 +175,77 @@ describe('appointment intake placeholder rules', () => {
     })
     expect(mocks.staffMayPerformService).not.toHaveBeenCalled()
   })
+
+  it('allows booking a complete combo as one selected service', async () => {
+    mocks.getServiceById.mockResolvedValue({
+      id: 'combo-1',
+      name: 'پکیج عروس',
+      active: true,
+      kind: 'combo',
+      duration: 180,
+      price: 9000000,
+    })
+    mocks.validateComboServiceIsBookable.mockResolvedValue(true)
+
+    const result = await validateCreateAppointmentIntake({
+      salonId: 'salon-1',
+      clientId: 'placeholder-1',
+      staffId: 'staff-1',
+      serviceId: 'combo-1',
+      date: '2026-05-01',
+      startTime: '10:00',
+    })
+
+    expect(result).toMatchObject({
+      ok: true,
+      command: {
+        serviceId: 'combo-1',
+        startTime: '10:00',
+        endTime: '13:00',
+      },
+      service: {
+        id: 'combo-1',
+        name: 'پکیج عروس',
+        price: 9000000,
+      },
+    })
+    expect(mocks.staffMayPerformService).toHaveBeenCalledWith(
+      'staff-1',
+      'combo-1',
+      'salon-1'
+    )
+  })
+
+  it('requires explicit staff capability for a combo service', async () => {
+    mocks.getServiceById.mockResolvedValue({
+      id: 'combo-1',
+      name: 'پکیج عروس',
+      active: true,
+      kind: 'combo',
+      duration: 180,
+      price: 9000000,
+    })
+    mocks.validateComboServiceIsBookable.mockResolvedValue(true)
+    mocks.staffMayPerformService.mockResolvedValue(false)
+
+    const result = await validateCreateAppointmentIntake({
+      salonId: 'salon-1',
+      clientId: 'placeholder-1',
+      staffId: 'staff-1',
+      serviceId: 'combo-1',
+      date: '2026-05-01',
+      startTime: '10:00',
+    })
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: 400,
+      error: 'این پرسنل برای خدمت انتخاب‌شده تعریف نشده است.',
+    })
+    expect(mocks.staffMayPerformService).toHaveBeenCalledWith(
+      'staff-1',
+      'combo-1',
+      'salon-1'
+    )
+  })
 })

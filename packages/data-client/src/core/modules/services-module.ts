@@ -1,4 +1,9 @@
-import type { Service, ServiceCategory, ServiceFamily } from '@repo/salon-core'
+import type {
+  ComboComponentsSummary,
+  Service,
+  ServiceCategory,
+  ServiceFamily,
+} from '@repo/salon-core'
 import { readCacheTimestamp, writeCacheTimestamp } from '../cache-meta'
 import type { HttpTransportPort } from '../../ports/http-transport'
 import type { LocalDataPort } from '../../ports/local-data-port'
@@ -21,6 +26,7 @@ type ServiceCategoriesResponse = { categories: ServiceCategory[] }
 type ServiceCategoryOneResponse = { category: ServiceCategory }
 type ServiceFamiliesResponse = { families: ServiceFamily[] }
 type ServiceFamilyOneResponse = { family: ServiceFamily }
+type ComboComponentsResponse = { combo: ComboComponentsSummary }
 type ImportStarterServiceTemplatesResponse = {
   categories: ServiceCategory[]
   families: ServiceFamily[]
@@ -100,6 +106,10 @@ export interface ServicesModule {
   subscribe(fn: (services: Service[]) => void): () => void
   create(input: ServiceCreateInput): Promise<Service>
   update(id: string, input: ServiceUpdateInput): Promise<Service>
+  comboComponents: {
+    get(id: string): Promise<ComboComponentsSummary | null>
+    update(id: string, input: { componentServiceIds: string[] }): Promise<ComboComponentsSummary>
+  }
   categories: {
     list(options?: { includeInactive?: boolean }): Promise<ServiceCategory[]>
     create(input: ServiceCategoryCreateInput): Promise<ServiceCategory>
@@ -459,6 +469,43 @@ export function createServicesModule(
 
       void emitSubscribers()
       return next
+    },
+
+    comboComponents: {
+      async get(id) {
+        const key = `combo:${id}:components`
+        const cached = await storage.get<ComboComponentsSummary>(COLLECTION, key)
+        if (cached !== undefined) return cached
+        try {
+          const data = await transport.json<ComboComponentsResponse>(
+            'GET',
+            `/api/services/${id}/combo-components`
+          )
+          const combo = data.combo ?? null
+          if (combo) {
+            await storage.set(COLLECTION, key, combo)
+            await writeCacheTimestamp(storage, COLLECTION, key)
+          }
+          return combo
+        } catch {
+          return null
+        }
+      },
+
+      async update(id, input) {
+        const data = await transport.json<ComboComponentsResponse>(
+          'PUT',
+          `/api/services/${id}/combo-components`,
+          {
+            body: { componentServiceIds: input.componentServiceIds },
+          }
+        )
+        await storage.set(COLLECTION, `combo:${id}:components`, data.combo)
+        await writeCacheTimestamp(storage, COLLECTION, `combo:${id}:components`)
+        await invalidateLists()
+        void emitSubscribers()
+        return data.combo
+      },
     },
 
     categories: {

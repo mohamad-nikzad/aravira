@@ -183,6 +183,18 @@ describe('api modules', () => {
       body: { active: false },
     })
 
+    await api.comboComponents.get('combo-1')
+    expectLastCall(calls, { path: '/api/services/combo-1/combo-components' })
+
+    await api.comboComponents.update('combo-1', {
+      componentServiceIds: ['service-1', 'service-2'],
+    })
+    expectLastCall(calls, {
+      path: '/api/services/combo-1/combo-components',
+      method: 'PUT',
+      body: { componentServiceIds: ['service-1', 'service-2'] },
+    })
+
     await api.categories.list({ includeInactive: true })
     expectLastCall(calls, { path: '/api/service-categories?all=1' })
 

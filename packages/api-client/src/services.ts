@@ -1,5 +1,11 @@
-import type { Service, ServiceCategory, ServiceFamily } from '@repo/salon-core/types'
 import type {
+  ComboComponentsSummary,
+  Service,
+  ServiceCategory,
+  ServiceFamily,
+} from '@repo/salon-core/types'
+import type {
+  ComboComponentsUpdateInput,
   ServiceCategoryCreateInput as ServiceCategoryCreateFormInput,
   ServiceCategoryUpdateInput as ServiceCategoryUpdateFormInput,
   ServiceCreateInput as ServiceCreateFormInput,
@@ -34,6 +40,10 @@ export type ServiceFamilyResponse = {
   family: ServiceFamily
 }
 
+export type ComboComponentsResponse = {
+  combo: ComboComponentsSummary
+}
+
 export type ImportStarterServiceTemplatesResponse = {
   categories: ServiceCategory[]
   families: ServiceFamily[]
@@ -46,6 +56,7 @@ export type CreateServiceCategoryInput = ServiceCategoryCreateFormInput
 export type UpdateServiceCategoryInput = ServiceCategoryUpdateFormInput
 export type CreateServiceFamilyInput = ServiceFamilyCreateFormInput
 export type UpdateServiceFamilyInput = ServiceFamilyUpdateFormInput
+export type UpdateComboComponentsInput = ComboComponentsUpdateInput
 
 export function createServicesApi(client: ApiClient) {
   return {
@@ -71,6 +82,28 @@ export function createServicesApi(client: ApiClient) {
         body: input,
         signal: opts.signal,
       })
+    },
+    comboComponents: {
+      get(id: string, opts: { signal?: AbortSignal } = {}) {
+        return client.request<ComboComponentsResponse>(
+          `${endpoints.services}/${id}/combo-components`,
+          { signal: opts.signal }
+        )
+      },
+      update(
+        id: string,
+        input: UpdateComboComponentsInput,
+        opts: { signal?: AbortSignal } = {}
+      ) {
+        return client.request<ComboComponentsResponse>(
+          `${endpoints.services}/${id}/combo-components`,
+          {
+            method: 'PUT',
+            body: input,
+            signal: opts.signal,
+          }
+        )
+      },
     },
     categories: {
       list(opts: { includeInactive?: boolean; signal?: AbortSignal } = {}) {
