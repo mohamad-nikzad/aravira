@@ -1,14 +1,25 @@
-import { and, asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, inArray, ne, or } from 'drizzle-orm'
 import { PERSIAN_STARTER_SERVICE_TEMPLATES } from '@repo/salon-core/starter-service-templates'
 import type {
   ComboComponent,
   ComboComponentsSummary,
   Service,
+  ServiceAddon,
+  ServiceAddonScope,
   ServiceCategory,
   ServiceFamily,
 } from '@repo/salon-core/types'
 import { getDb } from '../client'
-import { serviceCategories, serviceComboComponents, serviceFamilies, services } from '../schema'
+import {
+  serviceAddonCategoryScopes,
+  serviceAddonFamilyScopes,
+  serviceAddons,
+  serviceAddonServiceScopes,
+  serviceCategories,
+  serviceComboComponents,
+  serviceFamilies,
+  services,
+} from '../schema'
 import { joinedRowToService, rowToServiceCategory, rowToServiceFamily } from './row-mappers'
 import { isClientProvidedEntityId } from './client-queries'
 
@@ -30,6 +41,92 @@ type CreateFamilyInput = {
 }
 
 type UpdateFamilyInput = Partial<Pick<ServiceFamily, 'categoryId' | 'name' | 'active'>>
+
+export type ServiceAddonScopeInput =
+  | { type: 'category'; categoryId: string }
+  | { type: 'family'; familyId: string }
+  | { type: 'service'; serviceId: string }
+
+type CreateServiceAddonInput = {
+  id?: string
+  salonId: string
+  name: string
+  priceDelta: number
+  durationDelta: number
+  active?: boolean
+  sortOrder?: number
+  description?: string | null
+  color?: string | null
+  scopes?: ServiceAddonScopeInput[]
+}
+
+type UpdateServiceAddonInput = Partial<
+  Pick<ServiceAddon, 'name' | 'priceDelta' | 'durationDelta' | 'active' | 'sortOrder' | 'description' | 'color'>
+> & {
+  scopes?: ServiceAddonScopeInput[]
+}
+
+export function normalizeServiceAddonName(name: string): string {
+  return name.trim().replace(/\s+/g, ' ').toLocaleLowerCase('fa-IR')
+}
+
+export function validateServiceAddonDeltas(input: { priceDelta: number; durationDelta: number }) {
+  if (input.priceDelta < 0 || input.durationDelta < 0) {
+    throw new Error('service add-on price and duration deltas must be non-negative')
+  }
+  if (input.priceDelta === 0 && input.durationDelta === 0) {
+    throw new Error('service add-on price or duration delta must be positive')
+  }
+}
+
+export function normalizeServiceAddonScopes(
+  scopes: ServiceAddonScopeInput[],
+  catalog: {
+    families: Array<{ id: string; categoryId: string }>
+    services: Array<{ id: string; familyId: string }>
+  }
+): ServiceAddonScopeInput[] {
+  const categoryIds = new Set(scopes.filter((scope) => scope.type === 'category').map((scope) => scope.categoryId))
+  const familyCategory = new Map(catalog.families.map((family) => [family.id, family.categoryId]))
+  const serviceFamily = new Map(catalog.services.map((service) => [service.id, service.familyId]))
+  const familyIds = new Set(
+    scopes
+      .filter((scope) => scope.type === 'family')
+      .map((scope) => scope.familyId)
+      .filter((familyId) => !categoryIds.has(familyCategory.get(familyId) ?? ''))
+  )
+
+  const seen = new Set<string>()
+  const normalized: ServiceAddonScopeInput[] = []
+  for (const scope of scopes) {
+    if (scope.type === 'category') {
+      const key = `category:${scope.categoryId}`
+      if (!seen.has(key)) {
+        seen.add(key)
+        normalized.push(scope)
+      }
+      continue
+    }
+    if (scope.type === 'family') {
+      if (categoryIds.has(familyCategory.get(scope.familyId) ?? '')) continue
+      const key = `family:${scope.familyId}`
+      if (!seen.has(key)) {
+        seen.add(key)
+        normalized.push(scope)
+      }
+      continue
+    }
+    const familyId = serviceFamily.get(scope.serviceId)
+    if (familyId && familyIds.has(familyId)) continue
+    if (familyId && categoryIds.has(familyCategory.get(familyId) ?? '')) continue
+    const key = `service:${scope.serviceId}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      normalized.push(scope)
+    }
+  }
+  return normalized
+}
 
 export function validateComboComponentReplacement(input: {
   comboServiceId: string
@@ -371,6 +468,369 @@ export async function validateComboServiceIsBookable(
   const service = await getServiceById(serviceId, salonId)
   if (!service || service.kind !== 'combo' || !service.active) return true
   return (await countValidComboComponents(serviceId, salonId)) > 0
+}
+
+async function assertUniqueActiveAddonName(input: {
+  salonId: string
+  name: string
+  excludeId?: string
+}) {
+  const db = getDb()
+  const rows = await db
+    .select({ id: serviceAddons.id, name: serviceAddons.name })
+    .from(serviceAddons)
+    .where(
+      input.excludeId
+        ? and(
+            eq(serviceAddons.salonId, input.salonId),
+            eq(serviceAddons.active, true),
+            ne(serviceAddons.id, input.excludeId)
+          )
+        : and(eq(serviceAddons.salonId, input.salonId), eq(serviceAddons.active, true))
+    )
+  const normalized = normalizeServiceAddonName(input.name)
+  if (rows.some((row) => normalizeServiceAddonName(row.name) === normalized)) {
+    throw new Error('active service add-on name must be unique per salon')
+  }
+}
+
+async function normalizeAndValidateAddonScopes(
+  salonId: string,
+  scopes: ServiceAddonScopeInput[]
+): Promise<ServiceAddonScopeInput[]> {
+  if (scopes.length === 0) return []
+  const categoryIds = [...new Set(scopes.filter((scope) => scope.type === 'category').map((scope) => scope.categoryId))]
+  const familyIds = [...new Set(scopes.filter((scope) => scope.type === 'family').map((scope) => scope.familyId))]
+  const serviceIds = [...new Set(scopes.filter((scope) => scope.type === 'service').map((scope) => scope.serviceId))]
+
+  const db = getDb()
+  const categoryRows =
+    categoryIds.length === 0
+      ? []
+      : await db
+          .select({ id: serviceCategories.id })
+          .from(serviceCategories)
+          .where(and(eq(serviceCategories.salonId, salonId), inArray(serviceCategories.id, categoryIds)))
+  if (categoryRows.length !== categoryIds.length) {
+    throw new Error('service add-on category scope not found')
+  }
+
+  const familyRows =
+    familyIds.length === 0
+      ? []
+      : await db
+          .select({ id: serviceFamilies.id, categoryId: serviceFamilies.categoryId })
+          .from(serviceFamilies)
+          .where(and(eq(serviceFamilies.salonId, salonId), inArray(serviceFamilies.id, familyIds)))
+  if (familyRows.length !== familyIds.length) {
+    throw new Error('service add-on family scope not found')
+  }
+
+  const serviceRows =
+    serviceIds.length === 0
+      ? []
+      : await db
+          .select({ id: services.id, familyId: services.familyId })
+          .from(services)
+          .where(and(eq(services.salonId, salonId), inArray(services.id, serviceIds)))
+  if (serviceRows.length !== serviceIds.length) {
+    throw new Error('service add-on service scope not found')
+  }
+
+  const serviceFamilyIds = [...new Set(serviceRows.map((row) => row.familyId))]
+  const serviceFamilyRows =
+    serviceFamilyIds.length === 0
+      ? []
+      : await db
+          .select({ id: serviceFamilies.id, categoryId: serviceFamilies.categoryId })
+          .from(serviceFamilies)
+          .where(and(eq(serviceFamilies.salonId, salonId), inArray(serviceFamilies.id, serviceFamilyIds)))
+
+  return normalizeServiceAddonScopes(scopes, {
+    families: [
+      ...familyRows,
+      ...serviceFamilyRows.filter((row) => !familyRows.some((family) => family.id === row.id)),
+    ],
+    services: serviceRows,
+  })
+}
+
+async function replaceAddonScopes(
+  addonId: string,
+  salonId: string,
+  scopes: ServiceAddonScopeInput[]
+) {
+  const db = getDb()
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(serviceAddonCategoryScopes)
+      .where(and(eq(serviceAddonCategoryScopes.salonId, salonId), eq(serviceAddonCategoryScopes.addonId, addonId)))
+    await tx
+      .delete(serviceAddonFamilyScopes)
+      .where(and(eq(serviceAddonFamilyScopes.salonId, salonId), eq(serviceAddonFamilyScopes.addonId, addonId)))
+    await tx
+      .delete(serviceAddonServiceScopes)
+      .where(and(eq(serviceAddonServiceScopes.salonId, salonId), eq(serviceAddonServiceScopes.addonId, addonId)))
+
+    const categoryScopes = scopes.filter((scope) => scope.type === 'category')
+    if (categoryScopes.length > 0) {
+      await tx.insert(serviceAddonCategoryScopes).values(
+        categoryScopes.map((scope) => ({
+          salonId,
+          addonId,
+          scopeId: scope.categoryId,
+        }))
+      )
+    }
+    const familyScopes = scopes.filter((scope) => scope.type === 'family')
+    if (familyScopes.length > 0) {
+      await tx.insert(serviceAddonFamilyScopes).values(
+        familyScopes.map((scope) => ({
+          salonId,
+          addonId,
+          scopeId: scope.familyId,
+        }))
+      )
+    }
+    const serviceScopes = scopes.filter((scope) => scope.type === 'service')
+    if (serviceScopes.length > 0) {
+      await tx.insert(serviceAddonServiceScopes).values(
+        serviceScopes.map((scope) => ({
+          salonId,
+          addonId,
+          scopeId: scope.serviceId,
+        }))
+      )
+    }
+  })
+}
+
+async function getAddonScopes(addonIds: string[], salonId: string): Promise<Map<string, ServiceAddonScope[]>> {
+  const scopes = new Map<string, ServiceAddonScope[]>()
+  for (const id of addonIds) scopes.set(id, [])
+  if (addonIds.length === 0) return scopes
+
+  const db = getDb()
+  const categoryRows = await db
+    .select({
+      addonId: serviceAddonCategoryScopes.addonId,
+      categoryId: serviceCategories.id,
+      categoryName: serviceCategories.name,
+      active: serviceCategories.active,
+    })
+    .from(serviceAddonCategoryScopes)
+    .innerJoin(serviceCategories, eq(serviceAddonCategoryScopes.scopeId, serviceCategories.id))
+    .where(and(eq(serviceAddonCategoryScopes.salonId, salonId), inArray(serviceAddonCategoryScopes.addonId, addonIds)))
+  for (const row of categoryRows) {
+    scopes.get(row.addonId)?.push({
+      type: 'category',
+      categoryId: row.categoryId,
+      categoryName: row.categoryName,
+      active: row.active,
+    })
+  }
+
+  const familyRows = await db
+    .select({
+      addonId: serviceAddonFamilyScopes.addonId,
+      familyId: serviceFamilies.id,
+      familyName: serviceFamilies.name,
+      categoryId: serviceFamilies.categoryId,
+      active: serviceFamilies.active,
+    })
+    .from(serviceAddonFamilyScopes)
+    .innerJoin(serviceFamilies, eq(serviceAddonFamilyScopes.scopeId, serviceFamilies.id))
+    .where(and(eq(serviceAddonFamilyScopes.salonId, salonId), inArray(serviceAddonFamilyScopes.addonId, addonIds)))
+  for (const row of familyRows) {
+    scopes.get(row.addonId)?.push({
+      type: 'family',
+      familyId: row.familyId,
+      familyName: row.familyName,
+      categoryId: row.categoryId,
+      active: row.active,
+    })
+  }
+
+  const serviceRows = await db
+    .select({
+      addonId: serviceAddonServiceScopes.addonId,
+      serviceId: services.id,
+      serviceName: services.name,
+      familyId: services.familyId,
+      active: services.active,
+    })
+    .from(serviceAddonServiceScopes)
+    .innerJoin(services, eq(serviceAddonServiceScopes.scopeId, services.id))
+    .where(and(eq(serviceAddonServiceScopes.salonId, salonId), inArray(serviceAddonServiceScopes.addonId, addonIds)))
+  for (const row of serviceRows) {
+    scopes.get(row.addonId)?.push({
+      type: 'service',
+      serviceId: row.serviceId,
+      serviceName: row.serviceName,
+      familyId: row.familyId,
+      active: row.active,
+    })
+  }
+
+  return scopes
+}
+
+async function rowsToAddons(rows: Array<typeof serviceAddons.$inferSelect>, salonId: string): Promise<ServiceAddon[]> {
+  const scopes = await getAddonScopes(rows.map((row) => row.id), salonId)
+  return rows.map((row) => ({
+    id: row.id,
+    salonId: row.salonId,
+    name: row.name,
+    priceDelta: row.priceDelta,
+    durationDelta: row.durationDelta,
+    active: row.active,
+    sortOrder: row.sortOrder,
+    description: row.description,
+    color: row.color,
+    scopes: scopes.get(row.id) ?? [],
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }))
+}
+
+export async function getAllServiceAddons(
+  salonId: string,
+  includeInactive = false
+): Promise<ServiceAddon[]> {
+  const db = getDb()
+  const rows = await db
+    .select()
+    .from(serviceAddons)
+    .where(
+      includeInactive
+        ? eq(serviceAddons.salonId, salonId)
+        : and(eq(serviceAddons.salonId, salonId), eq(serviceAddons.active, true))
+    )
+    .orderBy(asc(serviceAddons.sortOrder), asc(serviceAddons.name))
+  return rowsToAddons(rows, salonId)
+}
+
+export async function getServiceAddonById(id: string, salonId: string): Promise<ServiceAddon | undefined> {
+  const db = getDb()
+  const rows = await db
+    .select()
+    .from(serviceAddons)
+    .where(and(eq(serviceAddons.id, id), eq(serviceAddons.salonId, salonId)))
+    .limit(1)
+  return (await rowsToAddons(rows, salonId))[0]
+}
+
+export async function createServiceAddon(input: CreateServiceAddonInput): Promise<ServiceAddon> {
+  validateServiceAddonDeltas(input)
+  if (input.active !== false) {
+    await assertUniqueActiveAddonName({ salonId: input.salonId, name: input.name })
+  }
+  const scopes = await normalizeAndValidateAddonScopes(input.salonId, input.scopes ?? [])
+
+  const db = getDb()
+  const values: typeof serviceAddons.$inferInsert = {
+    salonId: input.salonId,
+    name: input.name,
+    priceDelta: input.priceDelta,
+    durationDelta: input.durationDelta,
+    active: input.active ?? true,
+    sortOrder: input.sortOrder ?? 0,
+    description: input.description ?? null,
+    color: input.color ?? null,
+  }
+  if (isClientProvidedEntityId(input.id)) values.id = input.id
+  const [row] = await db.insert(serviceAddons).values(values).returning()
+  await replaceAddonScopes(row.id, input.salonId, scopes)
+  const addon = await getServiceAddonById(row.id, input.salonId)
+  if (!addon) throw new Error('service add-on not found')
+  return addon
+}
+
+export async function updateServiceAddon(
+  id: string,
+  salonId: string,
+  data: UpdateServiceAddonInput
+): Promise<ServiceAddon | undefined> {
+  const existing = await getServiceAddonById(id, salonId)
+  if (!existing) return undefined
+  const nextPriceDelta = data.priceDelta ?? existing.priceDelta
+  const nextDurationDelta = data.durationDelta ?? existing.durationDelta
+  validateServiceAddonDeltas({ priceDelta: nextPriceDelta, durationDelta: nextDurationDelta })
+  const nextName = data.name ?? existing.name
+  const nextActive = data.active ?? existing.active
+  if (nextActive) {
+    await assertUniqueActiveAddonName({ salonId, name: nextName, excludeId: id })
+  }
+  const scopes = data.scopes ? await normalizeAndValidateAddonScopes(salonId, data.scopes) : null
+
+  const db = getDb()
+  await db
+    .update(serviceAddons)
+    .set({
+      ...(data.name !== undefined ? { name: data.name } : {}),
+      ...(data.priceDelta !== undefined ? { priceDelta: data.priceDelta } : {}),
+      ...(data.durationDelta !== undefined ? { durationDelta: data.durationDelta } : {}),
+      ...(data.active !== undefined ? { active: data.active } : {}),
+      ...(data.sortOrder !== undefined ? { sortOrder: data.sortOrder } : {}),
+      ...(data.description !== undefined ? { description: data.description } : {}),
+      ...(data.color !== undefined ? { color: data.color } : {}),
+      updatedAt: new Date(),
+    })
+    .where(and(eq(serviceAddons.id, id), eq(serviceAddons.salonId, salonId)))
+  if (scopes) await replaceAddonScopes(id, salonId, scopes)
+  return getServiceAddonById(id, salonId)
+}
+
+export async function getActiveServiceAddonsForService(
+  serviceId: string,
+  salonId: string
+): Promise<ServiceAddon[]> {
+  const db = getDb()
+  const [service] = await db
+    .select({
+      id: services.id,
+      active: services.active,
+      familyId: services.familyId,
+      categoryId: serviceFamilies.categoryId,
+    })
+    .from(services)
+    .innerJoin(serviceFamilies, eq(services.familyId, serviceFamilies.id))
+    .where(and(eq(services.id, serviceId), eq(services.salonId, salonId), eq(services.active, true)))
+    .limit(1)
+  if (!service) return []
+
+  const rows = await db
+    .selectDistinct({ addon: serviceAddons })
+    .from(serviceAddons)
+    .leftJoin(
+      serviceAddonCategoryScopes,
+      and(
+        eq(serviceAddonCategoryScopes.addonId, serviceAddons.id),
+        eq(serviceAddonCategoryScopes.scopeId, service.categoryId)
+      )
+    )
+    .leftJoin(
+      serviceAddonFamilyScopes,
+      and(eq(serviceAddonFamilyScopes.addonId, serviceAddons.id), eq(serviceAddonFamilyScopes.scopeId, service.familyId))
+    )
+    .leftJoin(
+      serviceAddonServiceScopes,
+      and(eq(serviceAddonServiceScopes.addonId, serviceAddons.id), eq(serviceAddonServiceScopes.scopeId, service.id))
+    )
+    .where(
+      and(
+        eq(serviceAddons.salonId, salonId),
+        eq(serviceAddons.active, true),
+        or(
+          eq(serviceAddonCategoryScopes.scopeId, service.categoryId),
+          eq(serviceAddonFamilyScopes.scopeId, service.familyId),
+          eq(serviceAddonServiceScopes.scopeId, service.id)
+        )
+      )
+    )
+    .orderBy(asc(serviceAddons.sortOrder), asc(serviceAddons.name))
+
+  return rowsToAddons(rows.map((row) => row.addon), salonId)
 }
 
 export async function getAllServiceCategories(

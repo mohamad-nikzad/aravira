@@ -70,6 +70,26 @@ export interface ComboComponentsSummary {
   totalPrice: number
 }
 
+export type ServiceAddonScope =
+  | { type: 'category'; categoryId: string; categoryName: string; active: boolean }
+  | { type: 'family'; familyId: string; familyName: string; categoryId: string; active: boolean }
+  | { type: 'service'; serviceId: string; serviceName: string; familyId: string; active: boolean }
+
+export interface ServiceAddon {
+  id: string
+  salonId: string
+  name: string
+  priceDelta: number
+  durationDelta: number
+  active: boolean
+  sortOrder: number
+  description?: string | null
+  color?: string | null
+  scopes: ServiceAddonScope[]
+  createdAt: Date
+  updatedAt: Date
+}
+
 export interface BookedServiceSnapshot {
   bookedServiceName: string
   bookedServiceDuration: number

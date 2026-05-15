@@ -95,6 +95,61 @@ export const comboComponentsUpdateSchema = z.object({
   componentServiceIds: z.array(catalogEntityIdSchema).default([]),
 })
 
+export const serviceAddonScopeInputSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('category'),
+    categoryId: catalogEntityIdSchema,
+  }),
+  z.object({
+    type: z.literal('family'),
+    familyId: catalogEntityIdSchema,
+  }),
+  z.object({
+    type: z.literal('service'),
+    serviceId: catalogEntityIdSchema,
+  }),
+])
+
+const serviceAddonBaseSchema = z.object({
+  name: requiredTextSchema,
+  priceDelta: nonNegativeMoneySchema.default(0),
+  durationDelta: z.coerce.number().int().min(0, formMessages.numberInvalid).default(0),
+  active: z.boolean().default(true),
+  sortOrder: z.coerce.number().int().min(0, formMessages.numberInvalid).default(0),
+  description: z.string().trim().optional(),
+  color: z.string().trim().optional().nullable(),
+  scopes: z.array(serviceAddonScopeInputSchema).default([]),
+})
+
+export const serviceAddonFormSchema = serviceAddonBaseSchema.refine(
+  (value) => value.priceDelta > 0 || value.durationDelta > 0,
+  {
+    message: 'قیمت یا زمان افزوده باید بیشتر از صفر باشد',
+    path: ['priceDelta'],
+  }
+)
+
+export const serviceAddonCreateSchema = serviceAddonBaseSchema
+  .extend({
+    id: z.string().optional(),
+  })
+  .refine((value) => value.priceDelta > 0 || value.durationDelta > 0, {
+    message: 'قیمت یا زمان افزوده باید بیشتر از صفر باشد',
+    path: ['priceDelta'],
+  })
+
+export const serviceAddonUpdateSchema = serviceAddonBaseSchema.partial().refine(
+  (value) =>
+    value.priceDelta === undefined ||
+    value.durationDelta === undefined ||
+    value.priceDelta > 0 ||
+    value.durationDelta > 0,
+  {
+    message: 'قیمت یا زمان افزوده باید بیشتر از صفر باشد',
+    path: ['priceDelta'],
+  }
+)
+
 export type ServiceFormInput = z.input<typeof serviceFormSchema>
 export type ServiceFormPayload = z.output<typeof serviceFormSchema>
 export type ServiceCreateInput = z.input<typeof serviceCreateSchema>
@@ -111,3 +166,9 @@ export type ServiceFamilyUpdateInput = z.input<typeof serviceFamilyUpdateSchema>
 export type ServiceFamilyUpdatePayload = z.output<typeof serviceFamilyUpdateSchema>
 export type ComboComponentsUpdateInput = z.input<typeof comboComponentsUpdateSchema>
 export type ComboComponentsUpdatePayload = z.output<typeof comboComponentsUpdateSchema>
+export type ServiceAddonScopeInput = z.input<typeof serviceAddonScopeInputSchema>
+export type ServiceAddonScopePayload = z.output<typeof serviceAddonScopeInputSchema>
+export type ServiceAddonCreateInput = z.input<typeof serviceAddonCreateSchema>
+export type ServiceAddonCreatePayload = z.output<typeof serviceAddonCreateSchema>
+export type ServiceAddonUpdateInput = z.input<typeof serviceAddonUpdateSchema>
+export type ServiceAddonUpdatePayload = z.output<typeof serviceAddonUpdateSchema>

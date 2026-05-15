@@ -190,6 +190,92 @@ export const serviceComboComponents = pgTable(
   ]
 )
 
+export const serviceAddons = pgTable(
+  'service_addons',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    priceDelta: integer('price_delta').notNull().default(0),
+    durationDelta: integer('duration_delta').notNull().default(0),
+    active: boolean('active').notNull().default(true),
+    sortOrder: integer('sort_order').notNull().default(0),
+    description: text('description'),
+    color: text('color'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('service_addons_salon_id_active_idx').on(t.salonId, t.active),
+    index('service_addons_salon_id_sort_idx').on(t.salonId, t.sortOrder, t.name),
+  ]
+)
+
+export const serviceAddonCategoryScopes = pgTable(
+  'service_addon_category_scopes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'cascade' }),
+    addonId: uuid('addon_id')
+      .notNull()
+      .references(() => serviceAddons.id, { onDelete: 'cascade' }),
+    scopeId: uuid('scope_id')
+      .notNull()
+      .references(() => serviceCategories.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    uniqueIndex('service_addon_category_scopes_addon_scope_unique').on(t.addonId, t.scopeId),
+    index('service_addon_category_scopes_salon_id_addon_idx').on(t.salonId, t.addonId),
+    index('service_addon_category_scopes_salon_id_scope_idx').on(t.salonId, t.scopeId),
+  ]
+)
+
+export const serviceAddonFamilyScopes = pgTable(
+  'service_addon_family_scopes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'cascade' }),
+    addonId: uuid('addon_id')
+      .notNull()
+      .references(() => serviceAddons.id, { onDelete: 'cascade' }),
+    scopeId: uuid('scope_id')
+      .notNull()
+      .references(() => serviceFamilies.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    uniqueIndex('service_addon_family_scopes_addon_scope_unique').on(t.addonId, t.scopeId),
+    index('service_addon_family_scopes_salon_id_addon_idx').on(t.salonId, t.addonId),
+    index('service_addon_family_scopes_salon_id_scope_idx').on(t.salonId, t.scopeId),
+  ]
+)
+
+export const serviceAddonServiceScopes = pgTable(
+  'service_addon_service_scopes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'cascade' }),
+    addonId: uuid('addon_id')
+      .notNull()
+      .references(() => serviceAddons.id, { onDelete: 'cascade' }),
+    scopeId: uuid('scope_id')
+      .notNull()
+      .references(() => services.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    uniqueIndex('service_addon_service_scopes_addon_scope_unique').on(t.addonId, t.scopeId),
+    index('service_addon_service_scopes_salon_id_addon_idx').on(t.salonId, t.addonId),
+    index('service_addon_service_scopes_salon_id_scope_idx').on(t.salonId, t.scopeId),
+  ]
+)
+
 export const resources = pgTable(
   'resources',
   {

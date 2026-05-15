@@ -1,6 +1,7 @@
 import type {
   ComboComponentsSummary,
   Service,
+  ServiceAddon,
   ServiceCategory,
   ServiceFamily,
 } from '@repo/salon-core'
@@ -27,6 +28,8 @@ type ServiceCategoryOneResponse = { category: ServiceCategory }
 type ServiceFamiliesResponse = { families: ServiceFamily[] }
 type ServiceFamilyOneResponse = { family: ServiceFamily }
 type ComboComponentsResponse = { combo: ComboComponentsSummary }
+type ServiceAddonsResponse = { addons: ServiceAddon[] }
+type ServiceAddonOneResponse = { addon: ServiceAddon }
 type ImportStarterServiceTemplatesResponse = {
   categories: ServiceCategory[]
   families: ServiceFamily[]
@@ -84,6 +87,24 @@ export type ServiceFamilyUpdateInput = Partial<
   Pick<ServiceFamily, 'categoryId' | 'name' | 'active'>
 >
 
+export type ServiceAddonScopeInput =
+  | { type: 'category'; categoryId: string }
+  | { type: 'family'; familyId: string }
+  | { type: 'service'; serviceId: string }
+
+export type ServiceAddonCreateInput = {
+  name: string
+  priceDelta: number
+  durationDelta: number
+  active?: boolean
+  sortOrder?: number
+  description?: string | null
+  color?: string | null
+  scopes?: ServiceAddonScopeInput[]
+}
+
+export type ServiceAddonUpdateInput = Partial<ServiceAddonCreateInput>
+
 export interface ServicesModuleDeps {
   mutationQueue?: MutationQueuePort | null
   isOnline?: OnlineStatusReader
@@ -109,6 +130,12 @@ export interface ServicesModule {
   comboComponents: {
     get(id: string): Promise<ComboComponentsSummary | null>
     update(id: string, input: { componentServiceIds: string[] }): Promise<ComboComponentsSummary>
+  }
+  addons: {
+    list(options?: { includeInactive?: boolean }): Promise<ServiceAddon[]>
+    forService(serviceId: string): Promise<ServiceAddon[]>
+    create(input: ServiceAddonCreateInput): Promise<ServiceAddon>
+    update(id: string, input: ServiceAddonUpdateInput): Promise<ServiceAddon>
   }
   categories: {
     list(options?: { includeInactive?: boolean }): Promise<ServiceCategory[]>
@@ -164,6 +191,94 @@ export function createServicesModule(
     await storage.delete(COLLECTION, 'categories:list:all')
     await storage.delete(COLLECTION, 'families:list')
     await storage.delete(COLLECTION, 'families:list:all')
+    await storage.delete(COLLECTION, 'addons:list')
+    await storage.delete(COLLECTION, 'addons:list:all')
+  }
+
+  function addonListKey(includeInactive: boolean) {
+    return includeInactive ? 'addons:list:all' : 'addons:list'
+  }
+
+  async function persistAddonList(
+    includeInactive: boolean,
+    addons: ServiceAddon[],
+  ) {
+    const key = addonListKey(includeInactive)
+    await storage.set(COLLECTION, key, addons)
+    await writeCacheTimestamp(storage, COLLECTION, key)
+  }
+
+  async function mergeHydrateAddonListFromServer(
+    serverAddons: ServiceAddon[],
+    includeInactive: boolean,
+  ) {
+    const projected = await projectListWithPendingEntities({
+      storage,
+      mutationQueue,
+      base: serverAddons,
+      entityType: 'service_addon',
+      entityId: (addon) => addon.id,
+      localKey: (id) => `addon:${id}`,
+      collection: COLLECTION,
+      payloadItem: (payload) => {
+        const pay = payload as { addon?: ServiceAddon }
+        return pay.addon ?? null
+      },
+    })
+    await persistAddonList(includeInactive, projected)
+  }
+
+  async function fetchAddonList(includeInactive: boolean): Promise<ServiceAddon[]> {
+    const data = await transport.json<ServiceAddonsResponse>(
+      'GET',
+      '/api/service-addons',
+      {
+        query: includeInactive ? { all: '1' } : undefined,
+      },
+    )
+    const addons = data.addons ?? []
+    await mergeHydrateAddonListFromServer(addons, includeInactive)
+    return addons
+  }
+
+  async function listAddons(includeInactive = false): Promise<ServiceAddon[]> {
+    const key = addonListKey(includeInactive)
+    const hit = await storage.get<ServiceAddon[]>(COLLECTION, key)
+    if (hit !== undefined) return hit
+    try {
+      return await fetchAddonList(includeInactive)
+    } catch {
+      return []
+    }
+  }
+
+  function offlineAddonScopes(input: ServiceAddonScopeInput[] = []): ServiceAddon['scopes'] {
+    return input.map((scope) => {
+      if (scope.type === 'category') {
+        return {
+          type: 'category',
+          categoryId: scope.categoryId,
+          categoryName: '',
+          active: true,
+        }
+      }
+      if (scope.type === 'family') {
+        return {
+          type: 'family',
+          familyId: scope.familyId,
+          familyName: '',
+          categoryId: '',
+          active: true,
+        }
+      }
+      return {
+        type: 'service',
+        serviceId: scope.serviceId,
+        serviceName: '',
+        familyId: '',
+        active: true,
+      }
+    })
   }
 
   async function fetchList(includeInactive: boolean): Promise<Service[]> {
@@ -505,6 +620,161 @@ export function createServicesModule(
         await invalidateLists()
         void emitSubscribers()
         return data.combo
+      },
+    },
+
+    addons: {
+      list: (_opts?: { includeInactive?: boolean }) =>
+        listAddons(Boolean(_opts?.includeInactive)),
+
+      async forService(serviceId) {
+        const key = `service:${serviceId}:addons`
+        const cached = await storage.get<ServiceAddon[]>(COLLECTION, key)
+        if (cached !== undefined) return cached
+        try {
+          const data = await transport.json<ServiceAddonsResponse>(
+            'GET',
+            `/api/services/${serviceId}/addons`,
+          )
+          const addons = data.addons ?? []
+          await storage.set(COLLECTION, key, addons)
+          await writeCacheTimestamp(storage, COLLECTION, key)
+          return addons
+        } catch {
+          return []
+        }
+      },
+
+      async create(input) {
+        const body = {
+          name: input.name,
+          priceDelta: input.priceDelta,
+          durationDelta: input.durationDelta,
+          active: input.active !== false,
+          sortOrder: input.sortOrder ?? 0,
+          description: input.description,
+          color: input.color,
+          scopes: input.scopes ?? [],
+        }
+        if (!mutationQueue || isOnline()) {
+          const data = await transport.json<ServiceAddonOneResponse>(
+            'POST',
+            '/api/service-addons',
+            { body },
+          )
+          await invalidateCatalogLists()
+          void emitSubscribers()
+          return data.addon
+        }
+
+        const id = newOfflineEntityId()
+        const addon: ServiceAddon = {
+          id,
+          salonId: '',
+          name: input.name,
+          priceDelta: input.priceDelta,
+          durationDelta: input.durationDelta,
+          active: input.active !== false,
+          sortOrder: input.sortOrder ?? 0,
+          description: input.description ?? null,
+          color: input.color ?? null,
+          scopes: offlineAddonScopes(input.scopes),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+        await mutationQueue.runAtomically(async (txQueue, txStorage) => {
+          await txStorage.set(COLLECTION, `addon:${id}`, addon)
+          const allKey = addonListKey(true)
+          const actKey = addonListKey(false)
+          const curAll =
+            (await txStorage.get<ServiceAddon[]>(COLLECTION, allKey)) ?? []
+          const curAct =
+            (await txStorage.get<ServiceAddon[]>(COLLECTION, actKey)) ?? []
+          await txStorage.set(COLLECTION, allKey, [
+            addon,
+            ...curAll.filter((item) => item.id !== id),
+          ])
+          await writeCacheTimestamp(txStorage, COLLECTION, allKey)
+          await txStorage.set(
+            COLLECTION,
+            actKey,
+            addon.active
+              ? [addon, ...curAct.filter((item) => item.id !== id)]
+              : curAct.filter((item) => item.id !== id),
+          )
+          await writeCacheTimestamp(txStorage, COLLECTION, actKey)
+          await txQueue.enqueue({
+            entityType: 'service_addon',
+            entityId: id,
+            operation: 'create',
+            payload: { id, body, addon },
+          })
+        })
+        void emitSubscribers()
+        return addon
+      },
+
+      async update(id, input) {
+        if (!mutationQueue || isOnline()) {
+          const data = await transport.json<ServiceAddonOneResponse>(
+            'PATCH',
+            `/api/service-addons/${id}`,
+            { body: input },
+          )
+          await storage.set(COLLECTION, `addon:${id}`, data.addon)
+          await invalidateCatalogLists()
+          void emitSubscribers()
+          return data.addon
+        }
+
+        const existing =
+          (await storage.get<ServiceAddon>(COLLECTION, `addon:${id}`)) ??
+          (await listAddons(true)).find((addon) => addon.id === id) ??
+          null
+        if (!existing) {
+          throw new DataClientHttpError('افزودنی یافت نشد', 404, null)
+        }
+        const next: ServiceAddon = {
+          ...existing,
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.priceDelta !== undefined ? { priceDelta: input.priceDelta } : {}),
+          ...(input.durationDelta !== undefined ? { durationDelta: input.durationDelta } : {}),
+          ...(input.active !== undefined ? { active: input.active } : {}),
+          ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.color !== undefined ? { color: input.color } : {}),
+          ...(input.scopes !== undefined ? { scopes: offlineAddonScopes(input.scopes) } : {}),
+          updatedAt: new Date(),
+        }
+        await mutationQueue.runAtomically(async (txQueue, txStorage) => {
+          await txStorage.set(COLLECTION, `addon:${id}`, next)
+          const curAll =
+            (await txStorage.get<ServiceAddon[]>(COLLECTION, addonListKey(true))) ?? []
+          const curAct =
+            (await txStorage.get<ServiceAddon[]>(COLLECTION, addonListKey(false))) ?? []
+          await txStorage.set(
+            COLLECTION,
+            addonListKey(true),
+            curAll.map((addon) => (addon.id === id ? next : addon)),
+          )
+          await writeCacheTimestamp(txStorage, COLLECTION, addonListKey(true))
+          await txStorage.set(
+            COLLECTION,
+            addonListKey(false),
+            next.active
+              ? [next, ...curAct.filter((addon) => addon.id !== id)]
+              : curAct.filter((addon) => addon.id !== id),
+          )
+          await writeCacheTimestamp(txStorage, COLLECTION, addonListKey(false))
+          await txQueue.enqueue({
+            entityType: 'service_addon',
+            entityId: id,
+            operation: 'update',
+            payload: { id, patch: input, addon: next },
+          })
+        })
+        void emitSubscribers()
+        return next
       },
     },
 

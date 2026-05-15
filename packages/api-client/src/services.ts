@@ -1,11 +1,14 @@
 import type {
   ComboComponentsSummary,
   Service,
+  ServiceAddon,
   ServiceCategory,
   ServiceFamily,
 } from '@repo/salon-core/types'
 import type {
   ComboComponentsUpdateInput,
+  ServiceAddonCreateInput as ServiceAddonCreateFormInput,
+  ServiceAddonUpdateInput as ServiceAddonUpdateFormInput,
   ServiceCategoryCreateInput as ServiceCategoryCreateFormInput,
   ServiceCategoryUpdateInput as ServiceCategoryUpdateFormInput,
   ServiceCreateInput as ServiceCreateFormInput,
@@ -44,6 +47,14 @@ export type ComboComponentsResponse = {
   combo: ComboComponentsSummary
 }
 
+export type ServiceAddonsResponse = {
+  addons: ServiceAddon[]
+}
+
+export type ServiceAddonResponse = {
+  addon: ServiceAddon
+}
+
 export type ImportStarterServiceTemplatesResponse = {
   categories: ServiceCategory[]
   families: ServiceFamily[]
@@ -57,6 +68,8 @@ export type UpdateServiceCategoryInput = ServiceCategoryUpdateFormInput
 export type CreateServiceFamilyInput = ServiceFamilyCreateFormInput
 export type UpdateServiceFamilyInput = ServiceFamilyUpdateFormInput
 export type UpdateComboComponentsInput = ComboComponentsUpdateInput
+export type CreateServiceAddonInput = ServiceAddonCreateFormInput
+export type UpdateServiceAddonInput = ServiceAddonUpdateFormInput
 
 export function createServicesApi(client: ApiClient) {
   return {
@@ -103,6 +116,33 @@ export function createServicesApi(client: ApiClient) {
             signal: opts.signal,
           }
         )
+      },
+    },
+    addons: {
+      list(opts: { includeInactive?: boolean; signal?: AbortSignal } = {}) {
+        const path = opts.includeInactive
+          ? `${endpoints.serviceAddons}?all=1`
+          : endpoints.serviceAddons
+        return client.request<ServiceAddonsResponse>(path, { signal: opts.signal })
+      },
+      create(input: CreateServiceAddonInput, opts: { signal?: AbortSignal } = {}) {
+        return client.request<ServiceAddonResponse>(endpoints.serviceAddons, {
+          method: 'POST',
+          body: input,
+          signal: opts.signal,
+        })
+      },
+      update(id: string, input: UpdateServiceAddonInput, opts: { signal?: AbortSignal } = {}) {
+        return client.request<ServiceAddonResponse>(`${endpoints.serviceAddons}/${id}`, {
+          method: 'PATCH',
+          body: input,
+          signal: opts.signal,
+        })
+      },
+      forService(id: string, opts: { signal?: AbortSignal } = {}) {
+        return client.request<ServiceAddonsResponse>(`${endpoints.services}/${id}/addons`, {
+          signal: opts.signal,
+        })
       },
     },
     categories: {

@@ -6,6 +6,7 @@ export type MutationEntityType =
   | 'appointment'
   | 'business_settings'
   | 'service'
+  | 'service_addon'
   | 'staff_services'
   | 'staff_schedule'
 export type MutationOperation = 'create' | 'update' | 'delete'
@@ -173,6 +174,20 @@ export class KvMutationQueue implements MutationQueuePort {
       const row = pending.find(
         (r) =>
           r.entityType === 'service' && r.entityId === partial.entityId && r.operation === 'update'
+      )
+      if (row) {
+        await this.save({
+          ...row,
+          payload: mergePatchPayloads(row.payload, partial.payload),
+        })
+        return row.id
+      }
+    }
+
+    if (partial.entityType === 'service_addon' && partial.operation === 'update') {
+      const row = pending.find(
+        (r) =>
+          r.entityType === 'service_addon' && r.entityId === partial.entityId && r.operation === 'update'
       )
       if (row) {
         await this.save({

@@ -14,6 +14,7 @@ export const endpoints = {
   clients: '/api/clients',
   staff: '/api/staff',
   services: '/api/services',
+  serviceAddons: '/api/service-addons',
   serviceCategories: '/api/service-categories',
   serviceFamilies: '/api/service-families',
   importStarterServiceTemplates: '/api/services/import-starter-templates',

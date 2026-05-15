@@ -238,6 +238,29 @@ async function applyOneMutation(input: {
     }
   }
 
+  if (row.entityType === 'service_addon') {
+    if (row.operation === 'create') {
+      const p = row.payload as { id: string; body: Record<string, unknown> }
+      await transport.json<{ addon: unknown }>('POST', '/api/service-addons', {
+        body: { ...p.body, id: p.id },
+      })
+      await storage.delete(LOCAL_COLLECTIONS.services, 'addons:list')
+      await storage.delete(LOCAL_COLLECTIONS.services, 'addons:list:all')
+      await storage.delete(LOCAL_COLLECTIONS.services, `addon:${p.id}`)
+      return
+    }
+    if (row.operation === 'update') {
+      const p = row.payload as { id: string; patch: Record<string, unknown> }
+      await transport.json<{ addon: unknown }>('PATCH', `/api/service-addons/${p.id}`, {
+        body: p.patch,
+      })
+      await storage.delete(LOCAL_COLLECTIONS.services, 'addons:list')
+      await storage.delete(LOCAL_COLLECTIONS.services, 'addons:list:all')
+      await storage.delete(LOCAL_COLLECTIONS.services, `addon:${p.id}`)
+      return
+    }
+  }
+
   if (row.entityType === 'staff_services' && row.operation === 'update') {
     const p = row.payload as { staffId: string; serviceIds: string[] | null }
     await transport.json<{ staff: unknown }>('PATCH', `/api/staff/${p.staffId}/services`, {

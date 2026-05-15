@@ -359,6 +359,8 @@ Status: completed in this slice.
 
 ### Phase 1.5: Add-on Schema And Core Logic
 
+Status: completed in this slice.
+
 - Add `service_addons`.
 - Add separate add-on scope tables for categories, families, and ServiceVariants.
 - Add shared types for add-ons and matching add-ons for a service.

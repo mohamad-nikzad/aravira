@@ -14,7 +14,14 @@ export type {
   StaffScheduleBundle,
   StaffScheduleDayDraft,
 } from './core/modules/staff-module'
-export type { ServicesModule, ServiceCreateInput, ServiceUpdateInput } from './core/modules/services-module'
+export type {
+  ServicesModule,
+  ServiceAddonCreateInput,
+  ServiceAddonScopeInput,
+  ServiceAddonUpdateInput,
+  ServiceCreateInput,
+  ServiceUpdateInput,
+} from './core/modules/services-module'
 export type { BusinessSettingsModule, BusinessSettingsUpdateInput } from './core/modules/business-settings-module'
 export { BUSINESS_SETTINGS_ENTITY_ID } from './core/modules/business-settings-module'
 export type { ClientsModule, ClientCreateInput, ClientUpdateInput } from './core/modules/clients-module'

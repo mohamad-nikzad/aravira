@@ -47,6 +47,7 @@ function reviewTitle(row: MutationQueueRow): string {
     business_settings: 'ساعات کاری',
     client: 'مشتری',
     service: 'خدمت',
+    service_addon: 'افزودنی خدمت',
     staff_schedule: 'برنامه کاری',
     staff_services: 'خدمات پرسنل',
   }

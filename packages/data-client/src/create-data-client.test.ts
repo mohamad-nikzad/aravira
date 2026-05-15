@@ -262,6 +262,67 @@ describe('createDataClient', () => {
     )
   })
 
+  it('reads, caches, and resolves service add-ons through the services module', async () => {
+    const addon = {
+      id: 'addon-1',
+      salonId: 's1',
+      name: 'دیزاین',
+      priceDelta: 100000,
+      durationDelta: 15,
+      active: true,
+      sortOrder: 1,
+      description: null,
+      color: null,
+      scopes: [{ type: 'service' as const, serviceId: 'service-1', serviceName: 'کاشت', familyId: 'family-1', active: true }],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    const transport = {
+      json: vi.fn(async (method, path) => {
+        if (method === 'GET' && path === '/api/service-addons') return { addons: [addon] }
+        if (method === 'GET' && path === '/api/services/service-1/addons') return { addons: [addon] }
+        throw new Error(`Unexpected request ${method} ${path}`)
+      }),
+    } as unknown as HttpTransportPort
+
+    const client = createDataClient({ persistence: 'memory', transport })
+
+    await expect(client.services.addons.list()).resolves.toEqual([addon])
+    await expect(client.services.addons.list()).resolves.toEqual([addon])
+    await expect(client.services.addons.forService('service-1')).resolves.toEqual([addon])
+    expect(transport.json).toHaveBeenCalledTimes(2)
+  })
+
+  it('projects offline service add-on creates into cached lists', async () => {
+    const transport = {
+      json: vi.fn(async () => {
+        throw new Error('network should not be used')
+      }),
+    } as unknown as HttpTransportPort
+
+    const client = createDataClient({
+      persistence: 'memory',
+      transport,
+      isOnline: () => false,
+    })
+
+    const addon = await client.services.addons.create({
+      name: 'فرنچ',
+      priceDelta: 50000,
+      durationDelta: 10,
+      active: true,
+      sortOrder: 2,
+      scopes: [{ type: 'family', familyId: 'family-1' }],
+    })
+    const listed = await client.services.addons.list({ includeInactive: true })
+    const state = await client.sync.getState()
+
+    expect(addon).toMatchObject({ name: 'فرنچ', priceDelta: 50000, durationDelta: 10 })
+    expect(listed[0]).toMatchObject({ name: 'فرنچ' })
+    expect(state.pendingCount).toBe(1)
+    expect(transport.json).not.toHaveBeenCalled()
+  })
+
   it('can complete a placeholder appointment while offline', async () => {
     const transport = {
       json: vi.fn(async () => {

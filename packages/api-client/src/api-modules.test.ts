@@ -195,6 +195,38 @@ describe('api modules', () => {
       body: { componentServiceIds: ['service-1', 'service-2'] },
     })
 
+    await api.addons.list({ includeInactive: true })
+    expectLastCall(calls, { path: '/api/service-addons?all=1' })
+
+    await api.addons.create({
+      name: 'دیزاین',
+      priceDelta: 100000,
+      durationDelta: 15,
+      active: true,
+      scopes: [{ type: 'category', categoryId: 'category-1' }],
+    })
+    expectLastCall(calls, {
+      path: '/api/service-addons',
+      method: 'POST',
+      body: {
+        name: 'دیزاین',
+        priceDelta: 100000,
+        durationDelta: 15,
+        active: true,
+        scopes: [{ type: 'category', categoryId: 'category-1' }],
+      },
+    })
+
+    await api.addons.update('addon-1', { active: false })
+    expectLastCall(calls, {
+      path: '/api/service-addons/addon-1',
+      method: 'PATCH',
+      body: { active: false },
+    })
+
+    await api.addons.forService('service-1')
+    expectLastCall(calls, { path: '/api/services/service-1/addons' })
+
     await api.categories.list({ includeInactive: true })
     expectLastCall(calls, { path: '/api/service-categories?all=1' })
 
