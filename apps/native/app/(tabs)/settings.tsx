@@ -10,6 +10,7 @@ import {
   ListChecks,
   LogOut,
   Moon,
+  Scissors,
   Sun,
   UserRoundSearch,
   Users,
@@ -19,7 +20,6 @@ import { Avatar, AvatarFallback } from '../../components/ui/avatar';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { useAuth } from '../../components/auth-provider';
-import { ServicesCard } from '../../components/services/services-card';
 import { notificationsApi } from '../../lib/api';
 import { useAsyncResource } from '../../lib/hooks/use-async-resource';
 import { useTheme, useThemeStyles, withAlpha } from '../../theme';
@@ -51,6 +51,12 @@ const MANAGER_LINKS: ManagerLink[] = [
     hint: 'مشتریانی که نیاز به پیگیری دارند',
     route: '/retention',
     icon: UserRoundSearch,
+  },
+  {
+    label: 'خدمات',
+    hint: 'بخش‌ها، گروه‌ها، قیمت و مدت زمان',
+    route: '/services',
+    icon: Scissors,
   },
   {
     label: 'پرسنل و نقش‌ها',
@@ -270,8 +276,6 @@ export default function SettingsScreen() {
             </CardContent>
           </Card>
         ) : null}
-
-        {isManager ? <ServicesCard /> : null}
 
         <Card style={styles.card}>
           <CardHeader style={styles.cardHeaderPadding}>

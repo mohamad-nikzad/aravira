@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useForm, useFieldArray, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect, useState } from "react";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Drawer,
   DrawerContent,
@@ -10,51 +10,51 @@ import {
   DrawerTitle,
   DrawerDescription,
   DrawerFooter,
-} from '@repo/ui/drawer'
-import { Button } from '@repo/ui/button'
-import { Switch } from '@repo/ui/switch'
-import { Field, FieldLabel, FieldError } from '@repo/ui/field'
-import { FormRootError } from '@repo/ui/form'
-import { Skeleton } from '@repo/ui/skeleton'
-import { TimePicker } from '@repo/ui/time-picker'
-import { Spinner } from '@repo/ui/spinner'
-import type { BusinessHours, User } from '@repo/salon-core/types'
-import { formatPersianTime } from '@repo/salon-core/persian-digits'
-import { z } from 'zod'
+} from "@repo/ui/drawer";
+import { Button } from "@repo/ui/button";
+import { Switch } from "@repo/ui/switch";
+import { Field, FieldLabel, FieldError } from "@repo/ui/field";
+import { FormRootError } from "@repo/ui/form";
+import { Skeleton } from "@repo/ui/skeleton";
+import { TimePicker } from "@repo/ui/time-picker";
+import { Spinner } from "@repo/ui/spinner";
+import type { BusinessHours, User } from "@repo/salon-core/types";
+import { formatPersianTime } from "@repo/salon-core/persian-digits";
+import { z } from "zod";
 import {
   staffScheduleSchema,
   type StaffScheduleFormInput,
-} from '@repo/salon-core/forms/staff'
+} from "@repo/salon-core/forms/staff";
 
-const scheduleFormSchema = z.object({ rows: staffScheduleSchema })
-type ScheduleFormValues = z.input<typeof scheduleFormSchema>
-import { DataClientHttpError } from '@repo/data-client'
-import { useManagerDataClient } from '@/components/manager-data-client-provider'
+const scheduleFormSchema = z.object({ rows: staffScheduleSchema });
+type ScheduleFormValues = z.input<typeof scheduleFormSchema>;
+import { DataClientHttpError } from "@repo/data-client";
+import { useManagerDataClient } from "@/components/manager-data-client-provider";
 
 const days = [
-  { dayOfWeek: 6, label: 'شنبه' },
-  { dayOfWeek: 0, label: 'یکشنبه' },
-  { dayOfWeek: 1, label: 'دوشنبه' },
-  { dayOfWeek: 2, label: 'سه‌شنبه' },
-  { dayOfWeek: 3, label: 'چهارشنبه' },
-  { dayOfWeek: 4, label: 'پنجشنبه' },
-  { dayOfWeek: 5, label: 'جمعه' },
-] as const
+  { dayOfWeek: 6, label: "شنبه" },
+  { dayOfWeek: 0, label: "یکشنبه" },
+  { dayOfWeek: 1, label: "دوشنبه" },
+  { dayOfWeek: 2, label: "سه‌شنبه" },
+  { dayOfWeek: 3, label: "چهارشنبه" },
+  { dayOfWeek: 4, label: "پنجشنبه" },
+  { dayOfWeek: 5, label: "جمعه" },
+] as const;
 
 interface StaffScheduleDrawerProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  staff: User | null
-  onSuccess: () => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  staff: User | null;
+  onSuccess: () => void;
 }
 
 function defaultRows(hours?: BusinessHours): StaffScheduleFormInput {
   return days.map((day) => ({
     dayOfWeek: day.dayOfWeek,
     active: day.dayOfWeek !== 5,
-    workingStart: hours?.workingStart ?? '09:00',
-    workingEnd: hours?.workingEnd ?? '19:00',
-  }))
+    workingStart: hours?.workingStart ?? "09:00",
+    workingEnd: hours?.workingEnd ?? "19:00",
+  }));
 }
 
 function StaffScheduleRowsSkeleton() {
@@ -82,7 +82,7 @@ function StaffScheduleRowsSkeleton() {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 export function StaffScheduleDrawer({
@@ -91,9 +91,9 @@ export function StaffScheduleDrawer({
   staff,
   onSuccess,
 }: StaffScheduleDrawerProps) {
-  const dc = useManagerDataClient()
-  const [salonHours, setSalonHours] = useState<BusinessHours | null>(null)
-  const [bundleLoading, setBundleLoading] = useState(false)
+  const dc = useManagerDataClient();
+  const [salonHours, setSalonHours] = useState<BusinessHours | null>(null);
+  const [bundleLoading, setBundleLoading] = useState(false);
 
   const {
     control,
@@ -106,26 +106,26 @@ export function StaffScheduleDrawer({
   } = useForm<ScheduleFormValues>({
     resolver: zodResolver(scheduleFormSchema),
     defaultValues: { rows: defaultRows() },
-    mode: 'onSubmit',
-  })
+    mode: "onSubmit",
+  });
 
-  const { fields } = useFieldArray({ control, name: 'rows' })
+  const { fields } = useFieldArray({ control, name: "rows" });
 
   useEffect(() => {
-    if (!open || !staff || !dc) return
-    let cancelled = false
-    setBundleLoading(true)
-    reset({ rows: defaultRows() })
+    if (!open || !staff || !dc) return;
+    let cancelled = false;
+    setBundleLoading(true);
+    reset({ rows: defaultRows() });
     void dc.staff.getScheduleBundle(staff.id).then((bundle) => {
-      if (cancelled) return
-      setBundleLoading(false)
-      if (!bundle) return
-      setSalonHours(bundle.businessHours)
-      const map = new Map(bundle.schedule.map((r) => [r.dayOfWeek, r]))
-      const base = defaultRows(bundle.businessHours)
+      if (cancelled) return;
+      setBundleLoading(false);
+      if (!bundle) return;
+      setSalonHours(bundle.businessHours);
+      const map = new Map(bundle.schedule.map((r) => [r.dayOfWeek, r]));
+      const base = defaultRows(bundle.businessHours);
       reset({
         rows: base.map((row) => {
-          const saved = map.get(row.dayOfWeek)
+          const saved = map.get(row.dayOfWeek);
           return saved
             ? {
                 dayOfWeek: saved.dayOfWeek,
@@ -133,64 +133,69 @@ export function StaffScheduleDrawer({
                 workingStart: saved.workingStart,
                 workingEnd: saved.workingEnd,
               }
-            : row
+            : row;
         }),
-      })
-    })
+      });
+    });
     return () => {
-      cancelled = true
-    }
-  }, [open, staff, dc, reset])
+      cancelled = true;
+    };
+  }, [open, staff, dc, reset]);
 
   const useSalonHours = () => {
-    if (!salonHours) return
-    const current = getValues('rows')
+    if (!salonHours) return;
+    const current = getValues("rows");
     current.forEach((_, idx) => {
       setValue(`rows.${idx}.workingStart`, salonHours.workingStart, {
         shouldDirty: true,
-      })
+      });
       setValue(`rows.${idx}.workingEnd`, salonHours.workingEnd, {
         shouldDirty: true,
-      })
-    })
-  }
+      });
+    });
+  };
 
   const onSubmit = handleSubmit(async ({ rows }) => {
-    if (!staff || !dc) return
+    if (!staff || !dc) return;
     try {
-      await dc.staff.setSchedule(staff.id, rows)
-      onSuccess()
+      await dc.staff.setSchedule(staff.id, rows);
+      onSuccess();
     } catch (err) {
       const msg =
         err instanceof DataClientHttpError
           ? err.message
           : err instanceof Error
             ? err.message
-            : 'خطایی رخ داد. لطفاً دوباره تلاش کنید.'
-      setError('root', { message: msg })
+            : "خطایی رخ داد. لطفاً دوباره تلاش کنید.";
+      setError("root", { message: msg });
     }
-  })
+  });
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
         <DrawerHeader>
-          <DrawerTitle>برنامه کاری {staff?.name ?? ''}</DrawerTitle>
+          <DrawerTitle>برنامه کاری {staff?.name ?? ""}</DrawerTitle>
           <DrawerDescription>
             برای هر روز، فعال بودن و بازه کاری پرسنل را مشخص کنید.
           </DrawerDescription>
         </DrawerHeader>
 
-        <form onSubmit={onSubmit} className="space-y-3 overflow-auto px-4">
+        <form onSubmit={onSubmit} className="space-y-3 overflow-auto p-4">
           <div className="flex items-center justify-between rounded-lg border border-border/60 p-3">
             <div className="text-sm">
               <p className="font-medium">ساعت سالن</p>
               <p className="text-xs text-muted-foreground" dir="ltr">
-                {formatPersianTime(salonHours?.workingStart ?? '09:00')} -{' '}
-                {formatPersianTime(salonHours?.workingEnd ?? '19:00')}
+                {formatPersianTime(salonHours?.workingStart ?? "09:00")} -{" "}
+                {formatPersianTime(salonHours?.workingEnd ?? "19:00")}
               </p>
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={useSalonHours}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={useSalonHours}
+            >
               استفاده برای همه
             </Button>
           </div>
@@ -199,10 +204,15 @@ export function StaffScheduleDrawer({
             <StaffScheduleRowsSkeleton />
           ) : (
             fields.map((field, idx) => {
-              const label = days.find((day) => day.dayOfWeek === field.dayOfWeek)?.label
-              const rowError = errors.rows?.[idx]
+              const label = days.find(
+                (day) => day.dayOfWeek === field.dayOfWeek,
+              )?.label;
+              const rowError = errors.rows?.[idx];
               return (
-                <div key={field.id} className="rounded-lg border border-border/60 p-3">
+                <div
+                  key={field.id}
+                  className="rounded-lg border border-border/60 p-3"
+                >
                   <Controller
                     control={control}
                     name={`rows.${idx}.active`}
@@ -211,7 +221,9 @@ export function StaffScheduleDrawer({
                         <div>
                           <p className="text-sm font-medium">{label}</p>
                           <p className="text-xs text-muted-foreground">
-                            {activeField.value ? 'قابل رزرو' : 'تعطیل برای این پرسنل'}
+                            {activeField.value
+                              ? "قابل رزرو"
+                              : "تعطیل برای این پرسنل"}
                           </p>
                         </div>
                         <Switch
@@ -256,7 +268,7 @@ export function StaffScheduleDrawer({
                     </Field>
                   </div>
                 </div>
-              )
+              );
             })
           )}
 
@@ -266,7 +278,7 @@ export function StaffScheduleDrawer({
         <DrawerFooter>
           <Button onClick={onSubmit} disabled={isSubmitting || bundleLoading}>
             {isSubmitting && <Spinner className="ml-2" />}
-            {isSubmitting ? 'در حال ذخیره…' : 'ذخیره برنامه کاری'}
+            {isSubmitting ? "در حال ذخیره…" : "ذخیره برنامه کاری"}
           </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             بستن
@@ -274,5 +286,5 @@ export function StaffScheduleDrawer({
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
-  )
+  );
 }

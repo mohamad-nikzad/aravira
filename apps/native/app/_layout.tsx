@@ -100,6 +100,7 @@ function RootLayoutContent() {
                   },
                 }}>
                 <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="services" />
                 <Stack.Screen name="staff" />
                 <Stack.Screen name="business-hours" />
                 <Stack.Screen name="onboarding" />
