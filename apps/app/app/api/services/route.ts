@@ -88,6 +88,12 @@ export async function POST(request: Request) {
         { status: 409 },
       )
     }
+    if (msg.includes('active combo service must have at least one component')) {
+      return NextResponse.json(
+        { error: 'پکیج فعال باید حداقل یک خدمت در ترکیب خود داشته باشد' },
+        { status: 400 },
+      )
+    }
     return NextResponse.json(
       { error: 'خطای سرور. لطفاً دوباره تلاش کنید.' },
       { status: 500 },

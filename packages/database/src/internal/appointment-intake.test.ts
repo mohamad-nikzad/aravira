@@ -4,6 +4,7 @@ import { validateCreateAppointmentIntake, validateUpdateAppointmentIntake } from
 const mocks = vi.hoisted(() => ({
   getClientById: vi.fn(),
   getServiceById: vi.fn(),
+  validateComboServiceIsBookable: vi.fn(),
   staffMayPerformService: vi.fn(),
   getUserById: vi.fn(),
   checkStaffAvailabilityForAppointment: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock('./client-queries', () => ({
 
 vi.mock('./service-queries', () => ({
   getServiceById: mocks.getServiceById,
+  validateComboServiceIsBookable: mocks.validateComboServiceIsBookable,
 }))
 
 vi.mock('./staff-queries', () => ({
@@ -53,6 +55,7 @@ describe('appointment intake placeholder rules', () => {
       active: true,
       duration: 45,
     })
+    mocks.validateComboServiceIsBookable.mockResolvedValue(true)
     mocks.staffMayPerformService.mockResolvedValue(true)
     mocks.getUserById.mockResolvedValue({
       id: 'staff-1',
@@ -144,5 +147,32 @@ describe('appointment intake placeholder rules', () => {
       clientId: 'placeholder-1',
       appointmentId: 'appointment-1',
     })
+  })
+
+  it('rejects booking an active combo that has no valid components', async () => {
+    mocks.getServiceById.mockResolvedValue({
+      id: 'combo-1',
+      name: 'پکیج عروس',
+      active: true,
+      kind: 'combo',
+      duration: 180,
+    })
+    mocks.validateComboServiceIsBookable.mockResolvedValue(false)
+
+    const result = await validateCreateAppointmentIntake({
+      salonId: 'salon-1',
+      clientId: 'placeholder-1',
+      staffId: 'staff-1',
+      serviceId: 'combo-1',
+      date: '2026-05-01',
+      startTime: '10:00',
+    })
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: 400,
+      error: 'پکیج انتخاب‌شده هنوز ترکیب خدمات ندارد.',
+    })
+    expect(mocks.staffMayPerformService).not.toHaveBeenCalled()
   })
 })

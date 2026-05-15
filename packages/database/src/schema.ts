@@ -163,6 +163,33 @@ export const services = pgTable(
   ]
 )
 
+export const serviceComboComponents = pgTable(
+  'service_combo_components',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'cascade' }),
+    comboServiceId: uuid('combo_service_id')
+      .notNull()
+      .references(() => services.id, { onDelete: 'cascade' }),
+    componentServiceId: uuid('component_service_id')
+      .notNull()
+      .references(() => services.id, { onDelete: 'restrict' }),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('service_combo_components_combo_component_unique').on(
+      t.comboServiceId,
+      t.componentServiceId
+    ),
+    index('service_combo_components_salon_id_combo_idx').on(t.salonId, t.comboServiceId),
+    index('service_combo_components_salon_id_component_idx').on(t.salonId, t.componentServiceId),
+  ]
+)
+
 export const resources = pgTable(
   'resources',
   {

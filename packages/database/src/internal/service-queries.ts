@@ -1,8 +1,14 @@
 import { and, asc, eq, inArray } from 'drizzle-orm'
 import { PERSIAN_STARTER_SERVICE_TEMPLATES } from '@repo/salon-core/starter-service-templates'
-import type { Service, ServiceCategory, ServiceFamily } from '@repo/salon-core/types'
+import type {
+  ComboComponent,
+  ComboComponentsSummary,
+  Service,
+  ServiceCategory,
+  ServiceFamily,
+} from '@repo/salon-core/types'
 import { getDb } from '../client'
-import { serviceCategories, serviceFamilies, services } from '../schema'
+import { serviceCategories, serviceComboComponents, serviceFamilies, services } from '../schema'
 import { joinedRowToService, rowToServiceCategory, rowToServiceFamily } from './row-mappers'
 import { isClientProvidedEntityId } from './client-queries'
 
@@ -24,6 +30,60 @@ type CreateFamilyInput = {
 }
 
 type UpdateFamilyInput = Partial<Pick<ServiceFamily, 'categoryId' | 'name' | 'active'>>
+
+export function validateComboComponentReplacement(input: {
+  comboServiceId: string
+  comboActive: boolean
+  componentServiceIds: string[]
+  foundComponents: Array<{ id: string; kind: Service['kind'] }>
+}) {
+  const { comboServiceId, comboActive, componentServiceIds, foundComponents } = input
+  if (new Set(componentServiceIds).size !== componentServiceIds.length) {
+    throw new Error('combo components cannot contain duplicates')
+  }
+  if (componentServiceIds.includes(comboServiceId)) {
+    throw new Error('combo service cannot contain itself')
+  }
+  if (comboActive && componentServiceIds.length === 0) {
+    throw new Error('active combo service must have at least one component')
+  }
+  if (foundComponents.length !== componentServiceIds.length) {
+    throw new Error('combo component service not found')
+  }
+  if (foundComponents.some((row) => row.kind === 'combo')) {
+    throw new Error('combo service cannot contain another combo service')
+  }
+}
+
+async function countValidComboComponents(comboServiceId: string, salonId: string): Promise<number> {
+  const db = getDb()
+  const rows = await db
+    .select({ id: serviceComboComponents.id })
+    .from(serviceComboComponents)
+    .innerJoin(
+      services,
+      and(
+        eq(serviceComboComponents.componentServiceId, services.id),
+        eq(services.salonId, salonId),
+        eq(services.kind, 'standard')
+      )
+    )
+    .where(
+      and(
+        eq(serviceComboComponents.salonId, salonId),
+        eq(serviceComboComponents.comboServiceId, comboServiceId)
+      )
+    )
+  return rows.length
+}
+
+async function assertActiveComboHasComponents(service: Pick<Service, 'id' | 'kind' | 'active'>, salonId: string) {
+  if (service.kind !== 'combo' || !service.active) return
+  const count = await countValidComboComponents(service.id, salonId)
+  if (count === 0) {
+    throw new Error('active combo service must have at least one component')
+  }
+}
 
 export async function validateActiveServiceIds(ids: string[], salonId: string): Promise<boolean> {
   if (ids.length === 0) return true
@@ -143,6 +203,9 @@ export async function createService(
   if (isClientProvidedEntityId(input.id)) {
     values.id = input.id
   }
+  if ((values.kind ?? 'standard') === 'combo' && values.active !== false) {
+    throw new Error('active combo service must have at least one component')
+  }
   const [row] = await db.insert(services).values(values).returning()
   const service = await getServiceById(row.id, input.salonId)
   return service ?? joinedRowToService({ service: row, family: null, category: null })
@@ -154,11 +217,21 @@ export async function updateService(
   data: Partial<Omit<Service, 'id'>>
 ): Promise<Service | undefined> {
   const db = getDb()
+  const existing = await getServiceById(id, salonId)
+  if (!existing) return undefined
   if (data.familyId === null) throw new Error('service family is required')
   if (data.familyId !== undefined) {
     const family = await getActiveFamily(data.familyId, salonId)
     if (!family) throw new Error('service family not found or inactive')
   }
+  await assertActiveComboHasComponents(
+    {
+      id,
+      kind: data.kind ?? existing.kind ?? 'standard',
+      active: data.active ?? existing.active,
+    },
+    salonId
+  )
   const [row] = await db
     .update(services)
     .set({
@@ -174,6 +247,130 @@ export async function updateService(
     .where(and(eq(services.id, id), eq(services.salonId, salonId)))
     .returning()
   return row ? await getServiceById(row.id, salonId) : undefined
+}
+
+export async function getComboComponents(
+  comboServiceId: string,
+  salonId: string
+): Promise<ComboComponentsSummary | undefined> {
+  const combo = await getServiceById(comboServiceId, salonId)
+  if (!combo || combo.kind !== 'combo') return undefined
+
+  const db = getDb()
+  const rows = await db
+    .select({
+      component: serviceComboComponents,
+      service: services,
+      family: {
+        id: serviceFamilies.id,
+        name: serviceFamilies.name,
+      },
+      category: {
+        id: serviceCategories.id,
+        name: serviceCategories.name,
+      },
+    })
+    .from(serviceComboComponents)
+    .innerJoin(
+      services,
+      and(
+        eq(serviceComboComponents.componentServiceId, services.id),
+        eq(services.salonId, salonId)
+      )
+    )
+    .leftJoin(serviceFamilies, eq(services.familyId, serviceFamilies.id))
+    .leftJoin(serviceCategories, eq(serviceFamilies.categoryId, serviceCategories.id))
+    .where(
+      and(
+        eq(serviceComboComponents.salonId, salonId),
+        eq(serviceComboComponents.comboServiceId, comboServiceId)
+      )
+    )
+    .orderBy(asc(serviceComboComponents.sortOrder), asc(services.name))
+
+  const components: ComboComponent[] = rows.map((row) => ({
+    id: row.component.id,
+    salonId: row.component.salonId,
+    comboServiceId: row.component.comboServiceId,
+    componentServiceId: row.component.componentServiceId,
+    sortOrder: row.component.sortOrder,
+    service: joinedRowToService({
+      service: row.service,
+      family: row.family,
+      category: row.category,
+    }),
+    createdAt: row.component.createdAt,
+    updatedAt: row.component.updatedAt,
+  }))
+
+  return {
+    comboServiceId,
+    components,
+    totalDuration: components.reduce((sum, item) => sum + item.service.duration, 0),
+    totalPrice: components.reduce((sum, item) => sum + item.service.price, 0),
+  }
+}
+
+export async function replaceComboComponents(
+  comboServiceId: string,
+  salonId: string,
+  componentServiceIds: string[]
+): Promise<ComboComponentsSummary> {
+  const combo = await getServiceById(comboServiceId, salonId)
+  if (!combo || combo.kind !== 'combo') {
+    throw new Error('combo service not found')
+  }
+
+  const db = getDb()
+  const componentRows =
+    componentServiceIds.length === 0
+      ? []
+      : await db
+          .select({ id: services.id, kind: services.kind })
+          .from(services)
+          .where(and(eq(services.salonId, salonId), inArray(services.id, componentServiceIds)))
+
+  validateComboComponentReplacement({
+    comboServiceId,
+    comboActive: combo.active,
+    componentServiceIds,
+    foundComponents: componentRows,
+  })
+
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(serviceComboComponents)
+      .where(
+        and(
+          eq(serviceComboComponents.salonId, salonId),
+          eq(serviceComboComponents.comboServiceId, comboServiceId)
+        )
+      )
+
+    if (componentServiceIds.length > 0) {
+      await tx.insert(serviceComboComponents).values(
+        componentServiceIds.map((componentServiceId, index) => ({
+          salonId,
+          comboServiceId,
+          componentServiceId,
+          sortOrder: index,
+        }))
+      )
+    }
+  })
+
+  const summary = await getComboComponents(comboServiceId, salonId)
+  if (!summary) throw new Error('combo service not found')
+  return summary
+}
+
+export async function validateComboServiceIsBookable(
+  serviceId: string,
+  salonId: string
+): Promise<boolean> {
+  const service = await getServiceById(serviceId, salonId)
+  if (!service || service.kind !== 'combo' || !service.active) return true
+  return (await countValidComboComponents(serviceId, salonId)) > 0
 }
 
 export async function getAllServiceCategories(

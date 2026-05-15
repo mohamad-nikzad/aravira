@@ -52,6 +52,24 @@ export interface ServiceFamily {
   updatedAt: Date
 }
 
+export interface ComboComponent {
+  id: string
+  salonId: string
+  comboServiceId: string
+  componentServiceId: string
+  sortOrder: number
+  service: Service
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ComboComponentsSummary {
+  comboServiceId: string
+  components: ComboComponent[]
+  totalDuration: number
+  totalPrice: number
+}
+
 export interface BookedServiceSnapshot {
   bookedServiceName: string
   bookedServiceDuration: number

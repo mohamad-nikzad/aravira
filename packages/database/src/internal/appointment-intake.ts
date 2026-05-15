@@ -8,7 +8,7 @@ import {
 import { isClientProvidedEntityId } from './client-queries'
 import { getClientById } from './client-queries'
 import { validatePlaceholderClientUsage } from './placeholder-client-queries'
-import { getServiceById } from './service-queries'
+import { getServiceById, validateComboServiceIsBookable } from './service-queries'
 import {
   checkStaffAvailabilityForAppointment,
   staffMayPerformService,
@@ -80,6 +80,9 @@ async function validateReferences(input: {
   const service = await getServiceById(input.serviceId, input.salonId)
   if (!service || !service.active) {
     return fail(404, 'خدمت یافت نشد')
+  }
+  if (service.kind === 'combo' && !(await validateComboServiceIsBookable(input.serviceId, input.salonId))) {
+    return fail(400, 'پکیج انتخاب‌شده هنوز ترکیب خدمات ندارد.')
   }
 
   const staff = await getUserById(input.staffId)

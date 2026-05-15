@@ -91,6 +91,10 @@ export const serviceFamilyUpdateSchema = z.object({
   active: z.boolean().optional(),
 })
 
+export const comboComponentsUpdateSchema = z.object({
+  componentServiceIds: z.array(catalogEntityIdSchema).default([]),
+})
+
 export type ServiceFormInput = z.input<typeof serviceFormSchema>
 export type ServiceFormPayload = z.output<typeof serviceFormSchema>
 export type ServiceCreateInput = z.input<typeof serviceCreateSchema>
@@ -105,3 +109,5 @@ export type ServiceFamilyCreateInput = z.input<typeof serviceFamilyCreateSchema>
 export type ServiceFamilyCreatePayload = z.output<typeof serviceFamilyCreateSchema>
 export type ServiceFamilyUpdateInput = z.input<typeof serviceFamilyUpdateSchema>
 export type ServiceFamilyUpdatePayload = z.output<typeof serviceFamilyUpdateSchema>
+export type ComboComponentsUpdateInput = z.input<typeof comboComponentsUpdateSchema>
+export type ComboComponentsUpdatePayload = z.output<typeof comboComponentsUpdateSchema>
