@@ -92,6 +92,13 @@
       "when": 1778864400000,
       "tag": "0012_service_addons",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1778950800000,
+      "tag": "0013_appointment_addon_snapshots",
+      "breakpoints": true
     }
   ]
 }

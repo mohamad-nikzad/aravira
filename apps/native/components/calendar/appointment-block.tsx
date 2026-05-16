@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { AppointmentWithDetails } from '@repo/salon-core/types';
-import { formatPersianTime } from '@repo/salon-core/persian-digits';
+import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-digits';
 import { APPOINTMENT_STATUS } from '@repo/salon-core/types';
 import { formatCompactServiceLabel } from '@repo/salon-core/service-catalog';
 import { useTheme, withAlpha } from '../../theme';
@@ -39,7 +39,13 @@ export function AppointmentBlock({
   const themedStatus = appointmentStatus(status);
 
   const statusLabel = APPOINTMENT_STATUS[status]?.label ?? '';
-  const serviceLabel = formatCompactServiceLabel(appointment.service);
+  const baseServiceLabel = compact
+    ? appointment.bookedServiceName
+    : formatCompactServiceLabel(appointment.service);
+  const serviceLabel =
+    !compact && appointment.bookedAddonCount > 0
+      ? `${baseServiceLabel} +${toPersianDigits(appointment.bookedAddonCount)}`
+      : baseServiceLabel;
   const a11yLabel = `${appointment.client.name}، ${serviceLabel}، ${appointment.staff.name}، ${formatPersianTime(appointment.startTime)} تا ${formatPersianTime(appointment.endTime)}، ${statusLabel}`;
 
   return (

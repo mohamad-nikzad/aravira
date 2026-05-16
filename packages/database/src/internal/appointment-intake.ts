@@ -8,19 +8,33 @@ import {
 import { isClientProvidedEntityId } from './client-queries'
 import { getClientById } from './client-queries'
 import { validatePlaceholderClientUsage } from './placeholder-client-queries'
-import { getServiceById, validateComboServiceIsBookable } from './service-queries'
+import {
+  getActiveServiceAddonsForService,
+  getServiceById,
+  validateComboServiceIsBookable,
+} from './service-queries'
 import {
   checkStaffAvailabilityForAppointment,
   staffMayPerformService,
 } from './staff-queries'
 import { getUserById } from './user-queries'
-import { getScheduleOverlapFlags } from './appointment-queries'
+import { getScheduleOverlapFlags, validateAppointmentAddonIds } from './appointment-queries'
 
-type SnapshotKeys = 'bookedServiceName' | 'bookedServiceDuration' | 'bookedServicePrice'
+type SnapshotKeys =
+  | 'bookedServiceName'
+  | 'bookedServiceDuration'
+  | 'bookedServicePrice'
+  | 'bookedTotalDuration'
+  | 'bookedTotalPrice'
+  | 'bookedAddonCount'
+  | 'bookedAddons'
 type AppointmentCommand = Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | SnapshotKeys> & {
   id?: string
+  addonIds?: string[]
 }
-type AppointmentPatch = Partial<Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | SnapshotKeys>>
+type AppointmentPatch = Partial<Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | SnapshotKeys>> & {
+  addonIds?: string[]
+}
 
 type AppointmentIntakeFailure = {
   ok: false
@@ -66,6 +80,46 @@ function positiveDurationMinutes(raw: unknown): number | null {
 
 function explicitEndTime(raw: unknown): string | null {
   return typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : null
+}
+
+function explicitAddonIds(raw: unknown): string[] | null {
+  return Array.isArray(raw) && raw.every((item) => typeof item === 'string') ? raw : null
+}
+
+async function validateSelectedAddons(input: {
+  salonId: string
+  serviceId: string
+  addonIds: string[]
+}): Promise<true | AppointmentIntakeFailure> {
+  try {
+    validateAppointmentAddonIds(input.addonIds)
+  } catch {
+    return fail(400, 'افزودنی تکراری انتخاب شده است')
+  }
+  if (input.addonIds.length === 0) return true
+
+  const matchingAddons = await getActiveServiceAddonsForService(input.serviceId, input.salonId)
+  const matchingIds = new Set(matchingAddons.map((addon) => addon.id))
+  if (input.addonIds.some((id) => !matchingIds.has(id))) {
+    return fail(400, 'یکی از افزودنی‌های انتخاب‌شده برای این خدمت قابل استفاده نیست')
+  }
+  return true
+}
+
+async function bookedTotalDuration(input: {
+  salonId: string
+  service: Service
+  addonIds: string[]
+}): Promise<number> {
+  if (input.addonIds.length === 0) return input.service.duration
+  const matchingAddons = await getActiveServiceAddonsForService(input.service.id, input.salonId)
+  const selectedIds = new Set(input.addonIds)
+  return (
+    input.service.duration +
+    matchingAddons
+      .filter((addon) => selectedIds.has(addon.id))
+      .reduce((sum, addon) => sum + addon.durationDelta, 0)
+  )
 }
 
 async function validateReferences(input: {
@@ -159,6 +213,7 @@ export async function validateCreateAppointmentIntake(input: {
   startTime: unknown
   endTime?: unknown
   durationMinutes?: unknown
+  addonIds?: unknown
   notes?: string
   requestedAppointmentId?: unknown
 }): Promise<CreateAppointmentIntakeResult> {
@@ -188,8 +243,20 @@ export async function validateCreateAppointmentIntake(input: {
     return fail(placeholderUsage.status, placeholderUsage.error, placeholderUsage.code)
   }
 
-  const duration = positiveDurationMinutes(input.durationMinutes)
-  const endTime = explicitEndTime(input.endTime) ?? endTimeFromDuration(input.startTime, duration ?? refs.service.duration)
+  const addonIds = explicitAddonIds(input.addonIds) ?? []
+  const addonsCheck = await validateSelectedAddons({
+    salonId: input.salonId,
+    serviceId: refs.service.id,
+    addonIds,
+  })
+  if (addonsCheck !== true) return addonsCheck
+
+  const totalDuration = await bookedTotalDuration({
+    salonId: input.salonId,
+    service: refs.service,
+    addonIds,
+  })
+  const endTime = endTimeFromDuration(input.startTime, totalDuration)
   const windowCheck = validateAppointmentWindow(input.startTime, endTime)
   if (!windowCheck.ok) {
     return fail(400, windowCheck.error)
@@ -214,6 +281,7 @@ export async function validateCreateAppointmentIntake(input: {
       date: input.date,
       startTime: input.startTime,
       endTime,
+      addonIds,
       status: 'scheduled',
       notes: input.notes,
       ...(typeof input.requestedAppointmentId === 'string' &&
@@ -239,6 +307,7 @@ export async function validateUpdateAppointmentIntake(input: {
     startTime?: unknown
     endTime?: unknown
     durationMinutes?: unknown
+    addonIds?: unknown
     status?: unknown
     notes?: unknown
   }
@@ -253,23 +322,56 @@ export async function validateUpdateAppointmentIntake(input: {
   const duration = positiveDurationMinutes(body.durationMinutes)
   const startChanged = typeof body.startTime === 'string' && body.startTime !== existing.startTime
   const serviceChanged = typeof body.serviceId === 'string' && body.serviceId !== existing.serviceId
+  const addonIdsChanged = body.addonIds !== undefined
+  const addonIds = explicitAddonIds(body.addonIds)
+
+  if (serviceChanged && addonIds == null) {
+    return fail(400, 'برای تغییر خدمت، افزودنی‌ها باید دوباره مشخص شوند')
+  }
+  if (body.addonIds !== undefined && addonIds == null) {
+    return fail(400, 'فهرست افزودنی‌ها نامعتبر است')
+  }
 
   let endTime = existing.endTime
   const endExplicit = explicitEndTime(body.endTime)
-  if (endExplicit) {
+  if (serviceChanged || addonIdsChanged) {
+    const service = await getServiceById(resolvedServiceId, input.salonId)
+    if (service) {
+      const selectedAddonIds = addonIds ?? []
+      const addonsCheck = await validateSelectedAddons({
+        salonId: input.salonId,
+        serviceId: resolvedServiceId,
+        addonIds: selectedAddonIds,
+      })
+      if (addonsCheck !== true) return addonsCheck
+      const baseService = serviceChanged
+        ? service
+        : {
+            ...service,
+            duration: existing.bookedServiceDuration,
+            price: existing.bookedServicePrice,
+          }
+      endTime = endTimeFromDuration(
+        effectiveStart,
+        await bookedTotalDuration({
+          salonId: input.salonId,
+          service: baseService,
+          addonIds: selectedAddonIds,
+        })
+      )
+    }
+  } else if (endExplicit) {
     endTime = endExplicit
   } else if (duration != null) {
     endTime = endTimeFromDuration(effectiveStart, duration)
   } else if (startChanged) {
     endTime = endTimeFromDuration(
       effectiveStart,
-      Math.max(5, durationMinutesFromRange(existing.startTime, existing.endTime))
+      Math.max(
+        5,
+        existing.bookedTotalDuration ?? durationMinutesFromRange(existing.startTime, existing.endTime)
+      )
     )
-  } else if (serviceChanged) {
-    const service = await getServiceById(resolvedServiceId, input.salonId)
-    if (service) {
-      endTime = endTimeFromDuration(effectiveStart, service.duration)
-    }
   }
 
   const windowCheck = validateAppointmentWindow(effectiveStart, endTime)
@@ -314,6 +416,7 @@ export async function validateUpdateAppointmentIntake(input: {
   if (body.clientId !== undefined) patch.clientId = body.clientId as string
   if (body.staffId !== undefined) patch.staffId = body.staffId as string
   if (body.serviceId !== undefined) patch.serviceId = body.serviceId as string
+  if (addonIdsChanged) patch.addonIds = addonIds ?? []
   if (body.date !== undefined) patch.date = body.date as string
   if (typeof body.startTime === 'string') patch.startTime = body.startTime
   if (body.status !== undefined) patch.status = body.status as Appointment['status']

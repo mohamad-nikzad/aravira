@@ -7,6 +7,7 @@ import { ArrowRight } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Card, CardContent, CardHeader } from '@repo/ui/card'
 import { Skeleton } from '@repo/ui/skeleton'
+import { ServiceAddonManager } from '@/components/services/service-addon-manager'
 import { ServiceCatalogManager } from '@/components/services/service-catalog-manager'
 import { useAuth } from '@/components/auth-provider'
 import {
@@ -126,7 +127,15 @@ export default function ServicesPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-2 pb-3 sm:p-4 sm:pb-6">
+      <div className="flex-1 space-y-3 overflow-auto p-2 pb-3 sm:space-y-4 sm:p-4 sm:pb-6">
+        <ServiceAddonManager
+          services={services}
+          categories={categories}
+          families={families}
+          onChanged={() => {
+            bumpOfflineData()
+          }}
+        />
         <ServiceCatalogManager
           services={services}
           categories={categories}

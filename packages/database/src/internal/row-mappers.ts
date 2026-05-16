@@ -1,5 +1,6 @@
 import type {
   Appointment,
+  BookedAppointmentAddonLine,
   AppointmentWithDetails,
   BusinessHours,
   Client,
@@ -13,6 +14,7 @@ import type {
 } from '@repo/salon-core/types'
 import {
   appointments,
+  appointmentAddonLines,
   businessSettings,
   clientFollowUps,
   clientTags,
@@ -94,6 +96,9 @@ export function rowToAppointment(row: typeof appointments.$inferSelect): Appoint
     bookedServiceName: row.bookedServiceName,
     bookedServiceDuration: row.bookedServiceDuration,
     bookedServicePrice: row.bookedServicePrice,
+    bookedTotalDuration: row.bookedTotalDuration,
+    bookedTotalPrice: row.bookedTotalPrice,
+    bookedAddonCount: 0,
     date: row.date,
     startTime: row.startTime,
     endTime: row.endTime,
@@ -101,6 +106,21 @@ export function rowToAppointment(row: typeof appointments.$inferSelect): Appoint
     notes: row.notes ?? undefined,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+  }
+}
+
+export function rowToAppointmentAddonLine(
+  row: typeof appointmentAddonLines.$inferSelect
+): BookedAppointmentAddonLine {
+  return {
+    id: row.id,
+    appointmentId: row.appointmentId,
+    serviceAddonId: row.serviceAddonId,
+    bookedAddonName: row.bookedAddonName,
+    bookedAddonPriceDelta: row.bookedAddonPriceDelta,
+    bookedAddonDurationDelta: row.bookedAddonDurationDelta,
+    sortOrder: row.sortOrder,
+    createdAt: row.createdAt,
   }
 }
 

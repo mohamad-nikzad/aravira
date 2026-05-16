@@ -31,6 +31,7 @@ import { Badge } from '@repo/ui/badge'
 import {
   User,
   Service,
+  ServiceAddon,
   Client,
   AppointmentWithDetails,
   APPOINTMENT_STATUS,
@@ -76,6 +77,8 @@ function formatTomans(price: number) {
   return `${new Intl.NumberFormat('fa-IR').format(price)} تومان`
 }
 
+const tomansFormatter = new Intl.NumberFormat('fa-IR')
+
 interface AppointmentDetailDrawerProps {
   appointment: AppointmentWithDetails | null
   onOpenChange: (open: boolean) => void
@@ -115,6 +118,8 @@ export function AppointmentDetailDrawer({
   const [completeClientLoading, setCompleteClientLoading] = useState(false)
   const [duplicateClient, setDuplicateClient] = useState<Client | null>(null)
   const [localClients, setLocalClients] = useState<Client[]>(clients)
+  const [availableAddons, setAvailableAddons] = useState<ServiceAddon[]>([])
+  const [addonsLoading, setAddonsLoading] = useState(false)
   const completeClientNameRef = useRef<HTMLInputElement>(null)
   const temporaryClientNameRef = useRef<HTMLInputElement>(null)
 
@@ -133,6 +138,7 @@ export function AppointmentDetailDrawer({
       durationMinutes: 45,
       endTime: '',
       notes: '',
+      addonIds: [],
     },
   })
   const {
@@ -153,6 +159,7 @@ export function AppointmentDetailDrawer({
   const startTime = watchEdit('startTime') ?? ''
   const durationMinutes = Number(watchEdit('durationMinutes')) || 45
   const endTime = watchEdit('endTime') ?? ''
+  const addonIds = watchEdit('addonIds') ?? []
 
   const completeForm = useForm<CompletePlaceholderClientInput>({
     resolver: zodResolver(completePlaceholderClientSchema),
@@ -179,6 +186,47 @@ export function AppointmentDetailDrawer({
   const staffRoleOnly = useMemo(
     () => staff.filter((m) => m.role === 'staff'),
     [staff]
+  )
+  const selectedEditService = useMemo(
+    () => services.find((service) => service.id === serviceId),
+    [serviceId, services],
+  )
+  const historicalAddonOptions = useMemo<ServiceAddon[]>(
+    () =>
+      (appointment?.bookedAddons ?? []).map((addon) => ({
+        id: addon.serviceAddonId,
+        salonId: '',
+        name: addon.bookedAddonName,
+        priceDelta: addon.bookedAddonPriceDelta,
+        durationDelta: addon.bookedAddonDurationDelta,
+        active: false,
+        sortOrder: addon.sortOrder,
+        scopes: [],
+        createdAt: addon.createdAt,
+        updatedAt: addon.createdAt,
+      })),
+    [appointment?.bookedAddons],
+  )
+  const addonOptions = useMemo(() => {
+    const byId = new Map<string, ServiceAddon>()
+    for (const addon of historicalAddonOptions) byId.set(addon.id, addon)
+    for (const addon of availableAddons) byId.set(addon.id, addon)
+    return Array.from(byId.values()).sort(
+      (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'fa'),
+    )
+  }, [availableAddons, historicalAddonOptions])
+  const selectedAddons = useMemo(
+    () => addonOptions.filter((addon) => addonIds.includes(addon.id)),
+    [addonIds, addonOptions],
+  )
+  const previewDuration =
+    (selectedEditService?.duration ?? durationMinutes) +
+    selectedAddons.reduce((sum, addon) => sum + addon.durationDelta, 0)
+  const previewPrice =
+    (selectedEditService?.price ?? appointment?.bookedServicePrice ?? 0) +
+    selectedAddons.reduce((sum, addon) => sum + addon.priceDelta, 0)
+  const isEditingCurrentAppointment = Boolean(
+    appointment && isEditing && editingAppointmentId === appointment.id,
   )
 
   useEffect(() => {
@@ -215,6 +263,16 @@ export function AppointmentDetailDrawer({
     } catch {
       /* ignore */
     }
+  }
+
+  const applyCatalogDuration = (
+    baseService: Service | undefined,
+    addons: ServiceAddon[],
+  ) => {
+    applyDuration(
+      (baseService?.duration ?? 45) +
+        addons.reduce((sum, addon) => sum + addon.durationDelta, 0),
+    )
   }
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -259,6 +317,7 @@ export function AppointmentDetailDrawer({
       endTime: appointment.endTime,
       durationMinutes: durationMinutesFromRange(appointment.startTime, appointment.endTime),
       notes: appointment.notes || '',
+      addonIds: appointment.bookedAddons?.map((addon) => addon.serviceAddonId) ?? [],
     })
     setStatus(appointment.status)
     setIsEditing(true)
@@ -339,6 +398,7 @@ export function AppointmentDetailDrawer({
 
   const handleEditServiceChange = (id: string) => {
     setEditValue('serviceId', id, { shouldDirty: true, shouldValidate: true })
+    setEditValue('addonIds', [], { shouldDirty: true, shouldValidate: true })
     const svc = services.find((s) => s.id === id)
     if (svc) applyDuration(svc.duration)
 
@@ -349,6 +409,15 @@ export function AppointmentDetailDrawer({
     } else if (!eligibleAll.some((m) => m.id === staffId)) {
       setEditValue('staffId', '', { shouldDirty: true, shouldValidate: true })
     }
+  }
+
+  const toggleEditAddon = (addon: ServiceAddon) => {
+    const nextIds = addonIds.includes(addon.id)
+      ? addonIds.filter((id) => id !== addon.id)
+      : [...addonIds, addon.id]
+    const nextAddons = addonOptions.filter((item) => nextIds.includes(item.id))
+    setEditValue('addonIds', nextIds, { shouldDirty: true, shouldValidate: true })
+    applyCatalogDuration(selectedEditService, nextAddons)
   }
 
   const handleEditStaffChange = (id: string) => {
@@ -444,6 +513,41 @@ export function AppointmentDetailDrawer({
       setLoading(false)
     }
   })
+
+  useEffect(() => {
+    if (!isEditingCurrentAppointment || !serviceId) {
+      setAvailableAddons([])
+      setAddonsLoading(false)
+      return
+    }
+
+    let cancelled = false
+    const ctrl = new AbortController()
+    setAddonsLoading(true)
+
+    ;(async () => {
+      try {
+        const addons = dataClient
+          ? await dataClient.services.addons.forService(serviceId)
+          : await fetch(`/api/services/${serviceId}/addons`, {
+              credentials: 'include',
+              signal: ctrl.signal,
+            })
+              .then((res) => res.json())
+              .then((json: { addons?: ServiceAddon[] }) => json.addons ?? [])
+        if (!cancelled) setAvailableAddons(addons)
+      } catch {
+        if (!cancelled) setAvailableAddons([])
+      } finally {
+        if (!cancelled) setAddonsLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      ctrl.abort()
+    }
+  }, [dataClient, isEditingCurrentAppointment, serviceId])
 
   const handleDelete = async () => {
     if (!appointment) return
@@ -574,7 +678,6 @@ export function AppointmentDetailDrawer({
   if (!appointment) return null
 
   const statusInfo = APPOINTMENT_STATUS[appointment.status]
-  const isEditingCurrentAppointment = isEditing && editingAppointmentId === appointment.id
   const editableServices = services.filter(
     (service) => service.active || service.id === serviceId,
   )
@@ -713,6 +816,55 @@ export function AppointmentDetailDrawer({
                     onChange={handleEditServiceChange}
                   />
                 </Field>
+
+                {selectedEditService ? (
+                  <Field>
+                    <FieldLabel>افزودنی‌ها</FieldLabel>
+                    <div className="space-y-2 rounded-lg border border-border bg-card p-3">
+                      {addonsLoading ? (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Spinner className="size-3.5" />
+                          در حال دریافت افزودنی‌ها...
+                        </div>
+                      ) : addonOptions.length > 0 ? (
+                        addonOptions.map((addon) => (
+                          <label
+                            key={addon.id}
+                            className="flex cursor-pointer items-start gap-3 rounded-md px-2 py-2 hover:bg-muted/60"
+                          >
+                            <Checkbox
+                              checked={addonIds.includes(addon.id)}
+                              onCheckedChange={() => toggleEditAddon(addon)}
+                              className="mt-0.5"
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-medium">
+                                {addon.name}
+                                {!availableAddons.some((item) => item.id === addon.id) ? (
+                                  <span className="mr-2 text-xs font-normal text-muted-foreground">
+                                    تاریخی
+                                  </span>
+                                ) : null}
+                              </span>
+                              <span className="block text-xs text-muted-foreground">
+                                +{toPersianDigits(addon.durationDelta)} دقیقه · +
+                                {tomansFormatter.format(addon.priceDelta)} تومان
+                              </span>
+                            </span>
+                          </label>
+                        ))
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          برای این خدمت افزودنی فعالی تعریف نشده است.
+                        </p>
+                      )}
+                      <div className="border-t border-border/60 pt-2 text-xs text-muted-foreground">
+                        جمع پیش‌نمایش: {toPersianDigits(previewDuration)} دقیقه ·{' '}
+                        {formatTomans(previewPrice)}
+                      </div>
+                    </div>
+                  </Field>
+                ) : null}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -813,7 +965,14 @@ export function AppointmentDetailDrawer({
                   اطلاعات ناقص
                 </Badge>
               ) : null}
-              <span className="text-sm text-muted-foreground">{formatTomans(appointment.bookedServicePrice)}</span>
+              <span className="text-sm text-muted-foreground">
+                {formatTomans(appointment.bookedTotalPrice)}
+              </span>
+              {appointment.bookedAddonCount > 0 ? (
+                <Badge variant="outline" className="text-xs">
+                  +{toPersianDigits(appointment.bookedAddonCount)} افزودنی
+                </Badge>
+              ) : null}
             </div>
 
             <div className="space-y-3">
@@ -825,6 +984,26 @@ export function AppointmentDetailDrawer({
                     : appointment.bookedServiceName}
                 </span>
               </div>
+
+              {appointment.bookedAddons && appointment.bookedAddons.length > 0 ? (
+                <div className="rounded-lg border border-border/70 bg-muted/30 p-3 text-sm">
+                  <p className="mb-2 font-medium">افزودنی‌های ثبت‌شده</p>
+                  <div className="space-y-1.5">
+                    {appointment.bookedAddons.map((addon) => (
+                      <div
+                        key={addon.id}
+                        className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
+                      >
+                        <span>{addon.bookedAddonName}</span>
+                        <span>
+                          +{toPersianDigits(addon.bookedAddonDurationDelta)} دقیقه · +
+                          {tomansFormatter.format(addon.bookedAddonPriceDelta)} تومان
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="flex items-center gap-3 text-sm">
                 <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />

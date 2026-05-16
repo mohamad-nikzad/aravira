@@ -22,8 +22,12 @@ import {
   clients,
   locations,
   resources,
+  serviceAddonCategoryScopes,
+  serviceAddonFamilyScopes,
+  serviceAddons,
   serviceCategories,
   serviceFamilies,
+  serviceAddonServiceScopes,
   salons,
   services,
   staffSchedules,
@@ -39,6 +43,66 @@ const passwordHash = bcrypt.hashSync('admin123', 10)
 function formatDate(d: Date) {
   return d.toISOString().split('T')[0]
 }
+
+type SeedAddonRow = {
+  name: string
+  priceDelta: number
+  durationDelta: number
+  color: string
+  sortOrder: number
+  description: string
+  categoryScopes?: string[]
+  familyScopes?: Array<{ category: string; family: string }>
+  serviceScopes?: string[]
+}
+
+const primarySeedAddons: SeedAddonRow[] = [
+  {
+    name: 'دیزاین ناخن',
+    priceDelta: 150_000,
+    durationDelta: 20,
+    color: 'rose',
+    sortOrder: 10,
+    description: 'طراحی ساده روی چند ناخن',
+    categoryScopes: ['ناخن'],
+  },
+  {
+    name: 'فرنچ',
+    priceDelta: 180_000,
+    durationDelta: 20,
+    color: 'violet',
+    sortOrder: 20,
+    description: 'فرنچ کلاسیک برای خدمات ناخن',
+    categoryScopes: ['ناخن'],
+  },
+  {
+    name: 'ریموو ژل یا کاشت',
+    priceDelta: 220_000,
+    durationDelta: 30,
+    color: 'coral',
+    sortOrder: 30,
+    description: 'برداشتن مواد قبلی قبل از خدمت اصلی',
+    familyScopes: [{ category: 'ناخن', family: 'کاشت و ترمیم' }],
+  },
+  {
+    name: 'قد بلند',
+    priceDelta: 250_000,
+    durationDelta: 30,
+    color: 'gold',
+    sortOrder: 40,
+    description: 'افزایش زمان و قیمت برای قد بلند ناخن یا مو',
+    serviceScopes: ['کاشت پودری', 'کاشت ژل', 'رنگ کامل مو', 'آمبره و بالیاژ'],
+  },
+  {
+    name: 'پلکس محافظ مو',
+    priceDelta: 450_000,
+    durationDelta: 15,
+    color: 'mint',
+    sortOrder: 50,
+    description: 'محافظت اضافه هنگام رنگ و دکلره',
+    familyScopes: [{ category: 'مو', family: 'رنگ و لایت' }],
+  },
+]
 
 function salonYmdTehran(): string {
   return salonTodayYmd()
@@ -70,6 +134,8 @@ function appointmentSnapshot(service: {
     bookedServiceName: service.name,
     bookedServiceDuration: service.duration,
     bookedServicePrice: service.price,
+    bookedTotalDuration: service.duration,
+    bookedTotalPrice: service.price,
   }
 }
 
@@ -451,6 +517,94 @@ async function seedServiceCatalog(salonId: string, rows: SeedServiceRow[]) {
   }
 }
 
+async function seedServiceAddons(salonId: string, rows: SeedAddonRow[]) {
+  const categories = await db
+    .select()
+    .from(serviceCategories)
+    .where(eq(serviceCategories.salonId, salonId))
+  const families = await db
+    .select()
+    .from(serviceFamilies)
+    .where(eq(serviceFamilies.salonId, salonId))
+  const serviceRows = await db
+    .select()
+    .from(services)
+    .where(eq(services.salonId, salonId))
+
+  const categoryByName = new Map(categories.map((category) => [category.name, category]))
+  const familyByPath = new Map(
+    families.map((family) => {
+      const category = categories.find((item) => item.id === family.categoryId)
+      return [`${category?.name ?? ''}/${family.name}`, family] as const
+    }),
+  )
+  const serviceByName = new Map(serviceRows.map((service) => [service.name, service]))
+
+  for (const row of rows) {
+    const [existing] = await db
+      .select()
+      .from(serviceAddons)
+      .where(and(eq(serviceAddons.salonId, salonId), eq(serviceAddons.name, row.name)))
+      .limit(1)
+
+    const [addon] = existing
+      ? await db
+          .update(serviceAddons)
+          .set({
+            priceDelta: row.priceDelta,
+            durationDelta: row.durationDelta,
+            active: true,
+            color: row.color,
+            sortOrder: row.sortOrder,
+            description: row.description,
+            updatedAt: new Date(),
+          })
+          .where(eq(serviceAddons.id, existing.id))
+          .returning()
+      : await db
+          .insert(serviceAddons)
+          .values({
+            salonId,
+            name: row.name,
+            priceDelta: row.priceDelta,
+            durationDelta: row.durationDelta,
+            active: true,
+            color: row.color,
+            sortOrder: row.sortOrder,
+            description: row.description,
+          })
+          .returning()
+
+    await db.delete(serviceAddonCategoryScopes).where(eq(serviceAddonCategoryScopes.addonId, addon.id))
+    await db.delete(serviceAddonFamilyScopes).where(eq(serviceAddonFamilyScopes.addonId, addon.id))
+    await db.delete(serviceAddonServiceScopes).where(eq(serviceAddonServiceScopes.addonId, addon.id))
+
+    const categoryScopes = (row.categoryScopes ?? [])
+      .map((name) => categoryByName.get(name))
+      .filter((category): category is NonNullable<typeof category> => Boolean(category))
+      .map((category) => ({ salonId, addonId: addon.id, scopeId: category.id }))
+    if (categoryScopes.length > 0) {
+      await db.insert(serviceAddonCategoryScopes).values(categoryScopes).onConflictDoNothing()
+    }
+
+    const familyScopes = (row.familyScopes ?? [])
+      .map((scope) => familyByPath.get(`${scope.category}/${scope.family}`))
+      .filter((family): family is NonNullable<typeof family> => Boolean(family))
+      .map((family) => ({ salonId, addonId: addon.id, scopeId: family.id }))
+    if (familyScopes.length > 0) {
+      await db.insert(serviceAddonFamilyScopes).values(familyScopes).onConflictDoNothing()
+    }
+
+    const serviceScopes = (row.serviceScopes ?? [])
+      .map((name) => serviceByName.get(name))
+      .filter((service): service is NonNullable<typeof service> => Boolean(service))
+      .map((service) => ({ salonId, addonId: addon.id, scopeId: service.id }))
+    if (serviceScopes.length > 0) {
+      await db.insert(serviceAddonServiceScopes).values(serviceScopes).onConflictDoNothing()
+    }
+  }
+}
+
 /** Phones 09129900*** — removed and reinserted each run for retention / today / tags demos. */
 async function seedRetentionAndFeaturesDemo(salonId: string) {
   const todayStr = salonYmdTehran()
@@ -644,6 +798,7 @@ async function seedRetentionAndFeaturesDemo(salonId: string) {
     Omit<
       typeof appointments.$inferInsert,
       'bookedServiceName' | 'bookedServiceDuration' | 'bookedServicePrice'
+      | 'bookedTotalDuration' | 'bookedTotalPrice'
     >
   > = [
     {
@@ -1034,6 +1189,7 @@ async function main() {
     .onConflictDoNothing()
 
   await seedServiceCatalog(primarySalon.id, primarySeedServices)
+  await seedServiceAddons(primarySalon.id, primarySeedAddons)
 
   const [{ value: userCount }] = await db
     .select({ value: count() })

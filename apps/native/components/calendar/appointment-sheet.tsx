@@ -282,13 +282,38 @@ function SheetContent({
         <DetailRow
           icon={<Scissors size={16} color={theme.colors.foreground} strokeWidth={1.8} />}
           label="خدمت"
-          value={formatCompactServiceLabel(appointment.service)}
+          value={
+            appointment.bookedAddonCount > 0
+              ? `${formatCompactServiceLabel(appointment.service)} +${toPersianDigits(appointment.bookedAddonCount)}`
+              : formatCompactServiceLabel(appointment.service)
+          }
           hint={
-            appointment.service.duration
-              ? `${toPersianDigits(appointment.service.duration)} دقیقه`
+            appointment.bookedTotalDuration
+              ? `${toPersianDigits(appointment.bookedTotalDuration)} دقیقه`
               : undefined
           }
         />
+        {appointment.bookedAddons && appointment.bookedAddons.length > 0 ? (
+          <View
+            style={{
+              borderRadius: theme.radius.lg,
+              borderWidth: theme.sizes.hairline,
+              borderColor: theme.colors.border,
+              padding: 12,
+              gap: 8,
+            }}>
+            <Text style={{ fontFamily: FONTS.semi, fontSize: 12, color: theme.colors.foreground }}>
+              افزودنی‌ها
+            </Text>
+            {appointment.bookedAddons.map((addon) => (
+              <Text
+                key={addon.id}
+                style={{ fontFamily: FONTS.reg, fontSize: 11, color: theme.colors.mutedForeground }}>
+                {addon.bookedAddonName} · +{toPersianDigits(addon.bookedAddonDurationDelta)} دقیقه
+              </Text>
+            ))}
+          </View>
+        ) : null}
         <DetailRow
           icon={<UserIcon size={16} color={theme.colors.foreground} strokeWidth={1.8} />}
           label="آرایشگر"

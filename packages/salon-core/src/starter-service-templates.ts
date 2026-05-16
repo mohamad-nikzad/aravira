@@ -27,6 +27,13 @@ export const PERSIAN_STARTER_SERVICE_TEMPLATES: readonly StarterServiceCategoryT
             { name: 'کاشت پودری', duration: 120, price: 0, color: 'rose' },
             { name: 'کاشت ژل', duration: 120, price: 0, color: 'violet' },
             { name: 'ترمیم کاشت', duration: 90, price: 0, color: 'mint' },
+            {
+              name: 'پکیج کاشت دست و پا',
+              duration: 180,
+              price: 0,
+              color: 'gold',
+              kind: 'combo',
+            },
           ],
         },
         {
@@ -58,6 +65,13 @@ export const PERSIAN_STARTER_SERVICE_TEMPLATES: readonly StarterServiceCategoryT
             { name: 'رنگ کامل مو', duration: 150, price: 0, color: 'rose' },
             { name: 'مش و هایلایت', duration: 180, price: 0, color: 'gold' },
             { name: 'آمبره و بالیاژ', duration: 210, price: 0, color: 'mint' },
+            {
+              name: 'رنگ و براشینگ',
+              duration: 180,
+              price: 0,
+              color: 'coral',
+              kind: 'combo',
+            },
           ],
         },
         {

@@ -20,6 +20,7 @@ import {
 } from '@repo/salon-core/jalali-display'
 import { cn } from '@repo/ui/utils'
 import { formatCompactServiceLabel } from '@/components/services/service-catalog-groups'
+import { toPersianDigits } from '@repo/salon-core/persian-digits'
 
 function staffColorToCssVar(staffColor: string): string {
   return `var(--calendar-${normalizeCalendarColorId(staffColor)})`
@@ -62,6 +63,12 @@ function minutesToSlotDuration(minutes: number): string {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`
+}
+
+function appointmentServiceLabel(apt: AppointmentWithDetails, view: CalendarView) {
+  const base = view === 'week' ? apt.bookedServiceName : formatCompactServiceLabel(apt.service)
+  if (view === 'week' || apt.bookedAddonCount <= 0) return base
+  return `${base} +${toPersianDigits(apt.bookedAddonCount)}`
 }
 
 export interface SalonFullCalendarProps {
@@ -109,7 +116,7 @@ export function SalonFullCalendar({
     () =>
       appointments.map((apt) => ({
         id: apt.id,
-        title: `${apt.client.isPlaceholder ? 'موقت · ' : ''}${apt.client.name} — ${formatCompactServiceLabel(apt.service)}`,
+        title: `${apt.client.isPlaceholder ? 'موقت · ' : ''}${apt.client.name} — ${appointmentServiceLabel(apt, view)}`,
         start: `${apt.date}T${apt.startTime}:00`,
         end: `${apt.date}T${apt.endTime}:00`,
         allDay: false,
@@ -117,7 +124,7 @@ export function SalonFullCalendar({
         backgroundColor: staffColorToCssVar(apt.staff.color),
         borderColor: staffColorToCssVar(apt.staff.color),
       })),
-    [appointments]
+    [appointments, view]
   )
 
   useEffect(() => {

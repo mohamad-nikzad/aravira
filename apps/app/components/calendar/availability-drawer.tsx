@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   AlertTriangle,
   CalendarDays,
@@ -11,7 +11,7 @@ import {
   Clock3,
   Search,
   Sparkles,
-} from 'lucide-react'
+} from "lucide-react";
 import {
   Drawer,
   DrawerClose,
@@ -20,101 +20,114 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-} from '@repo/ui/drawer'
-import { Button } from '@repo/ui/button'
-import { Alert, AlertDescription } from '@repo/ui/alert'
-import { Badge } from '@repo/ui/badge'
-import { Field, FieldGroup, FieldLabel, FieldError } from '@repo/ui/field'
-import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
+} from "@repo/ui/drawer";
+import { Button } from "@repo/ui/button";
+import { Alert, AlertDescription } from "@repo/ui/alert";
+import { Badge } from "@repo/ui/badge";
+import { Field, FieldGroup, FieldLabel, FieldError } from "@repo/ui/field";
+import { JalaliDatePicker } from "@repo/ui/jalali-date-picker";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@repo/ui/select'
-import { Spinner } from '@repo/ui/spinner'
-import { cn } from '@repo/ui/utils'
+} from "@repo/ui/select";
+import { Spinner } from "@repo/ui/spinner";
+import { cn } from "@repo/ui/utils";
 import {
   AVAILABILITY_EMPTY_REASONS,
   type AvailabilityEmptyReason,
   type AvailabilityResponse,
   type AvailabilitySlot,
-} from '@repo/salon-core/availability'
-import { formatJalaliFullDate } from '@repo/salon-core/jalali'
-import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-digits'
-import { addDaysYmd } from '@repo/salon-core/salon-local-time'
-import { eligibleStaffForService } from '@repo/salon-core/staff-service-autofill'
-import type { Service, User } from '@repo/salon-core/types'
+} from "@repo/salon-core/availability";
+import { formatJalaliFullDate } from "@repo/salon-core/jalali";
+import {
+  formatPersianTime,
+  toPersianDigits,
+} from "@repo/salon-core/persian-digits";
+import { addDaysYmd } from "@repo/salon-core/salon-local-time";
+import { eligibleStaffForService } from "@repo/salon-core/staff-service-autofill";
+import type { Service, User } from "@repo/salon-core/types";
 import {
   availabilitySearchSchema,
   type AvailabilitySearchInput,
-} from '@repo/salon-core/forms/appointment'
-import { ServicePicker } from '@/components/services/service-picker'
-import { fetchJsonOrThrow, HttpError, useNetworkStatus } from '@/lib/pwa-client'
+} from "@repo/salon-core/forms/appointment";
+import { ServicePicker } from "@/components/services/service-picker";
+import {
+  fetchJsonOrThrow,
+  HttpError,
+  useNetworkStatus,
+} from "@/lib/pwa-client";
 
-const ANY_STAFF_VALUE = '__any__'
+const ANY_STAFF_VALUE = "__any__";
 
-type DayAvailabilityResponse = Extract<AvailabilityResponse, { mode: 'day' }>
-type NearestAvailabilityResponse = Extract<AvailabilityResponse, { mode: 'nearest' }>
+type DayAvailabilityResponse = Extract<AvailabilityResponse, { mode: "day" }>;
+type NearestAvailabilityResponse = Extract<
+  AvailabilityResponse,
+  { mode: "nearest" }
+>;
 
 type SlotGroup = {
-  staffId: string
-  staffName: string
-  slots: AvailabilitySlot[]
-}
+  staffId: string;
+  staffName: string;
+  slots: AvailabilitySlot[];
+};
 
 interface AvailabilityDrawerProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  initialDate: string
-  staff: User[]
-  services: Service[]
-  onSelectSlot: (selection: { slot: AvailabilitySlot; serviceId: string }) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialDate: string;
+  staff: User[];
+  services: Service[];
+  onSelectSlot: (selection: {
+    slot: AvailabilitySlot;
+    serviceId: string;
+  }) => void;
 }
 
 function emptyReasonCopy(reason?: AvailabilityEmptyReason): string {
   switch (reason) {
     case AVAILABILITY_EMPTY_REASONS.NO_QUALIFIED_STAFF:
-      return 'برای این خدمت فعلاً پرسنل فعالی تعریف نشده است.'
+      return "برای این خدمت فعلاً پرسنل فعالی تعریف نشده است.";
     case AVAILABILITY_EMPTY_REASONS.STAFF_OFF_DAY:
-      return 'پرسنل انتخاب‌شده در این روز شیفت فعالی ندارد.'
+      return "پرسنل انتخاب‌شده در این روز شیفت فعالی ندارد.";
     case AVAILABILITY_EMPTY_REASONS.ALL_QUALIFIED_STAFF_OFF_DAY:
-      return 'هیچ‌کدام از پرسنل واجد شرایط در این روز شیفت فعالی ندارند.'
+      return "هیچ‌کدام از پرسنل واجد شرایط در این روز شیفت فعالی ندارند.";
     case AVAILABILITY_EMPTY_REASONS.OUTSIDE_SEARCH_WINDOW:
-      return 'تا ۷ روز آینده زمان خالی مناسبی پیدا نشد.'
+      return "تا ۷ روز آینده زمان خالی مناسبی پیدا نشد.";
     case AVAILABILITY_EMPTY_REASONS.FULLY_BOOKED:
     default:
-      return 'در این روز زمانی پیدا نشد که کل مدت خدمت در آن جا شود.'
+      return "در این روز زمانی پیدا نشد که کل مدت خدمت در آن جا شود.";
   }
 }
 
 function compareGroupedSlots(a: SlotGroup, b: SlotGroup): number {
-  const aFirst = a.slots[0]?.startTime ?? '99:99'
-  const bFirst = b.slots[0]?.startTime ?? '99:99'
+  const aFirst = a.slots[0]?.startTime ?? "99:99";
+  const bFirst = b.slots[0]?.startTime ?? "99:99";
   if (aFirst !== bFirst) {
-    return aFirst.localeCompare(bFirst)
+    return aFirst.localeCompare(bFirst);
   }
-  return a.staffName.localeCompare(b.staffName, 'fa')
+  return a.staffName.localeCompare(b.staffName, "fa");
 }
 
 function groupSlotsByStaff(slots: AvailabilitySlot[]): SlotGroup[] {
-  const groups = new Map<string, SlotGroup>()
+  const groups = new Map<string, SlotGroup>();
 
   for (const slot of slots) {
-    const current = groups.get(slot.staffId)
+    const current = groups.get(slot.staffId);
     if (current) {
-      current.slots.push(slot)
-      continue
+      current.slots.push(slot);
+      continue;
     }
     groups.set(slot.staffId, {
       staffId: slot.staffId,
       staffName: slot.staffName,
       slots: [slot],
-    })
+    });
   }
 
-  return [...groups.values()].sort(compareGroupedSlots)
+  return [...groups.values()].sort(compareGroupedSlots);
 }
 
 export function AvailabilityDrawer({
@@ -125,9 +138,9 @@ export function AvailabilityDrawer({
   services,
   onSelectSlot,
 }: AvailabilityDrawerProps) {
-  const isOnline = useNetworkStatus()
-  const abortRef = useRef<AbortController | null>(null)
-  const wasOpenRef = useRef(open)
+  const isOnline = useNetworkStatus();
+  const abortRef = useRef<AbortController | null>(null);
+  const wasOpenRef = useRef(open);
 
   const {
     setValue,
@@ -137,72 +150,78 @@ export function AvailabilityDrawer({
   } = useForm<AvailabilitySearchInput>({
     resolver: zodResolver(availabilitySearchSchema),
     defaultValues: {
-      serviceId: '',
+      serviceId: "",
       staffSelection: ANY_STAFF_VALUE,
       date: initialDate,
     },
-  })
-  const serviceId = watch('serviceId') ?? ''
-  const staffSelection = watch('staffSelection') ?? ANY_STAFF_VALUE
-  const date = watch('date') ?? initialDate
-  const [loadingMode, setLoadingMode] = useState<'day' | 'nearest' | null>(null)
-  const [error, setError] = useState('')
-  const [dayResponse, setDayResponse] = useState<DayAvailabilityResponse | null>(null)
-  const [nearestResponse, setNearestResponse] = useState<NearestAvailabilityResponse | null>(null)
+  });
+  const serviceId = watch("serviceId") ?? "";
+  const staffSelection = watch("staffSelection") ?? ANY_STAFF_VALUE;
+  const date = watch("date") ?? initialDate;
+  const [loadingMode, setLoadingMode] = useState<"day" | "nearest" | null>(
+    null,
+  );
+  const [error, setError] = useState("");
+  const [dayResponse, setDayResponse] =
+    useState<DayAvailabilityResponse | null>(null);
+  const [nearestResponse, setNearestResponse] =
+    useState<NearestAvailabilityResponse | null>(null);
 
   const staffRoleOnly = useMemo(
-    () => staff.filter((member) => member.role === 'staff'),
-    [staff]
-  )
+    () => staff.filter((member) => member.role === "staff"),
+    [staff],
+  );
   const activeServices = useMemo(
     () => services.filter((service) => service.active),
-    [services]
-  )
+    [services],
+  );
   const eligibleStaff = useMemo(
     () => (serviceId ? eligibleStaffForService(staffRoleOnly, serviceId) : []),
-    [serviceId, staffRoleOnly]
-  )
+    [serviceId, staffRoleOnly],
+  );
   const groupedSlots = useMemo(
-    () => (dayResponse?.slots.length ? groupSlotsByStaff(dayResponse.slots) : []),
-    [dayResponse]
-  )
-  const hasVisibleResults = groupedSlots.length > 0 || nearestResponse?.slot != null
+    () =>
+      dayResponse?.slots.length ? groupSlotsByStaff(dayResponse.slots) : [],
+    [dayResponse],
+  );
+  const hasVisibleResults =
+    groupedSlots.length > 0 || nearestResponse?.slot != null;
 
   const clearResults = useCallback(() => {
-    abortRef.current?.abort()
-    abortRef.current = null
-    setLoadingMode(null)
-    setError('')
-    setDayResponse(null)
-    setNearestResponse(null)
-  }, [])
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setLoadingMode(null);
+    setError("");
+    setDayResponse(null);
+    setNearestResponse(null);
+  }, []);
 
   const resetDrawer = useCallback(() => {
-    clearResults()
+    clearResults();
     reset({
-      serviceId: '',
+      serviceId: "",
       staffSelection: ANY_STAFF_VALUE,
       date: initialDate,
-    })
-  }, [clearResults, initialDate, reset])
+    });
+  }, [clearResults, initialDate, reset]);
 
   const runSearch = useCallback(
-    async (mode: 'day' | 'nearest', targetDate = date) => {
+    async (mode: "day" | "nearest", targetDate = date) => {
       if (!serviceId) {
-        return
+        return;
       }
 
-      abortRef.current?.abort()
-      const controller = new AbortController()
-      abortRef.current = controller
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-      setLoadingMode(mode)
-      setError('')
-      if (mode === 'day') {
-        setDayResponse(null)
-        setNearestResponse(null)
+      setLoadingMode(mode);
+      setError("");
+      if (mode === "day") {
+        setDayResponse(null);
+        setNearestResponse(null);
       } else {
-        setNearestResponse(null)
+        setNearestResponse(null);
       }
 
       try {
@@ -210,103 +229,110 @@ export function AvailabilityDrawer({
           mode,
           serviceId,
           date: targetDate,
-        })
+        });
         if (staffSelection !== ANY_STAFF_VALUE) {
-          searchParams.set('staffId', staffSelection)
+          searchParams.set("staffId", staffSelection);
         }
 
         const response = await fetchJsonOrThrow<AvailabilityResponse>(
           `/api/appointments/availability?${searchParams.toString()}`,
           {
             signal: controller.signal,
-          }
-        )
+          },
+        );
 
         if (controller.signal.aborted) {
-          return
+          return;
         }
 
-        if (mode === 'day' && response.mode === 'day') {
-          setDayResponse(response)
-          return
+        if (mode === "day" && response.mode === "day") {
+          setDayResponse(response);
+          return;
         }
 
-        if (mode === 'nearest' && response.mode === 'nearest') {
-          setNearestResponse(response)
-          return
+        if (mode === "nearest" && response.mode === "nearest") {
+          setNearestResponse(response);
+          return;
         }
 
-        setError('پاسخ بررسی زمان کامل نبود.')
+        setError("پاسخ بررسی زمان کامل نبود.");
       } catch (err) {
         if (controller.signal.aborted) {
-          return
+          return;
         }
-        setError(err instanceof HttpError ? err.message : 'خطایی رخ داد. دوباره تلاش کنید.')
+        setError(
+          err instanceof HttpError
+            ? err.message
+            : "خطایی رخ داد. دوباره تلاش کنید.",
+        );
       } finally {
         if (abortRef.current === controller) {
-          abortRef.current = null
+          abortRef.current = null;
         }
-        setLoadingMode((current) => (current === mode ? null : current))
+        setLoadingMode((current) => (current === mode ? null : current));
       }
     },
-    [date, serviceId, staffSelection]
-  )
+    [date, serviceId, staffSelection],
+  );
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
-      resetDrawer()
+      resetDrawer();
     } else {
-      clearResults()
+      clearResults();
     }
-    onOpenChange(nextOpen)
-  }
+    onOpenChange(nextOpen);
+  };
 
   useEffect(() => {
     if (open && !wasOpenRef.current) {
-      resetDrawer()
+      resetDrawer();
     }
-    wasOpenRef.current = open
-  }, [open, resetDrawer])
+    wasOpenRef.current = open;
+  }, [open, resetDrawer]);
 
   useEffect(() => {
     return () => {
-      abortRef.current?.abort()
-    }
-  }, [])
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const handleServiceChange = (nextServiceId: string) => {
-    setValue('serviceId', nextServiceId, { shouldValidate: false })
-    const nextEligibleStaff = eligibleStaffForService(staffRoleOnly, nextServiceId)
+    setValue("serviceId", nextServiceId, { shouldValidate: false });
+    const nextEligibleStaff = eligibleStaffForService(
+      staffRoleOnly,
+      nextServiceId,
+    );
     if (
       staffSelection !== ANY_STAFF_VALUE &&
       !nextEligibleStaff.some((member) => member.id === staffSelection)
     ) {
-      setValue('staffSelection', ANY_STAFF_VALUE, { shouldValidate: false })
+      setValue("staffSelection", ANY_STAFF_VALUE, { shouldValidate: false });
     }
-    clearResults()
-  }
+    clearResults();
+  };
 
   const handleStaffChange = (nextStaffSelection: string) => {
-    setValue('staffSelection', nextStaffSelection, { shouldValidate: false })
-    clearResults()
-  }
+    setValue("staffSelection", nextStaffSelection, { shouldValidate: false });
+    clearResults();
+  };
 
   const handleDateChange = (nextDate: string) => {
-    setValue('date', nextDate, { shouldValidate: false })
-    clearResults()
-  }
+    setValue("date", nextDate, { shouldValidate: false });
+    clearResults();
+  };
 
   const handleDayNavigation = (deltaDays: number) => {
-    const nextDate = addDaysYmd(date, deltaDays)
-    setValue('date', nextDate, { shouldValidate: false })
-    setError('')
+    const nextDate = addDaysYmd(date, deltaDays);
+    setValue("date", nextDate, { shouldValidate: false });
+    setError("");
     if (!serviceId) {
-      setDayResponse(null)
-      setNearestResponse(null)
-      return
+      setDayResponse(null);
+      setNearestResponse(null);
+      return;
     }
-    void runSearch('day', nextDate)
-  }
+    void runSearch("day", nextDate);
+  };
 
   return (
     <Drawer open={open} onOpenChange={handleOpenChange}>
@@ -314,11 +340,12 @@ export function AvailabilityDrawer({
         <DrawerHeader className="pb-3 text-start">
           <DrawerTitle>بررسی زمان خالی</DrawerTitle>
           <DrawerDescription>
-            خدمت و تاریخ را انتخاب کنید تا زمان‌های قابل رزرو برای مدیر نمایش داده شود.
+            خدمت و تاریخ را انتخاب کنید تا زمان‌های قابل رزرو برای مدیر نمایش
+            داده شود.
           </DrawerDescription>
         </DrawerHeader>
 
-        <div className="min-h-0 flex-1 overflow-auto px-4 pb-4">
+        <div className="min-h-0 flex-1 overflow-auto p-4">
           <FieldGroup className="gap-4">
             <Field>
               <FieldLabel>خدمت</FieldLabel>
@@ -328,7 +355,9 @@ export function AvailabilityDrawer({
                 onChange={handleServiceChange}
                 showPrice={false}
               />
-              {errors.serviceId && <FieldError>{errors.serviceId.message}</FieldError>}
+              {errors.serviceId && (
+                <FieldError>{errors.serviceId.message}</FieldError>
+              )}
             </Field>
 
             <Field>
@@ -340,11 +369,15 @@ export function AvailabilityDrawer({
               >
                 <SelectTrigger className="w-full">
                   <SelectValue
-                    placeholder={serviceId ? 'انتخاب پرسنل' : 'اول خدمت را انتخاب کنید'}
+                    placeholder={
+                      serviceId ? "انتخاب پرسنل" : "اول خدمت را انتخاب کنید"
+                    }
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ANY_STAFF_VALUE}>هر پرسنل واجد شرایط</SelectItem>
+                  <SelectItem value={ANY_STAFF_VALUE}>
+                    هر پرسنل واجد شرایط
+                  </SelectItem>
                   {eligibleStaff.map((member) => (
                     <SelectItem key={member.id} value={member.id}>
                       {member.name}
@@ -368,11 +401,15 @@ export function AvailabilityDrawer({
             <Button
               type="button"
               className="h-11 gap-2 rounded-2xl"
-              disabled={!serviceId || !isOnline || loadingMode === 'day'}
-              onClick={() => void runSearch('day')}
+              disabled={!serviceId || !isOnline || loadingMode === "day"}
+              onClick={() => void runSearch("day")}
             >
-              {loadingMode === 'day' ? <Spinner className="size-4" /> : <Search className="size-4" />}
-              {loadingMode === 'day' ? 'در حال بررسی...' : 'بررسی زمان'}
+              {loadingMode === "day" ? (
+                <Spinner className="size-4" />
+              ) : (
+                <Search className="size-4" />
+              )}
+              {loadingMode === "day" ? "در حال بررسی..." : "بررسی زمان"}
             </Button>
 
             {!isOnline ? (
@@ -390,7 +427,8 @@ export function AvailabilityDrawer({
               <Alert className="border-primary/20 bg-primary/5 text-primary">
                 <AlertTriangle className="size-4" />
                 <AlertDescription className="text-primary/85">
-                  این زمان‌ها پیشنهادی هستند و تایید نهایی هنگام ثبت نوبت انجام می‌شود.
+                  این زمان‌ها پیشنهادی هستند و تایید نهایی هنگام ثبت نوبت انجام
+                  می‌شود.
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -399,14 +437,18 @@ export function AvailabilityDrawer({
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card px-3 py-3 shadow-sm">
                   <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">تاریخ انتخاب‌شده</p>
-                    <p className="truncate text-sm font-semibold">{formatJalaliFullDate(date)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      تاریخ انتخاب‌شده
+                    </p>
+                    <p className="truncate text-sm font-semibold">
+                      {formatJalaliFullDate(date)}
+                    </p>
                   </div>
                   <Badge variant="outline" className="shrink-0 text-[10px]">
                     <CalendarDays className="size-3.5" />
                     {groupedSlots.length > 0
                       ? `${toPersianDigits(dayResponse.slots.length)} زمان`
-                      : 'بدون زمان'}
+                      : "بدون زمان"}
                   </Badge>
                 </div>
 
@@ -419,13 +461,17 @@ export function AvailabilityDrawer({
                       >
                         <div className="mb-3 flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold">{group.staffName}</p>
+                            <p className="truncate text-sm font-semibold">
+                              {group.staffName}
+                            </p>
                             <p className="text-xs text-muted-foreground">
-                              {toPersianDigits(group.slots.length)} زمان قابل رزرو
+                              {toPersianDigits(group.slots.length)} زمان قابل
+                              رزرو
                             </p>
                           </div>
                           <Badge variant="secondary" className="text-[10px]">
-                            اولین زمان {formatPersianTime(group.slots[0]!.startTime)}
+                            اولین زمان{" "}
+                            {formatPersianTime(group.slots[0]!.startTime)}
                           </Badge>
                         </div>
                         <div className="grid grid-cols-1 gap-2">
@@ -438,7 +484,8 @@ export function AvailabilityDrawer({
                             >
                               <div className="min-w-0">
                                 <p className="text-sm font-medium">
-                                  {formatPersianTime(slot.startTime)} تا {formatPersianTime(slot.endTime)}
+                                  {formatPersianTime(slot.startTime)} تا{" "}
+                                  {formatPersianTime(slot.endTime)}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   رزرو با {slot.staffName}
@@ -454,7 +501,9 @@ export function AvailabilityDrawer({
                 ) : (
                   <div className="space-y-3 rounded-2xl border border-dashed border-border/70 bg-muted/30 p-4 text-center">
                     <div className="space-y-1">
-                      <p className="text-sm font-semibold">زمان خالی پیدا نشد</p>
+                      <p className="text-sm font-semibold">
+                        زمان خالی پیدا نشد
+                      </p>
                       <p className="text-sm text-muted-foreground">
                         {emptyReasonCopy(dayResponse.emptyReason)}
                       </p>
@@ -464,30 +513,39 @@ export function AvailabilityDrawer({
                       type="button"
                       variant="outline"
                       className="w-full gap-2 rounded-2xl"
-                      disabled={!serviceId || !isOnline || loadingMode === 'nearest'}
-                      onClick={() => void runSearch('nearest')}
+                      disabled={
+                        !serviceId || !isOnline || loadingMode === "nearest"
+                      }
+                      onClick={() => void runSearch("nearest")}
                     >
-                      {loadingMode === 'nearest' ? (
+                      {loadingMode === "nearest" ? (
                         <Spinner className="size-4" />
                       ) : (
                         <Clock3 className="size-4" />
                       )}
-                      {loadingMode === 'nearest'
-                        ? 'در حال جستجوی نزدیک‌ترین زمان...'
-                        : 'نزدیک‌ترین زمان را پیدا کن'}
+                      {loadingMode === "nearest"
+                        ? "در حال جستجوی نزدیک‌ترین زمان..."
+                        : "نزدیک‌ترین زمان را پیدا کن"}
                     </Button>
 
                     {nearestResponse?.slot ? (
                       <button
                         type="button"
-                        onClick={() => onSelectSlot({ slot: nearestResponse.slot!, serviceId })}
+                        onClick={() =>
+                          onSelectSlot({
+                            slot: nearestResponse.slot!,
+                            serviceId,
+                          })
+                        }
                         className={cn(
-                          'w-full rounded-2xl border border-primary/30 bg-primary/5 px-4 py-4 text-start shadow-sm transition-colors hover:bg-primary/8'
+                          "w-full rounded-2xl border border-primary/30 bg-primary/5 px-4 py-4 text-start shadow-sm transition-colors hover:bg-primary/8",
                         )}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 space-y-1">
-                            <p className="text-sm font-semibold">نزدیک‌ترین زمان</p>
+                            <p className="text-sm font-semibold">
+                              نزدیک‌ترین زمان
+                            </p>
                             <p className="text-xs text-muted-foreground">
                               {formatJalaliFullDate(nearestResponse.slot.date)}
                             </p>
@@ -497,7 +555,7 @@ export function AvailabilityDrawer({
                           </Badge>
                         </div>
                         <p className="mt-3 text-sm font-medium">
-                          {formatPersianTime(nearestResponse.slot.startTime)} تا{' '}
+                          {formatPersianTime(nearestResponse.slot.startTime)} تا{" "}
                           {formatPersianTime(nearestResponse.slot.endTime)}
                         </p>
                       </button>
@@ -541,5 +599,5 @@ export function AvailabilityDrawer({
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
-  )
+  );
 }

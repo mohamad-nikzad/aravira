@@ -4,6 +4,7 @@ import { validateCreateAppointmentIntake, validateUpdateAppointmentIntake } from
 const mocks = vi.hoisted(() => ({
   getClientById: vi.fn(),
   getServiceById: vi.fn(),
+  getActiveServiceAddonsForService: vi.fn(),
   validateComboServiceIsBookable: vi.fn(),
   staffMayPerformService: vi.fn(),
   getUserById: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock('./client-queries', () => ({
 
 vi.mock('./service-queries', () => ({
   getServiceById: mocks.getServiceById,
+  getActiveServiceAddonsForService: mocks.getActiveServiceAddonsForService,
   validateComboServiceIsBookable: mocks.validateComboServiceIsBookable,
 }))
 
@@ -33,6 +35,11 @@ vi.mock('./user-queries', () => ({
 
 vi.mock('./appointment-queries', () => ({
   getScheduleOverlapFlags: mocks.getScheduleOverlapFlags,
+  validateAppointmentAddonIds: (addonIds: string[]) => {
+    if (new Set(addonIds).size !== addonIds.length) {
+      throw new Error('appointment add-ons cannot contain duplicates')
+    }
+  },
 }))
 
 vi.mock('./placeholder-client-queries', () => ({
@@ -56,6 +63,7 @@ describe('appointment intake placeholder rules', () => {
       duration: 45,
     })
     mocks.validateComboServiceIsBookable.mockResolvedValue(true)
+    mocks.getActiveServiceAddonsForService.mockResolvedValue([])
     mocks.staffMayPerformService.mockResolvedValue(true)
     mocks.getUserById.mockResolvedValue({
       id: 'staff-1',
@@ -123,6 +131,9 @@ describe('appointment intake placeholder rules', () => {
         bookedServiceName: 'Cut',
         bookedServiceDuration: 45,
         bookedServicePrice: 100,
+        bookedTotalDuration: 45,
+        bookedTotalPrice: 100,
+        bookedAddonCount: 0,
         date: '2026-05-01',
         startTime: '10:00',
         endTime: '10:45',
@@ -247,5 +258,149 @@ describe('appointment intake placeholder rules', () => {
       'combo-1',
       'salon-1'
     )
+  })
+
+  it('computes create end time from base service plus selected add-ons', async () => {
+    mocks.getServiceById.mockResolvedValue({
+      id: 'service-1',
+      name: 'کات',
+      active: true,
+      duration: 45,
+      price: 100,
+    })
+    mocks.getActiveServiceAddonsForService.mockResolvedValue([
+      {
+        id: 'addon-1',
+        name: 'فرنچ',
+        durationDelta: 15,
+        priceDelta: 50,
+        active: true,
+      },
+    ])
+
+    const result = await validateCreateAppointmentIntake({
+      salonId: 'salon-1',
+      clientId: 'placeholder-1',
+      staffId: 'staff-1',
+      serviceId: 'service-1',
+      addonIds: ['addon-1'],
+      date: '2026-05-01',
+      startTime: '10:00',
+      endTime: '10:20',
+      durationMinutes: 20,
+    })
+
+    expect(result).toMatchObject({
+      ok: true,
+      command: {
+        addonIds: ['addon-1'],
+        endTime: '11:00',
+      },
+    })
+  })
+
+  it('rejects duplicate add-ons', async () => {
+    const result = await validateCreateAppointmentIntake({
+      salonId: 'salon-1',
+      clientId: 'placeholder-1',
+      staffId: 'staff-1',
+      serviceId: 'service-1',
+      addonIds: ['addon-1', 'addon-1'],
+      date: '2026-05-01',
+      startTime: '10:00',
+    })
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: 400,
+      error: 'افزودنی تکراری انتخاب شده است',
+    })
+  })
+
+  it('requires add-ons to be explicit when changing service', async () => {
+    const result = await validateUpdateAppointmentIntake({
+      salonId: 'salon-1',
+      appointmentId: 'appointment-1',
+      existing: {
+        id: 'appointment-1',
+        clientId: 'placeholder-1',
+        staffId: 'staff-1',
+        serviceId: 'service-1',
+        bookedServiceName: 'Cut',
+        bookedServiceDuration: 45,
+        bookedServicePrice: 100,
+        bookedTotalDuration: 45,
+        bookedTotalPrice: 100,
+        bookedAddonCount: 0,
+        date: '2026-05-01',
+        startTime: '10:00',
+        endTime: '10:45',
+        status: 'scheduled',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      body: {
+        serviceId: 'service-2',
+      },
+    })
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: 400,
+      error: 'برای تغییر خدمت، افزودنی‌ها باید دوباره مشخص شوند',
+    })
+  })
+
+  it('uses the existing booked base duration when only add-ons change', async () => {
+    mocks.getServiceById.mockResolvedValue({
+      id: 'service-1',
+      name: 'کات جدید در کاتالوگ',
+      active: true,
+      duration: 60,
+      price: 200,
+    })
+    mocks.getActiveServiceAddonsForService.mockResolvedValue([
+      {
+        id: 'addon-1',
+        name: 'فرنچ',
+        durationDelta: 15,
+        priceDelta: 50,
+        active: true,
+      },
+    ])
+
+    const result = await validateUpdateAppointmentIntake({
+      salonId: 'salon-1',
+      appointmentId: 'appointment-1',
+      existing: {
+        id: 'appointment-1',
+        clientId: 'placeholder-1',
+        staffId: 'staff-1',
+        serviceId: 'service-1',
+        bookedServiceName: 'Cut',
+        bookedServiceDuration: 45,
+        bookedServicePrice: 100,
+        bookedTotalDuration: 45,
+        bookedTotalPrice: 100,
+        bookedAddonCount: 0,
+        date: '2026-05-01',
+        startTime: '10:00',
+        endTime: '10:45',
+        status: 'scheduled',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      body: {
+        addonIds: ['addon-1'],
+      },
+    })
+
+    expect(result).toMatchObject({
+      ok: true,
+      patch: {
+        addonIds: ['addon-1'],
+        endTime: '11:00',
+      },
+    })
   })
 })

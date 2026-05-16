@@ -70,6 +70,7 @@ export async function POST(request: Request) {
       placeholderClient,
       staffId,
       serviceId,
+      addonIds,
       date,
       startTime,
       endTime: endTimeRaw,
@@ -99,6 +100,7 @@ export async function POST(request: Request) {
       startTime,
       endTime: endTimeRaw,
       durationMinutes,
+      addonIds,
       notes,
       requestedAppointmentId,
     })

@@ -40,6 +40,11 @@ export function summarizeOpenRanges(ranges: { startTime: string; endTime: string
   return `${primary} · ${toPersianDigits(ranges.length - 1)} بازه دیگر`;
 }
 
+export function bookedServiceWithAddonCount(appointment: AppointmentWithDetails) {
+  if (appointment.bookedAddonCount <= 0) return appointment.bookedServiceName;
+  return `${appointment.bookedServiceName} +${toPersianDigits(appointment.bookedAddonCount)}`;
+}
+
 export function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   const styles = useThemeStyles((t) => ({
     card: { gap: t.spacing.xs, padding: t.spacing.xl },
@@ -164,7 +169,7 @@ export function AppointmentCard({
               </Badge>
             ) : null}
           </View>
-          <Text style={styles.muted}>{appointment.bookedServiceName}</Text>
+          <Text style={styles.muted}>{bookedServiceWithAddonCount(appointment)}</Text>
           <Text style={styles.mutedLtr}>
             {formatPersianTime(appointment.startTime)} - {formatPersianTime(appointment.endTime)} ·{' '}
             {meta}

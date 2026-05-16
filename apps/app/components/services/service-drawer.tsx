@@ -227,7 +227,7 @@ export function ServiceDrawer({
 
         <form
           onSubmit={onSubmit}
-          className="flex flex-col gap-4 overflow-auto px-4"
+          className="flex flex-col gap-4 overflow-auto p-4"
         >
           <FieldGroup>
             <Field>

@@ -29,7 +29,7 @@ import type { ClientSummary, FollowUpReason } from '@repo/salon-core/types'
 import { APPOINTMENT_STATUS } from '@repo/salon-core/types'
 import { formatJalaliFullDate } from '@repo/salon-core/jalali'
 import { displayPhone } from '@repo/salon-core/phone'
-import { formatPersianTime } from '@repo/salon-core/persian-digits'
+import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-digits'
 
 async function fetcher<T>(url: string) {
   return fetchJsonOrThrow<T>(url)
@@ -269,7 +269,12 @@ export default function ClientDetailPage() {
                 {formatPersianTime(upcomingAppointment.startTime)} – {formatPersianTime(upcomingAppointment.endTime)} ·{' '}
                 {upcomingAppointment.staff.name}
               </p>
-              <p>{upcomingAppointment.bookedServiceName}</p>
+              <p>
+                {upcomingAppointment.bookedServiceName}
+                {upcomingAppointment.bookedAddonCount > 0
+                  ? ` +${toPersianDigits(upcomingAppointment.bookedAddonCount)}`
+                  : ''}
+              </p>
               <Badge className="mt-1" variant="secondary">
                 {APPOINTMENT_STATUS[upcomingAppointment.status].label}
               </Badge>
@@ -320,12 +325,21 @@ export default function ClientDetailPage() {
                         {APPOINTMENT_STATUS[apt.status].label}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {apt.bookedServiceName} · {apt.staff.name}{' '}
-                      <span dir="ltr" className="ms-1">
-                        ({formatPersianTime(apt.startTime)}–{formatPersianTime(apt.endTime)})
-                      </span>
-                    </p>
+	                    <p className="text-xs text-muted-foreground">
+	                      {apt.bookedServiceName} · {apt.staff.name}{' '}
+	                      <span dir="ltr" className="ms-1">
+	                        ({formatPersianTime(apt.startTime)}–{formatPersianTime(apt.endTime)})
+	                      </span>
+	                    </p>
+                    {apt.bookedAddons && apt.bookedAddons.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {apt.bookedAddons.map((addon) => (
+                          <Badge key={addon.id} variant="secondary" className="text-[10px]">
+                            {addon.bookedAddonName}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 ))
             )}

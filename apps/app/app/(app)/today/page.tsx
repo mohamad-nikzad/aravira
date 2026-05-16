@@ -211,7 +211,7 @@ function AppointmentCard({
               </Badge>
             ) : null}
           </div>
-          <p className="text-xs text-muted-foreground">{appointment.bookedServiceName}</p>
+          <p className="text-xs text-muted-foreground">{bookedServiceWithAddonCount(appointment)}</p>
           <p className="text-xs text-muted-foreground" dir="ltr">
             {formatPersianTime(appointment.startTime)} - {formatPersianTime(appointment.endTime)} · {meta}
           </p>
@@ -1117,7 +1117,9 @@ function StaffTodayView({
                       </span>
                     </div>
                     <p className="text-sm font-semibold">{currentAppointment.client.name}</p>
-                    <p className="text-xs text-muted-foreground">{currentAppointment.bookedServiceName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {bookedServiceWithAddonCount(currentAppointment)}
+                    </p>
                   </div>
                 ) : nextAppointment ? (
                   <div className="space-y-2 rounded-2xl border border-border/60 p-3">
@@ -1128,7 +1130,9 @@ function StaffTodayView({
                       </span>
                     </div>
                     <p className="text-sm font-semibold">{nextAppointment.client.name}</p>
-                    <p className="text-xs text-muted-foreground">{nextAppointment.bookedServiceName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {bookedServiceWithAddonCount(nextAppointment)}
+                    </p>
                   </div>
                 ) : (
                   <div className="rounded-2xl border border-dashed border-border/70 p-4 text-center">
@@ -1340,4 +1344,8 @@ export default function TodayPage() {
       mutateTomorrow={() => void mutateStaffTomorrow()}
     />
   )
+}
+function bookedServiceWithAddonCount(appointment: AppointmentWithDetails) {
+  if (appointment.bookedAddonCount <= 0) return appointment.bookedServiceName
+  return `${appointment.bookedServiceName} +${toPersianDigits(appointment.bookedAddonCount)}`
 }

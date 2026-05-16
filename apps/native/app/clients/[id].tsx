@@ -43,6 +43,11 @@ function followReasonLabel(reason: FollowUpReason): string {
   }
 }
 
+function bookedServiceWithAddonCount(appointment: ClientSummary['history'][number]) {
+  if (appointment.bookedAddonCount <= 0) return appointment.bookedServiceName;
+  return `${appointment.bookedServiceName} +${toPersianDigits(appointment.bookedAddonCount)}`;
+}
+
 function formatTomans(n: number) {
   return new Intl.NumberFormat('fa-IR').format(n) + ' تومان';
 }
@@ -442,7 +447,9 @@ export default function ClientDetailScreen() {
               {formatPersianTime(upcomingAppointment.startTime)} –{' '}
               {formatPersianTime(upcomingAppointment.endTime)} · {upcomingAppointment.staff.name}
             </Text>
-            <Text style={styles.upcomingLine}>{upcomingAppointment.bookedServiceName}</Text>
+            <Text style={styles.upcomingLine}>
+              {bookedServiceWithAddonCount(upcomingAppointment)}
+            </Text>
             <Badge variant="secondary">
               {APPOINTMENT_STATUS[upcomingAppointment.status].label}
             </Badge>
@@ -491,9 +498,18 @@ export default function ClientDetailScreen() {
                     <Badge variant="outline">{APPOINTMENT_STATUS[apt.status].label}</Badge>
                   </View>
                   <Text style={styles.historyMeta}>
-                    {apt.bookedServiceName} · {apt.staff.name} ({formatPersianTime(apt.startTime)}–
+                    {bookedServiceWithAddonCount(apt)} · {apt.staff.name} ({formatPersianTime(apt.startTime)}–
                     {formatPersianTime(apt.endTime)})
                   </Text>
+                  {apt.bookedAddons && apt.bookedAddons.length > 0 ? (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                      {apt.bookedAddons.map((addon) => (
+                        <Badge key={addon.id} variant="secondary">
+                          {addon.bookedAddonName}
+                        </Badge>
+                      ))}
+                    </View>
+                  ) : null}
                 </View>
               ))
             )}

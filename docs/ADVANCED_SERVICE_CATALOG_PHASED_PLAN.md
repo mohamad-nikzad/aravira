@@ -375,6 +375,8 @@ Status: completed in this slice.
 
 ### Phase 1.6: Add-on Manager UI
 
+Status: completed in this slice.
+
 - Add web settings add-on management section.
 - Add add-on create/edit drawer with name, price delta, duration delta, active, description, and scopes.
 - Let managers deactivate and reactivate add-ons; do not expose hard delete in v1.
@@ -383,6 +385,8 @@ Status: completed in this slice.
 - Done when managers can maintain add-ons without touching database rows.
 
 ### Phase 1.7: Appointment Add-on Snapshots
+
+Status: completed in this slice.
 
 - Add a minimal `appointment_addon_lines` table tied directly to appointment.
 - Add appointment total snapshot fields for total duration and total price including selected add-ons.
@@ -404,6 +408,8 @@ Status: completed in this slice.
 - Done when appointments can store selected add-ons as historical snapshots.
 
 ### Phase 1.8: Add-on Booking UI
+
+Status: completed in this slice.
 
 - Update web appointment create/edit drawers to show matching add-ons after service selection.
 - Keep availability search based on the selected ServiceVariant duration only.

@@ -383,6 +383,8 @@ export const appointments = pgTable(
     bookedServiceName: text('booked_service_name').notNull(),
     bookedServiceDuration: integer('booked_service_duration').notNull(),
     bookedServicePrice: integer('booked_service_price').notNull(),
+    bookedTotalDuration: integer('booked_total_duration').notNull(),
+    bookedTotalPrice: integer('booked_total_price').notNull(),
     status: text('status')
       .notNull()
       .$type<'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show'>(),
@@ -399,6 +401,35 @@ export const appointments = pgTable(
     index('appointments_salon_id_client_id_date_idx').on(t.salonId, t.clientId, t.date),
     index('appointments_staff_id_date_idx').on(t.staffId, t.date),
     index('appointments_client_id_date_idx').on(t.clientId, t.date),
+  ]
+)
+
+export const appointmentAddonLines = pgTable(
+  'appointment_addon_lines',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'cascade' }),
+    appointmentId: uuid('appointment_id')
+      .notNull()
+      .references(() => appointments.id, { onDelete: 'cascade' }),
+    serviceAddonId: uuid('service_addon_id')
+      .notNull()
+      .references(() => serviceAddons.id, { onDelete: 'restrict' }),
+    bookedAddonName: text('booked_addon_name').notNull(),
+    bookedAddonPriceDelta: integer('booked_addon_price_delta').notNull(),
+    bookedAddonDurationDelta: integer('booked_addon_duration_delta').notNull(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('appointment_addon_lines_appointment_addon_unique').on(
+      t.appointmentId,
+      t.serviceAddonId
+    ),
+    index('appointment_addon_lines_salon_id_appointment_idx').on(t.salonId, t.appointmentId),
+    index('appointment_addon_lines_salon_id_addon_idx').on(t.salonId, t.serviceAddonId),
   ]
 )
 

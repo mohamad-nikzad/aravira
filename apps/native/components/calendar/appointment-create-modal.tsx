@@ -5,7 +5,7 @@ import { AppModal } from '../ui/app-modal';
 import { confirmDirtyDismiss } from '../ui/app-sheet';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { AppointmentWithDetails, Client, Service, User } from '@repo/salon-core/types';
+import type { AppointmentWithDetails, Client, Service, ServiceAddon, User } from '@repo/salon-core/types';
 import {
   APPOINTMENT_DURATION_BOUNDS,
   durationMinutesFromRange,
@@ -32,7 +32,7 @@ import { Select, type SelectGroup, type SelectOption } from '../ui/select';
 import { TimePicker } from '../ui/time-picker';
 import { Spinner } from '../ui/spinner';
 import { FormJalaliDateField, FormRootError, FormTextField, FormTimeField } from '../ui/form-field';
-import { appointmentsApi } from '../../lib/api';
+import { appointmentsApi, servicesApi } from '../../lib/api';
 import { ClientPicker } from './client-picker';
 import { useTheme, useThemeStyles } from '../../theme';
 
@@ -75,6 +75,8 @@ export function AppointmentCreateModal({
 }: AppointmentCreateModalProps) {
   const [showDetails, setShowDetails] = React.useState(false);
   const [localClients, setLocalClients] = React.useState<Client[]>(clients);
+  const [availableAddons, setAvailableAddons] = React.useState<ServiceAddon[]>([]);
+  const [addonsLoading, setAddonsLoading] = React.useState(false);
   const wasOpenRef = React.useRef(false);
   const form = useForm<AppointmentFormInput>({
     resolver: zodResolver(appointmentFormSchema, undefined, { raw: true }),
@@ -90,6 +92,7 @@ export function AppointmentCreateModal({
       notes: '',
       temporaryClientName: '',
       temporaryClientNotes: '',
+      addonIds: [],
     },
   });
   const {
@@ -109,6 +112,7 @@ export function AppointmentCreateModal({
   const endTime = watch('endTime') ?? endTimeFromDuration(startTime, durationMinutes);
   const useTemporaryClient = Boolean(watch('useTemporaryClient'));
   const temporaryClientName = watch('temporaryClientName') ?? '';
+  const addonIds = watch('addonIds') ?? [];
   const { theme } = useTheme();
   const styles = useThemeStyles((t) => ({
     flex1: { flex: 1, width: '100%' },
@@ -268,6 +272,7 @@ export function AppointmentCreateModal({
       notes: '',
       temporaryClientName: '',
       temporaryClientNotes: '',
+      addonIds: [],
     });
     setShowDetails(false);
     setLocalClients(clients);
@@ -306,6 +311,27 @@ export function AppointmentCreateModal({
     }
   };
 
+  const selectedService = React.useMemo(
+    () => services.find((service) => service.id === serviceId),
+    [serviceId, services]
+  );
+  const selectedAddons = React.useMemo(
+    () => availableAddons.filter((addon) => addonIds.includes(addon.id)),
+    [addonIds, availableAddons]
+  );
+  const previewDuration =
+    (selectedService?.duration ?? durationMinutes) +
+    selectedAddons.reduce((sum, addon) => sum + addon.durationDelta, 0);
+  const previewPrice =
+    (selectedService?.price ?? 0) +
+    selectedAddons.reduce((sum, addon) => sum + addon.priceDelta, 0);
+  const applyCatalogDuration = (baseService: Service | undefined, addons: ServiceAddon[]) => {
+    applyDuration(
+      (baseService?.duration ?? 45) +
+        addons.reduce((sum, addon) => sum + addon.durationDelta, 0)
+    );
+  };
+
   const syncEndTimeWithStart = React.useCallback(
     (st: string) => {
       setValue('endTime', endTimeFromDuration(st, durationMinutes), {
@@ -318,6 +344,7 @@ export function AppointmentCreateModal({
 
   const handleServiceChange = (id: string) => {
     setValue('serviceId', id, { shouldDirty: true, shouldValidate: true });
+    setValue('addonIds', [], { shouldDirty: true, shouldValidate: true });
     const svc = services.find((s) => s.id === id);
     if (svc) applyDuration(svc.duration);
     const eligibleAll = eligibleStaffForService(staff, id);
@@ -328,6 +355,39 @@ export function AppointmentCreateModal({
       setValue('staffId', '', { shouldDirty: true, shouldValidate: true });
     }
   };
+
+  const toggleAddon = (addon: ServiceAddon) => {
+    const nextIds = addonIds.includes(addon.id)
+      ? addonIds.filter((id) => id !== addon.id)
+      : [...addonIds, addon.id];
+    const nextAddons = availableAddons.filter((item) => nextIds.includes(item.id));
+    setValue('addonIds', nextIds, { shouldDirty: true, shouldValidate: true });
+    applyCatalogDuration(selectedService, nextAddons);
+  };
+
+  React.useEffect(() => {
+    if (!open || !serviceId) {
+      setAvailableAddons([]);
+      setAddonsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setAddonsLoading(true);
+    servicesApi.addons
+      .forService(serviceId)
+      .then(({ addons }) => {
+        if (!cancelled) setAvailableAddons(addons);
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableAddons([]);
+      })
+      .finally(() => {
+        if (!cancelled) setAddonsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, serviceId]);
 
   const handleStaffChange = (id: string) => {
     setValue('staffId', id, { shouldDirty: true, shouldValidate: true });
@@ -532,6 +592,53 @@ export function AppointmentCreateModal({
         />
         {errors.serviceId ? <Text style={styles.errorText}>{errors.serviceId.message}</Text> : null}
       </Field>
+
+      {selectedService ? (
+        <Field label="افزودنی‌ها">
+          <View style={styles.detailsCard}>
+            {addonsLoading ? (
+              <View style={{ padding: theme.spacing.lg }}>
+                <Spinner />
+              </View>
+            ) : availableAddons.length > 0 ? (
+              availableAddons.map((addon) => {
+                const active = addonIds.includes(addon.id);
+                return (
+                  <Pressable
+                    key={addon.id}
+                    onPress={() => toggleAddon(addon)}
+                    style={[styles.temporaryRow, { marginBottom: 0, borderWidth: 0 }]}>
+                    <View
+                      style={[
+                        styles.checkbox,
+                        active ? styles.checkboxActive : styles.checkboxInactive,
+                      ]}>
+                      {active ? (
+                        <Check size={12} color={theme.colors.primaryForeground} strokeWidth={3} />
+                      ) : null}
+                    </View>
+                    <View style={styles.flex1}>
+                      <Text style={styles.checkboxLabel}>{addon.name}</Text>
+                      <Text style={styles.checkboxHint}>
+                        +{toPersianDigits(addon.durationDelta)} دقیقه · +{formatPrice(addon.priceDelta)}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })
+            ) : (
+              <Text style={[styles.checkboxHint, { padding: theme.spacing.lg }]}>
+                برای این خدمت افزودنی فعالی تعریف نشده است.
+              </Text>
+            )}
+            <View style={{ paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.lg }}>
+              <Text style={styles.checkboxHint}>
+                جمع پیش‌نمایش: {toPersianDigits(previewDuration)} دقیقه · {formatPrice(previewPrice)}
+              </Text>
+            </View>
+          </View>
+        </Field>
+      ) : null}
 
       <View style={styles.twoCol}>
         <View style={styles.flex1}>

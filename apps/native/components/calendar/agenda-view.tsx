@@ -22,6 +22,12 @@ import type { CalendarViewProps } from './types';
 
 const RANGE_DAYS = 14;
 
+function serviceLabelWithAddons(appointment: AppointmentWithDetails) {
+  const base = formatCompactServiceLabel(appointment.service);
+  if (appointment.bookedAddonCount <= 0) return base;
+  return `${base} +${toPersianDigits(appointment.bookedAddonCount)}`;
+}
+
 export function AgendaView(props: CalendarViewProps) {
   const { cursorYmd, appointments, staffFilter, onSelectAppointment } = props;
   const { theme } = useTheme();
@@ -303,7 +309,7 @@ function AgendaRow({
               fontSize: 11,
               color: theme.colors.mutedForeground,
             }}>
-            {formatCompactServiceLabel(appointment.service)} · {appointment.staff.name}
+            {serviceLabelWithAddons(appointment)} · {appointment.staff.name}
           </Text>
         </View>
 

@@ -3,14 +3,16 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import {
   ChevronDown,
   ChevronLeft,
+  Clock3,
   FolderPlus,
   Layers3,
+  Banknote,
   Pencil,
   Plus,
   Search,
   Sparkles,
 } from 'lucide-react-native';
-import type { Service, ServiceCategory, ServiceFamily } from '@repo/salon-core/types';
+import type { Service, ServiceAddon, ServiceCategory, ServiceFamily } from '@repo/salon-core/types';
 import { toPersianDigits } from '@repo/salon-core/persian-digits';
 import { Button } from '../ui/button';
 import { AppText } from '../ui/app-text';
@@ -22,6 +24,7 @@ import { servicesApi } from '../../lib/api';
 import { useAsyncResource } from '../../lib/hooks/use-async-resource';
 import { useTheme, useThemeStyles, withAlpha } from '../../theme';
 import { ServiceCategoryFormModal } from './service-category-form-modal';
+import { ServiceAddonFormModal } from './service-addon-form-modal';
 import { ServiceFamilyFormModal } from './service-family-form-modal';
 import { ServiceFormModal } from './service-form-modal';
 
@@ -99,6 +102,9 @@ export function ServicesCard() {
     'service-families',
     (signal) => servicesApi.families.list({ includeInactive: true, signal })
   );
+  const addonsResource = useAsyncResource<{ addons: ServiceAddon[] }>('service-addons', (signal) =>
+    servicesApi.addons.list({ includeInactive: true, signal })
+  );
 
   const services = React.useMemo(
     () => servicesResource.data?.services ?? [],
@@ -112,6 +118,10 @@ export function ServicesCard() {
     () => familiesResource.data?.families ?? [],
     [familiesResource.data?.families]
   );
+  const addons = React.useMemo(
+    () => addonsResource.data?.addons ?? [],
+    [addonsResource.data?.addons]
+  );
   const loading =
     (servicesResource.loading && !servicesResource.data) ||
     (categoriesResource.loading && !categoriesResource.data) ||
@@ -120,14 +130,17 @@ export function ServicesCard() {
   const [categoryModalOpen, setCategoryModalOpen] = React.useState(false);
   const [familyModalOpen, setFamilyModalOpen] = React.useState(false);
   const [serviceModalOpen, setServiceModalOpen] = React.useState(false);
+  const [addonModalOpen, setAddonModalOpen] = React.useState(false);
   const [editingCategory, setEditingCategory] = React.useState<ServiceCategory | null>(null);
   const [editingFamily, setEditingFamily] = React.useState<ServiceFamily | null>(null);
   const [editingService, setEditingService] = React.useState<Service | null>(null);
+  const [editingAddon, setEditingAddon] = React.useState<ServiceAddon | null>(null);
   const [defaultCategoryId, setDefaultCategoryId] = React.useState<string | null>(null);
   const [defaultFamilyId, setDefaultFamilyId] = React.useState<string | null>(null);
   const [openCategories, setOpenCategories] = React.useState<Record<string, boolean>>({});
   const [openFamilies, setOpenFamilies] = React.useState<Record<string, boolean>>({});
   const [query, setQuery] = React.useState('');
+  const [addonQuery, setAddonQuery] = React.useState('');
   const [importing, setImporting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -138,13 +151,22 @@ export function ServicesCard() {
   const visibleCatalog = React.useMemo(() => filterCatalog(catalog, query), [catalog, query]);
   const activeCount = services.filter((service) => service.active).length;
   const inactiveCount = services.length - activeCount;
+  const activeAddonCount = addons.filter((addon) => addon.active).length;
+  const inactiveAddonCount = addons.length - activeAddonCount;
+  const visibleAddons = React.useMemo(() => {
+    const normalized = addonQuery.trim().toLocaleLowerCase('fa');
+    if (!normalized) return addons;
+    return addons.filter((addon) => addon.name.toLocaleLowerCase('fa').includes(normalized));
+  }, [addonQuery, addons]);
+  const nextAddonSortOrder = addons.reduce((max, addon) => Math.max(max, addon.sortOrder), 0) + 10;
   const noCatalog = categories.length === 0 && families.length === 0 && services.length === 0;
 
   const reloadAll = React.useCallback(() => {
     servicesResource.reload();
     categoriesResource.reload();
     familiesResource.reload();
-  }, [categoriesResource, familiesResource, servicesResource]);
+    addonsResource.reload();
+  }, [addonsResource, categoriesResource, familiesResource, servicesResource]);
 
   const styles = useThemeStyles((t) => ({
     card: { gap: t.spacing.lg, padding: t.spacing.xl },
@@ -155,6 +177,14 @@ export function ServicesCard() {
       padding: 0,
     },
     content: { gap: t.spacing.md, padding: 0 },
+    scopeBox: {
+      gap: t.spacing.md,
+      borderRadius: t.radius.lg,
+      borderWidth: t.sizes.hairline,
+      borderColor: withAlpha(t.colors.border, 0.6),
+      backgroundColor: t.colors.background,
+      padding: t.spacing.md,
+    },
     skeletonWrap: { gap: t.spacing.md },
     stats: { flexDirection: 'row' as const, gap: t.spacing.sm },
     stat: {
@@ -280,6 +310,35 @@ export function ServicesCard() {
       fontSize: t.fontSize.xs,
       fontFamily: t.fonts.sans,
     },
+    addonRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.md,
+      borderRadius: t.radius.md,
+      borderWidth: t.sizes.hairline,
+      borderColor: withAlpha(t.colors.border, 0.5),
+      backgroundColor: t.colors.card,
+      padding: t.spacing.md,
+    },
+    metaRow: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      gap: t.spacing.xs,
+    },
+    metaPill: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: t.spacing.xs,
+      borderRadius: t.radius.sm,
+      backgroundColor: t.colors.muted,
+      paddingHorizontal: t.spacing.sm,
+      paddingVertical: t.spacing.xs,
+    },
+    metaPillText: {
+      color: t.colors.mutedForeground,
+      fontSize: t.fontSize.xs,
+      fontFamily: t.fonts.sans,
+    },
     empty: {
       borderRadius: t.radius.lg,
       borderWidth: t.sizes.hairline,
@@ -313,6 +372,11 @@ export function ServicesCard() {
     setServiceModalOpen(true);
   };
 
+  const addAddon = () => {
+    setEditingAddon(null);
+    setAddonModalOpen(true);
+  };
+
   const importTemplates = async () => {
     setImporting(true);
     setError(null);
@@ -342,6 +406,90 @@ export function ServicesCard() {
             </View>
           ) : (
             <>
+              <View style={styles.scopeBox}>
+                <View style={styles.header}>
+                  <View>
+                    <Text style={styles.title}>افزودنی‌های خدمت</Text>
+                    <Text style={styles.subtitle}>
+                      {toPersianDigits(activeAddonCount)} فعال ·{' '}
+                      {toPersianDigits(inactiveAddonCount)} غیرفعال
+                    </Text>
+                  </View>
+                  <Button size="sm" onPress={addAddon}>
+                    <Plus size={theme.sizes.iconSm} color={theme.colors.primaryForeground} />
+                    <Text style={{ color: theme.colors.primaryForeground }}>افزودنی</Text>
+                  </Button>
+                </View>
+                <View style={styles.searchWrap}>
+                  <Search
+                    size={theme.sizes.iconSm}
+                    color={theme.iconColors.muted}
+                    strokeWidth={1.7}
+                  />
+                  <TextInput
+                    value={addonQuery}
+                    onChangeText={setAddonQuery}
+                    placeholder="جستجوی افزودنی..."
+                    placeholderTextColor={theme.colors.mutedForeground}
+                    style={styles.searchInput}
+                  />
+                </View>
+                {visibleAddons.length === 0 ? (
+                  <View style={styles.empty}>
+                    <Sparkles size={theme.sizes.iconMd} color={theme.colors.primary} />
+                    <AppText weight="medium">
+                      {addons.length === 0 ? 'هنوز افزودنی ثبت نشده.' : 'نتیجه‌ای پیدا نشد.'}
+                    </AppText>
+                    <AppText color="mutedForeground">
+                      افزودنی‌ها روی دسته، خانواده خدمت یا خدمت خاص فعال می‌شوند.
+                    </AppText>
+                  </View>
+                ) : (
+                  visibleAddons.map((addon) => (
+                    <View key={addon.id} style={styles.addonRow}>
+                      <View style={styles.serviceBody}>
+                        <Text style={styles.serviceName} numberOfLines={1}>
+                          {addon.name}
+                        </Text>
+                        <Text style={styles.serviceMeta}>
+                          {addon.scopes.length > 0
+                            ? `${toPersianDigits(addon.scopes.length)} دامنه`
+                            : 'بدون دامنه'}
+                        </Text>
+                        <View style={styles.metaRow}>
+                          <View style={styles.metaPill}>
+                            <Banknote size={12} color={theme.iconColors.muted} />
+                            <Text style={styles.metaPillText}>
+                              {addon.priceDelta > 0
+                                ? `${toPersianDigits(addon.priceDelta.toLocaleString('fa-IR'))} تومان`
+                                : 'بدون افزایش قیمت'}
+                            </Text>
+                          </View>
+                          <View style={styles.metaPill}>
+                            <Clock3 size={12} color={theme.iconColors.muted} />
+                            <Text style={styles.metaPillText}>
+                              {addon.durationDelta > 0
+                                ? `${toPersianDigits(addon.durationDelta)} دقیقه`
+                                : 'بدون افزایش زمان'}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                      {!addon.active ? <Badge variant="secondary">غیرفعال</Badge> : null}
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => {
+                          setEditingAddon(addon);
+                          setAddonModalOpen(true);
+                        }}
+                        style={styles.iconButton}>
+                        <Pencil size={theme.sizes.iconSm} color={theme.iconColors.muted} />
+                      </Pressable>
+                    </View>
+                  ))
+                )}
+              </View>
+
               <View style={styles.stats}>
                 <View style={styles.stat}>
                   <Text style={styles.statValue}>{toPersianDigits(categories.length)}</Text>
@@ -645,6 +793,23 @@ export function ServicesCard() {
           setServiceModalOpen(false);
           setEditingService(null);
           reloadAll();
+        }}
+      />
+      <ServiceAddonFormModal
+        open={addonModalOpen}
+        addon={editingAddon}
+        categories={categories}
+        families={families}
+        services={services}
+        nextSortOrder={nextAddonSortOrder}
+        onClose={() => {
+          setAddonModalOpen(false);
+          setEditingAddon(null);
+        }}
+        onSaved={() => {
+          setAddonModalOpen(false);
+          setEditingAddon(null);
+          addonsResource.reload();
         }}
       />
     </>

@@ -20,6 +20,7 @@ import {
 } from './primitives'
 
 const idSchema = z.string().trim().min(1)
+const addonIdsSchema = z.array(idSchema).optional()
 const appointmentStatusKeys = Object.keys(APPOINTMENT_STATUS) as [
   keyof typeof APPOINTMENT_STATUS,
   ...(keyof typeof APPOINTMENT_STATUS)[],
@@ -29,6 +30,7 @@ const appointmentStatusSchema = z.enum(appointmentStatusKeys)
 const appointmentBaseSchema = z.object({
   staffId: idSchema,
   serviceId: idSchema,
+  addonIds: addonIdsSchema,
   date: gregorianDateSchema,
   startTime: timeOfDaySchema,
   endTime: timeOfDaySchema.optional(),
@@ -104,6 +106,7 @@ export const appointmentUpdateSchema = z.object({
     .optional(),
   staffId: z.string().trim().optional(),
   serviceId: z.string().trim().optional(),
+  addonIds: addonIdsSchema,
   date: gregorianDateSchema.optional(),
   startTime: timeOfDaySchema.optional(),
   endTime: timeOfDaySchema.optional(),
@@ -133,6 +136,7 @@ export const appointmentFormSchema = z
     temporaryClientNotes: z.string().optional(),
     staffId: z.string().optional(),
     serviceId: z.string().optional(),
+    addonIds: z.array(z.string()).optional(),
     date: gregorianDateSchema,
     startTime: timeOfDaySchema,
     endTime: timeOfDaySchema,
@@ -183,6 +187,7 @@ export const appointmentFormSchema = z
         : { clientId: values.clientId }),
       staffId: values.staffId,
       serviceId: values.serviceId,
+      addonIds: values.addonIds,
       date: values.date,
       startTime: values.startTime,
       endTime: values.endTime,

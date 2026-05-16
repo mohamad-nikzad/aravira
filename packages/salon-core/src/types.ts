@@ -96,6 +96,17 @@ export interface BookedServiceSnapshot {
   bookedServicePrice: number
 }
 
+export interface BookedAppointmentAddonLine {
+  id: string
+  appointmentId: string
+  serviceAddonId: string
+  bookedAddonName: string
+  bookedAddonPriceDelta: number
+  bookedAddonDurationDelta: number
+  sortOrder: number
+  createdAt: Date
+}
+
 export interface Client {
   id: string
   name: string
@@ -114,6 +125,10 @@ export interface Appointment {
   bookedServiceName: string
   bookedServiceDuration: number
   bookedServicePrice: number
+  bookedTotalDuration: number
+  bookedTotalPrice: number
+  bookedAddonCount: number
+  bookedAddons?: BookedAppointmentAddonLine[]
   date: string // YYYY-MM-DD
   startTime: string // HH:MM
   endTime: string // HH:MM

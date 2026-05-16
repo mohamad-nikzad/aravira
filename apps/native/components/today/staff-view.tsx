@@ -15,6 +15,7 @@ import {
   ACTIVE_STATUSES,
   AppointmentCard,
   StatCard,
+  bookedServiceWithAddonCount,
   formatNumber,
   sortAppointments,
 } from './shared';
@@ -304,7 +305,7 @@ export function StaffTodayView({
                       </Text>
                     </View>
                     <Text style={styles.clientName}>{currentAppointment.client.name}</Text>
-                    <Text style={styles.serviceName}>{currentAppointment.bookedServiceName}</Text>
+                    <Text style={styles.serviceName}>{bookedServiceWithAddonCount(currentAppointment)}</Text>
                   </View>
                 ) : nextAppointment ? (
                   <View style={styles.nextCard}>
@@ -316,7 +317,7 @@ export function StaffTodayView({
                       </Text>
                     </View>
                     <Text style={styles.clientName}>{nextAppointment.client.name}</Text>
-                    <Text style={styles.serviceName}>{nextAppointment.bookedServiceName}</Text>
+                    <Text style={styles.serviceName}>{bookedServiceWithAddonCount(nextAppointment)}</Text>
                   </View>
                 ) : (
                   <View style={styles.empty}>

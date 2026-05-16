@@ -41,6 +41,7 @@ export type AppointmentCreateInput = {
   placeholderClient?: PlaceholderClientDraft
   staffId: string
   serviceId: string
+  addonIds?: string[]
   date: string
   startTime: string
   endTime?: string
@@ -53,6 +54,7 @@ export type AppointmentUpdateInput = {
   placeholderClient?: PlaceholderClientDraft
   staffId?: string
   serviceId?: string
+  addonIds?: string[]
   date?: string
   startTime?: string
   endTime?: string
@@ -474,6 +476,12 @@ export function createAppointmentsModule(
         code: 'missing-reference',
       })
     }
+    if ((input.addonIds?.length ?? 0) > 0) {
+      throw new DataClientHttpError('رزرو افزودنی در حالت آفلاین هنوز در دسترس نیست', 400, {
+        code: 'missing-reference',
+      })
+    }
+    const catalogSelectionChanged = input.serviceId !== undefined || input.addonIds !== undefined
 
     const next: AppointmentWithDetails = {
       ...current,
@@ -481,6 +489,17 @@ export function createAppointmentsModule(
       clientId: nextClient.id,
       staffId: resolvedStaff.id,
       serviceId: resolvedService.id,
+      bookedServiceName: catalogSelectionChanged ? resolvedService.name : current.bookedServiceName,
+      bookedServiceDuration: catalogSelectionChanged
+        ? resolvedService.duration
+        : current.bookedServiceDuration,
+      bookedServicePrice: catalogSelectionChanged ? resolvedService.price : current.bookedServicePrice,
+      bookedTotalDuration: catalogSelectionChanged
+        ? resolvedService.duration
+        : current.bookedTotalDuration,
+      bookedTotalPrice: catalogSelectionChanged ? resolvedService.price : current.bookedTotalPrice,
+      bookedAddonCount: catalogSelectionChanged ? 0 : current.bookedAddonCount,
+      bookedAddons: catalogSelectionChanged ? [] : current.bookedAddons,
       date: input.date ?? current.date,
       startTime: input.startTime ?? current.startTime,
       endTime: input.endTime ?? current.endTime,
@@ -527,9 +546,10 @@ export function createAppointmentsModule(
                   }
                 : {
                     clientId: next.clientId,
-                  }),
+              }),
               staffId: next.staffId,
               serviceId: next.serviceId,
+              addonIds: next.bookedAddons?.map((addon) => addon.serviceAddonId) ?? [],
               date: next.date,
               startTime: next.startTime,
               endTime: next.endTime,
@@ -673,6 +693,11 @@ export function createAppointmentsModule(
           code: 'missing-reference',
         })
       }
+      if ((input.addonIds?.length ?? 0) > 0) {
+        throw new DataClientHttpError('رزرو افزودنی در حالت آفلاین هنوز در دسترس نیست', 400, {
+          code: 'missing-reference',
+        })
+      }
 
       const localPlaceholderClient =
         input.placeholderClient != null
@@ -723,6 +748,10 @@ export function createAppointmentsModule(
         bookedServiceName: service.name,
         bookedServiceDuration: service.duration,
         bookedServicePrice: service.price,
+        bookedTotalDuration: service.duration,
+        bookedTotalPrice: service.price,
+        bookedAddonCount: 0,
+        bookedAddons: [],
         date: input.date,
         startTime: input.startTime,
         endTime: resolvedEndTime,
@@ -759,6 +788,7 @@ export function createAppointmentsModule(
                 : { clientId: input.clientId }),
               staffId: input.staffId,
               serviceId: input.serviceId,
+              addonIds: input.addonIds,
               date: input.date,
               startTime: input.startTime,
               endTime: resolvedEndTime,
