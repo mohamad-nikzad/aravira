@@ -22,6 +22,7 @@ import {
   clients,
   locations,
   resources,
+  serviceComboComponents,
   serviceAddonCategoryScopes,
   serviceAddonFamilyScopes,
   serviceAddons,
@@ -154,6 +155,17 @@ type SeedServiceRow = {
   duration: number
   price: number
   color: 'rose' | 'violet' | 'mint' | 'gold' | 'coral'
+}
+
+type SeedComboRow = {
+  category: string
+  family: string
+  name: string
+  componentNames: string[]
+  duration: number
+  price: number
+  color: 'rose' | 'violet' | 'mint' | 'gold' | 'coral'
+  description: string
 }
 
 const primarySeedServices: SeedServiceRow[] = [
@@ -450,6 +462,39 @@ const secondSalonSeedServices: SeedServiceRow[] = [
   },
 ]
 
+const primarySeedCombos: SeedComboRow[] = [
+  {
+    category: 'مو',
+    family: 'پکیج‌های ترکیبی',
+    name: 'پکیج رنگ و براشینگ',
+    componentNames: ['رنگ کامل مو', 'براشینگ مو'],
+    duration: 180,
+    price: 2_150_000,
+    color: 'rose',
+    description: 'رنگ کامل مو همراه با براشینگ نهایی',
+  },
+  {
+    category: 'ناخن',
+    family: 'پکیج‌های ترکیبی',
+    name: 'پکیج مانیکور و لاک ژل',
+    componentNames: ['مانیکور', 'لاک ژل دست'],
+    duration: 75,
+    price: 850_000,
+    color: 'violet',
+    description: 'مانیکور کامل همراه با لاک ژل دست',
+  },
+  {
+    category: 'پوست',
+    family: 'پکیج‌های ترکیبی',
+    name: 'پکیج پاکسازی و آبرسانی',
+    componentNames: ['پاکسازی پوست', 'آبرسانی پوست'],
+    duration: 90,
+    price: 1_200_000,
+    color: 'mint',
+    description: 'پاکسازی پوست همراه با آبرسانی تکمیلی',
+  },
+]
+
 async function seedServiceCatalog(salonId: string, rows: SeedServiceRow[]) {
   const categoryByName = new Map<string, { id: string }>()
   const familyByPath = new Map<string, { id: string }>()
@@ -511,9 +556,123 @@ async function seedServiceCatalog(salonId: string, rows: SeedServiceRow[]) {
           duration: row.duration,
           price: row.price,
           color: row.color,
+          kind: 'standard',
           active: true,
         },
       })
+  }
+}
+
+async function seedServiceCombos(salonId: string, rows: SeedComboRow[]) {
+  const categories = await db
+    .select()
+    .from(serviceCategories)
+    .where(eq(serviceCategories.salonId, salonId))
+  const families = await db
+    .select()
+    .from(serviceFamilies)
+    .where(eq(serviceFamilies.salonId, salonId))
+  const serviceRows = await db
+    .select()
+    .from(services)
+    .where(eq(services.salonId, salonId))
+
+  const categoryByName = new Map(categories.map((category) => [category.name, category]))
+  const familyByPath = new Map<string, (typeof families)[number]>(
+    families.map((family) => {
+      const category = categories.find((item) => item.id === family.categoryId)
+      return [`${category?.name ?? ''}/${family.name}`, family] as const
+    }),
+  )
+  const serviceByName = new Map(serviceRows.map((service) => [service.name, service]))
+
+  for (const row of rows) {
+    let category = categoryByName.get(row.category)
+    if (!category) {
+      const [inserted] = await db
+        .insert(serviceCategories)
+        .values({ salonId, name: row.category, active: true })
+        .onConflictDoUpdate({
+          target: [serviceCategories.salonId, serviceCategories.name],
+          set: { active: true, updatedAt: new Date() },
+        })
+        .returning()
+      category = inserted
+      categoryByName.set(row.category, category)
+    }
+
+    const familyPath = `${row.category}/${row.family}`
+    let family = familyByPath.get(familyPath)
+    if (!family) {
+      const [inserted] = await db
+        .insert(serviceFamilies)
+        .values({
+          salonId,
+          categoryId: category.id,
+          name: row.family,
+          active: true,
+        })
+        .onConflictDoUpdate({
+          target: [
+            serviceFamilies.salonId,
+            serviceFamilies.categoryId,
+            serviceFamilies.name,
+          ],
+          set: { active: true, updatedAt: new Date() },
+        })
+        .returning()
+      family = inserted
+      familyByPath.set(familyPath, family)
+    }
+
+    const components = row.componentNames
+      .map((name) => serviceByName.get(name))
+      .filter((service): service is NonNullable<typeof service> => Boolean(service))
+
+    if (components.length !== row.componentNames.length) {
+      console.warn(`Skip combo seed: missing components for ${row.name}.`)
+      continue
+    }
+
+    const [combo] = await db
+      .insert(services)
+      .values({
+        salonId,
+        familyId: family.id,
+        name: row.name,
+        duration: row.duration,
+        price: row.price,
+        color: row.color,
+        active: true,
+        description: row.description,
+        kind: 'combo',
+      })
+      .onConflictDoUpdate({
+        target: [services.salonId, services.name],
+        set: {
+          familyId: family.id,
+          duration: row.duration,
+          price: row.price,
+          color: row.color,
+          active: true,
+          description: row.description,
+          kind: 'combo',
+        },
+      })
+      .returning()
+
+    await db
+      .delete(serviceComboComponents)
+      .where(eq(serviceComboComponents.comboServiceId, combo.id))
+
+    await db.insert(serviceComboComponents).values(
+      components.map((component, index) => ({
+        salonId,
+        comboServiceId: combo.id,
+        componentServiceId: component.id,
+        sortOrder: index + 1,
+      })),
+    )
   }
 }
 
@@ -1189,6 +1348,7 @@ async function main() {
     .onConflictDoNothing()
 
   await seedServiceCatalog(primarySalon.id, primarySeedServices)
+  await seedServiceCombos(primarySalon.id, primarySeedCombos)
   await seedServiceAddons(primarySalon.id, primarySeedAddons)
 
   const [{ value: userCount }] = await db
