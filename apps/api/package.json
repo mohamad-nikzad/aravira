@@ -1,0 +1,36 @@
+{
+  "name": "@repo/api",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./src/app.ts"
+  },
+  "scripts": {
+    "dev": "ROOT_ENV_FILES=.env.database.dev node ../../scripts/with-root-env.mjs tsx watch src/index.ts",
+    "build": "tsc --project tsconfig.json --noEmit",
+    "start": "ROOT_ENV_FILES=.env.database.dev node ../../scripts/with-root-env.mjs tsx src/index.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "pnpm run test:unit",
+    "test:unit": "vitest run --config vitest.config.ts",
+    "boundaries": "eslint . --max-warnings=0"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@hono/zod-validator": "^0.4.2",
+    "@repo/auth": "workspace:*",
+    "@repo/database": "workspace:*",
+    "@repo/salon-core": "workspace:*",
+    "hono": "^4.6.14",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22",
+    "tsx": "^4.19.2",
+    "typescript": "5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
