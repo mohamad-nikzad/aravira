@@ -24,6 +24,7 @@ import { today } from './routes/today'
 import { notifications } from './routes/notifications'
 import { push } from './routes/push'
 import { appointments } from './routes/appointments'
+import { auth } from './routes/auth'
 
 const env = getEnv()
 
@@ -66,6 +67,7 @@ const app = new Hono<AppEnv>()
   .route('/api/v1/notifications', notifications)
   .route('/api/v1/push', push)
   .route('/api/v1/appointments', appointments)
+  .route('/api/v1/auth', auth)
   .onError(errorHandler)
   .notFound(notFoundHandler)
 

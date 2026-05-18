@@ -5,7 +5,7 @@ import {
   createSalonWorkspace,
   SignupConflictError,
   SignupValidationError,
-} from '@/lib/server/salons/signup'
+} from '@repo/auth/signup'
 import { signupSchema } from '@repo/salon-core/forms/auth'
 import { validationErrorResponse } from '../../validation'
 
