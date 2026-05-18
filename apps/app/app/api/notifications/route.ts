@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { listNotificationsForUser } from '@/lib/notifications'
+import { listNotificationsForUser } from '@repo/notifications'
 import { getTenantRequest } from '@repo/auth/tenant'
 
 export async function GET(request: Request) {

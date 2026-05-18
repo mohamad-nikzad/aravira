@@ -1,0 +1,25 @@
+{
+  "name": "@repo/notifications",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "pnpm run test:unit",
+    "test:unit": "vitest run"
+  },
+  "dependencies": {
+    "@repo/database": "workspace:*",
+    "@repo/salon-core": "workspace:*",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22",
+    "@types/web-push": "^3.6.4",
+    "vitest": "^3.0.5"
+  }
+}

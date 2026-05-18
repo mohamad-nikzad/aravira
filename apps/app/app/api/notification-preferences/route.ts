@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import {
   getNotificationPreferences,
   updateNotificationPreferences,
-} from '@/lib/notifications'
+} from '@repo/notifications'
 import { getTenantRequest } from '@repo/auth/tenant'
 
 type PreferencesPatch = {

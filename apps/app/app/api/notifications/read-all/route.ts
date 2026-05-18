@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { markAllNotificationsRead } from '@/lib/notifications'
+import { markAllNotificationsRead } from '@repo/notifications'
 import { getTenantRequest } from '@repo/auth/tenant'
 
 export async function POST(request: Request) {

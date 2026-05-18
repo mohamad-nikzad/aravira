@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { isWebPushConfigured } from '@/lib/push'
+import { isWebPushConfigured } from '@repo/notifications'
 import { getTenantRequest } from '@repo/auth/tenant'
 
 export async function GET(request: Request) {

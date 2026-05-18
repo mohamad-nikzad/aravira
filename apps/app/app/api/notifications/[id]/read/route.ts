@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { markNotificationRead } from '@/lib/notifications'
+import { markNotificationRead } from '@repo/notifications'
 import { getTenantRequest } from '@repo/auth/tenant'
 
 type RouteContext = {

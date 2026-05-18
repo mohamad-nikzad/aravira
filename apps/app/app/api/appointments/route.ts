@@ -10,8 +10,11 @@ import {
   deletePlaceholderClientIfOrphaned,
 } from '@repo/database/clients'
 import { appointmentCreateSchema } from '@repo/salon-core/forms/appointment'
-import { sendWebPushToUser, isWebPushConfigured } from '@/lib/push'
-import { createNotificationForUser } from '@/lib/notifications'
+import {
+  createNotificationForUser,
+  isWebPushConfigured,
+  sendWebPushToUser,
+} from '@repo/notifications'
 import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant'
 
 export async function GET(request: Request) {

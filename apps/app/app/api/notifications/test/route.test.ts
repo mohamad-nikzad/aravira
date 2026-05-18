@@ -10,7 +10,7 @@ vi.mock('@repo/auth/tenant', () => ({
   getTenantRequest: mocks.getTenantRequest,
 }))
 
-vi.mock('@/lib/notifications', () => ({
+vi.mock('@repo/notifications', () => ({
   createNotificationForUser: mocks.createNotificationForUser,
 }))
 

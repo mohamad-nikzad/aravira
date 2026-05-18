@@ -87,12 +87,9 @@ vi.mock('@repo/database/appointments', () => ({
   validateUpdateAppointmentIntake: mocks.validateUpdateAppointmentIntake,
 }))
 
-vi.mock('@/lib/push', () => ({
+vi.mock('@repo/notifications', () => ({
   sendWebPushToUser: mocks.sendWebPushToUser,
   isWebPushConfigured: mocks.isWebPushConfigured,
-}))
-
-vi.mock('@/lib/notifications', () => ({
   createNotificationForUser: mocks.createNotificationForUser,
 }))
 

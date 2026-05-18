@@ -26,6 +26,7 @@
     "@repo/brand-tokens": "workspace:*",
     "@repo/data-client": "workspace:*",
     "@repo/database": "workspace:*",
+    "@repo/notifications": "workspace:*",
     "@repo/salon-core": "workspace:*",
     "@repo/ui": "workspace:*",
     "@vercel/analytics": "1.6.1",

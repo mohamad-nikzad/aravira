@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { upsertPushSubscription, deletePushSubscriptionForUser } from '@repo/database/push'
-import { isWebPushConfigured } from '@/lib/push'
+import { isWebPushConfigured } from '@repo/notifications'
 import { getTenantRequest } from '@repo/auth/tenant'
 
 const subscribeBody = z.object({
