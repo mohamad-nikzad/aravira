@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getClientSummary } from '@repo/database/clients'
-import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant-next'
 
 export async function GET(
   request: Request,

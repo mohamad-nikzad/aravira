@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant-next'
 import { updateServiceFamily } from '@repo/database/services'
 import { serviceFamilyUpdateSchema } from '@repo/salon-core/forms/service'
 import { validationErrorResponse } from '../../validation'

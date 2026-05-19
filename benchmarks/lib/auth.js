@@ -2,12 +2,13 @@ import http from 'k6/http'
 import { check, fail } from 'k6'
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000'
+const API_PREFIX = __ENV.API_PREFIX || '/api'
 const PHONE = __ENV.BENCH_PHONE || '09120000000'
 const PASSWORD = __ENV.BENCH_PASSWORD || 'admin123'
 
 export function loginAndGetCookie() {
   const res = http.post(
-    `${BASE_URL}/api/auth/login`,
+    `${BASE_URL}${API_PREFIX}/auth/login`,
     JSON.stringify({ phone: PHONE, password: PASSWORD }),
     { headers: { 'Content-Type': 'application/json' }, tags: { name: 'login' } }
   )
@@ -26,4 +27,4 @@ export function authHeaders(sessionCookie) {
   }
 }
 
-export { BASE_URL }
+export { BASE_URL, API_PREFIX }

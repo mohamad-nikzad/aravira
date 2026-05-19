@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getTenantRequest } from '@repo/auth/tenant'
+import { getTenantRequest } from '@repo/auth/tenant-next'
 import { getActiveServiceAddonsForService } from '@repo/database/services'
 
 export async function GET(

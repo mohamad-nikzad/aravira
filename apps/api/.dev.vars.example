@@ -1,0 +1,7 @@
+# Copy to .dev.vars for `wrangler dev`. Do not commit .dev.vars.
+DATABASE_URL="postgresql://user:password@ep-xxxx-pooler.region.aws.neon.tech/dbname?sslmode=require"
+JWT_SECRET="replace-with-long-random-string"
+# Optional web push:
+# VAPID_PRIVATE_KEY=""
+# VAPID_SUBJECT="mailto:you@example.com"
+# NEXT_PUBLIC_VAPID_PUBLIC_KEY=""

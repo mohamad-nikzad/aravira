@@ -3,7 +3,7 @@ import {
   getNotificationPreferences,
   updateNotificationPreferences,
 } from '@repo/notifications'
-import { getTenantRequest } from '@repo/auth/tenant'
+import { getTenantRequest } from '@repo/auth/tenant-next'
 
 type PreferencesPatch = {
   appointmentAlertsEnabled?: unknown

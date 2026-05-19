@@ -15,7 +15,7 @@ import {
   getClientById,
   updateClient,
 } from '@repo/database/clients'
-import { getTenantManagerRequest, getTenantRequest, isManagerRole } from '@repo/auth/tenant'
+import { getTenantManagerRequest, getTenantRequest, isManagerRole } from '@repo/auth/tenant-next'
 import { appointmentUpdateSchema } from '@repo/salon-core/forms/appointment'
 import { validationErrorResponse } from '../../validation'
 

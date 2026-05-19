@@ -15,7 +15,7 @@ import {
   isWebPushConfigured,
   sendWebPushToUser,
 } from '@repo/notifications'
-import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant-next'
 
 export async function GET(request: Request) {
   try {

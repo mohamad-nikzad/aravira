@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers'
 import { SignJWT, jwtVerify } from 'jose'
 import bcrypt from 'bcryptjs'
 import type { User } from '@repo/salon-core/types'
@@ -43,15 +42,6 @@ export async function verifySession(token: string): Promise<string | null> {
   }
 }
 
-export async function getCurrentUser(): Promise<User | null> {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('session')?.value
-
-  if (!token) return null
-
-  return getUserFromToken(token)
-}
-
 export async function getUserFromToken(token: string): Promise<User | null> {
   const userId = await verifySession(token)
   if (!userId) return null
@@ -67,13 +57,29 @@ function extractBearerToken(request: Request): string | null {
   return match ? match[1].trim() : null
 }
 
+function extractSessionCookie(request: Request): string | null {
+  const header = request.headers.get('cookie')
+  if (!header) return null
+  for (const part of header.split(';')) {
+    const [rawName, ...rest] = part.split('=')
+    if (rawName?.trim() === 'session') {
+      return rest.join('=').trim() || null
+    }
+  }
+  return null
+}
+
 export async function getCurrentUserFromRequest(request: Request): Promise<User | null> {
   const bearer = extractBearerToken(request)
   if (bearer) {
     const fromBearer = await getUserFromToken(bearer)
     if (fromBearer) return fromBearer
   }
-  return getCurrentUser()
+  const cookieToken = extractSessionCookie(request)
+  if (cookieToken) {
+    return getUserFromToken(cookieToken)
+  }
+  return null
 }
 
 export async function login(
@@ -90,9 +96,4 @@ export async function login(
 
   const { passwordHash: _hash, ...user } = row
   return { user, token }
-}
-
-export async function logout() {
-  const cookieStore = await cookies()
-  cookieStore.delete('session')
 }

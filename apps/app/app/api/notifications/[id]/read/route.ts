@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { markNotificationRead } from '@repo/notifications'
-import { getTenantRequest } from '@repo/auth/tenant'
+import { getTenantRequest } from '@repo/auth/tenant-next'
 
 type RouteContext = {
   params: Promise<{ id: string }>

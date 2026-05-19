@@ -14,7 +14,10 @@
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "test": "pnpm run test:unit",
     "test:unit": "vitest run --config vitest.config.ts",
-    "boundaries": "eslint . --max-warnings=0"
+    "boundaries": "eslint . --max-warnings=0",
+    "cf:dev": "wrangler dev",
+    "cf:deploy": "wrangler deploy",
+    "cf:tail": "wrangler tail"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
@@ -32,6 +35,8 @@
     "@types/node": "^22",
     "tsx": "^4.19.2",
     "typescript": "5.7.3",
-    "vitest": "^3.0.5"
+    "vitest": "^3.0.5",
+    "wrangler": "^3.99.0",
+    "@cloudflare/workers-types": "^4.20250115.0"
   }
 }

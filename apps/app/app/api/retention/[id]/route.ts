@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { updateClientFollowUpStatus } from '@repo/database/clients'
 import type { FollowUpStatus } from '@repo/salon-core/types'
-import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant-next'
 
 const allowedStatuses = new Set<FollowUpStatus>(['open', 'reviewed', 'dismissed'])
 

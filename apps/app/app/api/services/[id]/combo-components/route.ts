@@ -3,7 +3,7 @@ import {
   getComboComponents,
   replaceComboComponents,
 } from "@repo/database/services";
-import { getTenantManagerRequest, getTenantRequest } from "@repo/auth/tenant";
+import { getTenantManagerRequest, getTenantRequest } from "@repo/auth/tenant-next";
 import { comboComponentsUpdateSchema } from "@repo/salon-core/forms/service";
 import { validationErrorResponse } from "../../../validation";
 

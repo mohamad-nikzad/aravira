@@ -37,3 +37,7 @@ _brand-ideas/*
 
 # Local Claude worktrees
 .claude/worktrees/
+
+# Wrangler / Cloudflare Workers
+.dev.vars
+.wrangler/

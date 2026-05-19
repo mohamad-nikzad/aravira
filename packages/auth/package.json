@@ -5,10 +5,12 @@
   "exports": {
     ".": "./src/index.ts",
     "./auth": "./src/auth.ts",
+    "./auth-next": "./src/auth-next.ts",
     "./authz": "./src/authz.ts",
     "./keys": "./src/keys.ts",
     "./signup": "./src/signup.ts",
-    "./tenant": "./src/tenant.ts"
+    "./tenant": "./src/tenant.ts",
+    "./tenant-next": "./src/tenant-next.ts"
   },
   "scripts": {
     "lint": "eslint .",

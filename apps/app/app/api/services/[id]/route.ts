@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServiceById, updateService } from '@repo/database/services'
 import type { Service } from '@repo/salon-core/types'
-import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant-next'
 import { serviceUpdateSchema } from '@repo/salon-core/forms/service'
 import { validationErrorResponse } from '../../validation'
 

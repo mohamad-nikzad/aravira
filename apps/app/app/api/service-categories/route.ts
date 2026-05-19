@@ -3,7 +3,7 @@ import {
   getTenantManagerRequest,
   getTenantRequest,
   isManagerRole,
-} from '@repo/auth/tenant'
+} from '@repo/auth/tenant-next'
 import {
   createServiceCategory,
   getAllServiceCategories,

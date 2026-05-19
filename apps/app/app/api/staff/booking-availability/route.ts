@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getStaffBookingAvailabilityForSlot } from '@repo/database/staff'
 import { validateAppointmentWindow } from '@repo/salon-core/appointment-time'
-import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant-next'
 
 export async function GET(request: Request) {
   try {

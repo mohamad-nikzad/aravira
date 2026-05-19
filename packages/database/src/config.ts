@@ -7,10 +7,20 @@ type DatabaseUrlOptions = {
 }
 
 let envLoaded = false
-const packageDir = path.dirname(fileURLToPath(import.meta.url))
-const workspaceRoot = path.resolve(packageDir, '../../..')
+
+function getWorkspaceRoot(): string | null {
+  try {
+    if (!import.meta.url) return null
+    const packageDir = path.dirname(fileURLToPath(import.meta.url))
+    return path.resolve(packageDir, '../../..')
+  } catch {
+    return null
+  }
+}
 
 function loadLocalEnvFile(fileName: string) {
+  const workspaceRoot = getWorkspaceRoot()
+  if (!workspaceRoot) return
   const filePath = path.join(/* turbopackIgnore: true */ workspaceRoot, fileName)
   if (!existsSync(filePath)) return
 
@@ -40,6 +50,10 @@ function loadLocalEnvFile(fileName: string) {
 export function loadDatabaseEnvFiles() {
   if (envLoaded) return
   envLoaded = true
+
+  // Skip filesystem env-file loading when no workspace root is resolvable
+  // (e.g. Cloudflare Workers — env arrives via bindings, not .env files).
+  if (!getWorkspaceRoot()) return
 
   loadLocalEnvFile('.env')
   loadLocalEnvFile('.env.local')

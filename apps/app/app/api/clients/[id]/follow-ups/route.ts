@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClientFollowUp, getClientById } from '@repo/database/clients'
 import type { FollowUpReason } from '@repo/salon-core/types'
-import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant-next'
 
 const allowedReasons = new Set<FollowUpReason>([
   'inactive',

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createNotificationForUser } from '@repo/notifications'
-import { getTenantRequest } from '@repo/auth/tenant'
+import { getTenantRequest } from '@repo/auth/tenant-next'
 
 function isNotificationTestRouteEnabled() {
   if (process.env.ENABLE_NOTIFICATION_TEST !== '1') return false

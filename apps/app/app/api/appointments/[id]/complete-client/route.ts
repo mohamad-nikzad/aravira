@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { completePlaceholderAppointmentClient } from '@repo/database/clients'
-import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant-next'
 import { completePlaceholderClientSchema } from '@repo/salon-core/forms/appointment'
 import { validationErrorResponse } from '../../../validation'
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getBusinessSettings, updateBusinessSettings } from '@repo/database/settings'
-import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant-next'
 import { businessSettingsSchema } from '@repo/salon-core/forms/settings'
 import { validationErrorResponse } from '../../validation'
 

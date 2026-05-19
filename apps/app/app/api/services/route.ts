@@ -5,7 +5,7 @@ import {
   getTenantManagerRequest,
   getTenantRequest,
   isManagerRole,
-} from '@repo/auth/tenant'
+} from '@repo/auth/tenant-next'
 import { serviceCreateSchema } from '@repo/salon-core/forms/service'
 import { validationErrorResponse } from '../validation'
 

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getAllStaff, createUser } from '@repo/database/staff'
 import { STAFF_COLORS } from '@repo/salon-core/types'
 import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
-import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest, getTenantRequest } from '@repo/auth/tenant-next'
 import { staffCreateSchema } from '@repo/salon-core/forms/staff'
 import { validationErrorResponse } from '../validation'
 

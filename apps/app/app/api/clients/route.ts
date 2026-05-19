@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getAllClients, createClient, setClientTags, isClientProvidedEntityId } from '@repo/database/clients'
-import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant-next'
 import { clientCreateSchema } from '@repo/salon-core/forms/client'
 import { validationErrorResponse } from '../validation'
 

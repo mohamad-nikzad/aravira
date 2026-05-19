@@ -1,6 +1,6 @@
 import http from 'k6/http'
 import { check } from 'k6'
-import { loginAndGetCookie, authHeaders, BASE_URL } from '../lib/auth.js'
+import { loginAndGetCookie, authHeaders, BASE_URL, API_PREFIX } from '../lib/auth.js'
 import { buildSummary } from '../lib/report.js'
 
 export const options = {
@@ -24,7 +24,7 @@ export function setup() {
 
 export default function (data) {
   const headers = authHeaders(data.cookie)
-  const r = http.get(`${BASE_URL}/api/auth/me`, {
+  const r = http.get(`${BASE_URL}${API_PREFIX}/auth/me`, {
     headers,
     tags: { name: 'GET /api/auth/me' },
   })

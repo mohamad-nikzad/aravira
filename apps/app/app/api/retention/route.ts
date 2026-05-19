@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getRetentionQueue } from '@repo/database/retention'
-import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant-next'
 
 export async function GET(request: Request) {
   try {

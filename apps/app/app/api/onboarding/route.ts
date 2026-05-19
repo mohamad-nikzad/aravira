@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getOnboardingStatus, updateOnboardingState, type OnboardingAction } from '@repo/database/onboarding'
-import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant-next'
 
 const actions = new Set<OnboardingAction>(['confirm-profile', 'complete', 'skip', 'reopen'])
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getTodayData } from '@repo/database/dashboard'
-import { getTenantRequest } from '@repo/auth/tenant'
+import { getTenantRequest } from '@repo/auth/tenant-next'
 import { salonTodayYmd } from '@repo/salon-core/salon-local-time'
 
 export async function GET(request: Request) {

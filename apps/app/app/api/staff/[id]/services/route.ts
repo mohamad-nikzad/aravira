@@ -5,7 +5,7 @@ import {
   setStaffServiceIds,
   validateActiveServiceIds,
 } from '@repo/database/staff'
-import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant-next'
 import { staffServiceIdsSchema } from '@repo/salon-core/forms/staff'
 import { validationErrorResponse } from '../../../validation'
 

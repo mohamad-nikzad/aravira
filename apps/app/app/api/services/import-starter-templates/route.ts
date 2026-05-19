@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant-next'
 import { importStarterServiceTemplates } from '@repo/database/services'
 
 export async function POST(request: Request) {

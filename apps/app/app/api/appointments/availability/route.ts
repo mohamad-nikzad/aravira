@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getManagerAppointmentAvailability } from '@repo/database/appointments'
 import type { AvailabilityMode } from '@repo/salon-core/availability'
 import { dayOfWeekFromDate } from '@repo/salon-core/staff-availability'
-import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant-next'
 
 function isAvailabilityMode(value: string | null): value is AvailabilityMode {
   return value === 'day' || value === 'nearest'

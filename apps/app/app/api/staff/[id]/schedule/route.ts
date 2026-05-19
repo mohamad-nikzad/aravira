@@ -5,7 +5,7 @@ import {
   getUserById,
   setStaffSchedules,
 } from '@repo/database/staff'
-import { getTenantManagerRequest } from '@repo/auth/tenant'
+import { getTenantManagerRequest } from '@repo/auth/tenant-next'
 import { staffScheduleRequestSchema } from '@repo/salon-core/forms/staff'
 import { validationErrorResponse } from '../../../validation'
 
