@@ -1,0 +1,161 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('@repo/database/appointment-requests', () => ({
+  listAppointmentRequests: vi.fn(),
+  approveAppointmentRequest: vi.fn(),
+  rejectAppointmentRequest: vi.fn(),
+}))
+
+vi.mock('@repo/auth/auth', () => ({
+  verifySession: vi.fn(),
+}))
+
+vi.mock('@repo/database/auth-users', () => ({
+  getUserById: vi.fn(),
+}))
+
+import * as db from '@repo/database/appointment-requests'
+import { verifySession } from '@repo/auth/auth'
+import { getUserById } from '@repo/database/auth-users'
+
+process.env.NODE_ENV = 'test'
+process.env.DATABASE_URL = 'postgres://stub'
+process.env.JWT_SECRET = 'test-secret'
+
+const { app } = await import('../app')
+
+const managerUser = {
+  id: 'u1',
+  salonId: 's1',
+  role: 'manager' as const,
+  name: 'Manager',
+  phone: '09120000000',
+  createdAt: new Date(),
+}
+
+const staffUser = {
+  id: 'u2',
+  salonId: 's1',
+  role: 'staff' as const,
+  name: 'Staff',
+  phone: '09120000001',
+  createdAt: new Date(),
+}
+
+const requestId = '22222222-2222-2222-2222-222222222222'
+
+function authHeaders() {
+  return { Authorization: 'Bearer testtoken' }
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.mocked(verifySession).mockResolvedValue('u1')
+  vi.mocked(getUserById).mockResolvedValue(managerUser as never)
+})
+
+describe('appointment-requests router', () => {
+  it('returns 401 without auth', async () => {
+    const res = await app.request('/api/v1/appointment-requests')
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 for staff role', async () => {
+    vi.mocked(getUserById).mockResolvedValue(staffUser as never)
+    const res = await app.request('/api/v1/appointment-requests', { headers: authHeaders() })
+    expect(res.status).toBe(403)
+  })
+
+  it('GET / returns list for tenant salon', async () => {
+    vi.mocked(db.listAppointmentRequests).mockResolvedValue([
+      { id: 'r1', existingClient: null } as never,
+    ])
+    const res = await app.request('/api/v1/appointment-requests', { headers: authHeaders() })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { requests: unknown[] }
+    expect(body.requests).toHaveLength(1)
+    expect(db.listAppointmentRequests).toHaveBeenCalledWith('s1', {})
+  })
+
+  it('GET /?status=expired forwards the filter', async () => {
+    vi.mocked(db.listAppointmentRequests).mockResolvedValue([])
+    await app.request('/api/v1/appointment-requests?status=expired', { headers: authHeaders() })
+    expect(db.listAppointmentRequests).toHaveBeenCalledWith('s1', { status: 'expired' })
+  })
+
+  it('POST /:id/approve calls approveAppointmentRequest with tenant context', async () => {
+    vi.mocked(db.approveAppointmentRequest).mockResolvedValue({
+      ok: true,
+      appointmentId: 'apt1',
+      clientId: 'cli1',
+    } as never)
+    const res = await app.request(`/api/v1/appointment-requests/${requestId}/approve`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staffId: 'staff1' }),
+    })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ appointmentId: 'apt1', clientId: 'cli1' })
+    expect(db.approveAppointmentRequest).toHaveBeenCalledWith({
+      id: requestId,
+      salonId: 's1',
+      staffId: 'staff1',
+      reviewedByUserId: 'u1',
+    })
+  })
+
+  it('POST /:id/approve returns 409 with code on slot conflict', async () => {
+    vi.mocked(db.approveAppointmentRequest).mockResolvedValue({
+      ok: false,
+      status: 409,
+      error: 'slot taken',
+      code: 'slot-conflict',
+    } as never)
+    const res = await app.request(`/api/v1/appointment-requests/${requestId}/approve`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staffId: 'staff1' }),
+    })
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({ error: 'slot taken', code: 'slot-conflict' })
+  })
+
+  it('POST /:id/approve 400 when staffId missing', async () => {
+    const res = await app.request(`/api/v1/appointment-requests/${requestId}/approve`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('POST /:id/reject forwards reason', async () => {
+    vi.mocked(db.rejectAppointmentRequest).mockResolvedValue({ ok: true } as never)
+    const res = await app.request(`/api/v1/appointment-requests/${requestId}/reject`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'full' }),
+    })
+    expect(res.status).toBe(200)
+    expect(db.rejectAppointmentRequest).toHaveBeenCalledWith({
+      id: requestId,
+      salonId: 's1',
+      reviewedByUserId: 'u1',
+      reason: 'full',
+    })
+  })
+
+  it('POST /:id/reject returns 409 when not pending', async () => {
+    vi.mocked(db.rejectAppointmentRequest).mockResolvedValue({
+      ok: false,
+      status: 409,
+      error: 'این درخواست قابل رد نیست',
+    } as never)
+    const res = await app.request(`/api/v1/appointment-requests/${requestId}/reject`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    expect(res.status).toBe(409)
+  })
+})

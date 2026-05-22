@@ -20,7 +20,7 @@ import {
 } from '@repo/salon-core/staff-availability'
 import type { Appointment, Service, StaffSchedule, User } from '@repo/salon-core/types'
 import { endTimeFromDuration } from '@repo/salon-core/appointment-time'
-import { PUBLIC_REQUEST_WINDOW_DAYS } from '@repo/salon-core/forms'
+import { PUBLIC_REQUEST_WINDOW_DAYS } from '@repo/salon-core/forms/public'
 import { normalizePhone } from '@repo/salon-core/phone'
 
 import { getDb } from '../client'

@@ -30,6 +30,8 @@ const HONO_DOMAINS = [
   'retention',
   'dashboard',
   'today',
+  'public',
+  'appointment-requests',
 ]
 
 export default {

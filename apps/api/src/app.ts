@@ -25,6 +25,8 @@ import { notifications } from './routes/notifications'
 import { push } from './routes/push'
 import { appointments } from './routes/appointments'
 import { auth } from './routes/auth'
+import { publicRoutes } from './routes/public'
+import { appointmentRequestsRoute } from './routes/appointment-requests'
 
 const env = getEnv()
 
@@ -68,6 +70,8 @@ const app = new Hono<AppEnv>()
   .route('/api/v1/push', push)
   .route('/api/v1/appointments', appointments)
   .route('/api/v1/auth', auth)
+  .route('/api/v1/public', publicRoutes)
+  .route('/api/v1/appointment-requests', appointmentRequestsRoute)
   .onError(errorHandler)
   .notFound(notFoundHandler)
 
