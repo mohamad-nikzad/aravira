@@ -1,3 +1,5 @@
 import { createNextConfig } from '@repo/next-config'
 
-export default createNextConfig()
+export default createNextConfig({
+  transpilePackages: ['@repo/salon-core'],
+})

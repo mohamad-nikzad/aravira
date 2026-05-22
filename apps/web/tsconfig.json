@@ -3,7 +3,9 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@repo/salon-core": ["../../packages/salon-core/src/index.ts"],
+      "@repo/salon-core/*": ["../../packages/salon-core/src/*"]
     }
   },
   "include": [
