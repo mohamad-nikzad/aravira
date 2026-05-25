@@ -96,7 +96,6 @@ export function WeekView(props: CalendarViewProps) {
           const dow = (new Date(ymd + 'T12:00:00').getDay() + 1) % 7;
           const isToday = ymd === todayYmd;
           const isFriday = dow === 6;
-          const count = byDay.get(ymd)?.length ?? 0;
           return (
             <Pressable
               key={ymd}
@@ -133,15 +132,6 @@ export function WeekView(props: CalendarViewProps) {
                   {numFmt.format(j.jd)}
                 </Text>
               </View>
-              <View
-                style={{
-                  marginTop: 3,
-                  height: 4,
-                  width: 4,
-                  borderRadius: theme.radius.full,
-                  backgroundColor: count > 0 ? theme.colors.ring : 'transparent',
-                }}
-              />
             </Pressable>
           );
         })}

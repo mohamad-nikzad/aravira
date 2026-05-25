@@ -99,6 +99,7 @@ export default function CalendarScreen() {
   const styles = useThemeStyles((t) => ({
     safe: { backgroundColor: t.colors.background, flex: 1 },
     viewSwitcherBar: {
+      alignSelf: 'stretch' as const,
       paddingHorizontal: t.spacing.xl,
       paddingTop: t.spacing.md,
       backgroundColor: t.colors.card,

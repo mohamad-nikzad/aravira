@@ -28,6 +28,35 @@ function serviceLabelWithAddons(appointment: AppointmentWithDetails) {
   return `${base} +${toPersianDigits(appointment.bookedAddonCount)}`;
 }
 
+function ymdToUtcNoon(ymd: string): number {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return Date.UTC(y, m - 1, d, 12, 0, 0);
+}
+
+function dayDiff(fromYmd: string, toYmd: string): number {
+  return Math.round((ymdToUtcNoon(toYmd) - ymdToUtcNoon(fromYmd)) / 86_400_000);
+}
+
+/** Saturday-anchored weekday index (0 = Saturday … 6 = Friday). */
+function salonDow(ymd: string): number {
+  return (new Date(ymd + 'T12:00:00').getDay() + 1) % 7;
+}
+
+/** Friendly relative label (امروز/فردا/هفته بعد …), or null for distant days. */
+function relativeDayLabel(ymd: string, todayYmd: string): string | null {
+  const diff = dayDiff(todayYmd, ymd);
+  if (diff < 0) return null;
+  if (diff === 0) return 'امروز';
+  if (diff === 1) return 'فردا';
+  if (diff === 2) return 'پس‌فردا';
+  const weekStart = addDaysYmd(ymd, -salonDow(ymd));
+  const todayWeekStart = addDaysYmd(todayYmd, -salonDow(todayYmd));
+  const weekDiff = Math.round(dayDiff(todayWeekStart, weekStart) / 7);
+  if (weekDiff === 1) return 'هفته بعد';
+  if (weekDiff === 2) return 'دو هفته بعد';
+  return null;
+}
+
 export function AgendaView(props: CalendarViewProps) {
   const { cursorYmd, appointments, staffFilter, onSelectAppointment } = props;
   const { theme } = useTheme();
@@ -40,10 +69,11 @@ export function AgendaView(props: CalendarViewProps) {
   const dayMap = React.useMemo(() => appointmentsByDay(filtered), [filtered]);
 
   const days = React.useMemo(() => {
+    const start = cursorYmd < todayYmd ? todayYmd : cursorYmd;
     const ymds: string[] = [];
-    for (let i = 0; i < RANGE_DAYS; i++) ymds.push(addDaysYmd(cursorYmd, i));
+    for (let i = 0; i < RANGE_DAYS; i++) ymds.push(addDaysYmd(start, i));
     return ymds;
-  }, [cursorYmd]);
+  }, [cursorYmd, todayYmd]);
 
   const sections = days
     .map((ymd) => ({ ymd, items: dayMap.get(ymd) ?? [] }))
@@ -101,6 +131,7 @@ export function AgendaView(props: CalendarViewProps) {
             ymd={section.ymd}
             items={section.items}
             isToday={section.ymd === todayYmd}
+            relativeLabel={relativeDayLabel(section.ymd, todayYmd)}
             onSelectAppointment={onSelectAppointment}
           />
         ))}
@@ -113,11 +144,13 @@ function DaySection({
   ymd,
   items,
   isToday,
+  relativeLabel,
   onSelectAppointment,
 }: {
   ymd: string;
   items: AppointmentWithDetails[];
   isToday: boolean;
+  relativeLabel: string | null;
   onSelectAppointment: (appointment: AppointmentWithDetails) => void;
 }) {
   const { theme } = useTheme();
@@ -194,16 +227,23 @@ function DaySection({
             ساعت کار
           </Text>
         </View>
-        {isToday ? (
+        {relativeLabel ? (
           <View
             style={{
               paddingHorizontal: 8,
               paddingVertical: 3,
               borderRadius: theme.radius.full,
-              backgroundColor: withAlpha(theme.colors.ring, 0.14),
+              backgroundColor: isToday
+                ? withAlpha(theme.colors.ring, 0.14)
+                : withAlpha(theme.colors.primary, 0.12),
             }}>
-            <Text style={{ fontFamily: FONTS.semi, fontSize: 10, color: theme.colors.ring }}>
-              امروز
+            <Text
+              style={{
+                fontFamily: FONTS.semi,
+                fontSize: 10,
+                color: isToday ? theme.colors.ring : theme.colors.primary,
+              }}>
+              {relativeLabel}
             </Text>
           </View>
         ) : null}

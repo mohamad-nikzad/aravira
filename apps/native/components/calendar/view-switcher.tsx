@@ -20,6 +20,7 @@ export function ViewSwitcher({
   const { theme } = useTheme();
   const styles = useThemeStyles((t) => ({
     container: {
+      width: '100%' as const,
       backgroundColor: withAlpha(t.colors.muted, 0.7),
       flexDirection: 'row' as const,
       borderRadius: t.radius.xl,
@@ -27,6 +28,7 @@ export function ViewSwitcher({
     },
     item: {
       flex: 1,
+      flexBasis: 0,
       minHeight: t.sizes.controlLg - 8,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
