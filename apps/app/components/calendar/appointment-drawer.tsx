@@ -46,6 +46,7 @@ import { ClientPicker } from '@/components/calendar/client-picker'
 import { useManagerDataClient } from '@/components/manager-data-client-provider'
 import { ServicePicker } from '@/components/services/service-picker'
 import { DataClientHttpError } from '@repo/data-client'
+import { runMutation } from '@/lib/run-mutation'
 import { useNetworkStatus } from '@/lib/pwa-client'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
 import { TimePicker } from '@repo/ui/time-picker'
@@ -413,13 +414,12 @@ export function AppointmentDrawer({
       return
     }
 
-    try {
+    const result = await runMutation(async () => {
       const payload = appointmentFormSchema.parse(values)
       if (dataClient) {
         const created = await dataClient.appointments.create(payload)
         void dataClient.sync.processPending()
-        onSuccess(created)
-        return
+        return created
       }
 
       const res = await fetch('/api/appointments', {
@@ -432,22 +432,21 @@ export function AppointmentDrawer({
       const data = await res.json()
 
       if (!res.ok) {
-        setError('root', { message: data.error || 'خطا در ثبت نوبت' })
-        return
+        throw new DataClientHttpError(
+          data.error || 'خطا در ثبت نوبت',
+          res.status,
+          data,
+        )
       }
 
       if (!data.appointment) {
-        setError('root', { message: 'پاسخ ثبت نوبت کامل نبود' })
-        return
+        throw new DataClientHttpError('پاسخ ثبت نوبت کامل نبود', res.status, data)
       }
 
-      onSuccess(data.appointment)
-    } catch (err) {
-      setError('root', {
-        message:
-          err instanceof DataClientHttpError ? err.message : 'خطایی رخ داد',
-      })
-    }
+      return data.appointment as AppointmentWithDetails
+    })
+
+    if (result.ok) onSuccess(result.data)
   })
 
   useEffect(() => {

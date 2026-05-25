@@ -16,7 +16,6 @@ import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Badge } from "@repo/ui/badge";
 import { Field, FieldLabel, FieldGroup, FieldError } from "@repo/ui/field";
-import { FormRootError } from "@repo/ui/form";
 import { Spinner } from "@repo/ui/spinner";
 import { Client } from "@repo/salon-core/types";
 import { displayPhone, normalizePhone } from "@repo/salon-core/phone";
@@ -26,6 +25,7 @@ import {
 } from "@repo/salon-core/forms/client";
 import { DataClientHttpError } from "@repo/data-client";
 import { useManagerDataClient } from "@/components/manager-data-client-provider";
+import { runMutation } from "@/lib/run-mutation";
 
 const tagOptions = [
   "VIP",
@@ -72,7 +72,6 @@ export function ClientDrawer({
     control,
     handleSubmit,
     reset,
-    setError,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<ClientFormInput>({
@@ -89,7 +88,7 @@ export function ClientDrawer({
   const phoneValue = watch("phone");
 
   const onSubmit = handleSubmit(async (values) => {
-    try {
+    const result = await runMutation(async () => {
       if (dataClient) {
         if (isEditing && client) {
           await dataClient.clients.update(client.id, values);
@@ -97,7 +96,6 @@ export function ClientDrawer({
           await dataClient.clients.create(values);
         }
         void dataClient.sync.processPending();
-        onSuccess();
         return;
       }
 
@@ -114,20 +112,15 @@ export function ClientDrawer({
       const data = await res.json();
 
       if (!res.ok) {
-        setError("root", {
-          message: data.error || "ذخیره اطلاعات مشتری انجام نشد",
-        });
-        return;
+        throw new DataClientHttpError(
+          data.error || "ذخیره اطلاعات مشتری انجام نشد",
+          res.status,
+          data,
+        );
       }
+    });
 
-      onSuccess();
-    } catch (err) {
-      const message =
-        dataClient && err instanceof DataClientHttpError
-          ? err.message
-          : "خطایی رخ داد. لطفاً دوباره تلاش کنید.";
-      setError("root", { message });
-    }
+    if (result.ok) onSuccess();
   });
 
   return (
@@ -226,8 +219,6 @@ export function ClientDrawer({
                 }}
               />
             </Field>
-
-            <FormRootError message={errors.root?.message} />
           </FieldGroup>
         </form>
 

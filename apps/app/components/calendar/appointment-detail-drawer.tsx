@@ -71,6 +71,7 @@ import { ClientPicker } from '@/components/calendar/client-picker'
 import { useManagerDataClient } from '@/components/manager-data-client-provider'
 import { ServicePicker } from '@/components/services/service-picker'
 import { DataClientHttpError } from '@repo/data-client'
+import { runMutation } from '@/lib/run-mutation'
 import { useNetworkStatus } from '@/lib/pwa-client'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
 import { TimePicker } from '@repo/ui/time-picker'
@@ -471,20 +472,17 @@ export function AppointmentDetailDrawer({
     }
 
     setLoading(true)
-    try {
+    const result = await runMutation<AppointmentDetailChange>(async () => {
       const payload = appointmentFormSchema.parse(values)
       if (dataClient) {
-        const result = await dataClient.appointments.update(appointment.id, {
+        const r = await dataClient.appointments.update(appointment.id, {
           ...payload,
           status: status as AppointmentWithDetails['status'],
         })
         void dataClient.sync.processPending()
-        onSuccess(
-          result.type === 'deleted'
-            ? { type: 'deleted', id: result.id }
-            : { type: 'updated', appointment: result.appointment }
-        )
-        return
+        return r.type === 'deleted'
+          ? { type: 'deleted', id: r.id }
+          : { type: 'updated', appointment: r.appointment }
       }
 
       const res = await fetch(`/api/appointments/${appointment.id}`, {
@@ -500,33 +498,25 @@ export function AppointmentDetailDrawer({
       const data = await res.json()
 
       if (!res.ok) {
-        setEditError('root', { message: data.error || 'به‌روزرسانی نوبت انجام نشد' })
-        setLoading(false)
-        return
+        throw new DataClientHttpError(
+          data.error || 'به‌روزرسانی نوبت انجام نشد',
+          res.status,
+          data,
+        )
       }
 
       if (typeof data.removedAppointmentId === 'string') {
-        onSuccess({ type: 'deleted', id: data.removedAppointmentId })
-        return
+        return { type: 'deleted', id: data.removedAppointmentId }
       }
 
       if (!data.appointment) {
-        setEditError('root', { message: 'پاسخ به‌روزرسانی کامل نبود' })
-        setLoading(false)
-        return
+        throw new DataClientHttpError('پاسخ به‌روزرسانی کامل نبود', res.status, data)
       }
 
-      onSuccess({ type: 'updated', appointment: data.appointment })
-    } catch (err) {
-      setEditError('root', {
-        message:
-          err instanceof DataClientHttpError
-            ? err.message
-            : 'خطایی رخ داد. لطفاً دوباره تلاش کنید.',
-      })
-    } finally {
-      setLoading(false)
-    }
+      return { type: 'updated', appointment: data.appointment as AppointmentWithDetails }
+    })
+    setLoading(false)
+    if (result.ok) onSuccess(result.data)
   })
 
   useEffect(() => {
@@ -569,11 +559,10 @@ export function AppointmentDetailDrawer({
     setError('')
     setLoading(true)
 
-    try {
+    const result = await runMutation(async () => {
       if (dataClient) {
         await dataClient.appointments.remove(appointment.id)
         void dataClient.sync.processPending()
-        onSuccess({ type: 'deleted', id: appointment.id })
         return
       }
 
@@ -584,21 +573,15 @@ export function AppointmentDetailDrawer({
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        setError(data.error || 'حذف نوبت انجام نشد')
-        setLoading(false)
-        return
+        throw new DataClientHttpError(
+          data.error || 'حذف نوبت انجام نشد',
+          res.status,
+          data,
+        )
       }
-
-      onSuccess({ type: 'deleted', id: appointment.id })
-    } catch (err) {
-      setError(
-        err instanceof DataClientHttpError
-          ? err.message
-          : 'خطایی رخ داد. لطفاً دوباره تلاش کنید.'
-      )
-    } finally {
-      setLoading(false)
-    }
+    })
+    setLoading(false)
+    if (result.ok) onSuccess({ type: 'deleted', id: appointment.id })
   }
 
   const handleStatusChange = async (newStatus: string) => {

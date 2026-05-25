@@ -15,7 +15,6 @@ import {
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Field, FieldLabel, FieldGroup, FieldError } from "@repo/ui/field";
-import { FormRootError } from "@repo/ui/form";
 import {
   Select,
   SelectContent,
@@ -29,6 +28,8 @@ import {
   staffCreateSchema,
   type StaffCreateFormInput,
 } from "@repo/salon-core/forms/staff";
+import { DataClientHttpError } from "@repo/data-client";
+import { runMutation } from "@/lib/run-mutation";
 
 interface StaffDrawerProps {
   open: boolean;
@@ -52,7 +53,6 @@ export function StaffDrawer({
     control,
     handleSubmit,
     reset,
-    setError,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<StaffCreateFormInput>({
@@ -70,7 +70,7 @@ export function StaffDrawer({
   const passwordValue = watch("password");
 
   const onSubmit = handleSubmit(async (values) => {
-    try {
+    const result = await runMutation(async () => {
       const res = await fetch("/api/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -84,14 +84,15 @@ export function StaffDrawer({
       const data = await res.json();
 
       if (!res.ok) {
-        setError("root", { message: data.error || "افزودن پرسنل انجام نشد" });
-        return;
+        throw new DataClientHttpError(
+          data.error || "افزودن پرسنل انجام نشد",
+          res.status,
+          data,
+        );
       }
+    });
 
-      onSuccess();
-    } catch {
-      setError("root", { message: "خطایی رخ داد. لطفاً دوباره تلاش کنید." });
-    }
+    if (result.ok) onSuccess();
   });
 
   return (
@@ -188,8 +189,6 @@ export function StaffDrawer({
                 />
               </Field>
             )}
-
-            <FormRootError message={errors.root?.message} />
           </FieldGroup>
         </form>
 

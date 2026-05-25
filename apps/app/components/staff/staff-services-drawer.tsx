@@ -24,7 +24,7 @@ import {
 } from "@repo/salon-core/forms/staff";
 import { toPersianDigits } from "@repo/salon-core/persian-digits";
 import { cn } from "@repo/ui/utils";
-import { DataClientHttpError } from "@repo/data-client";
+import { runMutation } from "@/lib/run-mutation";
 import { useManagerDataClient } from "@/components/manager-data-client-provider";
 import { groupServicesByCatalog } from "@/components/services/service-catalog-groups";
 
@@ -113,18 +113,11 @@ export function StaffServicesDrawer({
       setError("root", { message: "اتصال داده برقرار نیست" });
       return;
     }
-    try {
-      await dc.staff.setServiceIds(staff.id, values.serviceIds ?? null);
-      onSuccess();
-    } catch (err) {
-      const msg =
-        err instanceof DataClientHttpError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : "خطایی رخ داد";
-      setError("root", { message: msg });
-    }
+
+    const result = await runMutation(() =>
+      dc.staff.setServiceIds(staff.id, values.serviceIds ?? null),
+    );
+    if (result.ok) onSuccess();
   });
 
   const handleOpenChange = (isOpen: boolean) => {

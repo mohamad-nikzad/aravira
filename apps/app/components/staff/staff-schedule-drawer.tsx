@@ -14,7 +14,6 @@ import {
 import { Button } from "@repo/ui/button";
 import { Switch } from "@repo/ui/switch";
 import { Field, FieldLabel, FieldError } from "@repo/ui/field";
-import { FormRootError } from "@repo/ui/form";
 import { Skeleton } from "@repo/ui/skeleton";
 import { TimePicker } from "@repo/ui/time-picker";
 import { Spinner } from "@repo/ui/spinner";
@@ -28,7 +27,7 @@ import {
 
 const scheduleFormSchema = z.object({ rows: staffScheduleSchema });
 type ScheduleFormValues = z.input<typeof scheduleFormSchema>;
-import { DataClientHttpError } from "@repo/data-client";
+import { runMutation } from "@/lib/run-mutation";
 import { useManagerDataClient } from "@/components/manager-data-client-provider";
 
 const days = [
@@ -99,7 +98,6 @@ export function StaffScheduleDrawer({
     control,
     handleSubmit,
     reset,
-    setError,
     setValue,
     getValues,
     formState: { errors, isSubmitting },
@@ -157,18 +155,8 @@ export function StaffScheduleDrawer({
 
   const onSubmit = handleSubmit(async ({ rows }) => {
     if (!staff || !dc) return;
-    try {
-      await dc.staff.setSchedule(staff.id, rows);
-      onSuccess();
-    } catch (err) {
-      const msg =
-        err instanceof DataClientHttpError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : "خطایی رخ داد. لطفاً دوباره تلاش کنید.";
-      setError("root", { message: msg });
-    }
+    const result = await runMutation(() => dc.staff.setSchedule(staff.id, rows));
+    if (result.ok) onSuccess();
   });
 
   return (
@@ -272,7 +260,6 @@ export function StaffScheduleDrawer({
             })
           )}
 
-          <FormRootError message={errors.root?.message} />
         </form>
 
         <DrawerFooter>
