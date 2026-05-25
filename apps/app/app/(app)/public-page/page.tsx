@@ -557,7 +557,7 @@ function ServicesPanel({
           )}
         </div>
         <div className="flex items-center justify-between gap-3">
-          <div className="flex gap-1 rounded-lg bg-muted p-0.5 text-xs">
+          <div className="flex gap-2 rounded-lg bg-muted p-0.5 text-xs">
             {(['all', 'visible', 'hidden'] as const).map((f) => (
               <button
                 key={f}
@@ -597,7 +597,7 @@ function ServicesPanel({
                   {allOn ? 'مخفی کردن همه' : 'نمایش همه'}
                 </button>
               </div>
-              <div className="flex flex-col gap-1.5 p-2">
+              <div className="flex flex-col gap-2 p-2">
                 {items.map((s) => (
                   <button
                     key={s.serviceId}

@@ -6,6 +6,7 @@
 @source "../src/**/*.{ts,tsx}";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant touch (@media (pointer: coarse));
 
 @layer base {
   html {
@@ -45,6 +46,16 @@
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Touch-target hit-area expansion for isolated small controls (see TOUCH_OPTIMIZATION_PLAN.md §3a). */
+.hit-area-expand {
+  position: relative;
+}
+.hit-area-expand::before {
+  content: '';
+  position: absolute;
+  inset: -0.5rem;
 }
 
 .safe-area-pb {

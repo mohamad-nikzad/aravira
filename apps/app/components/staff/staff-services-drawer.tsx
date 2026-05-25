@@ -207,7 +207,7 @@ export function StaffServicesDrawer({
                           <p className="mb-1 px-2 text-[11px] font-medium text-muted-foreground">
                             {family.familyName}
                           </p>
-                          <div className="flex flex-col gap-1">
+                          <div className="flex flex-col gap-2">
                             {family.services.map((svc) => (
                               <label
                                 key={svc.id}

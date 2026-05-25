@@ -69,7 +69,7 @@ export function CalendarHeader({
         </p>
       </div>
 
-      <div dir="ltr" className="flex items-center gap-0.5 shrink-0">
+      <div dir="ltr" className="flex items-center gap-2 touch:gap-3 shrink-0">
         <Button
           variant="ghost"
           size="icon-sm"

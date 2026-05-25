@@ -535,7 +535,7 @@ function ManagerTodayHeader({
         </button>
       </div>
 
-      <div className="flex gap-1.5 overflow-x-auto py-3.5 scrollbar-hide">
+      <div className="flex gap-2 overflow-x-auto py-3.5 scrollbar-hide">
         {days.map((day) => {
           const isActive = day.ymd === date;
           const isToday = day.ymd === today;
@@ -1088,7 +1088,7 @@ function StaffActionButtons({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {appointment.status === "scheduled" ? (
           <Button
             size="sm"

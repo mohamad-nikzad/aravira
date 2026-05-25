@@ -24,7 +24,7 @@ export function StaffFilter({ staff, selectedIds, onToggle, onClear }: StaffFilt
   const allActive = selectedIds.length === 0
 
   return (
-    <div className="scrollbar-hide flex items-center gap-1.5 overflow-x-auto py-1">
+    <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto py-1">
       <button
         type="button"
         onClick={onClear}

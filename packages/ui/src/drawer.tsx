@@ -75,7 +75,7 @@ function DrawerContent({
         {showClose && (
           <DrawerPrimitive.Close
             data-slot="drawer-close-x"
-            className="absolute top-4 left-4 z-10 flex size-9 items-center justify-center rounded-full bg-secondary/70 text-foreground/75 transition-colors hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none"
+            className="absolute top-4 left-4 z-10 flex size-9 touch:size-11 items-center justify-center rounded-full bg-secondary/70 text-foreground/75 transition-colors hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none"
           >
             <XIcon className="size-4" />
             <span className="sr-only">بستن</span>

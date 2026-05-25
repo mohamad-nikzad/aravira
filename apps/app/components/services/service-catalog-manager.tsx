@@ -295,7 +295,7 @@ export function ServiceCatalogManager({
               نگهداری شده است.
             </p>
           )}
-          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3 sm:gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-2">
             {showStarterImport ? (
               <Button
                 size="sm"
@@ -324,7 +324,7 @@ export function ServiceCatalogManager({
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 برای شروع، از لیست آماده استفاده کنید یا اولین بخش را بسازید.
               </p>
-              <div className="mt-3 flex flex-col justify-center gap-1.5 sm:mt-4 sm:flex-row sm:gap-2">
+              <div className="mt-3 flex flex-col justify-center gap-2 sm:mt-4 sm:flex-row sm:gap-2">
                 {showStarterImport && (
                   <Button
                     size="sm"
@@ -385,7 +385,7 @@ export function ServiceCatalogManager({
                   }
                   className="overflow-hidden rounded-lg border border-border/60 bg-background"
                 >
-                  <div className="flex items-center gap-1 border-b border-border/40 bg-muted/30 px-1.5 py-1.5 sm:px-2 sm:py-2.5">
+                  <div className="flex items-center gap-2 border-b border-border/40 bg-muted/30 px-1.5 py-1.5 sm:px-2 sm:py-2.5">
                     <CollapsibleTrigger asChild>
                       <Button
                         variant="ghost"
@@ -469,7 +469,7 @@ export function ServiceCatalogManager({
                             }
                             className="overflow-hidden rounded-lg border border-border/50 bg-card"
                           >
-                            <div className="flex items-center gap-1 px-1.5 py-1.5 sm:px-2 sm:py-2">
+                            <div className="flex items-center gap-2 px-1.5 py-1.5 sm:px-2 sm:py-2">
                               <CollapsibleTrigger asChild>
                                 <Button
                                   variant="ghost"

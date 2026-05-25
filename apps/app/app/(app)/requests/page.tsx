@@ -158,7 +158,7 @@ export default function RequestsPage() {
           </div>
         </div>
 
-        <div className="-mx-5 mt-3.5 flex gap-1 overflow-x-auto px-5 scrollbar-hide">
+        <div className="-mx-5 mt-3.5 flex gap-2 overflow-x-auto px-5 scrollbar-hide">
           {TABS.map(({ id, label }) => {
             const active = tab === id
             const count = id === 'pending' ? pendingCount : counts[id]
@@ -286,7 +286,7 @@ function RequestsList({
 function PhoneActions({ phone, name }: { phone: string; name: string }) {
   const waPhone = phone.replace(/^0/, '98')
   return (
-    <div className="flex shrink-0 gap-1.5">
+    <div className="flex shrink-0 gap-2">
       <a
         href={`tel:${phone}`}
         aria-label={`تماس با ${name}`}

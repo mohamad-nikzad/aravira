@@ -224,7 +224,7 @@ export default function ClientsPage() {
           />
         </div>
 
-        <div className="-mx-5 mt-3 flex gap-1.5 overflow-x-auto px-5 pb-0.5 scrollbar-hide">
+        <div className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-0.5 scrollbar-hide">
           {chips.map((chip) => {
             const active = filter === chip.id
             return (
