@@ -4,14 +4,14 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerClose,
-} from '@repo/ui/drawer'
+  FormSheet,
+  FormSheetContent,
+  FormSheetHeader,
+  FormSheetTitle,
+  FormSheetDescription,
+  FormSheetFooter,
+} from '@/components/ui/form-sheet'
+import { useDismissGuard } from '@/lib/use-dismiss-guard'
 import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
 import { Checkbox } from '@repo/ui/checkbox'
@@ -124,7 +124,7 @@ export function AppointmentDrawer({
     setFocus,
     setValue,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = form
 
   const clientId = watch('clientId') ?? ''
@@ -279,11 +279,18 @@ export function AppointmentDrawer({
     )
   }
 
+  const { requestClose, confirmDialog } = useDismissGuard({
+    isDirty: isDirty && !isSubmitting,
+    onClose: () => onOpenChange(false),
+  })
+
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {
       resetFormForInitialSlot()
+      onOpenChange(true)
+      return
     }
-    onOpenChange(isOpen)
+    requestClose(false)
   }
 
   const wasOpenRef = useRef(open)
@@ -529,14 +536,14 @@ export function AppointmentDrawer({
   const priceLabel = `${tomansFormatter.format(previewPrice)} تومان`
 
   return (
-    <Drawer open={open} onOpenChange={handleOpenChange}>
-      <DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[96lvh]">
-        <DrawerHeader className="pb-3">
-          <DrawerTitle>نوبت جدید</DrawerTitle>
-          <DrawerDescription>
+    <FormSheet open={open} onOpenChange={handleOpenChange}>
+      <FormSheetContent onRequestClose={() => requestClose(false)}>
+        <FormSheetHeader className="pb-3">
+          <FormSheetTitle>نوبت جدید</FormSheetTitle>
+          <FormSheetDescription>
             خدمت، پرسنل و زمان نوبت را انتخاب کنید.
-          </DrawerDescription>
-        </DrawerHeader>
+          </FormSheetDescription>
+        </FormSheetHeader>
 
         <form
           onSubmit={onSubmit}
@@ -633,64 +640,9 @@ export function AppointmentDrawer({
               </div>
             </Field>
 
-            {/* Nested column so staff always stacks above service (stable in RTL / flex layouts). */}
+            {/* Service first ("what?") so handleServiceChange can auto-pick a single eligible staff;
+                staff chips show availability for the chosen service. */}
             <div className="flex min-w-0 flex-col gap-4">
-              <Field>
-                <FieldLabel>پرسنل</FieldLabel>
-                <div className="flex flex-wrap gap-2">
-                  {staffRoleOnly.map((member) => {
-                    const unavailable = staffSlotOk[member.id] === false
-                    const noServices =
-                      (staffServiceCounts.get(member.id) ?? 0) === 0
-                    const serviceMismatch =
-                      serviceId &&
-                      !eligibleStaffForService([member], serviceId).length
-                    const disabled =
-                      unavailable || noServices || Boolean(serviceMismatch)
-                    const selected = staffId === member.id
-                    return (
-                      <button
-                        key={member.id}
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => handleStaffChange(member.id)}
-                        title={
-                          unavailable
-                            ? 'خارج از برنامه'
-                            : noServices
-                              ? 'خدمتی ندارد'
-                              : serviceMismatch
-                                ? 'این خدمت را انجام نمی‌دهد'
-                                : undefined
-                        }
-                        className={cn(
-                          'flex items-center gap-2 rounded-full border py-1 pe-3 ps-1 text-sm transition-colors',
-                          selected
-                            ? 'border-transparent bg-primary text-primary-foreground'
-                            : 'border-transparent bg-blush-soft text-foreground hover:bg-secondary/60',
-                          disabled && 'cursor-not-allowed opacity-40',
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'flex size-7 items-center justify-center rounded-full text-[11px] font-bold',
-                            selected
-                              ? 'bg-primary-foreground/20 text-primary-foreground'
-                              : 'bg-secondary text-plum-deep',
-                          )}
-                        >
-                          {getInitials(member.name)}
-                        </span>
-                        {member.name}
-                      </button>
-                    )
-                  })}
-                </div>
-                {errors.staffId && (
-                  <FieldError>{errors.staffId.message}</FieldError>
-                )}
-              </Field>
-
               <Field>
                 <FieldLabel>
                   خدمت <span className="text-destructive">*</span>
@@ -756,6 +708,62 @@ export function AppointmentDrawer({
                   )}
                 </Field>
               ) : null}
+
+              <Field>
+                <FieldLabel>پرسنل</FieldLabel>
+                <div className="flex flex-wrap gap-2">
+                  {staffRoleOnly.map((member) => {
+                    const unavailable = staffSlotOk[member.id] === false
+                    const noServices =
+                      (staffServiceCounts.get(member.id) ?? 0) === 0
+                    const serviceMismatch =
+                      serviceId &&
+                      !eligibleStaffForService([member], serviceId).length
+                    const disabled =
+                      unavailable || noServices || Boolean(serviceMismatch)
+                    const selected = staffId === member.id
+                    return (
+                      <button
+                        key={member.id}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => handleStaffChange(member.id)}
+                        title={
+                          unavailable
+                            ? 'خارج از برنامه'
+                            : noServices
+                              ? 'خدمتی ندارد'
+                              : serviceMismatch
+                                ? 'این خدمت را انجام نمی‌دهد'
+                                : undefined
+                        }
+                        className={cn(
+                          'flex items-center gap-2 rounded-full border py-1 pe-3 ps-1 text-sm transition-colors',
+                          selected
+                            ? 'border-transparent bg-primary text-primary-foreground'
+                            : 'border-transparent bg-blush-soft text-foreground hover:bg-secondary/60',
+                          disabled && 'cursor-not-allowed opacity-40',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'flex size-7 items-center justify-center rounded-full text-[11px] font-bold',
+                            selected
+                              ? 'bg-primary-foreground/20 text-primary-foreground'
+                              : 'bg-secondary text-plum-deep',
+                          )}
+                        >
+                          {getInitials(member.name)}
+                        </span>
+                        {member.name}
+                      </button>
+                    )
+                  })}
+                </div>
+                {errors.staffId && (
+                  <FieldError>{errors.staffId.message}</FieldError>
+                )}
+              </Field>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -889,7 +897,7 @@ export function AppointmentDrawer({
           </FieldGroup>
         </form>
 
-        <DrawerFooter>
+        <FormSheetFooter>
           <Button
             onClick={onSubmit}
             disabled={
@@ -905,11 +913,17 @@ export function AppointmentDrawer({
             {isSubmitting && <Spinner className="ml-2" />}
             {isSubmitting ? 'در حال ثبت…' : 'ثبت نوبت'}
           </Button>
-          <DrawerClose asChild>
-            <Button variant="outline">انصراف</Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => requestClose(false)}
+            disabled={isSubmitting}
+          >
+            انصراف
+          </Button>
+        </FormSheetFooter>
+      </FormSheetContent>
+      {confirmDialog}
+    </FormSheet>
   )
 }

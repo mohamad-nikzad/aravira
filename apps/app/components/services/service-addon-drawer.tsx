@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, Plus, X } from "lucide-react";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerFooter,
@@ -44,6 +43,7 @@ import {
 } from "@repo/salon-core/persian-digits";
 import { DataClientHttpError } from "@repo/data-client";
 import { useManagerDataClient } from "@/components/manager-data-client-provider";
+import { useDismissGuard } from "@/lib/use-dismiss-guard";
 
 type ServiceAddonFormInput = {
   name: string;
@@ -150,7 +150,7 @@ export function ServiceAddonDrawer({
     reset,
     setError,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<ServiceAddonFormInput>({
     resolver: zodResolver(serviceAddonFormSchema),
     defaultValues: emptyValues(nextSortOrder),
@@ -211,8 +211,21 @@ export function ServiceAddonDrawer({
     }
   });
 
+  const { requestClose, confirmDialog } = useDismissGuard({
+    isDirty: isDirty && !isSubmitting,
+    onClose: () => onOpenChange(false),
+  });
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      onOpenChange(true);
+      return;
+    }
+    requestClose(false);
+  };
+
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={handleOpenChange}>
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>
@@ -481,11 +494,17 @@ export function ServiceAddonDrawer({
             )}
             {isSubmitting ? "…" : isEditing ? "ذخیره" : "افزودن"}
           </Button>
-          <DrawerClose asChild>
-            <Button variant="outline">انصراف</Button>
-          </DrawerClose>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => requestClose(false)}
+            disabled={isSubmitting}
+          >
+            انصراف
+          </Button>
         </DrawerFooter>
       </DrawerContent>
+      {confirmDialog}
     </Drawer>
   );
 }

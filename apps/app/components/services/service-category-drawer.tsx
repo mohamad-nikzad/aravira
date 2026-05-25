@@ -5,7 +5,6 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerFooter,
@@ -17,6 +16,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui/field";
 import { FormRootError } from "@repo/ui/form";
 import { Input } from "@repo/ui/input";
 import { Spinner } from "@repo/ui/spinner";
+import { useDismissGuard } from "@/lib/use-dismiss-guard";
 import {
   serviceCategoryFormSchema,
   type ServiceCategoryCreateInput,
@@ -50,7 +50,7 @@ export function ServiceCategoryDrawer({
     handleSubmit,
     reset,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<ServiceCategoryCreateInput>({
     resolver: zodResolver(serviceCategoryFormSchema),
     defaultValues: emptyValues(),
@@ -91,8 +91,21 @@ export function ServiceCategoryDrawer({
     }
   });
 
+  const { requestClose, confirmDialog } = useDismissGuard({
+    isDirty: isDirty && !isSubmitting,
+    onClose: () => onOpenChange(false),
+  });
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      onOpenChange(true);
+      return;
+    }
+    requestClose(false);
+  };
+
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={handleOpenChange}>
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>{isEditing ? "ویرایش بخش" : "بخش جدید"}</DrawerTitle>
@@ -115,11 +128,17 @@ export function ServiceCategoryDrawer({
             {isSubmitting && <Spinner className="ml-2" />}
             {isSubmitting ? "…" : isEditing ? "ذخیره" : "افزودن"}
           </Button>
-          <DrawerClose asChild>
-            <Button variant="outline">انصراف</Button>
-          </DrawerClose>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => requestClose(false)}
+            disabled={isSubmitting}
+          >
+            انصراف
+          </Button>
         </DrawerFooter>
       </DrawerContent>
+      {confirmDialog}
     </Drawer>
   );
 }

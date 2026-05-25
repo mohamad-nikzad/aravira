@@ -55,7 +55,9 @@ export function ClientPicker({
     const q = query.trim().toLowerCase()
     const phoneQuery = normalizePhone(q)
     return clients.filter(
-      (c) => c.name.toLowerCase().includes(q) || (c.phone ?? '').includes(phoneQuery)
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (phoneQuery.length > 0 && (c.phone ?? '').includes(phoneQuery)),
     )
   }, [clients, query])
 
@@ -64,7 +66,9 @@ export function ClientPicker({
     const q = query.trim().toLowerCase()
     const phoneQuery = normalizePhone(q)
     return clients.some(
-      (c) => c.name.toLowerCase() === q || c.phone === phoneQuery
+      (c) =>
+        c.name.toLowerCase() === q ||
+        (phoneQuery.length > 0 && c.phone === phoneQuery),
     )
   }, [clients, query])
 
@@ -76,7 +80,7 @@ export function ClientPicker({
 
   useEffect(() => {
     if (mode === 'closed') return
-    function handleClick(e: MouseEvent) {
+    function handleClick(e: MouseEvent | TouchEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         if (document.activeElement instanceof HTMLElement) {
           document.activeElement.blur()
@@ -86,7 +90,11 @@ export function ClientPicker({
       }
     }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('touchstart', handleClick, { passive: true })
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('touchstart', handleClick)
+    }
   }, [mode])
 
   const openSearch = () => {
@@ -166,7 +174,7 @@ export function ClientPicker({
         type="button"
         onClick={openSearch}
         className={cn(
-          'flex h-10 w-full items-center justify-between rounded-lg border border-input bg-blush-soft dark:bg-input/30 px-3 text-sm transition-colors touch-manipulation',
+          'flex h-12 w-full items-center justify-between rounded-lg border border-input bg-blush-soft dark:bg-input/30 px-3 text-[15px] transition-colors touch-manipulation',
           'hover:border-ring/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30',
           !selectedClient && 'text-muted-foreground'
         )}
@@ -192,21 +200,26 @@ export function ClientPicker({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="جستجو نام یا شماره…"
-              className="flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-muted-foreground"
+              className="flex-1 bg-transparent py-3 text-base outline-none placeholder:text-muted-foreground"
               autoComplete="off"
+              enterKeyHint="search"
             />
             {query && (
               <button
                 type="button"
-                onClick={() => setQuery('')}
-                className="text-muted-foreground touch-manipulation"
+                onClick={() => {
+                  setQuery('')
+                  searchRef.current?.focus()
+                }}
+                aria-label="پاک کردن"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent active:bg-accent/80 touch-manipulation"
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-4 w-4" />
               </button>
             )}
           </div>
 
-          <div className="max-h-[180px] overflow-y-auto">
+          <div className="max-h-[55vh] min-h-[200px] overflow-y-auto overscroll-contain">
             {filtered.length > 0 ? (
               filtered.map((client) => (
                 <button
@@ -214,14 +227,14 @@ export function ClientPicker({
                   type="button"
                   onClick={() => selectClient(client.id)}
                   className={cn(
-                    'flex w-full items-center gap-3 px-3 py-2.5 text-sm transition-colors touch-manipulation text-right',
+                    'flex min-h-12 w-full items-center gap-3 px-3 py-2.5 text-sm transition-colors touch-manipulation text-right',
                     'hover:bg-accent/50 active:bg-accent',
                     client.id === value && 'bg-primary/5'
                   )}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate text-[13px]">{client.name}</p>
-                    <p className="text-[11px] text-muted-foreground" dir="ltr">
+                    <p className="font-medium truncate text-sm">{client.name}</p>
+                    <p className="text-xs text-muted-foreground" dir="ltr">
                       {client.isPlaceholder ? 'اطلاعات ناقص' : displayPhone(client.phone)}
                     </p>
                   </div>
@@ -231,7 +244,7 @@ export function ClientPicker({
                 </button>
               ))
             ) : (
-              <div className="px-3 py-4 text-center text-sm text-muted-foreground">
+              <div className="px-3 py-6 text-center text-sm text-muted-foreground">
                 مشتری‌ای یافت نشد
               </div>
             )}
@@ -242,18 +255,18 @@ export function ClientPicker({
               <button
                 type="button"
                 onClick={startAdding}
-                className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-primary transition-colors touch-manipulation hover:bg-primary/5 active:bg-primary/10"
+                className="flex min-h-12 w-full items-center gap-2.5 px-3 py-3 text-sm font-medium text-primary transition-colors touch-manipulation hover:bg-primary/5 active:bg-primary/10"
               >
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
                   <UserPlus className="h-3.5 w-3.5" />
                 </div>
-                <span>افزودن «{query.trim()}» به عنوان مشتری جدید</span>
+                <span className="truncate">افزودن «{query.trim()}» به عنوان مشتری جدید</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={startAdding}
-                className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-muted-foreground transition-colors touch-manipulation hover:bg-accent/50 active:bg-accent"
+                className="flex min-h-12 w-full items-center gap-2.5 px-3 py-3 text-sm text-muted-foreground transition-colors touch-manipulation hover:bg-accent/50 active:bg-accent"
               >
                 <Plus className="h-4 w-4" />
                 <span>مشتری جدید</span>

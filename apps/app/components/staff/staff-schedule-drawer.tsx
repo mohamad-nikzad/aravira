@@ -29,6 +29,7 @@ const scheduleFormSchema = z.object({ rows: staffScheduleSchema });
 type ScheduleFormValues = z.input<typeof scheduleFormSchema>;
 import { runMutation } from "@/lib/run-mutation";
 import { useManagerDataClient } from "@/components/manager-data-client-provider";
+import { useDismissGuard } from "@/lib/use-dismiss-guard";
 
 const days = [
   { dayOfWeek: 6, label: "شنبه" },
@@ -100,7 +101,7 @@ export function StaffScheduleDrawer({
     reset,
     setValue,
     getValues,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<ScheduleFormValues>({
     resolver: zodResolver(scheduleFormSchema),
     defaultValues: { rows: defaultRows() },
@@ -159,8 +160,21 @@ export function StaffScheduleDrawer({
     if (result.ok) onSuccess();
   });
 
+  const { requestClose, confirmDialog } = useDismissGuard({
+    isDirty: isDirty && !isSubmitting,
+    onClose: () => onOpenChange(false),
+  });
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      onOpenChange(true);
+      return;
+    }
+    requestClose(false);
+  };
+
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={handleOpenChange}>
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>برنامه کاری {staff?.name ?? ""}</DrawerTitle>
@@ -267,11 +281,16 @@ export function StaffScheduleDrawer({
             {isSubmitting && <Spinner className="ml-2" />}
             {isSubmitting ? "در حال ذخیره…" : "ذخیره برنامه کاری"}
           </Button>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => requestClose(false)}
+          >
             بستن
           </Button>
         </DrawerFooter>
       </DrawerContent>
+      {confirmDialog}
     </Drawer>
   );
 }

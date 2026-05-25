@@ -10,7 +10,6 @@ import {
   DrawerTitle,
   DrawerDescription,
   DrawerFooter,
-  DrawerClose,
 } from "@repo/ui/drawer";
 import { Button } from "@repo/ui/button";
 import { FormRootError } from "@repo/ui/form";
@@ -27,6 +26,7 @@ import { cn } from "@repo/ui/utils";
 import { runMutation } from "@/lib/run-mutation";
 import { useManagerDataClient } from "@/components/manager-data-client-provider";
 import { groupServicesByCatalog } from "@/components/services/service-catalog-groups";
+import { useDismissGuard } from "@/lib/use-dismiss-guard";
 
 interface StaffServicesDrawerProps {
   open: boolean;
@@ -50,7 +50,7 @@ export function StaffServicesDrawer({
     setError,
     setValue,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<StaffServiceIdsInput>({
     resolver: zodResolver(staffServiceIdsSchema),
     defaultValues: { serviceIds: null },
@@ -120,9 +120,20 @@ export function StaffServicesDrawer({
     if (result.ok) onSuccess();
   });
 
+  const { requestClose, confirmDialog } = useDismissGuard({
+    isDirty: isDirty && !isSubmitting,
+    onClose: () => {
+      reset({ serviceIds: null });
+      onOpenChange(false);
+    },
+  });
+
   const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen) reset({ serviceIds: null });
-    onOpenChange(isOpen);
+    if (isOpen) {
+      onOpenChange(true);
+      return;
+    }
+    requestClose(false);
   };
 
   return (
@@ -244,13 +255,17 @@ export function StaffServicesDrawer({
             {isSubmitting && <Spinner className="ml-2" />}
             {isSubmitting ? "در حال ذخیره…" : "ذخیره"}
           </Button>
-          <DrawerClose asChild>
-            <Button variant="outline" type="button">
-              انصراف
-            </Button>
-          </DrawerClose>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => requestClose(false)}
+            disabled={isSubmitting}
+          >
+            انصراف
+          </Button>
         </DrawerFooter>
       </DrawerContent>
+      {confirmDialog}
     </Drawer>
   );
 }

@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerFooter,
@@ -59,6 +58,7 @@ import {
   HttpError,
   useNetworkStatus,
 } from "@/lib/pwa-client";
+import { useDismissGuard } from "@/lib/use-dismiss-guard";
 
 const ANY_STAFF_VALUE = "__any__";
 
@@ -275,13 +275,22 @@ export function AvailabilityDrawer({
     [date, serviceId, staffSelection],
   );
 
+  const { requestClose, confirmDialog } = useDismissGuard({
+    // Search drawer has no save action; closing discards only query state.
+    isDirty: false,
+    onClose: () => {
+      clearResults();
+      onOpenChange(false);
+    },
+  });
+
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
       resetDrawer();
-    } else {
-      clearResults();
+      onOpenChange(true);
+      return;
     }
-    onOpenChange(nextOpen);
+    requestClose(false);
   };
 
   useEffect(() => {
@@ -593,11 +602,16 @@ export function AvailabilityDrawer({
         </div>
 
         <DrawerFooter className="border-t border-border/60 bg-background">
-          <DrawerClose asChild>
-            <Button variant="outline">بستن</Button>
-          </DrawerClose>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => requestClose(false)}
+          >
+            بستن
+          </Button>
         </DrawerFooter>
       </DrawerContent>
+      {confirmDialog}
     </Drawer>
   );
 }

@@ -4,14 +4,14 @@ import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerClose,
-} from "@repo/ui/drawer";
+  FormSheet,
+  FormSheetContent,
+  FormSheetHeader,
+  FormSheetTitle,
+  FormSheetDescription,
+  FormSheetFooter,
+} from "@/components/ui/form-sheet";
+import { useDismissGuard } from "@/lib/use-dismiss-guard";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Badge } from "@repo/ui/badge";
@@ -73,7 +73,7 @@ export function ClientDrawer({
     handleSubmit,
     reset,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<ClientFormInput>({
     resolver: zodResolver(clientFormSchema),
     defaultValues: emptyValues,
@@ -86,6 +86,19 @@ export function ClientDrawer({
 
   const nameValue = watch("name");
   const phoneValue = watch("phone");
+
+  const { requestClose, confirmDialog } = useDismissGuard({
+    isDirty: isDirty && !isSubmitting,
+    onClose: () => onOpenChange(false),
+  });
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      onOpenChange(true);
+      return;
+    }
+    requestClose(false);
+  };
 
   const onSubmit = handleSubmit(async (values) => {
     const result = await runMutation(async () => {
@@ -124,20 +137,20 @@ export function ClientDrawer({
   });
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>{isEditing ? "ویرایش مشتری" : "مشتری جدید"}</DrawerTitle>
-          <DrawerDescription>
+    <FormSheet open={open} onOpenChange={handleOpenChange}>
+      <FormSheetContent onRequestClose={() => requestClose(false)}>
+        <FormSheetHeader>
+          <FormSheetTitle>{isEditing ? "ویرایش مشتری" : "مشتری جدید"}</FormSheetTitle>
+          <FormSheetDescription>
             {isEditing
               ? "اطلاعات مشتری را به‌روز کنید"
               : "مشتری جدید به سالن اضافه کنید"}
-          </DrawerDescription>
-        </DrawerHeader>
+          </FormSheetDescription>
+        </FormSheetHeader>
 
         <form
           onSubmit={onSubmit}
-          className="flex flex-col gap-4 overflow-auto p-4"
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4"
         >
           <FieldGroup>
             <Field>
@@ -222,7 +235,7 @@ export function ClientDrawer({
           </FieldGroup>
         </form>
 
-        <DrawerFooter>
+        <FormSheetFooter>
           <Button
             onClick={onSubmit}
             disabled={isSubmitting || !nameValue || !phoneValue}
@@ -235,11 +248,17 @@ export function ClientDrawer({
                 ? "ذخیره تغییرات"
                 : "افزودن مشتری"}
           </Button>
-          <DrawerClose asChild>
-            <Button variant="outline">انصراف</Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => requestClose(false)}
+            disabled={isSubmitting}
+          >
+            انصراف
+          </Button>
+        </FormSheetFooter>
+      </FormSheetContent>
+      {confirmDialog}
+    </FormSheet>
   );
 }

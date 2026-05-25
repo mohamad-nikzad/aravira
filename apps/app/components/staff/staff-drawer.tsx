@@ -4,14 +4,14 @@ import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerClose,
-} from "@repo/ui/drawer";
+  FormSheet,
+  FormSheetContent,
+  FormSheetHeader,
+  FormSheetTitle,
+  FormSheetDescription,
+  FormSheetFooter,
+} from "@/components/ui/form-sheet";
+import { useDismissGuard } from "@/lib/use-dismiss-guard";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Field, FieldLabel, FieldGroup, FieldError } from "@repo/ui/field";
@@ -54,7 +54,7 @@ export function StaffDrawer({
     handleSubmit,
     reset,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<StaffCreateFormInput>({
     resolver: zodResolver(staffCreateSchema),
     defaultValues: emptyValues(roleLocked),
@@ -68,6 +68,19 @@ export function StaffDrawer({
   const nameValue = watch("name");
   const phoneValue = watch("phone");
   const passwordValue = watch("password");
+
+  const { requestClose, confirmDialog } = useDismissGuard({
+    isDirty: isDirty && !isSubmitting,
+    onClose: () => onOpenChange(false),
+  });
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      onOpenChange(true);
+      return;
+    }
+    requestClose(false);
+  };
 
   const onSubmit = handleSubmit(async (values) => {
     const result = await runMutation(async () => {
@@ -96,18 +109,18 @@ export function StaffDrawer({
   });
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>پرسنل جدید</DrawerTitle>
-          <DrawerDescription>
+    <FormSheet open={open} onOpenChange={handleOpenChange}>
+      <FormSheetContent onRequestClose={() => requestClose(false)}>
+        <FormSheetHeader>
+          <FormSheetTitle>پرسنل جدید</FormSheetTitle>
+          <FormSheetDescription>
             عضو جدیدی به تیم سالن اضافه کنید
-          </DrawerDescription>
-        </DrawerHeader>
+          </FormSheetDescription>
+        </FormSheetHeader>
 
         <form
           onSubmit={onSubmit}
-          className="flex flex-col gap-4 overflow-auto p-4"
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4"
         >
           <FieldGroup>
             <Field>
@@ -192,7 +205,7 @@ export function StaffDrawer({
           </FieldGroup>
         </form>
 
-        <DrawerFooter>
+        <FormSheetFooter>
           <Button
             onClick={onSubmit}
             disabled={
@@ -203,11 +216,17 @@ export function StaffDrawer({
             {isSubmitting && <Spinner className="ml-2" />}
             {isSubmitting ? "در حال افزودن…" : "افزودن پرسنل"}
           </Button>
-          <DrawerClose asChild>
-            <Button variant="outline">انصراف</Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => requestClose(false)}
+            disabled={isSubmitting}
+          >
+            انصراف
+          </Button>
+        </FormSheetFooter>
+      </FormSheetContent>
+      {confirmDialog}
+    </FormSheet>
   );
 }

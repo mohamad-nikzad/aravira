@@ -5,14 +5,14 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Clock3, PackageCheck, Trash2 } from "lucide-react";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerClose,
-} from "@repo/ui/drawer";
+  FormSheet,
+  FormSheetContent,
+  FormSheetHeader,
+  FormSheetTitle,
+  FormSheetDescription,
+  FormSheetFooter,
+} from "@/components/ui/form-sheet";
+import { useDismissGuard } from "@/lib/use-dismiss-guard";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Textarea } from "@repo/ui/textarea";
@@ -98,6 +98,7 @@ export function ServiceDrawer({
   const dc = useManagerDataClient();
   const isEditing = !!service;
   const [componentIds, setComponentIds] = useState<string[]>([]);
+  const [initialComponentIds, setInitialComponentIds] = useState<string[]>([]);
   const [loadingComponents, setLoadingComponents] = useState(false);
   const {
     register,
@@ -105,7 +106,7 @@ export function ServiceDrawer({
     handleSubmit,
     reset,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<ServiceFormInput>({
     resolver: zodResolver(serviceFormSchema),
     defaultValues: emptyValues(defaultFamilyId),
@@ -144,16 +145,18 @@ export function ServiceDrawer({
     if (!open) return;
     if (!service || service.kind !== "combo" || !dc) {
       setComponentIds([]);
+      setInitialComponentIds([]);
       return;
     }
     setLoadingComponents(true);
     dc.services.comboComponents
       .get(service.id)
       .then((combo) => {
-        setComponentIds(
+        const ids =
           combo?.components.map((component) => component.componentServiceId) ??
-            [],
-        );
+          [];
+        setComponentIds(ids);
+        setInitialComponentIds(ids);
       })
       .finally(() => setLoadingComponents(false));
   }, [dc, open, service]);
@@ -215,19 +218,36 @@ export function ServiceDrawer({
     }
   });
 
+  const componentsDirty =
+    componentIds.length !== initialComponentIds.length ||
+    componentIds.some((id, i) => id !== initialComponentIds[i]);
+
+  const { requestClose, confirmDialog } = useDismissGuard({
+    isDirty: (isDirty || componentsDirty) && !isSubmitting,
+    onClose: () => onOpenChange(false),
+  });
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      onOpenChange(true);
+      return;
+    }
+    requestClose(false);
+  };
+
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>{isEditing ? "ویرایش خدمت" : "خدمت جدید"}</DrawerTitle>
-          <DrawerDescription>
+    <FormSheet open={open} onOpenChange={handleOpenChange}>
+      <FormSheetContent onRequestClose={() => requestClose(false)}>
+        <FormSheetHeader>
+          <FormSheetTitle>{isEditing ? "ویرایش خدمت" : "خدمت جدید"}</FormSheetTitle>
+          <FormSheetDescription>
             نام، زمان انجام و قیمت را وارد کنید
-          </DrawerDescription>
-        </DrawerHeader>
+          </FormSheetDescription>
+        </FormSheetHeader>
 
         <form
           onSubmit={onSubmit}
-          className="flex flex-col gap-4 overflow-auto p-4"
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4"
         >
           <FieldGroup>
             <Field>
@@ -537,7 +557,7 @@ export function ServiceDrawer({
           </FieldGroup>
         </form>
 
-        <DrawerFooter>
+        <FormSheetFooter>
           <Button
             onClick={onSubmit}
             disabled={
@@ -551,11 +571,17 @@ export function ServiceDrawer({
             {isSubmitting && <Spinner className="ml-2" />}
             {isSubmitting ? "…" : isEditing ? "ذخیره" : "افزودن"}
           </Button>
-          <DrawerClose asChild>
-            <Button variant="outline">انصراف</Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => requestClose(false)}
+            disabled={isSubmitting}
+          >
+            انصراف
+          </Button>
+        </FormSheetFooter>
+      </FormSheetContent>
+      {confirmDialog}
+    </FormSheet>
   );
 }

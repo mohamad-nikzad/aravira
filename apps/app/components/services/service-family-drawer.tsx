@@ -5,7 +5,6 @@ import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerFooter,
@@ -24,6 +23,7 @@ import {
   SelectValue,
 } from '@repo/ui/select'
 import { Spinner } from '@repo/ui/spinner'
+import { useDismissGuard } from '@/lib/use-dismiss-guard'
 import {
   serviceFamilyFormSchema,
   type ServiceFamilyCreateInput,
@@ -63,7 +63,7 @@ export function ServiceFamilyDrawer({
     handleSubmit,
     reset,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<ServiceFamilyCreateInput>({
     resolver: zodResolver(serviceFamilyFormSchema),
     defaultValues: emptyValues(defaultCategoryId),
@@ -109,8 +109,21 @@ export function ServiceFamilyDrawer({
     }
   })
 
+  const { requestClose, confirmDialog } = useDismissGuard({
+    isDirty: isDirty && !isSubmitting,
+    onClose: () => onOpenChange(false),
+  })
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      onOpenChange(true)
+      return
+    }
+    requestClose(false)
+  }
+
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={handleOpenChange}>
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>
@@ -162,11 +175,17 @@ export function ServiceFamilyDrawer({
             {isSubmitting && <Spinner className="ml-2" />}
             {isSubmitting ? '…' : isEditing ? 'ذخیره' : 'افزودن'}
           </Button>
-          <DrawerClose asChild>
-            <Button variant="outline">انصراف</Button>
-          </DrawerClose>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => requestClose(false)}
+            disabled={isSubmitting}
+          >
+            انصراف
+          </Button>
         </DrawerFooter>
       </DrawerContent>
+      {confirmDialog}
     </Drawer>
   )
 }
