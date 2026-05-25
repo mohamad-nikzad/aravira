@@ -281,9 +281,13 @@ export function createSyncModule(input: {
 
     async processPending() {
       if (!queue) return
-      const before = await readState()
+      const all = await queue.listAll()
+      const hasWork = all.some(
+        (r) => r.status === 'pending' || r.status === 'syncing'
+      )
+      if (!hasWork) return
       isSyncingInternal = true
-      listeners.notify({ ...before, isSyncing: true })
+      listeners.notify({ ...(await readState()), isSyncing: true })
       try {
         await processPendingMutations({ queue, transport, storage, isOnline })
       } finally {

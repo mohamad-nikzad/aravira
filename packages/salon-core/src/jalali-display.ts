@@ -64,6 +64,33 @@ export function formatPersianListDay(date: Date): string {
   return safeFormat(date, { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
+/** Saturday-anchored start of week (Persian calendar weeks begin Saturday). */
+function startOfSaturdayWeek(d: Date): Date {
+  const dow = (d.getDay() + 1) % 7
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow)
+}
+
+/** List view day heading with relative prefix (امروز / فردا / پس‌فردا / هفته بعد …) */
+export function formatPersianListDayRelative(date: Date, today: Date = new Date()): string {
+  const base = formatPersianListDay(date)
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const ref = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const diff = Math.round((day.getTime() - ref.getTime()) / 86_400_000)
+  if (diff === 0) return `امروز · ${base}`
+  if (diff === 1) return `فردا · ${base}`
+  if (diff === 2) return `پس‌فردا · ${base}`
+  if (diff === -1) return `دیروز · ${base}`
+  if (diff > 2) {
+    const weekDiff = Math.round(
+      (startOfSaturdayWeek(day).getTime() - startOfSaturdayWeek(ref).getTime()) /
+        (7 * 86_400_000)
+    )
+    if (weekDiff === 1) return `هفته بعد · ${base}`
+    if (weekDiff === 2) return `دو هفته بعد · ${base}`
+  }
+  return base
+}
+
 /** FullCalendar VerboseFormattingArg / ExpandedZonedMarker → local Date (wall time) */
 export function expandedZonedToDate(z: {
   year: number
