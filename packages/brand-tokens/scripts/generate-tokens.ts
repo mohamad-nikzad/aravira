@@ -78,7 +78,7 @@ ${cssVars('', semanticLight).join('\n')}
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: var(--saloora-blush);
   --sidebar-accent-foreground: var(--saloora-plum);
-  --sidebar-border: oklch(0.893 0.018 0.4);
+  --sidebar-border: var(--border);
   --sidebar-ring: var(--saloora-rose);
 ${calendarColorOptions.map((option) => `  --calendar-${option.id}: ${option.light.oklch};`).join('\n')}
 ${lightCalendarVars.join('\n')}
@@ -94,18 +94,18 @@ ${Object.entries(appointmentStatusPalettes)
 
 .dark {
 ${cssVars('', semanticDark).join('\n')}
-  --chart-1: oklch(0.807 0.051 0.8);
+  --chart-1: var(--primary);
   --chart-2: var(--saloora-rose);
   --chart-3: oklch(0.7 0.06 150);
   --chart-4: oklch(0.74 0.12 75);
   --chart-5: oklch(0.7 0.08 255);
-  --sidebar: oklch(0.216 0.015 346.8);
-  --sidebar-foreground: var(--saloora-mist);
-  --sidebar-primary: oklch(0.807 0.051 0.8);
-  --sidebar-primary-foreground: oklch(0.216 0.015 346.8);
-  --sidebar-accent: oklch(0.456 0.089 4);
-  --sidebar-accent-foreground: var(--saloora-mist);
-  --sidebar-border: oklch(0.335 0.028 345);
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
   --sidebar-ring: var(--saloora-rose);
 ${calendarColorOptions.map((option) => `  --calendar-${option.id}: ${option.dark.oklch};`).join('\n')}
 ${darkCalendarVars.join('\n')}

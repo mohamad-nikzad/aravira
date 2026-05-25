@@ -14,9 +14,9 @@ export type CalendarColorOption = {
 export const calendarColorOptions = [
   {
     id: 'rose',
-    labelFa: 'رز',
-    light: tok('oklch(0.597 0.126 10)', '#C26878'),
-    dark: tok('oklch(0.597 0.126 10)', '#C26878'),
+    labelFa: 'آبی',
+    light: tok('oklch(0.62 0.12 245)', '#3E8CC9'),
+    dark: tok('oklch(0.55 0.1 245)', '#3977A8'),
   },
   {
     id: 'violet',
