@@ -152,7 +152,7 @@ export function ServiceAddonManager({
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="جستجوی افزودنی…"
-                className="h-9 bg-background pr-9 text-sm"
+                className="h-9 bg-blush-soft pr-9 text-sm"
               />
             </div>
             <Button

@@ -1,17 +1,20 @@
-'use client'
+"use client";
 
-import { useEffect, useMemo, useState } from 'react'
-import type { Client, Service, TodayData, User } from '@repo/salon-core'
-import { useManagerDataClient, useManagerOfflineDataEpoch } from '@/components/manager-data-client-provider'
+import { useEffect, useMemo, useState } from "react";
+import type { Client, Service, TodayData, User } from "@repo/salon-core";
+import {
+  useManagerDataClient,
+  useManagerOfflineDataEpoch,
+} from "@/components/manager-data-client-provider";
 
 type RepoState = {
-  loaded: boolean
-  data: TodayData | null
-  staff: User[]
-  services: Service[]
-  clients: Client[]
-  todayUpdatedAt: string | null
-}
+  loaded: boolean;
+  data: TodayData | null;
+  staff: User[];
+  services: Service[];
+  clients: Client[];
+  todayUpdatedAt: string | null;
+};
 
 function emptyRepo(): RepoState {
   return {
@@ -21,7 +24,7 @@ function emptyRepo(): RepoState {
     services: [],
     clients: [],
     todayUpdatedAt: null,
-  }
+  };
 }
 
 export function useManagerTodayIndexedDbSources(
@@ -31,26 +34,30 @@ export function useManagerTodayIndexedDbSources(
   liveToday: TodayData | undefined,
   staffLive: User[] | undefined,
   servicesLive: Service[] | undefined,
-  clientsLive: Client[] | undefined
+  clientsLive: Client[] | undefined,
 ) {
-  const client = useManagerDataClient()
-  const offlineDataEpoch = useManagerOfflineDataEpoch()
-  const [repo, setRepo] = useState<RepoState>(emptyRepo)
+  const client = useManagerDataClient();
+  const offlineDataEpoch = useManagerOfflineDataEpoch();
+  const [repo, setRepo] = useState<RepoState>(emptyRepo);
 
   useEffect(() => {
     if (!enabled || !client) {
-      setRepo(emptyRepo())
-      return
+      setRepo(emptyRepo());
+      return;
     }
 
-    let cancelled = false
+    let cancelled = false;
 
     void (async () => {
       if (isOnline) {
-        if (liveToday) await client.today.hydrateFromServer(managerDate, liveToday)
-        if (staffLive !== undefined) await client.staff.hydrateFromServer(staffLive)
-        if (servicesLive !== undefined) await client.services.hydrateFromServer(servicesLive)
-        if (clientsLive !== undefined) await client.clients.hydrateListFromServer(clientsLive)
+        if (liveToday)
+          await client.today.hydrateFromServer(managerDate, liveToday);
+        if (staffLive !== undefined)
+          await client.staff.hydrateFromServer(staffLive);
+        if (servicesLive !== undefined)
+          await client.services.hydrateFromServer(servicesLive);
+        if (clientsLive !== undefined)
+          await client.clients.hydrateListFromServer(clientsLive);
       }
 
       const [data, st, se, cl, ts] = await Promise.all([
@@ -59,9 +66,9 @@ export function useManagerTodayIndexedDbSources(
         client.services.list(),
         client.clients.list(),
         client.today.dayLastSyncedAt(managerDate),
-      ])
+      ]);
 
-      if (cancelled) return
+      if (cancelled) return;
       setRepo({
         loaded: true,
         data,
@@ -69,15 +76,25 @@ export function useManagerTodayIndexedDbSources(
         services: se,
         clients: cl,
         todayUpdatedAt: ts,
-      })
-    })()
+      });
+    })();
 
     return () => {
-      cancelled = true
-    }
-  }, [enabled, client, isOnline, managerDate, liveToday, staffLive, servicesLive, clientsLive, offlineDataEpoch])
+      cancelled = true;
+    };
+  }, [
+    enabled,
+    client,
+    isOnline,
+    managerDate,
+    liveToday,
+    staffLive,
+    servicesLive,
+    clientsLive,
+    offlineDataEpoch,
+  ]);
 
-  const idbLoading = Boolean(enabled && client && !repo.loaded)
+  const idbLoading = Boolean(enabled && client && !repo.loaded);
 
   return useMemo(() => {
     if (!enabled) {
@@ -89,7 +106,7 @@ export function useManagerTodayIndexedDbSources(
         snapshotUpdatedAt: null as string | null,
         hasSnapshot: false,
         idbLoading: false,
-      }
+      };
     }
 
     if (!client) {
@@ -101,7 +118,7 @@ export function useManagerTodayIndexedDbSources(
         snapshotUpdatedAt: null as string | null,
         hasSnapshot: false,
         idbLoading: false,
-      }
+      };
     }
 
     if (!repo.loaded) {
@@ -114,7 +131,7 @@ export function useManagerTodayIndexedDbSources(
           snapshotUpdatedAt: null as string | null,
           hasSnapshot: false,
           idbLoading: true,
-        }
+        };
       }
 
       return {
@@ -125,7 +142,7 @@ export function useManagerTodayIndexedDbSources(
         snapshotUpdatedAt: null as string | null,
         hasSnapshot: false,
         idbLoading: true,
-      }
+      };
     }
 
     return {
@@ -136,6 +153,15 @@ export function useManagerTodayIndexedDbSources(
       snapshotUpdatedAt: repo.todayUpdatedAt,
       hasSnapshot: repo.data != null,
       idbLoading: false,
-    }
-  }, [enabled, client, isOnline, liveToday, staffLive, servicesLive, clientsLive, repo])
+    };
+  }, [
+    enabled,
+    client,
+    isOnline,
+    liveToday,
+    staffLive,
+    servicesLive,
+    clientsLive,
+    repo,
+  ]);
 }

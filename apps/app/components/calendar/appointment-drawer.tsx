@@ -17,15 +17,11 @@ import { Input } from '@repo/ui/input'
 import { Checkbox } from '@repo/ui/checkbox'
 import { Field, FieldLabel, FieldGroup, FieldError } from '@repo/ui/field'
 import { FormRootError } from '@repo/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@repo/ui/select'
 import { Spinner } from '@repo/ui/spinner'
-import { ChevronDown } from 'lucide-react'
+import { Textarea } from '@repo/ui/textarea'
+import { cn } from '@repo/ui/utils'
+import { ChevronDown, Check } from 'lucide-react'
+import { getInitials } from '@/components/clients/client-visuals'
 import {
   User,
   Service,
@@ -545,15 +541,17 @@ export function AppointmentDrawer({
 
         <form
           onSubmit={onSubmit}
-          className="min-h-0 flex-1 overflow-auto px-4 pb-4"
+          className="min-h-0 flex-1 overflow-auto px-5 pb-4"
         >
           <FieldGroup className="gap-4">
             <Field>
-              <FieldLabel>مشتری</FieldLabel>
+              <FieldLabel>
+                مشتری <span className="text-destructive">*</span>
+              </FieldLabel>
               <div className="space-y-3">
                 <label
                   htmlFor="temporary-client-mode"
-                  className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-card px-3 py-3"
+                  className="flex cursor-pointer items-start gap-3 rounded-xl border border-transparent bg-blush-soft px-3 py-3"
                 >
                   <Checkbox
                     id="temporary-client-mode"
@@ -640,56 +638,64 @@ export function AppointmentDrawer({
             <div className="flex min-w-0 flex-col gap-4">
               <Field>
                 <FieldLabel>پرسنل</FieldLabel>
-                <Controller
-                  control={control}
-                  name="staffId"
-                  render={({ field }) => (
-                    <Select
-                      value={field.value || undefined}
-                      onValueChange={handleStaffChange}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="انتخاب پرسنل" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {staffRoleOnly.map((member) => {
-                          const unavailable = staffSlotOk[member.id] === false
-                          const noServices =
-                            (staffServiceCounts.get(member.id) ?? 0) === 0
-                          const serviceMismatch =
-                            serviceId &&
-                            !eligibleStaffForService([member], serviceId)
-                              .length
-                          const disabled =
-                            unavailable || noServices || Boolean(serviceMismatch)
-                          return (
-                            <SelectItem
-                              key={member.id}
-                              value={member.id}
-                              disabled={disabled}
-                            >
-                              {member.name}
-                              {unavailable
-                                ? ' (خارج از برنامه)'
-                                : noServices
-                                  ? ' (خدمتی ندارد)'
-                                  : serviceMismatch
-                                    ? ' (این خدمت را انجام نمی‌دهد)'
-                                    : ''}
-                            </SelectItem>
-                          )
-                        })}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
+                <div className="flex flex-wrap gap-2">
+                  {staffRoleOnly.map((member) => {
+                    const unavailable = staffSlotOk[member.id] === false
+                    const noServices =
+                      (staffServiceCounts.get(member.id) ?? 0) === 0
+                    const serviceMismatch =
+                      serviceId &&
+                      !eligibleStaffForService([member], serviceId).length
+                    const disabled =
+                      unavailable || noServices || Boolean(serviceMismatch)
+                    const selected = staffId === member.id
+                    return (
+                      <button
+                        key={member.id}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => handleStaffChange(member.id)}
+                        title={
+                          unavailable
+                            ? 'خارج از برنامه'
+                            : noServices
+                              ? 'خدمتی ندارد'
+                              : serviceMismatch
+                                ? 'این خدمت را انجام نمی‌دهد'
+                                : undefined
+                        }
+                        className={cn(
+                          'flex items-center gap-2 rounded-full border py-1 pe-3 ps-1 text-sm transition-colors',
+                          selected
+                            ? 'border-transparent bg-primary text-primary-foreground'
+                            : 'border-transparent bg-blush-soft text-foreground hover:bg-secondary/60',
+                          disabled && 'cursor-not-allowed opacity-40',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'flex size-7 items-center justify-center rounded-full text-[11px] font-bold',
+                            selected
+                              ? 'bg-primary-foreground/20 text-primary-foreground'
+                              : 'bg-secondary text-plum-deep',
+                          )}
+                        >
+                          {getInitials(member.name)}
+                        </span>
+                        {member.name}
+                      </button>
+                    )
+                  })}
+                </div>
                 {errors.staffId && (
                   <FieldError>{errors.staffId.message}</FieldError>
                 )}
               </Field>
 
               <Field>
-                <FieldLabel>خدمت</FieldLabel>
+                <FieldLabel>
+                  خدمت <span className="text-destructive">*</span>
+                </FieldLabel>
                 <Controller
                   control={control}
                   name="serviceId"
@@ -709,52 +715,55 @@ export function AppointmentDrawer({
 
               {selectedService ? (
                 <Field>
-                  <FieldLabel>افزودنی‌ها</FieldLabel>
-                  <div className="space-y-2 rounded-lg border border-border bg-card p-3">
-                    {addonsLoading ? (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Spinner className="size-3.5" />
-                        در حال دریافت افزودنی‌ها...
-                      </div>
-                    ) : availableAddons.length > 0 ? (
-                      availableAddons.map((addon) => (
-                        <label
-                          key={addon.id}
-                          className="flex cursor-pointer items-start gap-3 rounded-md px-2 py-2 hover:bg-muted/60"
-                        >
-                          <Checkbox
-                            checked={addonIds.includes(addon.id)}
-                            onCheckedChange={() => toggleAddon(addon)}
-                            className="mt-0.5"
-                          />
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-medium">
-                              {addon.name}
-                            </span>
-                            <span className="block text-xs text-muted-foreground">
-                              +{toPersianDigits(addon.durationDelta)} دقیقه · +
-                              {tomansFormatter.format(addon.priceDelta)} تومان
-                            </span>
-                          </span>
-                        </label>
-                      ))
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        برای این خدمت افزودنی فعالی تعریف نشده است.
-                      </p>
-                    )}
-                    <div className="border-t border-border/60 pt-2 text-xs text-muted-foreground">
-                      جمع پیش‌نمایش: {toPersianDigits(previewDuration)} دقیقه ·{' '}
-                      {priceLabel}
+                  <FieldLabel>افزودنی‌ها (اختیاری)</FieldLabel>
+                  {addonsLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Spinner className="size-3.5" />
+                      در حال دریافت افزودنی‌ها...
                     </div>
-                  </div>
+                  ) : availableAddons.length > 0 ? (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        {availableAddons.map((addon) => {
+                          const selected = addonIds.includes(addon.id)
+                          return (
+                            <button
+                              key={addon.id}
+                              type="button"
+                              onClick={() => toggleAddon(addon)}
+                              title={`+${toPersianDigits(addon.durationDelta)} دقیقه · +${tomansFormatter.format(addon.priceDelta)} تومان`}
+                              className={cn(
+                                'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
+                                selected
+                                  ? 'border-transparent bg-primary text-primary-foreground'
+                                  : 'border-transparent bg-blush-soft text-foreground hover:bg-secondary/60',
+                              )}
+                            >
+                              {selected ? <Check className="size-3.5" /> : null}
+                              {addon.name}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        جمع پیش‌نمایش: {toPersianDigits(previewDuration)} دقیقه ·{' '}
+                        {priceLabel}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      برای این خدمت افزودنی فعالی تعریف نشده است.
+                    </p>
+                  )}
                 </Field>
               ) : null}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <Field>
-                <FieldLabel htmlFor="date">تاریخ</FieldLabel>
+                <FieldLabel htmlFor="date">
+                  تاریخ <span className="text-destructive">*</span>
+                </FieldLabel>
                 <JalaliDatePicker
                   id="date"
                   value={date}
@@ -770,7 +779,9 @@ export function AppointmentDrawer({
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="time">شروع</FieldLabel>
+                <FieldLabel htmlFor="time">
+                  ساعت <span className="text-destructive">*</span>
+                </FieldLabel>
                 <TimePicker
                   id="time"
                   value={startTime}
@@ -796,9 +807,19 @@ export function AppointmentDrawer({
               </Field>
             </div>
 
-            <details className="group rounded-lg border border-border bg-card">
+            <Field>
+              <FieldLabel htmlFor="notes">یادداشت (اختیاری)</FieldLabel>
+              <Textarea
+                id="notes"
+                {...register('notes')}
+                rows={3}
+                placeholder="توضیحات اضافی درباره این نوبت…"
+              />
+            </Field>
+
+            <details className="group rounded-lg border border-transparent bg-blush-soft">
               <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-medium touch-manipulation [&::-webkit-details-marker]:hidden">
-                <span>جزئیات زمان و توضیحات</span>
+                <span>جزئیات زمان</span>
                 <span className="flex min-w-0 items-center gap-2 text-xs font-normal text-muted-foreground">
                   <span className="tabular-nums" dir="ltr">
                     {endTimeLabel}
@@ -861,15 +882,6 @@ export function AppointmentDrawer({
                   {errors.endTime && (
                     <FieldError>{errors.endTime.message}</FieldError>
                   )}
-                </Field>
-
-                <Field>
-                  <FieldLabel htmlFor="notes">توضیحات (اختیاری)</FieldLabel>
-                  <Input
-                    id="notes"
-                    {...register('notes')}
-                    placeholder="توضیحات اضافی…"
-                  />
                 </Field>
               </FieldGroup>
             </details>

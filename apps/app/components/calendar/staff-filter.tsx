@@ -2,7 +2,6 @@
 
 import { User } from '@repo/salon-core/types'
 import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
-import { Avatar, AvatarFallback } from '@repo/ui/avatar'
 import { cn } from '@repo/ui/utils'
 
 interface StaffFilterProps {
@@ -22,46 +21,58 @@ export function StaffFilter({ staff, selectedIds, onToggle, onClear }: StaffFilt
       .slice(0, 2)
   }
 
+  const allActive = selectedIds.length === 0
+
   return (
-    <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto">
+    <div className="scrollbar-hide flex items-center gap-1.5 overflow-x-auto py-1">
       <button
         type="button"
         onClick={onClear}
-        aria-pressed={selectedIds.length === 0}
+        aria-pressed={allActive}
         className={cn(
-          'flex min-h-10 shrink-0 items-center rounded-full border px-3 text-xs font-semibold transition-colors touch-manipulation',
-          selectedIds.length === 0
-            ? 'border-primary/40 bg-primary/10 text-foreground'
-            : 'border-border/70 bg-card text-muted-foreground'
+          'flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors touch-manipulation',
+          allActive
+            ? 'border-transparent bg-primary text-primary-foreground'
+            : 'border-line-soft bg-muted text-foreground'
         )}
       >
+        <span
+          className={cn(
+            'flex size-5 items-center justify-center rounded-full text-[9px] font-bold',
+            allActive ? 'bg-white/25 text-white' : 'bg-primary/15 text-primary'
+          )}
+        >
+          ه
+        </span>
         همه
       </button>
       {staff.map((member) => {
-        const isSelected = selectedIds.length === 0 || selectedIds.includes(member.id)
+        const isSelected = selectedIds.includes(member.id)
+        const colorVar = `var(--calendar-${normalizeCalendarColorId(member.color)})`
         return (
           <button
             key={member.id}
             type="button"
             onClick={() => onToggle(member.id)}
             aria-pressed={isSelected}
+            style={isSelected ? { backgroundColor: colorVar } : undefined}
             className={cn(
-              'flex min-h-10 shrink-0 items-center gap-2 rounded-full border px-2.5 py-1 text-xs transition-[background-color,border-color,opacity] touch-manipulation',
+              'flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors touch-manipulation',
               isSelected
-                ? 'border-primary/40 bg-primary/8 text-foreground'
-                : 'border-transparent bg-transparent text-muted-foreground opacity-50'
+                ? 'border-transparent text-white'
+                : 'border-line-soft bg-muted text-foreground'
             )}
           >
-            <Avatar className="h-6 w-6">
-              <AvatarFallback
-                className="text-[10px] text-foreground font-medium"
-                style={{
-                  backgroundColor: `var(--calendar-${normalizeCalendarColorId(member.color)})`,
-                }}
-              >
-                {getInitials(member.name)}
-              </AvatarFallback>
-            </Avatar>
+            <span
+              className="flex size-5 items-center justify-center rounded-full text-[9px] font-bold"
+              style={
+                isSelected
+                  ? { backgroundColor: 'rgba(255,255,255,0.25)', color: '#fff' }
+                  : { backgroundColor: `color-mix(in oklch, ${colorVar} 18%, transparent)`, color: colorVar }
+              }
+            >
+              {getInitials(member.name)}
+            </span>
             <span className="max-w-20 truncate">{member.name.split(' ')[0]}</span>
           </button>
         )

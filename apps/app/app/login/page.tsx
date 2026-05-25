@@ -14,6 +14,8 @@ import type { User } from '@repo/salon-core/types'
 import { displayPhone } from '@repo/salon-core/phone'
 import { loginSchema, type LoginFormInput } from '@repo/salon-core/forms/auth'
 import { SalooraMark } from '@/components/brand/saloora-logo'
+import { SESSION_USER_CACHE_KEY } from '@/components/auth-provider'
+import { writeOfflineSnapshot } from '@/lib/pwa-client'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -52,6 +54,9 @@ export default function LoginPage() {
       }
 
       const nextUser = data.user as User | undefined
+      if (nextUser) {
+        writeOfflineSnapshot(SESSION_USER_CACHE_KEY, nextUser)
+      }
       router.push(nextUser ? homePathForRole(nextUser.role) : '/calendar')
       router.refresh()
     } catch {

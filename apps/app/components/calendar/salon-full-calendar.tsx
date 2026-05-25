@@ -15,15 +15,31 @@ import {
   expandedZonedToDate,
   formatPersianDayHeaderCompact,
   formatPersianDayNumber,
-  formatPersianListDay,
+  formatPersianListDayRelative,
   formatPersianTimeHm,
 } from '@repo/salon-core/jalali-display'
 import { cn } from '@repo/ui/utils'
 import { formatCompactServiceLabel } from '@/components/services/service-catalog-groups'
-import { toPersianDigits } from '@repo/salon-core/persian-digits'
+import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-digits'
+import { salonTodayYmd } from '@repo/salon-core/salon-local-time'
+import { buildConcurrencyClusters } from '@/components/calendar/concurrent-appointments-sheet'
 
 function staffColorToCssVar(staffColor: string): string {
   return `var(--calendar-${normalizeCalendarColorId(staffColor)})`
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+}
+
+function durationMinutes(startTime: string, endTime: string): number {
+  const [sh, sm] = startTime.split(':').map(Number)
+  const [eh, em] = endTime.split(':').map(Number)
+  return eh * 60 + em - (sh * 60 + sm)
 }
 
 function escapeHtml(text: string): string {
@@ -79,6 +95,8 @@ export interface SalonFullCalendarProps {
   onVisibleRangeChange: (start: string, endInclusive: string, activeStart: Date) => void
   onSlotSelect: (dateStr: string, timeStr: string) => void
   onEventClick: (appointment: AppointmentWithDetails) => void
+  /** Week view: tapping a collapsed "N همزمان" pill resolves to the overlapping cluster. */
+  onClusterClick?: (cluster: AppointmentWithDetails[]) => void
   /** From DB / API; falls back to WORKING_HOURS if omitted */
   businessHours?: BusinessHours
   /** Staff: view-only calendar (no slot selection). */
@@ -95,6 +113,7 @@ export function SalonFullCalendar({
   onVisibleRangeChange,
   onSlotSelect,
   onEventClick,
+  onClusterClick,
   businessHours: businessHoursProp,
   readOnly = false,
   isRefreshing = false,
@@ -112,20 +131,84 @@ export function SalonFullCalendar({
     return m
   }, [appointments])
 
-  const events: EventInput[] = useMemo(
-    () =>
-      appointments.map((apt) => ({
+  const events: EventInput[] = useMemo(() => {
+    const buildSingle = (apt: AppointmentWithDetails): EventInput => {
+      const staffVar = staffColorToCssVar(apt.staff.color)
+      const isDone = apt.status === 'completed'
+      const isCancelled = apt.status === 'cancelled' || apt.status === 'no-show'
+      const classNames: string[] = []
+      if (isDone) classNames.push('fc-event--done')
+      else if (isCancelled) classNames.push('fc-event--cancelled')
+      const clientLabel = `${apt.client.isPlaceholder ? 'موقت · ' : ''}${apt.client.name}`
+      return {
         id: apt.id,
-        title: `${apt.client.isPlaceholder ? 'موقت · ' : ''}${apt.client.name} — ${appointmentServiceLabel(apt, view)}`,
+        title: `${clientLabel} — ${appointmentServiceLabel(apt, view)}`,
         start: `${apt.date}T${apt.startTime}:00`,
         end: `${apt.date}T${apt.endTime}:00`,
         allDay: false,
-        extendedProps: { appointmentId: apt.id },
-        backgroundColor: staffColorToCssVar(apt.staff.color),
-        borderColor: staffColorToCssVar(apt.staff.color),
-      })),
-    [appointments, view]
-  )
+        extendedProps: {
+          kind: 'single',
+          appointmentId: apt.id,
+          staffColorVar: staffVar,
+          timeLabel: formatPersianTime(apt.startTime),
+          clientLabel,
+          serviceLabel: appointmentServiceLabel(apt, view),
+          staffName: apt.staff.name.split(' ')[0],
+          clientInitials: getInitials(apt.client.name),
+          durationLabel: `${toPersianDigits(durationMinutes(apt.startTime, apt.endTime))} د`,
+          isDone,
+          isCancelled,
+        },
+        backgroundColor: `color-mix(in oklch, ${staffVar} 55%, var(--card))`,
+        borderColor: staffVar,
+        classNames,
+      }
+    }
+
+    if (view !== 'week') {
+      // Agenda/list view shows only today onward, never past days.
+      const source =
+        view === 'list' ? appointments.filter((a) => a.date >= salonTodayYmd()) : appointments
+      return source.map(buildSingle)
+    }
+
+    // Week view: collapse time-overlapping appointments into one "N همزمان" pill.
+    const clusters = buildConcurrencyClusters(appointments)
+    const out: EventInput[] = []
+    const emitted = new Set<string>()
+    for (const apt of appointments) {
+      const cluster = clusters.get(apt.id)
+      if (!cluster || cluster.length < 2) {
+        out.push(buildSingle(apt))
+        continue
+      }
+      const ids = cluster.map((c) => c.id).sort()
+      const key = ids[0]
+      if (emitted.has(key)) continue
+      emitted.add(key)
+      const startMin = cluster.reduce((min, c) => (c.startTime < min ? c.startTime : min), cluster[0].startTime)
+      const endMax = cluster.reduce((max, c) => (c.endTime > max ? c.endTime : max), cluster[0].endTime)
+      const dotColors: string[] = []
+      for (const c of cluster) {
+        const v = staffColorToCssVar(c.staff.color)
+        if (!dotColors.includes(v)) dotColors.push(v)
+      }
+      out.push({
+        id: `cluster:${key}`,
+        title: `${toPersianDigits(cluster.length)} همزمان`,
+        start: `${cluster[0].date}T${startMin}:00`,
+        end: `${cluster[0].date}T${endMax}:00`,
+        allDay: false,
+        extendedProps: {
+          kind: 'cluster',
+          clusterIds: ids,
+          count: cluster.length,
+          dotColors: dotColors.slice(0, 5),
+        },
+      })
+    }
+    return out
+  }, [appointments, view])
 
   useEffect(() => {
     const id = requestAnimationFrame(() => {
@@ -177,12 +260,20 @@ export function SalonFullCalendar({
   const handleEventClick = useCallback(
     (info: EventClickArg) => {
       info.jsEvent.preventDefault()
+      if (info.event.extendedProps.kind === 'cluster') {
+        const ids = (info.event.extendedProps.clusterIds as string[] | undefined) ?? []
+        const resolved = ids
+          .map((cid) => appointmentsById.get(cid))
+          .filter((a): a is AppointmentWithDetails => Boolean(a))
+        if (resolved.length > 0) onClusterClick?.(resolved)
+        return
+      }
       const id = info.event.extendedProps.appointmentId as string | undefined
       if (!id) return
       const apt = appointmentsById.get(id)
       if (apt) onEventClick(apt)
     },
-    [appointmentsById, onEventClick]
+    [appointmentsById, onEventClick, onClusterClick]
   )
 
   const handleDateClick = useCallback(
@@ -197,7 +288,13 @@ export function SalonFullCalendar({
   )
 
   return (
-    <div className={cn('salon-fullcalendar relative h-full min-h-[400px] flex-1', className)}>
+    <div
+      className={cn(
+        'salon-fullcalendar relative h-full min-h-[400px] flex-1',
+        view === 'list' && 'salon-fullcalendar--list',
+        className
+      )}
+    >
       {isRefreshing && (
         <div
           className="calendar-refresh-layer pointer-events-none absolute inset-x-2 top-2 z-20 overflow-hidden rounded-md border border-border/60 bg-card/85 px-3 py-2 shadow-sm backdrop-blur-sm"
@@ -258,6 +355,61 @@ export function SalonFullCalendar({
         slotLabelContent={({ date }) => ({
           html: `<span>${escapeHtml(formatPersianTimeHm(date))}</span>`,
         })}
+        eventContent={(arg) => {
+          const viewType = arg.view.type
+          if (viewType === 'dayGridMonth') return undefined
+          if (arg.event.extendedProps.kind === 'cluster') {
+            const count = arg.event.extendedProps.count as number
+            const dotColors = (arg.event.extendedProps.dotColors as string[] | undefined) ?? []
+            const dots = dotColors
+              .map((c) => `<span class="fc-apt-cluster-dot" style="background:${c}"></span>`)
+              .join('')
+            return {
+              html: `<div class="fc-apt-cluster">
+                <span class="fc-apt-cluster-head">
+                  <span class="fc-apt-cluster-count">${escapeHtml(toPersianDigits(count))}</span>
+                  <span class="fc-apt-cluster-label">همزمان</span>
+                </span>
+                ${dots ? `<span class="fc-apt-cluster-dots">${dots}</span>` : ''}
+              </div>`,
+            }
+          }
+          const p = arg.event.extendedProps as {
+            timeLabel: string
+            clientLabel: string
+            serviceLabel: string
+            staffName: string
+            clientInitials: string
+            durationLabel: string
+            staffColorVar: string
+            isDone: boolean
+            isCancelled: boolean
+          }
+          if (viewType.startsWith('list')) {
+            const avatarStyle = `background:color-mix(in oklch, ${p.staffColorVar} 16%, transparent);color:${p.staffColorVar}`
+            return {
+              html: `<div class="fc-apt-row">
+                <span class="fc-apt-row-time">
+                  <span class="fc-apt-row-time-h" dir="ltr">${escapeHtml(p.timeLabel)}</span>
+                  <span class="fc-apt-row-time-d">${escapeHtml(p.durationLabel)}</span>
+                </span>
+                <span class="fc-apt-avatar" style="${avatarStyle}">${escapeHtml(p.clientInitials)}</span>
+                <span class="fc-apt-row-main">
+                  <span class="fc-apt-row-client">${escapeHtml(p.clientLabel)}</span>
+                  <span class="fc-apt-row-sub">${escapeHtml(p.serviceLabel)} · ${escapeHtml(p.staffName)}</span>
+                </span>
+                <span class="fc-apt-row-chevron" dir="ltr" aria-hidden="true">‹</span>
+              </div>`,
+            }
+          }
+          return {
+            html: `<div class="fc-apt-block">
+              <span class="fc-apt-time">${escapeHtml(p.timeLabel)}</span>
+              <span class="fc-apt-client">${escapeHtml(p.clientLabel)}</span>
+              <span class="fc-apt-svc">${escapeHtml(p.serviceLabel)}</span>
+            </div>`,
+          }
+        }}
         dayMaxEvents
         stickyHeaderDates
         businessHours={{
@@ -270,7 +422,7 @@ export function SalonFullCalendar({
           const e = arg.end ? expandedZonedToDate(arg.end) : s
           return `${formatPersianTimeHm(s)} – ${formatPersianTimeHm(e)}`
         }}
-        listDayFormat={(arg) => formatPersianListDay(expandedZonedToDate(arg.date))}
+        listDayFormat={(arg) => formatPersianListDayRelative(expandedZonedToDate(arg.date))}
         listDaySideFormat={false}
         noEventsText="نوبتی در این بازه نیست"
         eventDisplay="block"

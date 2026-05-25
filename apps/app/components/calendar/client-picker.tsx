@@ -166,7 +166,7 @@ export function ClientPicker({
         type="button"
         onClick={openSearch}
         className={cn(
-          'flex h-10 w-full items-center justify-between rounded-lg border border-input bg-background px-3 text-sm transition-colors touch-manipulation',
+          'flex h-10 w-full items-center justify-between rounded-lg border border-input bg-blush-soft dark:bg-input/30 px-3 text-sm transition-colors touch-manipulation',
           'hover:border-ring/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30',
           !selectedClient && 'text-muted-foreground'
         )}

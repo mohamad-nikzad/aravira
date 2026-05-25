@@ -72,11 +72,11 @@ export function BottomNav() {
             >
               <div className={cn(
                 'relative flex h-8 w-8 items-center justify-center rounded-xl transition-[background-color,transform]',
-                isActive && 'bg-primary/12'
+                isActive && 'bg-blush-soft'
               )}>
-                <Icon className="h-5 w-5" strokeWidth={isActive ? 2.2 : 1.7} />
+                <Icon className="h-5 w-5" strokeWidth={isActive ? 2 : 1.7} />
                 {item.href === '/requests' && pendingCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center tabular-nums">
+                  <span className="absolute -top-1 -right-1 box-content min-w-[16px] h-[16px] px-1 rounded-full border-2 border-card bg-saloora-rose text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
                     {pendingCount > 99 ? '99+' : pendingCount}
                   </span>
                 )}

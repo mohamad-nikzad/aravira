@@ -1,24 +1,40 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-import useSWR from 'swr'
-import { useAuth } from '@/components/auth-provider'
-import { BottomNav } from '@/components/bottom-nav'
-import { ManagerDataClientProvider } from '@/components/manager-data-client-provider'
-import { Skeleton } from '@repo/ui/skeleton'
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import useSWR from "swr";
+import { useAuth } from "@/components/auth-provider";
+import { BottomNav } from "@/components/bottom-nav";
+import { ManagerDataClientProvider } from "@/components/manager-data-client-provider";
+import { readOfflineSnapshot, writeOfflineSnapshot } from "@/lib/pwa-client";
+import { Skeleton } from "@repo/ui/skeleton";
 
 type OnboardingStatus = {
   steps: {
-    servicesAdded: boolean
-    staffAdded: boolean
-  }
-  completedAt: string | null
-  skippedAt: string | null
-}
+    servicesAdded: boolean;
+    staffAdded: boolean;
+  };
+  completedAt: string | null;
+  skippedAt: string | null;
+};
 
-const fetcher = (url: string) =>
-  fetch(url, { credentials: 'include' }).then((res) => res.json())
+const ONBOARDING_CACHE_KEY = "onboarding-status";
+
+const fetcher = async (url: string) => {
+  const data = await fetch(url, { credentials: "include" }).then((res) =>
+    res.json(),
+  );
+  if (data?.onboarding) {
+    writeOfflineSnapshot(ONBOARDING_CACHE_KEY, data);
+  }
+  return data;
+};
+
+function readCachedOnboarding(): { onboarding: OnboardingStatus } | undefined {
+  return readOfflineSnapshot<{ onboarding: OnboardingStatus }>(
+    ONBOARDING_CACHE_KEY,
+  )?.data;
+}
 
 function AppShellSkeleton() {
   return (
@@ -50,47 +66,55 @@ function AppShellSkeleton() {
         </div>
       </nav>
     </>
-  )
+  );
 }
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
-  const pathname = usePathname()
-  const router = useRouter()
-  const { data, isLoading: onboardingLoading, error: onboardingError } = useSWR<{ onboarding: OnboardingStatus }>(
-    user?.role === 'manager' ? '/api/onboarding' : null,
+  const { user, loading } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+  const {
+    data,
+    isLoading: onboardingLoading,
+    error: onboardingError,
+  } = useSWR<{ onboarding: OnboardingStatus }>(
+    user?.role === "manager" ? "/api/onboarding" : null,
     fetcher,
     {
       shouldRetryOnError: false,
-    }
-  )
+      fallbackData:
+        user?.role === "manager" ? readCachedOnboarding() : undefined,
+    },
+  );
 
-  const onboarding = data?.onboarding
+  const onboarding = data?.onboarding;
   const managerSetupLocked =
-    user?.role === 'manager' &&
+    user?.role === "manager" &&
     !!onboarding &&
-    (!onboarding.steps.servicesAdded || !onboarding.steps.staffAdded)
-  const isOffline = typeof navigator !== 'undefined' && !navigator.onLine
+    (!onboarding.steps.servicesAdded || !onboarding.steps.staffAdded);
+  const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
   const canBypassOnboardingGateOffline =
-    user?.role === 'manager' && isOffline && !onboarding && !!onboardingError
+    user?.role === "manager" && isOffline && !onboarding && !!onboardingError;
 
   useEffect(() => {
-    if (managerSetupLocked && pathname !== '/onboarding') {
-      router.replace('/onboarding')
+    if (managerSetupLocked && pathname !== "/onboarding") {
+      router.replace("/onboarding");
     }
-  }, [managerSetupLocked, pathname, router])
+  }, [managerSetupLocked, pathname, router]);
 
-  if (
-    loading ||
-    (user?.role === 'manager' &&
-      !canBypassOnboardingGateOffline &&
-      (onboardingLoading || !data?.onboarding))
-  ) {
-    return <AppShellSkeleton />
+  const waitingForAuth = loading && !user;
+  const waitingForOnboarding =
+    user?.role === "manager" &&
+    !canBypassOnboardingGateOffline &&
+    onboardingLoading &&
+    !data?.onboarding;
+
+  if (waitingForAuth || waitingForOnboarding) {
+    return <AppShellSkeleton />;
   }
 
-  if (managerSetupLocked && pathname !== '/onboarding') {
-    return <AppShellSkeleton />
+  if (managerSetupLocked && pathname !== "/onboarding") {
+    return <AppShellSkeleton />;
   }
 
   return (
@@ -98,5 +122,5 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       <ManagerDataClientProvider>{children}</ManagerDataClientProvider>
       {!managerSetupLocked && <BottomNav />}
     </>
-  )
+  );
 }

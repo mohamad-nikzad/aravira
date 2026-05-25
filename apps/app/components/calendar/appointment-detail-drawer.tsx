@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { format, parseISO } from 'date-fns'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -42,7 +41,20 @@ import {
   eligibleStaffForService,
 } from '@repo/salon-core/staff-service-autofill'
 import { cn } from '@repo/ui/utils'
-import { Phone, Clock, Calendar, User as UserIcon, Trash2 } from 'lucide-react'
+import {
+  Phone,
+  Clock,
+  Trash2,
+  Scissors,
+  ChevronLeft,
+  Wallet,
+  AlertTriangle,
+} from 'lucide-react'
+import {
+  ClientAvatar,
+  clientAccent,
+  isVip,
+} from '@/components/clients/client-visuals'
 import {
   APPOINTMENT_DURATION_BOUNDS,
   durationMinutesFromRange,
@@ -57,7 +69,6 @@ import {
 } from '@repo/salon-core/forms/appointment'
 import { ClientPicker } from '@/components/calendar/client-picker'
 import { useManagerDataClient } from '@/components/manager-data-client-provider'
-import { formatCompactServiceLabel } from '@/components/services/service-catalog-groups'
 import { ServicePicker } from '@/components/services/service-picker'
 import { DataClientHttpError } from '@repo/data-client'
 import { useNetworkStatus } from '@/lib/pwa-client'
@@ -78,6 +89,10 @@ function formatTomans(price: number) {
 }
 
 const tomansFormatter = new Intl.NumberFormat('fa-IR')
+
+const STATUS_SEGMENTS = (
+  ['scheduled', 'confirmed', 'completed', 'cancelled'] as const
+).map((key) => ({ key, label: APPOINTMENT_STATUS[key].label }))
 
 interface AppointmentDetailDrawerProps {
   appointment: AppointmentWithDetails | null
@@ -677,7 +692,6 @@ export function AppointmentDetailDrawer({
 
   if (!appointment) return null
 
-  const statusInfo = APPOINTMENT_STATUS[appointment.status]
   const editableServices = services.filter(
     (service) => service.active || service.id === serviceId,
   )
@@ -686,13 +700,13 @@ export function AppointmentDetailDrawer({
     <Drawer open={!!appointment} onOpenChange={handleOpenChange}>
       <DrawerContent>
         <DrawerHeader>
-          <DrawerTitle className="flex items-center gap-2">
-            {isEditingCurrentAppointment ? 'ویرایش نوبت' : appointment.client.name}
+          <DrawerTitle>
+            {isEditingCurrentAppointment ? 'ویرایش نوبت' : 'جزئیات نوبت'}
           </DrawerTitle>
           <DrawerDescription>
             {isEditingCurrentAppointment
               ? 'جزئیات نوبت را ویرایش کنید. نوبت‌های هم‌زمان فقط با پرسنل و مشتری متفاوت نسبت به نوبت‌های هم‌پوشان مجاز است.'
-              : formatCompactServiceLabel(appointment.service)}
+              : formatJalaliFullDate(appointment.date)}
           </DrawerDescription>
         </DrawerHeader>
 
@@ -955,174 +969,182 @@ export function AppointmentDetailDrawer({
             </FieldGroup>
           </form>
         ) : (
-          <div className="flex flex-col gap-4 overflow-auto px-4">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className={cn('text-xs', statusInfo.color)}>
-                {statusInfo.label}
-              </Badge>
-              {appointment.client.isPlaceholder ? (
-                <Badge variant="outline" className="text-xs border-amber-300 bg-amber-50 text-amber-800">
-                  اطلاعات ناقص
-                </Badge>
-              ) : null}
-              <span className="text-sm text-muted-foreground">
-                {formatTomans(appointment.bookedTotalPrice)}
-              </span>
-              {appointment.bookedAddonCount > 0 ? (
-                <Badge variant="outline" className="text-xs">
-                  +{toPersianDigits(appointment.bookedAddonCount)} افزودنی
-                </Badge>
-              ) : null}
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm">
-                <span className="h-4 w-4 shrink-0 rounded-sm" style={{ backgroundColor: appointment.service.color }} />
-                <span>
-                  {appointment.service.categoryName
-                    ? `${appointment.service.categoryName} / ${appointment.bookedServiceName}`
-                    : appointment.bookedServiceName}
-                </span>
-              </div>
-
-              {appointment.bookedAddons && appointment.bookedAddons.length > 0 ? (
-                <div className="rounded-lg border border-border/70 bg-muted/30 p-3 text-sm">
-                  <p className="mb-2 font-medium">افزودنی‌های ثبت‌شده</p>
-                  <div className="space-y-1.5">
-                    {appointment.bookedAddons.map((addon) => (
-                      <div
-                        key={addon.id}
-                        className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
-                      >
-                        <span>{addon.bookedAddonName}</span>
-                        <span>
-                          +{toPersianDigits(addon.bookedAddonDurationDelta)} دقیقه · +
-                          {tomansFormatter.format(addon.bookedAddonPriceDelta)} تومان
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="flex items-center gap-3 text-sm">
-                <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span>{formatJalaliFullDate(appointment.date)}</span>
-              </div>
-
-              <div className="flex items-center gap-3 text-sm">
-                <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span dir="ltr" className="text-right">
-                  {formatPersianTime(format(parseISO(`2000-01-01T${appointment.startTime}`), 'HH:mm'))} —{' '}
-                  {formatPersianTime(format(parseISO(`2000-01-01T${appointment.endTime}`), 'HH:mm'))}
-                  <span className="text-muted-foreground mr-1">
-                    (
-                    {toPersianDigits(durationMinutesFromRange(appointment.startTime, appointment.endTime))}{' '}
-                    دقیقه)
+          <div className="flex flex-col gap-3 overflow-auto px-5 py-4">
+            {/* Client card */}
+            <div className="flex items-center gap-3 rounded-2xl bg-blush-soft p-3.5">
+              <ClientAvatar
+                name={appointment.client.name}
+                accent={clientAccent(appointment.client)}
+                size={48}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="truncate font-bold text-foreground">
+                    {appointment.client.name}
                   </span>
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3 text-sm">
-                <UserIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span>با {appointment.staff.name}</span>
-              </div>
-
-              {appointment.client.phone && (
-                <div className="flex items-center gap-3 text-sm">
-                  <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <a href={`tel:${appointment.client.phone}`} className="text-primary hover:underline">
+                  {isVip(appointment.client) ? <Badge variant="rose">VIP</Badge> : null}
+                  {appointment.client.isPlaceholder ? (
+                    <Badge variant="amber">اطلاعات ناقص</Badge>
+                  ) : null}
+                </div>
+                {appointment.client.phone ? (
+                  <div
+                    dir="ltr"
+                    className="mt-0.5 text-right text-[13px] text-muted-foreground tabular-nums"
+                  >
                     {displayPhone(appointment.client.phone)}
-                  </a>
-                </div>
-              )}
-
-              {appointment.notes && (
-                <div className="rounded-lg bg-muted p-3 text-sm">
-                  <p className="text-muted-foreground">{appointment.notes}</p>
-                </div>
-              )}
+                  </div>
+                ) : null}
+              </div>
+              {appointment.client.phone ? (
+                <a
+                  href={`tel:${appointment.client.phone}`}
+                  aria-label="تماس"
+                  className="flex size-10 shrink-0 items-center justify-center rounded-full bg-card text-primary transition-colors hover:bg-card/80"
+                >
+                  <Phone className="size-4" />
+                </a>
+              ) : null}
             </div>
 
-            {canChangeStatus && appointment.status === 'scheduled' && (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="min-h-10 touch-manipulation"
-                  onClick={() => handleStatusChange('confirmed')}
-                  disabled={loading}
-                >
-                  {statusAction?.mode === 'saving' && statusAction.status === 'confirmed' && (
-                    <Spinner className="ml-2 size-3.5" />
-                  )}
-                  تایید نوبت
-                </Button>
-                {!readOnly && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="min-h-10 touch-manipulation"
-                    onClick={() => handleStatusChange('cancelled')}
-                    disabled={loading}
-                  >
-                    {statusAction?.mode === 'saving' && statusAction.status === 'cancelled' && (
-                      <Spinner className="ml-2 size-3.5" />
-                    )}
-                    لغو
-                  </Button>
-                )}
+            {/* Stat cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-blush-soft p-3.5 text-right">
+                <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
+                  <span>ساعت</span>
+                  <Clock className="size-3.5" />
+                </div>
+                <div dir="ltr" className="mt-1 text-xl font-extrabold text-foreground tabular-nums">
+                  {formatPersianTime(appointment.startTime)}
+                </div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  {toPersianDigits(
+                    durationMinutesFromRange(appointment.startTime, appointment.endTime),
+                  )}{' '}
+                  دقیقه
+                </div>
               </div>
-            )}
-
-            {canChangeStatus && appointment.status === 'confirmed' && (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="min-h-10 touch-manipulation"
-                  onClick={() => handleStatusChange('completed')}
-                  disabled={loading}
-                >
-                  {statusAction?.mode === 'saving' && statusAction.status === 'completed' && (
-                    <Spinner className="ml-2 size-3.5" />
-                  )}
-                  انجام شد
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="min-h-10 touch-manipulation"
-                  onClick={() => handleStatusChange('no-show')}
-                  disabled={loading}
-                >
-                  {statusAction?.mode === 'saving' && statusAction.status === 'no-show' && (
-                    <Spinner className="ml-2 size-3.5" />
-                  )}
-                  غیبت
-                </Button>
+              <div className="rounded-2xl bg-blush-soft p-3.5 text-right">
+                <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
+                  <span>مبلغ</span>
+                  <Wallet className="size-3.5" />
+                </div>
+                <div className="mt-1 text-xl font-extrabold text-primary tabular-nums">
+                  {toPersianDigits(Math.round(appointment.bookedTotalPrice / 1000))} هـ
+                </div>
+                <div className="mt-0.5 text-xs text-muted-foreground">تومان</div>
               </div>
-            )}
+            </div>
 
-            {statusAction && statusAction.mode !== 'saving' && (
+            {/* Service row */}
+            <button
+              type="button"
+              onClick={startEditing}
+              disabled={readOnly}
+              className="flex items-center gap-3 rounded-2xl bg-blush-soft p-3.5 text-right transition-colors enabled:hover:bg-secondary disabled:cursor-default"
+            >
+              <span
+                className="flex size-11 shrink-0 items-center justify-center rounded-xl"
+                style={{
+                  background: `color-mix(in oklch, ${appointment.service.color} 16%, transparent)`,
+                }}
+              >
+                <Scissors className="size-4" style={{ color: appointment.service.color }} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-bold text-foreground">
+                  {appointment.bookedServiceName}
+                </div>
+                <div className="truncate text-[13px] text-muted-foreground">
+                  {appointment.staff.name}
+                  {appointment.bookedAddonCount > 0
+                    ? ` · +${toPersianDigits(appointment.bookedAddonCount)} افزودنی`
+                    : ''}
+                </div>
+              </div>
+              {!readOnly ? (
+                <ChevronLeft className="size-4 shrink-0 text-muted-foreground" />
+              ) : null}
+            </button>
+
+            {appointment.bookedAddons && appointment.bookedAddons.length > 0 ? (
+              <div className="rounded-2xl bg-blush-soft p-3.5 text-sm">
+                <p className="mb-2 font-medium">افزودنی‌های ثبت‌شده</p>
+                <div className="space-y-1.5">
+                  {appointment.bookedAddons.map((addon) => (
+                    <div
+                      key={addon.id}
+                      className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
+                    >
+                      <span>{addon.bookedAddonName}</span>
+                      <span>
+                        +{toPersianDigits(addon.bookedAddonDurationDelta)} دقیقه · +
+                        {tomansFormatter.format(addon.bookedAddonPriceDelta)} تومان
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Status pills */}
+            {canChangeStatus ? (
+              <div>
+                <div className="mb-2 text-xs text-muted-foreground">وضعیت</div>
+                <div className="flex flex-wrap gap-2">
+                  {STATUS_SEGMENTS.map(({ key, label }) => {
+                    const active = appointment.status === key
+                    const saving =
+                      statusAction?.mode === 'saving' && statusAction.status === key
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        disabled={loading || active}
+                        onClick={() => !active && handleStatusChange(key)}
+                        className={cn(
+                          'flex items-center justify-center gap-1.5 rounded-full border px-4 py-2 text-[13px] font-medium transition-colors',
+                          active
+                            ? 'border-transparent bg-primary text-primary-foreground shadow-sm'
+                            : 'border-transparent bg-blush-soft text-muted-foreground hover:text-foreground disabled:opacity-50',
+                        )}
+                      >
+                        {saving ? <Spinner className="size-3.5" /> : null}
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Note */}
+            {appointment.notes ? (
+              <div className="flex items-start gap-2 rounded-2xl bg-amber-soft p-3.5 text-[13px] text-amber-fg">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <p>{appointment.notes}</p>
+              </div>
+            ) : null}
+
+            {statusAction && statusAction.mode !== 'saving' ? (
               <p
                 className={cn(
-                  'rounded-xl border px-3 py-2 text-xs',
+                  'rounded-2xl px-3.5 py-2.5 text-xs',
                   statusAction.mode === 'queued'
-                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-100'
-                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-100'
+                    ? 'bg-amber-soft text-amber-fg'
+                    : 'bg-mint-soft text-mint-fg',
                 )}
               >
                 {statusAction.message}
               </p>
-            )}
+            ) : null}
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
             {appointment.client.isPlaceholder && !readOnly ? (
-              <div className="rounded-2xl border border-amber-300/70 bg-amber-50/80 p-3 text-sm text-amber-950">
+              <div className="rounded-2xl bg-amber-soft p-3.5 text-sm text-amber-fg">
                 <p className="font-medium">اطلاعات این مشتری هنوز کامل نشده است.</p>
-                <p className="mt-1 text-xs text-amber-800">
+                <p className="mt-1 text-xs opacity-90">
                   شماره تماس و مشخصات نهایی را ثبت کنید تا این نوبت مثل یک مشتری عادی ادامه پیدا کند.
                 </p>
                 <Button

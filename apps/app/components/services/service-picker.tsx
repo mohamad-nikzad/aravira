@@ -80,7 +80,7 @@ export function ServicePicker({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className="h-auto min-h-10 w-full justify-between gap-3 whitespace-normal px-3 py-2 text-start"
+          className="h-auto min-h-10 w-full justify-between gap-3 whitespace-normal bg-blush-soft px-3 py-2 text-start hover:bg-blush-soft"
         >
           <span
             className={cn(

@@ -1,76 +1,95 @@
-'use client'
+"use client";
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
-import { User } from '@repo/salon-core/types'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useCallback,
+} from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { User } from "@repo/salon-core/types";
 import {
   clearOfflineSnapshot,
   readOfflineSnapshot,
   writeOfflineSnapshot,
-} from '@/lib/pwa-client'
+} from "@/lib/pwa-client";
 
 interface AuthContextType {
-  user: User | null
-  loading: boolean
-  logout: () => Promise<void>
-  refresh: () => Promise<void>
+  user: User | null;
+  loading: boolean;
+  logout: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
-const SESSION_USER_CACHE_KEY = 'session-user'
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const SESSION_USER_CACHE_KEY = "session-user";
+
+function readCachedSessionUser(): User | null {
+  return readOfflineSnapshot<User>(SESSION_USER_CACHE_KEY)?.data ?? null;
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
-  const pathname = usePathname()
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useLayoutEffect(() => {
+    const cached = readCachedSessionUser();
+    if (cached) {
+      setUser(cached);
+      setLoading(false);
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch('/api/auth/me', { credentials: 'include' })
+      const res = await fetch("/api/auth/me", { credentials: "include" });
       if (res.ok) {
-        const data = await res.json()
-        setUser(data.user)
-        writeOfflineSnapshot(SESSION_USER_CACHE_KEY, data.user)
+        const data = await res.json();
+        setUser(data.user);
+        writeOfflineSnapshot(SESSION_USER_CACHE_KEY, data.user);
       } else {
-        setUser(null)
-        clearOfflineSnapshot(SESSION_USER_CACHE_KEY)
+        setUser(null);
+        clearOfflineSnapshot(SESSION_USER_CACHE_KEY);
       }
     } catch {
-      setUser(readOfflineSnapshot<User>(SESSION_USER_CACHE_KEY)?.data ?? null)
+      setUser(readOfflineSnapshot<User>(SESSION_USER_CACHE_KEY)?.data ?? null);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    refresh()
-  }, [refresh])
+    refresh();
+  }, [refresh]);
 
   useEffect(() => {
-    if (!loading && !user && pathname !== '/login') {
-      router.push('/login')
+    if (!loading && !user && pathname !== "/login") {
+      router.push("/login");
     }
-  }, [loading, user, pathname, router])
+  }, [loading, user, pathname, router]);
 
   const logout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
-    setUser(null)
-    clearOfflineSnapshot(SESSION_USER_CACHE_KEY)
-    router.push('/login')
-  }
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    setUser(null);
+    clearOfflineSnapshot(SESSION_USER_CACHE_KEY);
+    router.push("/login");
+  };
 
   return (
     <AuthContext.Provider value={{ user, loading, logout, refresh }}>
       {children}
     </AuthContext.Provider>
-  )
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  return context
+  return context;
 }

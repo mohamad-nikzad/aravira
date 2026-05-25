@@ -257,7 +257,7 @@ export function ServiceCatalogManager({
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="جستجوی خدمت، گروه یا بخش…"
-                className="h-9 bg-background pr-9 text-sm"
+                className="h-9 bg-blush-soft pr-9 text-sm"
               />
             </div>
             <Button

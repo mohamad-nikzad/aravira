@@ -13,7 +13,9 @@ type ManagerDataContextValue = {
 const ManagerDataClientContext = createContext<ManagerDataContextValue | null>(null)
 
 export function ManagerDataClientProvider({ children }: { children: ReactNode }) {
-  const [client, setClient] = useState<DataClient | null>(null)
+  const [client] = useState<DataClient | null>(() =>
+    typeof window === 'undefined' ? null : createDataClient({ persistence: 'indexeddb' })
+  )
   const [offlineDataEpoch, setOfflineDataEpoch] = useState(0)
 
   const bumpOfflineData = useCallback(() => {
@@ -28,10 +30,6 @@ export function ManagerDataClientProvider({ children }: { children: ReactNode })
     }),
     [client, offlineDataEpoch, bumpOfflineData]
   )
-
-  useEffect(() => {
-    setClient(createDataClient({ persistence: 'indexeddb' }))
-  }, [])
 
   useEffect(() => {
     if (!client) return
