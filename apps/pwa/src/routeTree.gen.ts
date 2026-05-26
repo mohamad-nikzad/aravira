@@ -14,10 +14,13 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedTodayRouteImport } from './routes/_authed/today'
+import { Route as AuthedStaffRouteImport } from './routes/_authed/staff'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
+import { Route as AuthedServicesRouteImport } from './routes/_authed/services'
 import { Route as AuthedRetentionRouteImport } from './routes/_authed/retention'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as AuthedClientsRouteImport } from './routes/_authed/clients'
+import { Route as AuthedCalendarRouteImport } from './routes/_authed/calendar'
 import { Route as AuthedClientsIdRouteImport } from './routes/_authed/clients.$id'
 
 const SignupRoute = SignupRouteImport.update({
@@ -44,9 +47,19 @@ const AuthedTodayRoute = AuthedTodayRouteImport.update({
   path: '/today',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedStaffRoute = AuthedStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedServicesRoute = AuthedServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedRetentionRoute = AuthedRetentionRouteImport.update({
@@ -64,6 +77,11 @@ const AuthedClientsRoute = AuthedClientsRouteImport.update({
   path: '/clients',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedCalendarRoute = AuthedCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedClientsIdRoute = AuthedClientsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -74,10 +92,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/calendar': typeof AuthedCalendarRoute
   '/clients': typeof AuthedClientsRouteWithChildren
   '/dashboard': typeof AuthedDashboardRoute
   '/retention': typeof AuthedRetentionRoute
+  '/services': typeof AuthedServicesRoute
   '/settings': typeof AuthedSettingsRoute
+  '/staff': typeof AuthedStaffRoute
   '/today': typeof AuthedTodayRoute
   '/clients/$id': typeof AuthedClientsIdRoute
 }
@@ -85,10 +106,13 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/calendar': typeof AuthedCalendarRoute
   '/clients': typeof AuthedClientsRouteWithChildren
   '/dashboard': typeof AuthedDashboardRoute
   '/retention': typeof AuthedRetentionRoute
+  '/services': typeof AuthedServicesRoute
   '/settings': typeof AuthedSettingsRoute
+  '/staff': typeof AuthedStaffRoute
   '/today': typeof AuthedTodayRoute
   '/clients/$id': typeof AuthedClientsIdRoute
 }
@@ -98,10 +122,13 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/_authed/calendar': typeof AuthedCalendarRoute
   '/_authed/clients': typeof AuthedClientsRouteWithChildren
   '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/retention': typeof AuthedRetentionRoute
+  '/_authed/services': typeof AuthedServicesRoute
   '/_authed/settings': typeof AuthedSettingsRoute
+  '/_authed/staff': typeof AuthedStaffRoute
   '/_authed/today': typeof AuthedTodayRoute
   '/_authed/clients/$id': typeof AuthedClientsIdRoute
 }
@@ -111,10 +138,13 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
+    | '/calendar'
     | '/clients'
     | '/dashboard'
     | '/retention'
+    | '/services'
     | '/settings'
+    | '/staff'
     | '/today'
     | '/clients/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -122,10 +152,13 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
+    | '/calendar'
     | '/clients'
     | '/dashboard'
     | '/retention'
+    | '/services'
     | '/settings'
+    | '/staff'
     | '/today'
     | '/clients/$id'
   id:
@@ -134,10 +167,13 @@ export interface FileRouteTypes {
     | '/_authed'
     | '/login'
     | '/signup'
+    | '/_authed/calendar'
     | '/_authed/clients'
     | '/_authed/dashboard'
     | '/_authed/retention'
+    | '/_authed/services'
     | '/_authed/settings'
+    | '/_authed/staff'
     | '/_authed/today'
     | '/_authed/clients/$id'
   fileRoutesById: FileRoutesById
@@ -186,11 +222,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedTodayRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/staff': {
+      id: '/_authed/staff'
+      path: '/staff'
+      fullPath: '/staff'
+      preLoaderRoute: typeof AuthedStaffRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/settings': {
       id: '/_authed/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthedSettingsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/services': {
+      id: '/_authed/services'
+      path: '/services'
+      fullPath: '/services'
+      preLoaderRoute: typeof AuthedServicesRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/retention': {
@@ -212,6 +262,13 @@ declare module '@tanstack/react-router' {
       path: '/clients'
       fullPath: '/clients'
       preLoaderRoute: typeof AuthedClientsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/calendar': {
+      id: '/_authed/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof AuthedCalendarRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/clients/$id': {
@@ -237,18 +294,24 @@ const AuthedClientsRouteWithChildren = AuthedClientsRoute._addFileChildren(
 )
 
 interface AuthedRouteChildren {
+  AuthedCalendarRoute: typeof AuthedCalendarRoute
   AuthedClientsRoute: typeof AuthedClientsRouteWithChildren
   AuthedDashboardRoute: typeof AuthedDashboardRoute
   AuthedRetentionRoute: typeof AuthedRetentionRoute
+  AuthedServicesRoute: typeof AuthedServicesRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
+  AuthedStaffRoute: typeof AuthedStaffRoute
   AuthedTodayRoute: typeof AuthedTodayRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedCalendarRoute: AuthedCalendarRoute,
   AuthedClientsRoute: AuthedClientsRouteWithChildren,
   AuthedDashboardRoute: AuthedDashboardRoute,
   AuthedRetentionRoute: AuthedRetentionRoute,
+  AuthedServicesRoute: AuthedServicesRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
+  AuthedStaffRoute: AuthedStaffRoute,
   AuthedTodayRoute: AuthedTodayRoute,
 }
 

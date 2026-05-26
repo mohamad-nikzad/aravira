@@ -1,7 +1,7 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
   CalendarDays,
-  LayoutDashboard,
+  CalendarRange,
   Menu,
   Users,
   type LucideIcon,
@@ -19,18 +19,19 @@ type NavItem = {
 
 const managerItems: ReadonlyArray<NavItem> = [
   { to: '/today', label: 'امروز', icon: CalendarDays },
-  { to: '/dashboard', label: 'داشبورد', icon: LayoutDashboard },
+  { to: '/calendar', label: 'تقویم', icon: CalendarRange },
   { to: '/clients', label: 'مشتریان', icon: Users },
   {
     to: '/settings',
     label: 'بیشتر',
     icon: Menu,
-    matchPrefixes: ['/settings', '/dashboard', '/retention'],
+    matchPrefixes: ['/settings', '/dashboard', '/retention', '/services', '/staff'],
   },
 ]
 
 const staffItems: ReadonlyArray<NavItem> = [
   { to: '/today', label: 'امروز', icon: CalendarDays },
+  { to: '/calendar', label: 'تقویم', icon: CalendarRange },
   { to: '/settings', label: 'تنظیمات', icon: Menu },
 ]
 

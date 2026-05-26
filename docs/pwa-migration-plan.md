@@ -635,10 +635,9 @@ Foundation slice landed and verified end-to-end against Hono on localhost.
 
 **Note on existing offline state:** Installed legacy users hit `apps/app` at `aravira-manager-offline`. Both apps now write to the same DB. When a user moves to the PWA, queued mutations replay against Hono via the `/api/v1` rewrite — same endpoints, just a different prefix. No migration needed.
 
-## Phase 4 — In Progress
+## Phase 4 — Shipped (2026-05-26)
 
-**Done:** `/retention`, `/clients`, `/clients/$id`.
-**Remaining:** `/services`, `/staff`, `/settings`.
+**Done:** `/retention`, `/clients`, `/clients/$id`, `/services`, `/staff`, `/settings`.
 
 **Pattern established (apply to remaining slices):** Router `loader` → `ensureQueryData` with the same key the component's `useQuery` uses; `useMutation` invalidates that key on success. Manager guard via `beforeLoad` using router context's `user`. Explicit `pendingComponent`/`errorComponent`. Offline-backed reads layer IDB on top via dedicated hooks. Drawer flows use `FormSheet` (vaul) + `useDismissGuard` + `runMutation`.
 
@@ -702,6 +701,77 @@ Manager client profile with stats, tags, notes, upcoming appointment, open follo
 **Verified:**
 - `pnpm exec tsc --noEmit` → only the pre-existing `appointments-module.ts` TS6133 warning
 - `pnpm build` → succeeds; `clients._id` chunk 10.1 KB
+
+### `/services` — Shipped (2026-05-26)
+
+Manager-only catalog page: addon manager (list + drawer with category/family/service scopes) and catalog manager (collapsible bxsh→families→services tree, combo support, starter import flag). Data flows through `useManagerDataClient()` + `subscribe()`/`refreshCatalog()`; no TanStack Query layer (matches legacy pattern).
+
+**PWA additions:**
+- `api-client.ts` — added `services: createServicesApi(apiClient)`.
+- `src/components/services/` — ported `service-addon-manager`, `service-addon-drawer`, `service-catalog-manager`, `service-category-drawer`, `service-family-drawer`, `service-drawer`, `service-picker`, `service-catalog-groups`. Drawers use `Drawer` from `@repo/ui/drawer` except `service-drawer` (vaul `FormSheet`).
+- `src/routes/_authed/services.tsx` — manager guard via `beforeLoad`; ports legacy refresh-on-mount + subscribe pattern verbatim.
+
+**Parity notes:**
+- Starter import `localStorage` key (`saloora:starter-services-used:${salonId}`) preserved verbatim so first-time-import UX migrates cleanly.
+
+### `/staff` — Shipped (2026-05-26)
+
+Manager-only staff list with three drawers: `StaffDrawer` (create, vaul `FormSheet`), `StaffServicesDrawer` (restrict services per staff, native `Drawer`), `StaffScheduleDrawer` (weekly schedule, native `Drawer`).
+
+**PWA additions:**
+- `api-client.ts` — added `staff: createStaffApi(apiClient)`.
+- `src/components/staff/` — ported `staff-drawer`, `staff-services-drawer`, `staff-schedule-drawer`, `staff-skeleton`.
+- `src/routes/_authed/staff.tsx` — manager guard; data-client `subscribe()` pattern (no TanStack Query layer).
+
+**Parity deviations:**
+- Legacy `StaffDrawer` did raw `fetch('/api/staff', POST, …)` for create. PWA now calls `api.staff.create(input)` via cross-origin Hono; error envelope is wrapped in `DataClientHttpError` so `runMutation` keeps its message-preserving behavior.
+
+### `/settings` — Shipped (2026-05-26)
+
+Dual-mode (manager "بیشتر" / staff "تنظیمات"): profile card, dashboard metrics tiles, manager menu (links to migrated `/dashboard`, `/retention`, `/services`, `/staff`; unmigrated `/public-page` and `/onboarding` use plain `<a>` for full reload), notification preferences toggle, business hours form (TimePicker + slot interval), dark-mode toggle, logout.
+
+**PWA additions:**
+- `api-client.ts` — added `businessSettings`, `notifications`, `notificationPreferences`.
+- `src/lib/theme.tsx` — small Vite-safe theme provider replacing `next-themes`. Stores `light|dark|system` under `saloora-theme` localStorage key; applies `light`/`dark` class to `<html>` and tracks `prefers-color-scheme`. Wired into `src/main.tsx` between `QueryClientProvider` and `AuthProvider`.
+- `src/routes/_authed/settings.tsx` — full UI port; metrics via `api.dashboard.get`, prefs via `api.notificationPreferences.{get,update}`, business hours via `dc.businessSettings`.
+
+**Deferred:**
+- Staff push-notification settings (`StaffPushSettings`) — depends on Service Worker registration and `PushManager`, which are part of Phase 7 (PWA Hardening). Settings page for staff currently shows the standard sections without the push card.
+
+### Phase 4 acceptance
+
+- `pnpm exec tsc --noEmit` in `apps/pwa` → only the pre-existing `appointments-module.ts` TS6133 warning.
+- `pnpm build` in `apps/pwa` → succeeds. New chunks: `services` (~76 KB), `staff` (~29 KB), `settings` (~13 KB).
+- Bottom-nav `matchPrefixes` for the manager "بیشتر" item extended to include `/services` and `/staff` so the active state holds across the settings sub-tree.
+
+## Phase 5 — In Progress (2026-05-26)
+
+Split into sub-slices so each lands in isolation: **5a calendar shell** (read-only grid + concurrent-cluster sheet) → **5b appointment drawer** (create/edit) → **5c detail drawer** → **5d availability drawer** → **5e `/today` + next-open-slot**.
+
+### Phase 5a — Shipped (2026-05-26)
+
+Read-only `/calendar` route lands with FullCalendar grid, view toggle (روز/هفته/ماه/لیست), staff filter (manager-only), concurrent-cluster sheet, IDB-backed offline reads, search-param-validated `date`. `appointmentId` / `clientId` deep-links and create/edit/availability drawers are deferred to 5b–5d and stubbed as toasts.
+
+**PWA (`apps/pwa`):**
+- Deps: `@fullcalendar/{core,daygrid,timegrid,list,interaction,react}@^6.1.20`.
+- `package.json` + `pnpm install` performed.
+- `api-client.ts` — added `appointments: createAppointmentsApi(apiClient)`.
+- `src/components/brand/saloora-mark.tsx` — minimal Vite-safe port (no asset versioning yet; Phase 7).
+- `public/brand/*` — brand assets copied from `apps/app/public/brand`.
+- `src/components/calendar/` — ported `calendar-header`, `staff-filter`, `concurrent-appointments-sheet` (verbatim minus `'use client'`), `salon-full-calendar` (verbatim + import path fix `@/` → `#/`), `calendar-skeleton`.
+- `src/lib/use-calendar-indexeddb-sources.ts` — ported, retargeted at `#/lib/manager-data-client`, dropped unused `idbLoading`.
+- `src/routes/_authed/calendar.tsx` — `validateSearch` (z.object{date, clientId, appointmentId}) + TanStack Query for appointments/staff/services/clients/business + `useCalendarIndexedDbSources` layered on top. Cluster sheet wired. Create/availability FABs, slot select, and single-event taps call a `toast` stub for 5b. `appointmentId`/`clientId` search params toast a hint and self-clear.
+- `src/components/bottom-nav.tsx` — replaced `/dashboard` slot with `/calendar` (icon `CalendarRange`); staff items also gain `/calendar`. Dashboard remains reachable from the "بیشتر" menu (matchPrefixes already includes `/dashboard`).
+
+**Parity deviations (deferred to 5b–5e):**
+- No appointment create/edit drawer — slot taps and FAB toast "ساخت/ویرایش نوبت در نسخه‌ی بعدی فعال می‌شود".
+- No appointment detail drawer — single-event tap on a non-clustered event toasts the same hint.
+- No availability drawer — search FAB toasts the same hint.
+- `?appointmentId=` / `?clientId=` deep-links toast a notice and clear themselves; will be honored once drawers ship.
+
+**Verified:**
+- `pnpm exec tsc --noEmit` → only the pre-existing `appointments-module.ts` TS6133 warning.
+- `pnpm build` → succeeds. `calendar` chunk ~295 KB (FullCalendar + locales).
 
 ## Recommended First Implementation Slice
 

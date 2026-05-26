@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { getRouter } from './router'
 import { AuthProvider, registerAuthQueryDefaults } from './lib/auth'
+import { ThemeProvider } from './lib/theme'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,9 +26,11 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>,
   )
 }
