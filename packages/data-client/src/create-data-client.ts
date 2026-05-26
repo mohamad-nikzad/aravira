@@ -12,6 +12,12 @@ export interface CreateDataClientConfig {
   persistence: DataClientPersistence
   /** Prepended to request paths (default `''` for same-origin `/api/...`). */
   basePath?: string
+  /**
+   * Rewrites the logical `/api` prefix used in module callsites. Defaults to
+   * `'/api'` for legacy same-origin Next. The PWA passes `'/api/v1'` to target
+   * Hono without depending on Next rewrites.
+   */
+  apiPrefix?: string
   fetchImpl?: typeof fetch
   /** Supply a custom transport (e.g. tests). Overrides `basePath` / `fetchImpl`. */
   transport?: HttpTransportPort
@@ -28,6 +34,7 @@ export function createDataClient(config: CreateDataClientConfig): DataClient {
     config.transport ??
     createFetchHttpTransport({
       basePath: config.basePath,
+      apiPrefix: config.apiPrefix,
       fetchImpl: config.fetchImpl,
     })
 

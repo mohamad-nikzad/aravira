@@ -3,6 +3,8 @@ import type { User } from '@repo/salon-core/types'
 
 import { authQueryKey } from '#/lib/auth'
 import { BottomNav } from '#/components/bottom-nav'
+import { ManagerSyncBar } from '#/components/manager-sync-bar'
+import { ManagerDataClientProvider } from '#/lib/manager-data-client'
 
 export const Route = createFileRoute('/_authed')({
   beforeLoad: async ({ context, location }) => {
@@ -22,11 +24,14 @@ export const Route = createFileRoute('/_authed')({
 
 function AuthedLayout() {
   return (
-    <div className="flex h-dvh flex-col bg-background">
-      <main className="flex-1 overflow-auto">
-        <Outlet />
-      </main>
-      <BottomNav />
-    </div>
+    <ManagerDataClientProvider>
+      <div className="flex h-dvh flex-col bg-background">
+        <ManagerSyncBar />
+        <main className="flex-1 overflow-auto">
+          <Outlet />
+        </main>
+        <BottomNav />
+      </div>
+    </ManagerDataClientProvider>
   )
 }

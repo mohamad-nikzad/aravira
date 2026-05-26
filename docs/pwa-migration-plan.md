@@ -603,9 +603,37 @@ Foundation slice landed and verified end-to-end against Hono on localhost.
 - Theme provider (replace `next-themes`)
 - Toast provider (sonner)
 - Onboarding gate
-- `ManagerDataClientProvider` + offline workflows
 - PWA service worker / manifest / install prompt / push
 - Vazirmatn font loading (currently system fonts — Iran VPS may need self-hosted font; do not rely on Google Fonts)
+
+## Phase 2 — Shipped (2026-05-26)
+
+`/_authed/dashboard` ships full UI parity with `apps/app/app/(app)/dashboard/page.tsx`:
+
+- Router `loader` calls `queryClient.ensureQueryData` against `api.dashboard.get`.
+- `useQuery` with `staleTime: 60_000` + `refetchInterval: 60_000` (matches legacy SWR `refreshInterval`).
+- Explicit `pendingComponent` (`Spinner`) and `errorComponent`.
+- `beforeLoad` enforces manager-only; non-managers redirect to `/today`.
+- Cosmetic delta: PWA uses `Spinner` while legacy uses `DashboardSkeleton`. Not blocking.
+
+## Phase 3 — Shipped (2026-05-26)
+
+**Shared (`packages/data-client`):**
+- `adapters/http/fetch-http-transport.ts` — added `apiPrefix` option (default `'/api'`). When set, rewrites the leading `/api` in caller-supplied module paths. Legacy `apps/app` keeps default; PWA passes `'/api/v1'` to target Hono directly. Module callsites unchanged, so legacy + tests unchanged.
+- `create-data-client.ts` — plumbs `apiPrefix` through `CreateDataClientConfig`.
+
+**PWA (`apps/pwa`):**
+- Deps: added `@repo/data-client` workspace dep.
+- `src/lib/manager-data-client.tsx` — ported `ManagerDataClientProvider` + hooks (`useManagerDataClient`, `useManagerOfflineDataEpoch`, `useBumpOfflineData`). `createDataClient({ persistence: 'indexeddb', basePath: env.apiBaseUrl, apiPrefix: '/api/v1' })`. **IndexedDB DB name `aravira-manager-offline` preserved** (data-client default) so installed users keep their offline queue.
+- `src/components/manager-sync-bar.tsx` — ported `ManagerSyncBar`. Replaces `next/link` with TanStack `Link to=...`. Uses PWA `useAuth` from `#/lib/auth`.
+- `src/routes/_authed.tsx` — wraps the authenticated shell in `ManagerDataClientProvider` and renders `ManagerSyncBar` above `<main>` (between sync bar and `BottomNav`).
+
+**Verified:**
+- `pnpm test` in `packages/data-client` → 20 passed (apiPrefix default preserves legacy behavior)
+- `pnpm exec tsc --noEmit` in `apps/pwa` → only the pre-existing `appointments-module.ts` TS6133 warning (unchanged from main)
+- `pnpm build` in `apps/pwa` → succeeds; sync UI lives in the `_authed` chunk
+
+**Note on existing offline state:** Installed legacy users hit `apps/app` at `aravira-manager-offline`. Both apps now write to the same DB. When a user moves to the PWA, queued mutations replay against Hono via the `/api/v1` rewrite — same endpoints, just a different prefix. No migration needed.
 
 ## Recommended First Implementation Slice
 

@@ -5,16 +5,32 @@ import {
 } from '../../ports/http-transport'
 
 export interface CreateFetchHttpTransportOptions {
-  /** e.g. `''` for same-origin `/api/...` */
+  /** e.g. `''` for same-origin `/api/...`, or an absolute origin like `https://api.example.com` */
   basePath?: string
+  /**
+   * Logical `/api` prefix used by module callsites is rewritten to this value.
+   * Default `'/api'` preserves legacy same-origin behavior. The PWA passes
+   * `'/api/v1'` to target Hono directly without depending on Next rewrites.
+   */
+  apiPrefix?: string
   fetchImpl?: typeof fetch
   credentials?: RequestCredentials
 }
 
-function buildUrl(basePath: string, path: string, query?: Record<string, string | undefined>) {
+function buildUrl(
+  basePath: string,
+  apiPrefix: string,
+  path: string,
+  query?: Record<string, string | undefined>
+) {
   const base = basePath.replace(/\/$/, '')
-  const p = path.startsWith('/') ? path : `/${path}`
-  const url = `${base}${p}`
+  const prefix = apiPrefix.replace(/\/$/, '')
+  const normalized = path.startsWith('/') ? path : `/${path}`
+  const rewritten =
+    normalized === '/api' || normalized.startsWith('/api/')
+      ? `${prefix}${normalized.slice(4)}`
+      : normalized
+  const url = `${base}${rewritten}`
   const q = new URLSearchParams()
   if (query) {
     for (const [k, v] of Object.entries(query)) {
@@ -37,6 +53,7 @@ export function createFetchHttpTransport(
   options: CreateFetchHttpTransportOptions = {}
 ): HttpTransportPort {
   const basePath = options.basePath ?? ''
+  const apiPrefix = options.apiPrefix ?? '/api'
   const fetchFn = options.fetchImpl ?? fetch
   const credentials = options.credentials ?? 'include'
 
@@ -46,7 +63,7 @@ export function createFetchHttpTransport(
       path: string,
       opts?: { query?: Record<string, string | undefined>; body?: unknown }
     ): Promise<T> {
-      const url = buildUrl(basePath, path, opts?.query)
+      const url = buildUrl(basePath, apiPrefix, path, opts?.query)
       const headers: Record<string, string> = {}
       let body: string | undefined
       if (opts?.body !== undefined) {
