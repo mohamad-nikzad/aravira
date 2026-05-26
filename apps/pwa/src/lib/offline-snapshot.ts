@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 const PREFIX = 'aravira-offline-v1'
 
 export const SESSION_USER_CACHE_KEY = 'session-user'
@@ -45,4 +47,27 @@ export function clearSnapshot(key: string) {
   } catch {
     /* ignore */
   }
+}
+
+export function useOfflineSnapshot<T>(
+  key: string | null,
+  liveData: T | undefined,
+) {
+  const [snapshot, setSnapshot] = useState<OfflineSnapshot<T> | null>(null)
+
+  useEffect(() => {
+    if (!key) {
+      setSnapshot(null)
+      return
+    }
+    setSnapshot(readSnapshot<T>(key))
+  }, [key])
+
+  useEffect(() => {
+    if (!key || liveData === undefined) return
+    const next = writeSnapshot(key, liveData)
+    if (next) setSnapshot(next)
+  }, [key, liveData])
+
+  return snapshot
 }

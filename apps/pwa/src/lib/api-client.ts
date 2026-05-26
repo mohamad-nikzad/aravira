@@ -10,6 +10,7 @@ import {
   createRetentionApi,
   createServicesApi,
   createStaffApi,
+  createTodayApi,
 } from '@repo/api-client'
 
 import { env } from '#/env'
@@ -30,6 +31,7 @@ export const api = {
   retention: createRetentionApi(apiClient),
   services: createServicesApi(apiClient),
   staff: createStaffApi(apiClient),
+  today: createTodayApi(apiClient),
 }
 
 export type Api = typeof api

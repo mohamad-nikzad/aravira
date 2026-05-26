@@ -838,6 +838,27 @@ Availability ("بررسی زمان خالی") drawer lands on `/calendar`. The s
 **Deferred to 5e:**
 - `/today` manager/staff variants and next-open-slot logic.
 
+### Phase 5e — Shipped (2026-05-26)
+
+`/today` manager and staff variants land, replacing the placeholder route. Manager view ships the weekstrip date picker, hero stats, attention items, queue, team load bars, and the create/detail/availability drawers wired the same way as `/calendar`. Staff view ships the live clock, "الان و بعدی" card, next-open-slot summary, today list with تایید/انجام شد/غیبت actions, and a "نگاه به فردا" preview.
+
+**PWA (`apps/pwa`):**
+- `api-client.ts` — added `today: createTodayApi(apiClient)`.
+- `src/lib/next-open-slot.ts` — ported verbatim from legacy `apps/app/app/(app)/today/next-open-slot.ts`.
+- `src/lib/use-manager-today-indexeddb.ts` — ported; retargeted at `#/lib/manager-data-client`. Hydrates today/staff/services/clients into IDB when online, falls back to IDB-only when offline.
+- `src/lib/offline-snapshot.ts` — added `useOfflineSnapshot(key, liveData)` hook (read on mount, write on every fresh `liveData`). Reuses the existing `aravira-offline-v1:` prefix and key shape — staff snapshots still land at `today:staff:<ymd>`, matching legacy.
+- `src/components/status-pill.tsx` — ported.
+- `src/components/today-skeleton.tsx` — ported (`ManagerTodaySkeleton`, `StaffTodaySkeleton`).
+- `src/routes/_authed/today.tsx` — full port. `useSWR` → TanStack `useQuery` (separate manager/staff query trees gated by role). Raw `fetch('/api/appointments/:id', PATCH {status})` replaced with `api.appointments.updateStatus(id, status)`; `removedAppointmentId` branch preserved off the typed union. `next/link` → TanStack `Link to=...`, `useRouter().push` → `useNavigate()` (only used for the manager cross-day create redirect to `/calendar?date=…`). Both views consume `useNetworkStatus` from `#/lib/network-status`; the staff view uses the new `useOfflineSnapshot`. Manager view consumes `useManagerTodayIndexedDbSources` + `useManagerDataClient`/`useBumpOfflineData` for offline-first behavior, identical to legacy.
+
+**Parity deviations:**
+- The manager view used legacy `router.push('/calendar?date=…')` after a cross-day create; PWA uses TanStack `navigate({ to: '/calendar', search: { date } })` which yields the same navigation but routed through the SPA (no full reload).
+- The staff status patch went through raw fetch in legacy; in PWA `ApiError.message` flows through to the inline feedback banner via `api.appointments.updateStatus`. Same UX, same messages.
+
+**Verified:**
+- `pnpm exec tsc --noEmit` → only the pre-existing `appointments-module.ts` TS6133 warning.
+- `pnpm build` → succeeds. `today` chunk ~34 KB (skeletons + status pill + IDB hook share with already-loaded calendar drawers/utilities).
+
 ## Recommended First Implementation Slice
 
 Build the smallest useful vertical slice:
