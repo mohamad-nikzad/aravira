@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO, subDays, addDays } from 'date-fns'
 import { Plus, Search } from 'lucide-react'
 import { z } from 'zod'
-import { toast } from '@repo/ui/use-toast'
+import type { AvailabilitySlot } from '@repo/salon-core/availability'
 import { cn } from '@repo/ui/utils'
 import {
   WORKING_HOURS,
@@ -29,6 +29,7 @@ import {
 } from '#/components/calendar/concurrent-appointments-sheet'
 import { CalendarSkeleton } from '#/components/calendar/calendar-skeleton'
 import { AppointmentDrawer } from '#/components/calendar/appointment-drawer'
+import { AvailabilityDrawer } from '#/components/calendar/availability-drawer'
 import {
   AppointmentDetailDrawer,
   type AppointmentDetailChange,
@@ -102,6 +103,7 @@ function CalendarPage() {
   const [selectedAppointment, setSelectedAppointment] =
     useState<AppointmentWithDetails | null>(null)
 
+  const [showAvailabilityDrawer, setShowAvailabilityDrawer] = useState(false)
   const [showCreateDrawer, setShowCreateDrawer] = useState(false)
   const [createDate, setCreateDate] = useState<string>('')
   const [createTime, setCreateTime] = useState<string>('')
@@ -347,9 +349,23 @@ function CalendarPage() {
     }
   }, [])
 
-  const stubAvailabilityDrawer = useCallback(() => {
-    toast({ title: 'بررسی زمان خالی در نسخه‌ی بعدی فعال می‌شود' })
-  }, [])
+  const handleOpenAvailability = useCallback(() => {
+    if (!isManager) return
+    setShowAvailabilityDrawer(true)
+  }, [isManager])
+
+  const handleAvailabilitySlotSelect = useCallback(
+    (selection: { slot: AvailabilitySlot; serviceId: string }) => {
+      setShowAvailabilityDrawer(false)
+      setInitialClientIdForCreate(undefined)
+      setInitialStaffIdForCreate(selection.slot.staffId)
+      setInitialServiceIdForCreate(selection.serviceId)
+      setCreateDate(selection.slot.date)
+      setCreateTime(selection.slot.startTime)
+      requestAnimationFrame(() => setShowCreateDrawer(true))
+    },
+    [],
+  )
 
   const handleAppointmentClick = (appointment: AppointmentWithDetails) => {
     const supportsCluster = view === 'day' || view === 'week'
@@ -513,7 +529,7 @@ function CalendarPage() {
       {isManager && (
         <div className="absolute bottom-5 left-4 z-40 flex flex-col items-center gap-3">
           <button
-            onClick={stubAvailabilityDrawer}
+            onClick={handleOpenAvailability}
             disabled={!isOnline || services.length === 0 || staff.length === 0}
             className="flex h-14 w-14 items-center justify-center rounded-[18px] border border-border bg-card text-foreground shadow-lg shadow-foreground/10 transition-all active:scale-[0.92] disabled:pointer-events-none disabled:opacity-40 touch-manipulation"
             aria-label="بررسی زمان خالی"
@@ -548,6 +564,17 @@ function CalendarPage() {
         }}
         readOnly={!isManager}
       />
+
+      {isManager && (
+        <AvailabilityDrawer
+          open={showAvailabilityDrawer}
+          onOpenChange={setShowAvailabilityDrawer}
+          initialDate={format(navDate, 'yyyy-MM-dd')}
+          staff={staff}
+          services={services}
+          onSelectSlot={handleAvailabilitySlotSelect}
+        />
+      )}
 
       {isManager && (
         <AppointmentDrawer

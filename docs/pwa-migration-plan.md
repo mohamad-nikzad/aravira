@@ -819,6 +819,25 @@ Appointment **detail** drawer lands on `/calendar`. Single-event taps (in any vi
 **Deferred to 5d:**
 - Availability drawer (search FAB still toasts).
 
+### Phase 5d — Shipped (2026-05-26)
+
+Availability ("بررسی زمان خالی") drawer lands on `/calendar`. The search FAB now opens the drawer; picking a slot closes it and re-opens the create drawer pre-seeded with `staffId` / `serviceId` / `date` / `startTime` (matching legacy `handleAvailabilitySlotSelect` behavior, including the `requestAnimationFrame` defer so the two vaul drawers don't fight each other on mount).
+
+**PWA (`apps/pwa`):**
+- `src/components/calendar/availability-drawer.tsx` — ported from `apps/app`. Path aliases `@/` → `#/`. `useNetworkStatus` from `#/lib/network-status`, `useDismissGuard` from `#/lib/use-dismiss-guard`, `ServicePicker` from `#/components/services/service-picker`. Raw `fetchJsonOrThrow('/api/appointments/availability?…')` replaced with `api.appointments.availability({ mode, serviceId, date, staffId? }, { signal })`. `HttpError` → `ApiError` for the user-facing error message.
+- `src/routes/_authed/calendar.tsx` —
+  - Dropped the `toast`-based `stubAvailabilityDrawer`; added `showAvailabilityDrawer` state.
+  - `handleOpenAvailability` (manager-only) wired to the search FAB.
+  - `handleAvailabilitySlotSelect` mirrors legacy: clear client seed, set `initialStaffId`/`initialServiceId` from the picked slot, set `createDate`/`createTime`, then `requestAnimationFrame(() => setShowCreateDrawer(true))`.
+  - Drawer mounted alongside `AppointmentDrawer` under `isManager`, with `initialDate={format(navDate, 'yyyy-MM-dd')}`.
+
+**Verified:**
+- `pnpm exec tsc --noEmit` → only the pre-existing `appointments-module.ts` TS6133 warning.
+- `pnpm build` → succeeds. `calendar` chunk grew from ~349 KB to ~359 KB (availability drawer + `staff-service-autofill` + `availability` types).
+
+**Deferred to 5e:**
+- `/today` manager/staff variants and next-open-slot logic.
+
 ## Recommended First Implementation Slice
 
 Build the smallest useful vertical slice:
