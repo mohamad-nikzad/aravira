@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Crown, Phone, Plus, Search, Sparkles } from 'lucide-react'
 import { Badge } from '@repo/ui/badge'
@@ -317,13 +317,10 @@ function ClientsPage() {
                           index > 0 && 'border-t border-line-soft',
                         )}
                       >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedClient(client)
-                            setShowDrawer(true)
-                          }}
-                          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-right transition-opacity active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                        <Link
+                          to="/clients/$id"
+                          params={{ id: client.id }}
+                          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl transition-opacity active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                         >
                           <ClientAvatar name={client.name} accent={accent} />
                           <div className="min-w-0 flex-1">
@@ -346,7 +343,7 @@ function ClientsPage() {
                               </div>
                             ) : null}
                           </div>
-                        </button>
+                        </Link>
 
                         {client.phone ? (
                           <a

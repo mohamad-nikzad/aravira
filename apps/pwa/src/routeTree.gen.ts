@@ -18,6 +18,7 @@ import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AuthedRetentionRouteImport } from './routes/_authed/retention'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as AuthedClientsRouteImport } from './routes/_authed/clients'
+import { Route as AuthedClientsIdRouteImport } from './routes/_authed/clients.$id'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -63,26 +64,33 @@ const AuthedClientsRoute = AuthedClientsRouteImport.update({
   path: '/clients',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedClientsIdRoute = AuthedClientsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthedClientsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/clients': typeof AuthedClientsRoute
+  '/clients': typeof AuthedClientsRouteWithChildren
   '/dashboard': typeof AuthedDashboardRoute
   '/retention': typeof AuthedRetentionRoute
   '/settings': typeof AuthedSettingsRoute
   '/today': typeof AuthedTodayRoute
+  '/clients/$id': typeof AuthedClientsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/clients': typeof AuthedClientsRoute
+  '/clients': typeof AuthedClientsRouteWithChildren
   '/dashboard': typeof AuthedDashboardRoute
   '/retention': typeof AuthedRetentionRoute
   '/settings': typeof AuthedSettingsRoute
   '/today': typeof AuthedTodayRoute
+  '/clients/$id': typeof AuthedClientsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -90,11 +98,12 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/_authed/clients': typeof AuthedClientsRoute
+  '/_authed/clients': typeof AuthedClientsRouteWithChildren
   '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/retention': typeof AuthedRetentionRoute
   '/_authed/settings': typeof AuthedSettingsRoute
   '/_authed/today': typeof AuthedTodayRoute
+  '/_authed/clients/$id': typeof AuthedClientsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/retention'
     | '/settings'
     | '/today'
+    | '/clients/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/retention'
     | '/settings'
     | '/today'
+    | '/clients/$id'
   id:
     | '__root__'
     | '/'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/_authed/retention'
     | '/_authed/settings'
     | '/_authed/today'
+    | '/_authed/clients/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -202,11 +214,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedClientsRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/clients/$id': {
+      id: '/_authed/clients/$id'
+      path: '/$id'
+      fullPath: '/clients/$id'
+      preLoaderRoute: typeof AuthedClientsIdRouteImport
+      parentRoute: typeof AuthedClientsRoute
+    }
   }
 }
 
+interface AuthedClientsRouteChildren {
+  AuthedClientsIdRoute: typeof AuthedClientsIdRoute
+}
+
+const AuthedClientsRouteChildren: AuthedClientsRouteChildren = {
+  AuthedClientsIdRoute: AuthedClientsIdRoute,
+}
+
+const AuthedClientsRouteWithChildren = AuthedClientsRoute._addFileChildren(
+  AuthedClientsRouteChildren,
+)
+
 interface AuthedRouteChildren {
-  AuthedClientsRoute: typeof AuthedClientsRoute
+  AuthedClientsRoute: typeof AuthedClientsRouteWithChildren
   AuthedDashboardRoute: typeof AuthedDashboardRoute
   AuthedRetentionRoute: typeof AuthedRetentionRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
@@ -214,7 +245,7 @@ interface AuthedRouteChildren {
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
-  AuthedClientsRoute: AuthedClientsRoute,
+  AuthedClientsRoute: AuthedClientsRouteWithChildren,
   AuthedDashboardRoute: AuthedDashboardRoute,
   AuthedRetentionRoute: AuthedRetentionRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,

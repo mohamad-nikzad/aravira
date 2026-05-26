@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Client } from '@repo/salon-core/types'
+import type { Client, ClientSummary } from '@repo/salon-core/types'
 import {
   useManagerDataClient,
   useManagerOfflineDataEpoch,
@@ -73,6 +73,80 @@ export function useClientsListIndexedDbSources(
       data: { clients: repo.clients },
       snapshotUpdatedAt: repo.listUpdatedAt,
       hasSnapshot: true,
+      idbLoading: false,
+    }
+  }, [enabled, client, isOnline, live, repo])
+}
+
+export function useClientSummaryIndexedDbSources(
+  enabled: boolean,
+  isOnline: boolean,
+  clientId: string,
+  live: ClientSummary | undefined,
+) {
+  const client = useManagerDataClient()
+  const offlineDataEpoch = useManagerOfflineDataEpoch()
+  const [repo, setRepo] = useState<{
+    loaded: boolean
+    summary: ClientSummary | null
+    updatedAt: string | null
+  }>({ loaded: false, summary: null, updatedAt: null })
+
+  useEffect(() => {
+    if (!enabled || !client || !clientId) {
+      setRepo({ loaded: false, summary: null, updatedAt: null })
+      return
+    }
+
+    let cancelled = false
+    void (async () => {
+      if (isOnline && live) {
+        await client.clients.hydrateSummaryFromServer(clientId, live)
+      }
+      const [summary, ts] = await Promise.all([
+        client.clients.getSummary(clientId),
+        client.clients.summaryLastSyncedAt(clientId),
+      ])
+      if (cancelled) return
+      setRepo({ loaded: true, summary, updatedAt: ts })
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [enabled, client, isOnline, clientId, live, offlineDataEpoch])
+
+  return useMemo(() => {
+    if (!enabled || !client) {
+      return {
+        data: live,
+        snapshotUpdatedAt: null as string | null,
+        hasSnapshot: false,
+        idbLoading: false,
+      }
+    }
+
+    if (!repo.loaded) {
+      if (isOnline) {
+        return {
+          data: live,
+          snapshotUpdatedAt: null as string | null,
+          hasSnapshot: Boolean(live),
+          idbLoading: true,
+        }
+      }
+      return {
+        data: undefined,
+        snapshotUpdatedAt: null as string | null,
+        hasSnapshot: false,
+        idbLoading: true,
+      }
+    }
+
+    return {
+      data: repo.summary ?? undefined,
+      snapshotUpdatedAt: repo.updatedAt,
+      hasSnapshot: repo.summary != null,
       idbLoading: false,
     }
   }, [enabled, client, isOnline, live, repo])

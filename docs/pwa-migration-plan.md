@@ -637,6 +637,26 @@ Foundation slice landed and verified end-to-end against Hono on localhost.
 
 ## Phase 4 — In Progress
 
+### `/clients/$id` — Shipped (2026-05-26)
+
+Manager client profile with stats, tags, notes, upcoming appointment, open follow-ups, history, and inline edit drawer. Mirrors `/clients` data-flow: Router loader → `ensureQueryData(['clients', id, 'summary'])` → `useQuery` (shared key) + `useClientSummaryIndexedDbSources` for offline reads after first hydrate.
+
+**New PWA modules:**
+- `src/lib/use-clients-indexeddb.ts` — added `useClientSummaryIndexedDbSources` (mirrors list hook for `getSummary`/`hydrateSummaryFromServer`/`summaryLastSyncedAt`).
+- `src/components/clients/client-summary-skeleton.tsx`.
+- `src/routes/_authed/clients.$id.tsx`.
+
+**Wiring fix:** reverted the `/clients` row-click deviation — rows now navigate via `<Link to="/clients/$id" params={{id}} />` instead of opening the drawer in place. The list-page FAB still opens the create drawer.
+
+**Edit success:** invalidates both `['clients', id, 'summary']` and `['clients']` (list) so the list reflects edits without a manual refresh.
+
+**Parity deviations:**
+- "نوبت جدید" still uses plain `<a href="/calendar?clientId=...">` (calendar route not migrated yet).
+
+**Verified:**
+- `pnpm exec tsc --noEmit` → only the pre-existing `appointments-module.ts` TS6133 warning
+- `pnpm build` → succeeds; `clients._id` chunk 10.1 KB
+
 ### `/clients` — Shipped (2026-05-26)
 
 List page with offline-first IDB hydration, retention follow-up filter cross-query, and inline create/edit drawer (`FormSheet` + vaul).
