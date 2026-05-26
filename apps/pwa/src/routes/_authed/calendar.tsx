@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO, subDays, addDays } from 'date-fns'
 import { Plus, Search } from 'lucide-react'
 import { z } from 'zod'
@@ -28,6 +28,7 @@ import {
   buildConcurrencyClusters,
 } from '#/components/calendar/concurrent-appointments-sheet'
 import { CalendarSkeleton } from '#/components/calendar/calendar-skeleton'
+import { AppointmentDrawer } from '#/components/calendar/appointment-drawer'
 import { NetworkStatusBanner, OfflineStateCard } from '#/components/offline-state'
 
 const searchSchema = z.object({
@@ -65,12 +66,20 @@ export const Route = createFileRoute('/_authed/calendar')({
   pendingComponent: CalendarSkeleton,
 })
 
+function compareAppointments(
+  a: AppointmentWithDetails,
+  b: AppointmentWithDetails,
+) {
+  return `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`)
+}
+
 function CalendarPage() {
   const navigate = useNavigate()
   const search = Route.useSearch()
   const { user } = useAuth()
   const isOnline = useNetworkStatus()
   const isManager = user?.role === 'manager'
+  const queryClient = useQueryClient()
 
   const [view, setView] = useState<CalendarView>(() => {
     if (typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches) {
@@ -85,6 +94,19 @@ function CalendarPage() {
   const [concurrentCluster, setConcurrentCluster] = useState<
     AppointmentWithDetails[] | null
   >(null)
+
+  const [showCreateDrawer, setShowCreateDrawer] = useState(false)
+  const [createDate, setCreateDate] = useState<string>('')
+  const [createTime, setCreateTime] = useState<string>('')
+  const [initialStaffIdForCreate, setInitialStaffIdForCreate] = useState<
+    string | undefined
+  >(undefined)
+  const [initialServiceIdForCreate, setInitialServiceIdForCreate] = useState<
+    string | undefined
+  >(undefined)
+  const [initialClientIdForCreate, setInitialClientIdForCreate] = useState<
+    string | undefined
+  >(undefined)
 
   const fallbackRange = useMemo(() => defaultRange(navDate), [navDate])
   const { start: startDate, end: endDate } = range ?? fallbackRange
@@ -155,8 +177,10 @@ function CalendarPage() {
   )
   const staff: User[] = staffSource?.staff ?? []
   const services: Service[] = servicesSource?.services ?? []
-  // clients retained for future create/edit drawers in slice 5b
-  void clientsSource
+  const clients: Client[] = useMemo(
+    () => clientsSource?.clients ?? [],
+    [clientsSource],
+  )
 
   const businessHours: BusinessHours = useMemo(() => {
     const s = businessSource?.settings
@@ -193,18 +217,41 @@ function CalendarPage() {
     setRange(null)
   }, [search.date])
 
-  // appointmentId/clientId deep links are deferred to slice 5b (drawers).
-  // For now, surface them as toast hints so the link isn't silently dropped.
+  const businessWorkingStart = businessHours.workingStart
+
   useEffect(() => {
-    if (search.appointmentId || search.clientId) {
-      toast({ title: 'باز کردن مستقیم نوبت یا مشتری در نسخه‌ی بعدی فعال می‌شود' })
-      navigate({
-        to: '/calendar',
-        search: ({ date }) => ({ date }),
-        replace: true,
-      })
-    }
-  }, [search.appointmentId, search.clientId, navigate])
+    if (!isManager || !search.clientId || clients.length === 0) return
+    if (!clients.some((c) => c.id === search.clientId)) return
+    setInitialClientIdForCreate(search.clientId)
+    setInitialStaffIdForCreate(undefined)
+    setInitialServiceIdForCreate(undefined)
+    setCreateDate(format(navDate, 'yyyy-MM-dd'))
+    setCreateTime(businessWorkingStart)
+    setShowCreateDrawer(true)
+    navigate({
+      to: '/calendar',
+      search: ({ date }) => ({ date }),
+      replace: true,
+    })
+  }, [
+    search.clientId,
+    clients,
+    isManager,
+    navDate,
+    businessWorkingStart,
+    navigate,
+  ])
+
+  // appointmentId deep link still deferred to slice 5c (detail drawer).
+  useEffect(() => {
+    if (!search.appointmentId) return
+    toast({ title: 'باز کردن مستقیم نوبت در نسخه‌ی بعدی فعال می‌شود' })
+    navigate({
+      to: '/calendar',
+      search: ({ date }) => ({ date }),
+      replace: true,
+    })
+  }, [search.appointmentId, navigate])
 
   const handleVisibleRangeChange = useCallback(
     (start: string, endInclusive: string, activeStart: Date) => {
@@ -229,8 +276,75 @@ function CalendarPage() {
     setRange(null)
   }
 
-  const stubDrawer = useCallback(() => {
-    toast({ title: 'ساخت/ویرایش نوبت در نسخه‌ی بعدی فعال می‌شود' })
+  const stubDetailDrawer = useCallback(() => {
+    toast({ title: 'مشاهده/ویرایش نوبت در نسخه‌ی بعدی فعال می‌شود' })
+  }, [])
+
+  const handleAddAppointment = useCallback(() => {
+    if (!isManager) return
+    setInitialClientIdForCreate(undefined)
+    setInitialStaffIdForCreate(undefined)
+    setInitialServiceIdForCreate(undefined)
+    setCreateDate(format(navDate, 'yyyy-MM-dd'))
+    setCreateTime(businessWorkingStart)
+    setShowCreateDrawer(true)
+  }, [isManager, navDate, businessWorkingStart])
+
+  const handleSlotSelect = useCallback(
+    (dateStr: string, timeStr: string) => {
+      if (!isManager) return
+      setInitialClientIdForCreate(undefined)
+      setInitialStaffIdForCreate(undefined)
+      setInitialServiceIdForCreate(undefined)
+      setCreateDate(dateStr)
+      setCreateTime(timeStr)
+      setShowCreateDrawer(true)
+    },
+    [isManager],
+  )
+
+  const upsertAppointmentInCache = useCallback(
+    (appointment: AppointmentWithDetails) => {
+      const shouldKeep =
+        appointment.date >= startDate && appointment.date <= endDate
+      queryClient.setQueryData<AppointmentsResponse>(
+        appointmentsKey(startDate, endDate),
+        (current) => {
+          const base = current?.appointments ?? appointments
+          const withoutApt = base.filter((a) => a.id !== appointment.id)
+          const next = shouldKeep
+            ? [...withoutApt, appointment].sort(compareAppointments)
+            : withoutApt
+          return { ...(current ?? { appointments: [] }), appointments: next }
+        },
+      )
+    },
+    [appointments, endDate, queryClient, startDate],
+  )
+
+  const handleAppointmentCreated = useCallback(
+    (appointment: AppointmentWithDetails) => {
+      upsertAppointmentInCache(appointment)
+      setShowCreateDrawer(false)
+      setInitialClientIdForCreate(undefined)
+      setInitialStaffIdForCreate(undefined)
+      setInitialServiceIdForCreate(undefined)
+      void queryClient.invalidateQueries({ queryKey: ['appointments', 'range'] })
+    },
+    [queryClient, upsertAppointmentInCache],
+  )
+
+  const handleCreateDrawerOpenChange = useCallback((open: boolean) => {
+    setShowCreateDrawer(open)
+    if (!open) {
+      setInitialClientIdForCreate(undefined)
+      setInitialStaffIdForCreate(undefined)
+      setInitialServiceIdForCreate(undefined)
+    }
+  }, [])
+
+  const stubAvailabilityDrawer = useCallback(() => {
+    toast({ title: 'بررسی زمان خالی در نسخه‌ی بعدی فعال می‌شود' })
   }, [])
 
   const handleAppointmentClick = (appointment: AppointmentWithDetails) => {
@@ -240,13 +354,13 @@ function CalendarPage() {
       setConcurrentCluster(cluster)
       return
     }
-    stubDrawer()
+    stubDetailDrawer()
   }
 
   const handleConcurrentSelect = useCallback(() => {
     setConcurrentCluster(null)
-    stubDrawer()
-  }, [stubDrawer])
+    stubDetailDrawer()
+  }, [stubDetailDrawer])
 
   const handleRetry = useCallback(() => {
     void appointmentsQuery.refetch()
@@ -353,7 +467,7 @@ function CalendarPage() {
           businessHours={businessHours}
           readOnly={!isManager}
           onVisibleRangeChange={handleVisibleRangeChange}
-          onSlotSelect={stubDrawer}
+          onSlotSelect={handleSlotSelect}
           onEventClick={handleAppointmentClick}
           onClusterClick={setConcurrentCluster}
           isRefreshing={appointmentsQuery.isFetching && !appointmentsQuery.isLoading}
@@ -363,7 +477,7 @@ function CalendarPage() {
       {isManager && (
         <div className="absolute bottom-5 left-4 z-40 flex flex-col items-center gap-3">
           <button
-            onClick={stubDrawer}
+            onClick={stubAvailabilityDrawer}
             disabled={!isOnline || services.length === 0 || staff.length === 0}
             className="flex h-14 w-14 items-center justify-center rounded-[18px] border border-border bg-card text-foreground shadow-lg shadow-foreground/10 transition-all active:scale-[0.92] disabled:pointer-events-none disabled:opacity-40 touch-manipulation"
             aria-label="بررسی زمان خالی"
@@ -371,7 +485,7 @@ function CalendarPage() {
             <Search className="h-6 w-6" />
           </button>
           <button
-            onClick={stubDrawer}
+            onClick={handleAddAppointment}
             className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-lg shadow-primary/30 transition-all active:scale-[0.92] touch-manipulation"
             aria-label="نوبت جدید"
           >
@@ -385,6 +499,25 @@ function CalendarPage() {
         onOpenChange={(open) => !open && setConcurrentCluster(null)}
         onSelectAppointment={handleConcurrentSelect}
       />
+
+      {isManager && (
+        <AppointmentDrawer
+          open={showCreateDrawer}
+          onOpenChange={handleCreateDrawerOpenChange}
+          initialDate={createDate}
+          initialTime={createTime}
+          initialStaffId={initialStaffIdForCreate}
+          initialServiceId={initialServiceIdForCreate}
+          initialClientId={initialClientIdForCreate}
+          staff={staff}
+          services={services}
+          clients={clients}
+          onSuccess={handleAppointmentCreated}
+          onClientsChanged={() => {
+            void queryClient.invalidateQueries({ queryKey: ['clients'] })
+          }}
+        />
+      )}
     </div>
   )
 }

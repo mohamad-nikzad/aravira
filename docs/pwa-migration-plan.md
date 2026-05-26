@@ -773,6 +773,30 @@ Read-only `/calendar` route lands with FullCalendar grid, view toggle (روز/ه
 - `pnpm exec tsc --noEmit` → only the pre-existing `appointments-module.ts` TS6133 warning.
 - `pnpm build` → succeeds. `calendar` chunk ~295 KB (FullCalendar + locales).
 
+### Phase 5b — Shipped (2026-05-26)
+
+Appointment **create** drawer lands on `/calendar`. Slot taps, FAB plus, and `?clientId=` deep links open the drawer; `?appointmentId=` and the availability FAB still toast a "next slice" hint (deferred to 5c/5d).
+
+**PWA (`apps/pwa`):**
+- `src/components/calendar/client-picker.tsx` — ported verbatim from `apps/app`. Drawer-nested on touch, dismiss-on-outside on desktop. Data-client `clients.create` first; falls back to `api.clients.create({ …values, tags: values.tags ?? [] })` (same pattern as `client-drawer.tsx`).
+- `src/components/calendar/appointment-drawer.tsx` — ported verbatim minus Next imports. Raw `fetch('/api/appointments', POST)` fallback replaced with `api.appointments.create(payload)`; raw `fetch('/api/services/:id/addons')` fallback replaced with `api.services.addons.forService(id, { signal })`; raw `fetch('/api/staff/booking-availability?…')` replaced with `api.staff.bookingAvailability({ date, startTime, endTime }, { signal })` (response cast to `{ staff: Array<{ staffId, available }> }` — api-client's generated `StaffResponse` type is wrong for this endpoint; not blocking).
+- `src/routes/_authed/calendar.tsx` —
+  - Added create-drawer state (`showCreateDrawer`, `createDate`, `createTime`, `initialStaffIdForCreate`, `initialServiceIdForCreate`, `initialClientIdForCreate`).
+  - Wired `handleSlotSelect` (replaces `stubDrawer` for `onSlotSelect`), `handleAddAppointment` (FAB plus), `handleCreateDrawerOpenChange`, `handleAppointmentCreated`.
+  - `?clientId=` deep link: when manager + client exists in current list, opens drawer pre-seeded with that client at `navDate` + `businessHours.workingStart`, then strips the param via `navigate({ to: '/calendar', search: ({ date }) => ({ date }), replace: true })`.
+  - `?appointmentId=` still toasts + clears itself (5c).
+  - Availability FAB toasts a "next slice" hint (5d).
+  - `handleAppointmentCreated` does optimistic `queryClient.setQueryData` upsert into the current `['appointments','range', start, end]` cache (mirrors legacy `mutateAppointments` upsert with sort), then `invalidateQueries({ queryKey: ['appointments','range'] })`.
+  - `onClientsChanged` invalidates `['clients']` so the picker's freshly-created client surfaces elsewhere.
+
+**Verified:**
+- `pnpm exec tsc --noEmit` → only the pre-existing `appointments-module.ts` TS6133 warning.
+- `pnpm build` → succeeds. `calendar` chunk grew from ~295 KB to 324 KB (drawer + addons + picker + form schemas).
+
+**Deferred to 5c–5d:**
+- Appointment detail drawer (view/edit/delete/status). `handleAppointmentClick` for a non-clustered single event still toasts.
+- Availability drawer.
+
 ## Recommended First Implementation Slice
 
 Build the smallest useful vertical slice:
