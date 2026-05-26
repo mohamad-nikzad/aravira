@@ -1,14 +1,17 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/')({ component: Home })
+import { authQueryKey } from '#/lib/auth'
+import { homePathForRole } from '#/lib/navigation'
+import type { User } from '@repo/salon-core/types'
 
-function Home() {
-  return (
-    <div className="p-8">
-      <h1 className="text-4xl font-bold">Welcome to TanStack Start</h1>
-      <p className="mt-4 text-lg">
-        Edit <code>src/routes/index.tsx</code> to get started.
-      </p>
-    </div>
-  )
-}
+export const Route = createFileRoute('/')({
+  beforeLoad: async ({ context }) => {
+    const user = await context.queryClient.ensureQueryData<User | null>({
+      queryKey: authQueryKey,
+    })
+    if (!user) {
+      throw redirect({ to: '/login' })
+    }
+    throw redirect({ to: homePathForRole(user.role) })
+  },
+})

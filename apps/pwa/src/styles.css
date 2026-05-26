@@ -1,17 +1,3 @@
+@import '@repo/ui/styles.css';
 
-@import "tailwindcss";
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#app {
-  min-height: 100%;
-}
-
-body {
-  margin: 0;
-}
-
+@source "../src/**/*.{ts,tsx}";

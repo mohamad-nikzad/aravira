@@ -18,10 +18,15 @@ import { error, ok } from '../lib/responses'
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7
 
 function setSessionCookie(c: Parameters<typeof setCookie>[0], token: string) {
+  // SameSite=None + Secure so the cookie travels on cross-origin requests
+  // from the PWA (app.saloora.beauty → api.saloora.beauty in prod, and
+  // http://localhost:<pwa-port> → http://localhost:<api-port> in dev).
+  // Browsers treat localhost as a secure context, so Secure works over plain
+  // http://localhost without HTTPS.
   setCookie(c, 'session', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'Lax',
+    secure: true,
+    sameSite: 'None',
     maxAge: SESSION_MAX_AGE,
     path: '/',
   })
@@ -38,7 +43,7 @@ export const auth = new Hono<AppEnv>()
     return ok(c, { user: result.user, token: result.token })
   })
   .post('/logout', async (c) => {
-    deleteCookie(c, 'session', { path: '/' })
+    deleteCookie(c, 'session', { path: '/', secure: true, sameSite: 'None' })
     return ok(c, { success: true })
   })
   .get('/me', async (c) => {

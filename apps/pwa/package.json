@@ -15,17 +15,27 @@
     "check": "prettier --check ."
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.9.1",
+    "@repo/api-client": "workspace:*",
+    "@repo/brand-tokens": "workspace:*",
+    "@repo/salon-core": "workspace:*",
+    "@repo/ui": "workspace:*",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/intent": "^0.0.41",
     "@tanstack/react-devtools": "latest",
+    "@tanstack/react-query": "^5.62.7",
+    "@tanstack/react-query-devtools": "^5.62.7",
     "@tanstack/react-router": "latest",
     "@tanstack/react-router-devtools": "latest",
     "@tanstack/router-core": "^1.171.6",
     "@tanstack/router-plugin": "^1.132.0",
+    "date-fns": "4.1.0",
     "lucide-react": "^0.545.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "tailwindcss": "^4.1.18"
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-hook-form": "^7.54.1",
+    "tailwindcss": "^4.1.18",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",
