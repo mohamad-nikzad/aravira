@@ -637,25 +637,21 @@ Foundation slice landed and verified end-to-end against Hono on localhost.
 
 ## Phase 4 — In Progress
 
-### `/clients/$id` — Shipped (2026-05-26)
+**Done:** `/retention`, `/clients`, `/clients/$id`.
+**Remaining:** `/services`, `/staff`, `/settings`.
 
-Manager client profile with stats, tags, notes, upcoming appointment, open follow-ups, history, and inline edit drawer. Mirrors `/clients` data-flow: Router loader → `ensureQueryData(['clients', id, 'summary'])` → `useQuery` (shared key) + `useClientSummaryIndexedDbSources` for offline reads after first hydrate.
+**Pattern established (apply to remaining slices):** Router `loader` → `ensureQueryData` with the same key the component's `useQuery` uses; `useMutation` invalidates that key on success. Manager guard via `beforeLoad` using router context's `user`. Explicit `pendingComponent`/`errorComponent`. Offline-backed reads layer IDB on top via dedicated hooks. Drawer flows use `FormSheet` (vaul) + `useDismissGuard` + `runMutation`.
 
-**New PWA modules:**
-- `src/lib/use-clients-indexeddb.ts` — added `useClientSummaryIndexedDbSources` (mirrors list hook for `getSummary`/`hydrateSummaryFromServer`/`summaryLastSyncedAt`).
-- `src/components/clients/client-summary-skeleton.tsx`.
-- `src/routes/_authed/clients.$id.tsx`.
+### `/retention` — Shipped (2026-05-26)
 
-**Wiring fix:** reverted the `/clients` row-click deviation — rows now navigate via `<Link to="/clients/$id" params={{id}} />` instead of opening the drawer in place. The list-page FAB still opens the create drawer.
-
-**Edit success:** invalidates both `['clients', id, 'summary']` and `['clients']` (list) so the list reflects edits without a manual refresh.
-
-**Parity deviations:**
-- "نوبت جدید" still uses plain `<a href="/calendar?clientId=...">` (calendar route not migrated yet).
+**PWA (`apps/pwa`):**
+- `src/lib/api-client.ts` — added `retention: createRetentionApi(apiClient)`.
+- `src/routes/_authed/retention.tsx` — manager-only (`beforeLoad` redirects non-managers to `/today`). Router `loader` calls `queryClient.ensureQueryData` against `api.retention.list`. `useQuery` shares the `['retention']` key; `useMutation` wraps `api.retention.updateStatus` and invalidates the same key on success. `busyId` derives from `useMutation`'s `isPending`+`variables`. Header uses `useNavigate` back to `/settings`.
+- Unmigrated outbound links (`/calendar?clientId=...`, `/clients/$id`) use plain `<a>` until those routes migrate — full reload is acceptable since those routes do not yet exist in the PWA either.
 
 **Verified:**
 - `pnpm exec tsc --noEmit` → only the pre-existing `appointments-module.ts` TS6133 warning
-- `pnpm build` → succeeds; `clients._id` chunk 10.1 KB
+- `pnpm build` → succeeds; retention chunk emitted
 
 ### `/clients` — Shipped (2026-05-26)
 
@@ -681,25 +677,31 @@ List page with offline-first IDB hydration, retention follow-up filter cross-que
 - `bottom-nav.tsx` — added `/clients` manager item (Users icon); `/retention` folded under settings prefix match.
 
 **Parity deviations:**
-- Row click opens edit drawer in place (legacy links to `/clients/$id`). Will revert when `/clients/$id` ships in the next slice.
 - Drawer's raw-fetch fallback path now uses `api.clients.create/update` (cross-origin Hono) instead of legacy `/api/clients`; data-client offline path is unchanged. Error message preservation is weaker (`api-client` errors don't expose status codes the same way), but `DataClientHttpError` still flows through `runMutation`.
 
 **Verified:**
 - `pnpm exec tsc --noEmit` → only the pre-existing `appointments-module.ts` TS6133 warning
 - `pnpm build` → succeeds; clients chunk 49.9 KB, form-sheet code lands in clients chunk
 
-### `/retention` — Shipped (2026-05-26)
+### `/clients/$id` — Shipped (2026-05-26)
 
-**PWA (`apps/pwa`):**
-- `src/lib/api-client.ts` — added `retention: createRetentionApi(apiClient)`.
-- `src/routes/_authed/retention.tsx` — manager-only (`beforeLoad` redirects non-managers to `/today`). Router `loader` calls `queryClient.ensureQueryData` against `api.retention.list`. `useQuery` shares the `['retention']` key; `useMutation` wraps `api.retention.updateStatus` and invalidates the same key on success. `busyId` derives from `useMutation`'s `isPending`+`variables`. Header uses `useNavigate` back to `/settings`.
-- Unmigrated outbound links (`/calendar?clientId=...`, `/clients/$id`) use plain `<a>` until those routes migrate — full reload is acceptable since those routes do not yet exist in the PWA either.
+Manager client profile with stats, tags, notes, upcoming appointment, open follow-ups, history, and inline edit drawer. Mirrors `/clients` data-flow: Router loader → `ensureQueryData(['clients', id, 'summary'])` → `useQuery` (shared key) + `useClientSummaryIndexedDbSources` for offline reads after first hydrate.
 
-**Pattern established for the rest of Phase 4:** Router loader (`ensureQueryData`) + `useQuery` (shared key, `initialData` from loader) + `useMutation` (invalidates the same key on success). Manager guard via `beforeLoad` using router context's `user`. Explicit `pendingComponent`/`errorComponent`.
+**New PWA modules:**
+- `src/lib/use-clients-indexeddb.ts` — added `useClientSummaryIndexedDbSources` (mirrors list hook for `getSummary`/`hydrateSummaryFromServer`/`summaryLastSyncedAt`).
+- `src/components/clients/client-summary-skeleton.tsx`.
+- `src/routes/_authed/clients.$id.tsx`.
+
+**Wiring fix:** `/clients` rows now navigate via `<Link to="/clients/$id" params={{id}} />` (an earlier deviation that opened the edit drawer in place is gone). The list-page FAB still opens the create drawer.
+
+**Edit success:** invalidates both `['clients', id, 'summary']` and `['clients']` (list) so the list reflects edits without a manual refresh.
+
+**Parity deviations:**
+- "نوبت جدید" still uses plain `<a href="/calendar?clientId=...">` (calendar route not migrated yet).
 
 **Verified:**
 - `pnpm exec tsc --noEmit` → only the pre-existing `appointments-module.ts` TS6133 warning
-- `pnpm build` → succeeds; retention chunk emitted
+- `pnpm build` → succeeds; `clients._id` chunk 10.1 KB
 
 ## Recommended First Implementation Slice
 
