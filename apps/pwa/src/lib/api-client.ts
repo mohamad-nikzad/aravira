@@ -2,6 +2,7 @@ import {
   createApiClient,
   createAuthApi,
   createDashboardApi,
+  createRetentionApi,
 } from '@repo/api-client'
 
 import { env } from '#/env'
@@ -14,6 +15,7 @@ export const apiClient = createApiClient({
 export const api = {
   auth: createAuthApi(apiClient),
   dashboard: createDashboardApi(apiClient),
+  retention: createRetentionApi(apiClient),
 }
 
 export type Api = typeof api

@@ -635,6 +635,21 @@ Foundation slice landed and verified end-to-end against Hono on localhost.
 
 **Note on existing offline state:** Installed legacy users hit `apps/app` at `aravira-manager-offline`. Both apps now write to the same DB. When a user moves to the PWA, queued mutations replay against Hono via the `/api/v1` rewrite — same endpoints, just a different prefix. No migration needed.
 
+## Phase 4 — In Progress
+
+### `/retention` — Shipped (2026-05-26)
+
+**PWA (`apps/pwa`):**
+- `src/lib/api-client.ts` — added `retention: createRetentionApi(apiClient)`.
+- `src/routes/_authed/retention.tsx` — manager-only (`beforeLoad` redirects non-managers to `/today`). Router `loader` calls `queryClient.ensureQueryData` against `api.retention.list`. `useQuery` shares the `['retention']` key; `useMutation` wraps `api.retention.updateStatus` and invalidates the same key on success. `busyId` derives from `useMutation`'s `isPending`+`variables`. Header uses `useNavigate` back to `/settings`.
+- Unmigrated outbound links (`/calendar?clientId=...`, `/clients/$id`) use plain `<a>` until those routes migrate — full reload is acceptable since those routes do not yet exist in the PWA either.
+
+**Pattern established for the rest of Phase 4:** Router loader (`ensureQueryData`) + `useQuery` (shared key, `initialData` from loader) + `useMutation` (invalidates the same key on success). Manager guard via `beforeLoad` using router context's `user`. Explicit `pendingComponent`/`errorComponent`.
+
+**Verified:**
+- `pnpm exec tsc --noEmit` → only the pre-existing `appointments-module.ts` TS6133 warning
+- `pnpm build` → succeeds; retention chunk emitted
+
 ## Recommended First Implementation Slice
 
 Build the smallest useful vertical slice:
