@@ -29,6 +29,10 @@ import {
 } from '#/components/calendar/concurrent-appointments-sheet'
 import { CalendarSkeleton } from '#/components/calendar/calendar-skeleton'
 import { AppointmentDrawer } from '#/components/calendar/appointment-drawer'
+import {
+  AppointmentDetailDrawer,
+  type AppointmentDetailChange,
+} from '#/components/calendar/appointment-detail-drawer'
 import { NetworkStatusBanner, OfflineStateCard } from '#/components/offline-state'
 
 const searchSchema = z.object({
@@ -94,6 +98,9 @@ function CalendarPage() {
   const [concurrentCluster, setConcurrentCluster] = useState<
     AppointmentWithDetails[] | null
   >(null)
+
+  const [selectedAppointment, setSelectedAppointment] =
+    useState<AppointmentWithDetails | null>(null)
 
   const [showCreateDrawer, setShowCreateDrawer] = useState(false)
   const [createDate, setCreateDate] = useState<string>('')
@@ -242,16 +249,17 @@ function CalendarPage() {
     navigate,
   ])
 
-  // appointmentId deep link still deferred to slice 5c (detail drawer).
   useEffect(() => {
     if (!search.appointmentId) return
-    toast({ title: 'باز کردن مستقیم نوبت در نسخه‌ی بعدی فعال می‌شود' })
+    const target = appointments.find((a) => a.id === search.appointmentId)
+    if (!target) return
+    setSelectedAppointment(target)
     navigate({
       to: '/calendar',
       search: ({ date }) => ({ date }),
       replace: true,
     })
-  }, [search.appointmentId, navigate])
+  }, [search.appointmentId, appointments, navigate])
 
   const handleVisibleRangeChange = useCallback(
     (start: string, endInclusive: string, activeStart: Date) => {
@@ -275,10 +283,6 @@ function CalendarPage() {
     setTitleAnchor(t)
     setRange(null)
   }
-
-  const stubDetailDrawer = useCallback(() => {
-    toast({ title: 'مشاهده/ویرایش نوبت در نسخه‌ی بعدی فعال می‌شود' })
-  }, [])
 
   const handleAddAppointment = useCallback(() => {
     if (!isManager) return
@@ -354,13 +358,45 @@ function CalendarPage() {
       setConcurrentCluster(cluster)
       return
     }
-    stubDetailDrawer()
+    setSelectedAppointment(appointment)
   }
 
-  const handleConcurrentSelect = useCallback(() => {
-    setConcurrentCluster(null)
-    stubDetailDrawer()
-  }, [stubDetailDrawer])
+  const handleConcurrentSelect = useCallback(
+    (appointment: AppointmentWithDetails) => {
+      setConcurrentCluster(null)
+      setSelectedAppointment(appointment)
+    },
+    [],
+  )
+
+  const handleDetailChange = useCallback(
+    (change: AppointmentDetailChange) => {
+      if (change.type === 'deleted') {
+        queryClient.setQueryData<AppointmentsResponse>(
+          appointmentsKey(startDate, endDate),
+          (current) =>
+            current
+              ? {
+                  ...current,
+                  appointments: current.appointments.filter(
+                    (a) => a.id !== change.id,
+                  ),
+                }
+              : current,
+        )
+        setSelectedAppointment(null)
+      } else {
+        upsertAppointmentInCache(change.appointment)
+        setSelectedAppointment(change.appointment)
+      }
+      void queryClient.invalidateQueries({ queryKey: ['appointments', 'range'] })
+    },
+    [queryClient, startDate, endDate, upsertAppointmentInCache],
+  )
+
+  const handleDetailDrawerOpenChange = useCallback((open: boolean) => {
+    if (!open) setSelectedAppointment(null)
+  }, [])
 
   const handleRetry = useCallback(() => {
     void appointmentsQuery.refetch()
@@ -498,6 +534,19 @@ function CalendarPage() {
         cluster={concurrentCluster}
         onOpenChange={(open) => !open && setConcurrentCluster(null)}
         onSelectAppointment={handleConcurrentSelect}
+      />
+
+      <AppointmentDetailDrawer
+        appointment={selectedAppointment}
+        onOpenChange={handleDetailDrawerOpenChange}
+        staff={staff}
+        services={services}
+        clients={clients}
+        onSuccess={handleDetailChange}
+        onClientsChanged={() => {
+          void queryClient.invalidateQueries({ queryKey: ['clients'] })
+        }}
+        readOnly={!isManager}
       />
 
       {isManager && (

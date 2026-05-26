@@ -793,9 +793,31 @@ Appointment **create** drawer lands on `/calendar`. Slot taps, FAB plus, and `?c
 - `pnpm exec tsc --noEmit` → only the pre-existing `appointments-module.ts` TS6133 warning.
 - `pnpm build` → succeeds. `calendar` chunk grew from ~295 KB to 324 KB (drawer + addons + picker + form schemas).
 
-**Deferred to 5c–5d:**
-- Appointment detail drawer (view/edit/delete/status). `handleAppointmentClick` for a non-clustered single event still toasts.
+**Deferred to 5d:**
 - Availability drawer.
+
+### Phase 5c — Shipped (2026-05-26)
+
+Appointment **detail** drawer lands on `/calendar`. Single-event taps (in any view), cluster-sheet picks, and `?appointmentId=` deep links now open the drawer. Edit, status change, delete, and "تکمیل اطلاعات مشتری" (placeholder client) all flow through the data-client when available and fall back to `@repo/api-client` cross-origin Hono.
+
+**PWA (`apps/pwa`):**
+- `src/components/calendar/appointment-detail-drawer.tsx` — ported from `apps/app`. Path aliases `@/` → `#/`. `useNetworkStatus` from `#/lib/network-status`. Raw-fetch fallbacks replaced:
+  - `fetch('/api/services/:id/addons')` → `api.services.addons.forService(id, { signal })`
+  - `fetch('/api/appointments/:id/complete-client', POST)` → `api.appointments.completePlaceholderClient(id, …)`
+  - `fetch('/api/appointments/:id', PATCH)` (update + status) → `api.appointments.update(id, …)` / `api.appointments.updateStatus(id, status)`
+  - `fetch('/api/appointments/:id', DELETE)` → `api.appointments.delete(id)`
+  - `ApiError` is caught and rewrapped as `DataClientHttpError` for `runMutation` message preservation. For the placeholder-client duplicate-phone flow, the duplicate `existingClient` is read from `ApiError.payload` (legacy read it from `res.json()`).
+- `src/routes/_authed/calendar.tsx` —
+  - Added `selectedAppointment` state. `handleAppointmentClick` now opens the drawer for non-clustered events; `handleConcurrentSelect(appointment)` opens it from the cluster sheet.
+  - `?appointmentId=` deep link resolves against current `appointments` and opens the drawer (then strips the param via `navigate({ search: ({ date }) => ({ date }), replace: true })`). If the id isn't in the loaded range, the param is left in place so a subsequent loader hydration can pick it up.
+  - `handleDetailChange({ type: 'updated' | 'deleted' })` mirrors the create flow's optimistic cache update: `updated` → `upsertAppointmentInCache` + keep drawer open with refreshed appointment; `deleted` → filter out + close drawer. Both then invalidate `['appointments','range']`.
+
+**Verified:**
+- `pnpm exec tsc --noEmit` → only the pre-existing `appointments-module.ts` TS6133 warning.
+- `pnpm build` → succeeds. `calendar` chunk grew from 324 KB to ~349 KB (detail drawer + complete-client nested drawer).
+
+**Deferred to 5d:**
+- Availability drawer (search FAB still toasts).
 
 ## Recommended First Implementation Slice
 
