@@ -389,6 +389,7 @@ function PendingCard({
 
   const approveMutation = useMutation({
     mutationFn: () => api.appointmentRequests.approve(request.id, { staffId }),
+    meta: { skipToast: true },
     onSuccess: () => {
       setErrMsg(null)
       onChanged()
@@ -404,6 +405,7 @@ function PendingCard({
       api.appointmentRequests.reject(request.id, {
         ...(rejectReason.trim() ? { reason: rejectReason.trim() } : {}),
       }),
+    meta: { skipToast: true },
     onSuccess: () => {
       setErrMsg(null)
       setRejectOpen(false)

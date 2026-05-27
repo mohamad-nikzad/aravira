@@ -19,8 +19,7 @@ import { APPOINTMENT_STATUS } from '@repo/salon-core/types'
 import type { DashboardData } from '@repo/api-client'
 
 import { api } from '#/lib/api-client'
-
-const dashboardQueryKey = ['dashboard'] as const
+import { dashboardQueryKey } from '#/lib/query-keys'
 
 export const Route = createFileRoute('/_authed/dashboard')({
   beforeLoad: ({ context }) => {

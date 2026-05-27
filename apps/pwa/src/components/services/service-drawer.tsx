@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Clock3, PackageCheck, Trash2 } from 'lucide-react'
@@ -15,7 +16,6 @@ import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
 import { Textarea } from '@repo/ui/textarea'
 import { Field, FieldLabel, FieldGroup, FieldError } from '@repo/ui/field'
-import { FormRootError } from '@repo/ui/form'
 import {
   Select,
   SelectContent,
@@ -40,6 +40,7 @@ import { serviceFormSchema } from '@repo/salon-core/forms/service'
 import type { ServiceFormInput } from '@repo/salon-core/forms/service'
 import { DataClientHttpError } from '@repo/data-client'
 import { useManagerDataClient } from '#/lib/manager-data-client'
+import { useComboComponentsQuery } from '#/lib/manager-data-queries'
 import { ServicePicker } from './service-picker'
 
 interface ServiceDrawerProps {
@@ -95,7 +96,9 @@ export function ServiceDrawer({
   const isEditing = !!service
   const [componentIds, setComponentIds] = useState<string[]>([])
   const [initialComponentIds, setInitialComponentIds] = useState<string[]>([])
-  const [loadingComponents, setLoadingComponents] = useState(false)
+  const isComboService = service?.kind === 'combo'
+  const comboQuery = useComboComponentsQuery(service?.id, open, isComboService)
+  const loadingComponents = comboQuery.isPending
   const {
     register,
     control,
@@ -139,35 +142,27 @@ export function ServiceDrawer({
 
   useEffect(() => {
     if (!open) return
-    if (!service || service.kind !== 'combo' || !dc) {
+    if (!isComboService) {
       setComponentIds([])
       setInitialComponentIds([])
       return
     }
-    setLoadingComponents(true)
-    dc.services.comboComponents
-      .get(service.id)
-      .then((combo) => {
-        const ids =
-          combo?.components.map((component) => component.componentServiceId) ??
-          []
-        setComponentIds(ids)
-        setInitialComponentIds(ids)
-      })
-      .finally(() => setLoadingComponents(false))
-  }, [dc, open, service])
+    const ids =
+      comboQuery.data?.components.map(
+        (component) => component.componentServiceId,
+      ) ?? []
+    setComponentIds(ids)
+    setInitialComponentIds(ids)
+  }, [comboQuery.data, isComboService, open])
 
-  const onSubmit = handleSubmit(async (values) => {
-    if (!dc) {
-      setError('root', { message: 'اتصال داده برقرار نیست' })
-      return
-    }
-
-    try {
+  const saveService = useMutation({
+    mutationFn: async (values: ServiceFormInput) => {
+      if (!dc) {
+        throw new DataClientHttpError('اتصال داده برقرار نیست', 0, null)
+      }
       const payload = serviceFormSchema.parse(values)
       if (!payload.familyId) {
-        setError('familyId', { message: 'گروه خدمات را انتخاب کنید' })
-        return
+        throw new DataClientHttpError('گروه خدمات را انتخاب کنید', 0, null)
       }
       if (isEditing) {
         const shouldStageComboActivation =
@@ -185,32 +180,39 @@ export function ServiceDrawer({
             await dc.services.update(service.id, { active: true })
           }
         }
-      } else {
-        const shouldStageComboActivation =
-          payload.kind === 'combo' && payload.active && componentIds.length > 0
-        const created = await dc.services.create({
-          ...payload,
-          color: normalizeCalendarColorId(payload.color),
-          active: shouldStageComboActivation ? false : payload.active,
+        return
+      }
+
+      const shouldStageComboActivation =
+        payload.kind === 'combo' && payload.active && componentIds.length > 0
+      const created = await dc.services.create({
+        ...payload,
+        color: normalizeCalendarColorId(payload.color),
+        active: shouldStageComboActivation ? false : payload.active,
+      })
+      if (payload.kind === 'combo') {
+        await dc.services.comboComponents.update(created.id, {
+          componentServiceIds: componentIds,
         })
-        if (payload.kind === 'combo') {
-          await dc.services.comboComponents.update(created.id, {
-            componentServiceIds: componentIds,
-          })
-          if (shouldStageComboActivation) {
-            await dc.services.update(created.id, { active: true })
-          }
+        if (shouldStageComboActivation) {
+          await dc.services.update(created.id, { active: true })
         }
       }
+    },
+    meta: { errorMessage: 'ذخیره خدمت انجام نشد' },
+  })
+
+  const onSubmit = handleSubmit(async (values) => {
+    const payload = serviceFormSchema.safeParse(values)
+    if (payload.success && !payload.data.familyId) {
+      setError('familyId', { message: 'گروه خدمات را انتخاب کنید' })
+      return
+    }
+    try {
+      await saveService.mutateAsync(values)
       onSuccess()
-    } catch (err) {
-      const msg =
-        err instanceof DataClientHttpError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : 'خطایی رخ داد'
-      setError('root', { message: msg })
+    } catch {
+      // Toast handled by mutation cache.
     }
   })
 
@@ -549,7 +551,6 @@ export function ServiceDrawer({
                 ) : null}
               </div>
             ) : null}
-            <FormRootError message={errors.root?.message} />
           </FieldGroup>
         </form>
 

@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowRight, CalendarPlus, Check, Phone, X } from 'lucide-react'
 import { Badge } from '@repo/ui/badge'
 import { Button } from '@repo/ui/button'
@@ -72,7 +72,6 @@ function reasonLabel(reason: FollowUpReason): string {
 
 function RetentionPage() {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const initial = Route.useLoaderData()
   const { data } = useQuery({
     queryKey: retentionQueryKey,
@@ -83,8 +82,10 @@ function RetentionPage() {
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: FollowUpStatus }) =>
       api.retention.updateStatus(id, status),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: retentionQueryKey }),
+    meta: {
+      skipToast: true,
+      invalidatesQuery: retentionQueryKey,
+    },
   })
 
   const items: RetentionItem[] = data.items

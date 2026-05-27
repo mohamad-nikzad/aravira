@@ -24,8 +24,12 @@ import { StaffServicesDrawer } from '#/components/staff/staff-services-drawer'
 import { StaffScheduleDrawer } from '#/components/staff/staff-schedule-drawer'
 import { useAuth } from '#/lib/auth'
 import { useManagerDataClient } from '#/lib/manager-data-client'
+import {
+  useManagerServicesQuery,
+  useManagerStaffQuery,
+} from '#/lib/manager-data-queries'
 import { StaffSkeleton } from '#/components/staff/staff-skeleton'
-import type { Service, User } from '@repo/salon-core/types'
+import type { User } from '@repo/salon-core/types'
 import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { displayPhone } from '@repo/salon-core/phone'
 
@@ -46,46 +50,18 @@ function StaffPage() {
   const [showDrawer, setShowDrawer] = useState(false)
   const [servicesStaff, setServicesStaff] = useState<User | null>(null)
   const [scheduleStaff, setScheduleStaff] = useState<User | null>(null)
-  const [staff, setStaff] = useState<User[]>([])
-  const [servicesList, setServicesList] = useState<Service[]>([])
-  const [staffLoading, setStaffLoading] = useState(true)
+
+  const isManager = user?.role === 'manager'
+  const staffQuery = useManagerStaffQuery(!!dc && isManager)
+  const servicesQuery = useManagerServicesQuery(!!dc && isManager)
+  const staff = staffQuery.data ?? []
+  const servicesList = servicesQuery.data ?? []
 
   useEffect(() => {
     if (user && user.role !== 'manager') {
       navigate({ to: '/today', replace: true })
     }
   }, [user, navigate])
-
-  useEffect(() => {
-    if (!dc || user?.role !== 'manager') {
-      setStaffLoading(false)
-      return
-    }
-    let cancelled = false
-    setStaffLoading(true)
-    void dc.staff
-      .list()
-      .then((list) => {
-        if (!cancelled) setStaff(list)
-      })
-      .finally(() => {
-        if (!cancelled) setStaffLoading(false)
-      })
-    const unsub = dc.staff.subscribe((list) => {
-      if (!cancelled) setStaff(list)
-    })
-    void dc.services.list().then((list) => {
-      if (!cancelled) setServicesList(list)
-    })
-    const unsubSvc = dc.services.subscribe((list) => {
-      if (!cancelled) setServicesList(list)
-    })
-    return () => {
-      cancelled = true
-      unsub()
-      unsubSvc()
-    }
-  }, [dc, user?.role])
 
   const filteredStaff = staff.filter(
     (member) =>
@@ -119,6 +95,9 @@ function StaffPage() {
       .join('')
       .slice(0, 2)
   }
+
+  const staffLoading =
+    isManager && !!dc && (staffQuery.isPending || servicesQuery.isPending)
 
   if (staffLoading) {
     return <StaffSkeleton />

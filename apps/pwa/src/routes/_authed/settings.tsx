@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -22,7 +23,6 @@ import { Button } from '@repo/ui/button'
 import { Switch } from '@repo/ui/switch'
 import { Input } from '@repo/ui/input'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field'
-import { FormRootError } from '@repo/ui/form'
 import { TimePicker } from '@repo/ui/time-picker'
 import { Badge } from '@repo/ui/badge'
 import type { badgeVariants } from '@repo/ui/badge'
@@ -47,6 +47,11 @@ import {
 } from '#/lib/manager-data-client'
 import { useTheme } from '#/lib/theme'
 import { api } from '#/lib/api-client'
+import { useManagerBusinessSettingsQuery } from '#/lib/manager-data-queries'
+import {
+  dashboardQueryKey,
+  notificationPreferencesQueryKey,
+} from '#/lib/query-keys'
 
 type BadgeTone = NonNullable<VariantProps<typeof badgeVariants>['variant']>
 
@@ -289,15 +294,41 @@ function SettingsPage() {
   const dc = useManagerDataClient()
   const bumpOfflineData = useBumpOfflineData()
   const [loggingOut, setLoggingOut] = useState(false)
-  const [managerDataReady, setManagerDataReady] = useState(false)
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [localAlerts, setLocalAlerts] = useState<boolean | null>(null)
-  const [savingAlerts, setSavingAlerts] = useState(false)
+  const isManager = user?.role === 'manager'
+
+  const businessSettingsQuery = useManagerBusinessSettingsQuery(
+    isManager && !!dc,
+  )
+  const notificationPrefsQuery = useQuery({
+    queryKey: notificationPreferencesQueryKey,
+    queryFn: ({ signal }) => api.notificationPreferences.get({ signal }),
+  })
+  const dashboardQuery = useQuery({
+    queryKey: dashboardQueryKey,
+    queryFn: ({ signal }) => api.dashboard.get({ signal }),
+    enabled: isManager,
+  })
+
+  const updateLocalAlerts = useMutation({
+    mutationFn: (enabled: boolean) =>
+      api.notificationPreferences.update({ localAlertsEnabled: enabled }),
+    meta: {
+      skipSuccessToast: true,
+      invalidatesQuery: notificationPreferencesQueryKey,
+    },
+  })
+
+  const saveBusinessHoursMutation = useMutation({
+    mutationFn: (values: BusinessSettingsPayload) =>
+      dc!.businessSettings.update(values),
+    meta: { errorMessage: 'ذخیره ساعات کاری انجام نشد' },
+    onSuccess: () => bumpOfflineData(),
+  })
 
   const {
     handleSubmit: handleBusinessHoursSubmit,
     reset: resetBusinessHours,
-    setError: setBusinessHoursError,
     setValue: setBusinessHoursValue,
     watch: watchBusinessHours,
     formState: { errors: businessHoursErrors, isSubmitting: savingHours },
@@ -314,66 +345,19 @@ function SettingsPage() {
   const slotMin = watchBusinessHours('slotDurationMinutes') ?? 30
 
   useEffect(() => {
-    if (!dc || user?.role !== 'manager') {
-      setManagerDataReady(true)
-      return
+    const settings = businessSettingsQuery.data
+    if (settings) {
+      resetBusinessHours(settings)
     }
-    let cancelled = false
-    void dc.businessSettings
-      .get()
-      .then((s) => {
-        if (cancelled || !s) return
-        resetBusinessHours(s)
-      })
-      .finally(() => {
-        if (!cancelled) setManagerDataReady(true)
-      })
-    const unsubBiz = dc.businessSettings.subscribe((s) => {
-      if (cancelled || !s) return
-      resetBusinessHours(s)
-    })
-    return () => {
-      cancelled = true
-      unsubBiz()
-    }
-  }, [dc, resetBusinessHours, user?.role])
+  }, [businessSettingsQuery.data, resetBusinessHours])
 
   useEffect(() => {
-    const ac = new AbortController()
-    void api.notificationPreferences
-      .get({ signal: ac.signal })
-      .then((data) => {
-        if (!ac.signal.aborted) {
-          setLocalAlerts(Boolean(data.preferences.localAlertsEnabled))
-        }
-      })
-      .catch(() => {})
-    return () => {
-      ac.abort()
+    if (notificationPrefsQuery.data) {
+      setLocalAlerts(
+        Boolean(notificationPrefsQuery.data.preferences.localAlertsEnabled),
+      )
     }
-  }, [])
-
-  useEffect(() => {
-    if (user?.role !== 'manager') return
-    let cancelled = false
-    const ac = new AbortController()
-    void api.dashboard
-      .get({ signal: ac.signal })
-      .then((data) => {
-        if (!cancelled && typeof data.totalClients === 'number') {
-          setMetrics({
-            monthRevenue: data.monthRevenue,
-            totalClients: data.totalClients,
-            newClientsThisMonth: data.newClientsThisMonth,
-          })
-        }
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-      ac.abort()
-    }
-  }, [user?.role])
+  }, [notificationPrefsQuery.data])
 
   const handleLogout = async () => {
     setLoggingOut(true)
@@ -385,37 +369,38 @@ function SettingsPage() {
     setTheme(enabled ? 'dark' : 'light')
   }
 
-  const toggleLocalAlerts = async (next: boolean) => {
+  const toggleLocalAlerts = (next: boolean) => {
     setLocalAlerts(next)
-    setSavingAlerts(true)
-    try {
-      await api.notificationPreferences.update({ localAlertsEnabled: next })
-    } catch {
-      setLocalAlerts(!next)
-    } finally {
-      setSavingAlerts(false)
-    }
+    updateLocalAlerts.mutate(next, {
+      onError: () => setLocalAlerts(!next),
+    })
   }
 
   const saveBusinessHours = handleBusinessHoursSubmit(async (values) => {
     if (!dc) return
     try {
-      await dc.businessSettings.update(values)
-      bumpOfflineData()
+      await saveBusinessHoursMutation.mutateAsync(values)
     } catch {
-      setBusinessHoursError('root', { message: 'ذخیره ساعات کاری انجام نشد' })
+      // Toast handled by mutation cache.
     }
   })
 
   const settingsDataLoading =
-    user?.role === 'manager' && (!dc || !managerDataReady)
+    isManager && !!dc && businessSettingsQuery.isPending
   if (settingsDataLoading) {
     return <SettingsSkeleton />
   }
 
   if (!user) return null
 
-  const isManager = user.role === 'manager'
+  const metrics: DashboardMetrics | null =
+    dashboardQuery.data && typeof dashboardQuery.data.totalClients === 'number'
+      ? {
+          monthRevenue: dashboardQuery.data.monthRevenue,
+          totalClients: dashboardQuery.data.totalClients,
+          newClientsThisMonth: dashboardQuery.data.newClientsThisMonth,
+        }
+      : null
   const darkMode = theme === 'dark'
 
   return (
@@ -526,7 +511,7 @@ function SettingsPage() {
                 label="اعلان درون‌برنامه"
                 hint="یادآور نوبت‌ها و درخواست‌ها"
                 checked={localAlerts}
-                disabled={savingAlerts}
+                disabled={updateLocalAlerts.isPending}
                 onChange={(next) => void toggleLocalAlerts(next)}
               />
             </SettingsGroup>
@@ -594,7 +579,6 @@ function SettingsPage() {
                     )}
                   </Field>
                 </FieldGroup>
-                <FormRootError message={businessHoursErrors.root?.message} />
                 <Button
                   size="sm"
                   className="w-full touch-manipulation"

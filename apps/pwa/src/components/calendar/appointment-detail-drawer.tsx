@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -69,9 +70,9 @@ import type {
 } from '@repo/salon-core/forms/appointment'
 import { ClientPicker } from '#/components/calendar/client-picker'
 import { useManagerDataClient } from '#/lib/manager-data-client'
+import { useServiceAddons } from '#/lib/use-service-addons'
 import { ServicePicker } from '#/components/services/service-picker'
 import { DataClientHttpError } from '@repo/data-client'
-import { runMutation } from '#/lib/run-mutation'
 import { useNetworkStatus } from '#/lib/network-status'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
 import { TimePicker } from '@repo/ui/time-picker'
@@ -130,8 +131,6 @@ export function AppointmentDetailDrawer({
 }: AppointmentDetailDrawerProps) {
   const dataClient = useManagerDataClient()
   const isOnline = useNetworkStatus()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const [statusAction, setStatusAction] = useState<StatusActionState>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editingAppointmentId, setEditingAppointmentId] = useState<
@@ -140,11 +139,8 @@ export function AppointmentDetailDrawer({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showCompleteClientDrawer, setShowCompleteClientDrawer] =
     useState(false)
-  const [completeClientLoading, setCompleteClientLoading] = useState(false)
   const [duplicateClient, setDuplicateClient] = useState<Client | null>(null)
   const [localClients, setLocalClients] = useState<Client[]>(clients)
-  const [availableAddons, setAvailableAddons] = useState<ServiceAddon[]>([])
-  const [addonsLoading, setAddonsLoading] = useState(false)
   const completeClientNameRef = useRef<HTMLInputElement>(null)
   const temporaryClientNameRef = useRef<HTMLInputElement>(null)
 
@@ -211,6 +207,11 @@ export function AppointmentDetailDrawer({
     () => staff.filter((m) => m.role === 'staff'),
     [staff],
   )
+  const isEditingCurrentAppointment = Boolean(
+    appointment && isEditing && editingAppointmentId === appointment.id,
+  )
+  const { data: availableAddons = [], isPending: addonsLoading } =
+    useServiceAddons(serviceId, isEditingCurrentAppointment && !!serviceId)
   const selectedEditService = useMemo(
     () => services.find((service) => service.id === serviceId),
     [serviceId, services],
@@ -249,9 +250,6 @@ export function AppointmentDetailDrawer({
   const previewPrice =
     (selectedEditService?.price ?? appointment?.bookedServicePrice ?? 0) +
     selectedAddons.reduce((sum, addon) => sum + addon.priceDelta, 0)
-  const isEditingCurrentAppointment = Boolean(
-    appointment && isEditing && editingAppointmentId === appointment.id,
-  )
 
   useEffect(() => {
     setLocalClients(clients)
@@ -262,9 +260,7 @@ export function AppointmentDetailDrawer({
     setEditingAppointmentId(null)
     setShowDeleteConfirm(false)
     setShowCompleteClientDrawer(false)
-    setCompleteClientLoading(false)
     setDuplicateClient(null)
-    setError('')
     setStatusAction(null)
     resetEditForm()
     resetCompleteForm()
@@ -307,9 +303,7 @@ export function AppointmentDetailDrawer({
       setEditingAppointmentId(null)
       setShowDeleteConfirm(false)
       setShowCompleteClientDrawer(false)
-      setCompleteClientLoading(false)
       setDuplicateClient(null)
-      setError('')
       setStatusAction(null)
       resetEditForm()
       resetCompleteForm()
@@ -383,54 +377,6 @@ export function AppointmentDetailDrawer({
     setShowCompleteClientDrawer(true)
   }
 
-  const submitCompleteClient = handleCompleteSubmit(async (values) => {
-    if (!appointment) return
-
-    setCompleteClientLoading(true)
-    clearCompleteErrors('root')
-
-    try {
-      let updated: AppointmentWithDetails
-      if (dataClient) {
-        updated = await dataClient.appointments.completePlaceholderClient(
-          appointment.id,
-          {
-            ...values,
-            notes: values.notes ?? undefined,
-          },
-        )
-        void dataClient.sync.processPending()
-      } else {
-        const data = await api.appointments.completePlaceholderClient(
-          appointment.id,
-          { ...values, notes: values.notes ?? undefined },
-        )
-        updated = data.appointment
-      }
-
-      setShowCompleteClientDrawer(false)
-      setDuplicateClient(null)
-      onClientsChanged?.()
-      onSuccess({ type: 'updated', appointment: updated })
-    } catch (err) {
-      if (err instanceof DataClientHttpError) {
-        setCompleteFormError('root', { message: err.message })
-        const body = err.body as { existingClient?: Client } | null
-        setDuplicateClient(body?.existingClient ?? null)
-      } else if (err instanceof ApiError) {
-        setCompleteFormError('root', { message: err.message })
-        const payload = err.payload as { existingClient?: Client } | null
-        setDuplicateClient(payload?.existingClient ?? null)
-      } else {
-        setCompleteFormError('root', {
-          message: 'خطایی رخ داد. لطفاً دوباره تلاش کنید.',
-        })
-      }
-    } finally {
-      setCompleteClientLoading(false)
-    }
-  })
-
   const handleEditServiceChange = (id: string) => {
     setEditValue('serviceId', id, { shouldDirty: true, shouldValidate: true })
     setEditValue('addonIds', [], { shouldDirty: true, shouldValidate: true })
@@ -491,26 +437,21 @@ export function AppointmentDetailDrawer({
     }
   }
 
-  const handleUpdate = handleEditSubmit(async (values) => {
-    if (!appointment) return
-    setError('')
-
-    const localCheck = validateAppointmentWindow(
-      values.startTime,
-      values.endTime,
-    )
-    if (!localCheck.ok) {
-      setEditError('root', { message: localCheck.error })
-      return
-    }
-
-    setLoading(true)
-    const result = await runMutation<AppointmentDetailChange>(async () => {
+  const updateAppointment = useMutation({
+    mutationFn: async ({
+      appointmentId,
+      values,
+      nextStatus,
+    }: {
+      appointmentId: string
+      values: AppointmentFormInput
+      nextStatus: AppointmentWithDetails['status']
+    }): Promise<AppointmentDetailChange> => {
       const payload = appointmentFormSchema.parse(values)
       if (dataClient) {
-        const r = await dataClient.appointments.update(appointment.id, {
+        const r = await dataClient.appointments.update(appointmentId, {
           ...payload,
-          status: status as AppointmentWithDetails['status'],
+          status: nextStatus,
         })
         void dataClient.sync.processPending()
         return r.type === 'deleted'
@@ -519,9 +460,9 @@ export function AppointmentDetailDrawer({
       }
 
       try {
-        const data = await api.appointments.update(appointment.id, {
+        const data = await api.appointments.update(appointmentId, {
           ...payload,
-          status: status as AppointmentWithDetails['status'],
+          status: nextStatus,
         })
         if (typeof data.removedAppointmentId === 'string') {
           return { type: 'deleted', id: data.removedAppointmentId }
@@ -533,135 +474,194 @@ export function AppointmentDetailDrawer({
         }
         throw err
       }
-    })
-    setLoading(false)
-    if (result.ok) onSuccess(result.data)
+    },
   })
 
-  useEffect(() => {
-    if (!isEditingCurrentAppointment || !serviceId) {
-      setAvailableAddons([])
-      setAddonsLoading(false)
-      return
-    }
-
-    const ac = new AbortController()
-    setAddonsLoading(true)
-    ;(async () => {
-      try {
-        const addons = dataClient
-          ? await dataClient.services.addons.forService(serviceId)
-          : await api.services.addons
-              .forService(serviceId, { signal: ac.signal })
-              .then((r) => r.addons)
-        if (ac.signal.aborted) return
-        setAvailableAddons(addons)
-      } catch {
-        if (ac.signal.aborted) return
-        setAvailableAddons([])
-      } finally {
-        if (!ac.signal.aborted) setAddonsLoading(false)
-      }
-    })()
-
-    return () => {
-      ac.abort()
-    }
-  }, [dataClient, isEditingCurrentAppointment, serviceId])
-
-  const handleDelete = async () => {
-    if (!appointment) return
-    setError('')
-    setLoading(true)
-
-    const result = await runMutation(async () => {
+  const deleteAppointment = useMutation({
+    mutationFn: async (appointmentId: string) => {
       if (dataClient) {
-        await dataClient.appointments.remove(appointment.id)
+        await dataClient.appointments.remove(appointmentId)
         void dataClient.sync.processPending()
         return
       }
 
       try {
-        await api.appointments.delete(appointment.id)
+        await api.appointments.delete(appointmentId)
       } catch (err) {
         if (err instanceof ApiError) {
           throw new DataClientHttpError(err.message, err.status, err.payload)
         }
         throw err
       }
-    })
-    setLoading(false)
-    if (result.ok) onSuccess({ type: 'deleted', id: appointment.id })
+    },
+  })
+
+  const completePlaceholderClientMutation = useMutation({
+    mutationFn: async (values: CompletePlaceholderClientInput) => {
+      if (!appointment) {
+        throw new DataClientHttpError('نوبت یافت نشد', 0, null)
+      }
+      const payload = { ...values, notes: values.notes ?? undefined }
+      if (dataClient) {
+        const updated = await dataClient.appointments.completePlaceholderClient(
+          appointment.id,
+          payload,
+        )
+        void dataClient.sync.processPending()
+        return updated
+      }
+      const data = await api.appointments.completePlaceholderClient(
+        appointment.id,
+        payload,
+      )
+      return data.appointment
+    },
+    meta: {
+      skipErrorToast: true,
+      errorMessage: 'ثبت اطلاعات مشتری انجام نشد',
+    },
+  })
+
+  type StatusChangeResult =
+    | { type: 'deleted'; id: string }
+    | { type: 'updated'; appointment: AppointmentWithDetails }
+
+  const updateAppointmentStatus = useMutation({
+    mutationFn: async ({
+      appointmentId,
+      nextStatus,
+    }: {
+      appointmentId: string
+      nextStatus: AppointmentWithDetails['status']
+    }): Promise<StatusChangeResult> => {
+      if (dataClient) {
+        const result = await dataClient.appointments.updateStatus(
+          appointmentId,
+          nextStatus,
+        )
+        void dataClient.sync.processPending()
+        return result.type === 'deleted'
+          ? { type: 'deleted', id: result.id }
+          : { type: 'updated', appointment: result.appointment }
+      }
+
+      const data = await api.appointments.updateStatus(
+        appointmentId,
+        nextStatus,
+      )
+      if (typeof data.removedAppointmentId === 'string') {
+        return { type: 'deleted', id: data.removedAppointmentId }
+      }
+      return { type: 'updated', appointment: data.appointment }
+    },
+    meta: { skipSuccessToast: true },
+  })
+
+  const isMutating =
+    updateAppointment.isPending ||
+    deleteAppointment.isPending ||
+    updateAppointmentStatus.isPending
+
+  const submitCompleteClient = handleCompleteSubmit(async (values) => {
+    if (!appointment) return
+
+    clearCompleteErrors('root')
+    setDuplicateClient(null)
+
+    try {
+      const updated =
+        await completePlaceholderClientMutation.mutateAsync(values)
+      setShowCompleteClientDrawer(false)
+      setDuplicateClient(null)
+      onClientsChanged?.()
+      onSuccess({ type: 'updated', appointment: updated })
+    } catch (err) {
+      if (err instanceof DataClientHttpError) {
+        setCompleteFormError('root', { message: err.message })
+        const body = err.body as { existingClient?: Client } | null
+        setDuplicateClient(body?.existingClient ?? null)
+      } else if (err instanceof ApiError) {
+        setCompleteFormError('root', { message: err.message })
+        const payload = err.payload as { existingClient?: Client } | null
+        setDuplicateClient(payload?.existingClient ?? null)
+      } else {
+        setCompleteFormError('root', {
+          message: 'خطایی رخ داد. لطفاً دوباره تلاش کنید.',
+        })
+      }
+    }
+  })
+
+  const handleUpdate = handleEditSubmit(async (values) => {
+    if (!appointment) return
+
+    const localCheck = validateAppointmentWindow(
+      values.startTime,
+      values.endTime,
+    )
+    if (!localCheck.ok) {
+      setEditError('root', { message: localCheck.error })
+      return
+    }
+
+    try {
+      const change = await updateAppointment.mutateAsync({
+        appointmentId: appointment.id,
+        values,
+        nextStatus: status as AppointmentWithDetails['status'],
+      })
+      onSuccess(change)
+    } catch {
+      // Toast handled by mutation cache.
+    }
+  })
+
+  const handleDelete = async () => {
+    if (!appointment) return
+
+    try {
+      await deleteAppointment.mutateAsync(appointment.id)
+      onSuccess({ type: 'deleted', id: appointment.id })
+    } catch {
+      // Toast handled by mutation cache.
+    }
   }
 
   const handleStatusChange = async (newStatus: string) => {
     if (!appointment) return
-    setError('')
     const nextStatus = newStatus as AppointmentWithDetails['status']
     setStatusAction({
       status: nextStatus,
       mode: 'saving',
       message: 'در حال ثبت وضعیت...',
     })
-    setLoading(true)
 
     try {
-      if (dataClient) {
-        const result = await dataClient.appointments.updateStatus(
-          appointment.id,
-          nextStatus,
-        )
-        void dataClient.sync.processPending()
-        setStatusAction({
-          status: nextStatus,
-          mode: isOnline ? 'saved' : 'queued',
-          message:
-            result.type === 'deleted'
-              ? isOnline
-                ? 'رزرو موقت لغو و حذف شد.'
-                : 'لغو رزرو موقت آفلاین ثبت شد و بعدا همگام می‌شود.'
-              : isOnline
-                ? 'وضعیت نوبت ثبت شد.'
-                : 'وضعیت نوبت آفلاین ثبت شد و بعدا همگام می‌شود.',
-        })
-        onSuccess(
-          result.type === 'deleted'
-            ? { type: 'deleted', id: result.id }
-            : { type: 'updated', appointment: result.appointment },
-        )
-        return
-      }
-
-      const data = await api.appointments.updateStatus(
-        appointment.id,
+      const result = await updateAppointmentStatus.mutateAsync({
+        appointmentId: appointment.id,
         nextStatus,
-      )
-
-      if (typeof data.removedAppointmentId === 'string') {
-        setStatusAction({
-          status: nextStatus,
-          mode: 'saved',
-          message: 'رزرو موقت لغو و حذف شد.',
-        })
-        onSuccess({ type: 'deleted', id: data.removedAppointmentId })
-        return
-      }
+      })
 
       setStatusAction({
         status: nextStatus,
-        mode: 'saved',
-        message: 'وضعیت نوبت ثبت شد.',
+        mode: dataClient && !isOnline ? 'queued' : 'saved',
+        message:
+          result.type === 'deleted'
+            ? dataClient && !isOnline
+              ? 'لغو رزرو موقت آفلاین ثبت شد و بعدا همگام می‌شود.'
+              : 'رزرو موقت لغو و حذف شد.'
+            : dataClient && !isOnline
+              ? 'وضعیت نوبت آفلاین ثبت شد و بعدا همگام می‌شود.'
+              : 'وضعیت نوبت ثبت شد.',
       })
-      onSuccess({ type: 'updated', appointment: data.appointment })
-    } catch (err) {
-      if (err instanceof DataClientHttpError || err instanceof ApiError) {
-        setError(err.message)
-      } else {
-        setError('خطایی رخ داد. لطفاً دوباره تلاش کنید.')
-      }
+      onSuccess(
+        result.type === 'deleted'
+          ? { type: 'deleted', id: result.id }
+          : { type: 'updated', appointment: result.appointment },
+      )
+    } catch {
       setStatusAction(null)
-    } finally {
-      setLoading(false)
+      // Toast handled by mutation cache.
     }
   }
 
@@ -707,7 +707,6 @@ export function AppointmentDetailDrawer({
                           shouldDirty: true,
                           shouldValidate: true,
                         })
-                        setError('')
                         if (enabled) {
                           setEditValue('clientId', '', { shouldDirty: true })
                           setEditValue(
@@ -1001,7 +1000,7 @@ export function AppointmentDetailDrawer({
                 />
               </Field>
 
-              <FormRootError message={editErrors.root?.message ?? error} />
+              <FormRootError message={editErrors.root?.message} />
             </FieldGroup>
           </form>
         ) : (
@@ -1150,7 +1149,7 @@ export function AppointmentDetailDrawer({
                       <button
                         key={key}
                         type="button"
-                        disabled={loading || active}
+                        disabled={isMutating || active}
                         onClick={() => !active && handleStatusChange(key)}
                         className={cn(
                           'flex items-center justify-center gap-1.5 rounded-full border px-4 py-2 text-[13px] font-medium transition-colors',
@@ -1188,8 +1187,6 @@ export function AppointmentDetailDrawer({
               </p>
             ) : null}
 
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
             {appointment.client.isPlaceholder && !readOnly ? (
               <div className="rounded-2xl bg-amber-soft p-3.5 text-sm text-amber-fg">
                 <p className="font-medium">
@@ -1224,13 +1221,15 @@ export function AppointmentDetailDrawer({
               <Button
                 onClick={handleUpdate}
                 disabled={
-                  loading ||
+                  isMutating ||
                   isEditSubmitting ||
                   (useTemporaryClient ? !temporaryClientName.trim() : !clientId)
                 }
               >
-                {(loading || isEditSubmitting) && <Spinner className="mr-2" />}
-                {loading || isEditSubmitting
+                {(isMutating || isEditSubmitting) && (
+                  <Spinner className="mr-2" />
+                )}
+                {isMutating || isEditSubmitting
                   ? 'در حال ذخیره…'
                   : 'ذخیره تغییرات'}
               </Button>
@@ -1252,9 +1251,9 @@ export function AppointmentDetailDrawer({
               <Button
                 variant="destructive"
                 onClick={handleDelete}
-                disabled={loading}
+                disabled={isMutating}
               >
-                {loading && <Spinner className="mr-2" />}
+                {isMutating && <Spinner className="mr-2" />}
                 بله، حذف شود
               </Button>
               <Button
@@ -1378,7 +1377,7 @@ export function AppointmentDetailDrawer({
                       )
                       void submitCompleteClient()
                     }}
-                    disabled={completeClientLoading}
+                    disabled={completePlaceholderClientMutation.isPending}
                   >
                     اتصال به مشتری موجود
                   </Button>
@@ -1396,12 +1395,14 @@ export function AppointmentDetailDrawer({
                 void submitCompleteClient()
               }}
               disabled={
-                completeClientLoading ||
+                completePlaceholderClientMutation.isPending ||
                 !completeClientName.trim() ||
                 !completeClientPhone.trim()
               }
             >
-              {completeClientLoading ? 'در حال ذخیره…' : 'ثبت اطلاعات'}
+              {completePlaceholderClientMutation.isPending
+                ? 'در حال ذخیره…'
+                : 'ثبت اطلاعات'}
             </Button>
             <DrawerClose asChild>
               <Button variant="outline">بستن</Button>

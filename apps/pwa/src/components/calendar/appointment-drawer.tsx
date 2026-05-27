@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -42,9 +43,8 @@ import {
 } from '@repo/salon-core/appointment-time'
 import { ClientPicker } from '#/components/calendar/client-picker'
 import { useManagerDataClient } from '#/lib/manager-data-client'
+import { useServiceAddons } from '#/lib/use-service-addons'
 import { ServicePicker } from '#/components/services/service-picker'
-import { DataClientHttpError } from '@repo/data-client'
-import { runMutation } from '#/lib/run-mutation'
 import { useNetworkStatus } from '#/lib/network-status'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
 import { TimePicker } from '@repo/ui/time-picker'
@@ -92,8 +92,6 @@ export function AppointmentDrawer({
   const isOnline = useNetworkStatus()
   const [localClients, setLocalClients] = useState<Client[]>(clients)
   const [staffSlotOk, setStaffSlotOk] = useState<Record<string, boolean>>({})
-  const [availableAddons, setAvailableAddons] = useState<ServiceAddon[]>([])
-  const [addonsLoading, setAddonsLoading] = useState(false)
   const form = useForm<AppointmentFormInput>({
     resolver: zodResolver(appointmentFormSchema, undefined, { raw: true }),
     defaultValues: {
@@ -133,7 +131,9 @@ export function AppointmentDrawer({
     watch('endTime') || endTimeFromDuration(startTime, durationMinutes)
   const useTemporaryClient = Boolean(watch('useTemporaryClient'))
   const temporaryClientName = watch('temporaryClientName')
-  const addonIds = watch('addonIds')
+  const addonIds = watch('addonIds') ?? []
+  const { data: availableAddons = [], isPending: addonsLoading } =
+    useServiceAddons(serviceId ?? '', open && !!serviceId)
   const activeServices = useMemo(
     () => services.filter((service) => service.active),
     [services],
@@ -372,6 +372,20 @@ export function AppointmentDrawer({
     onClientsChanged?.()
   }
 
+  const createAppointment = useMutation({
+    mutationFn: async (values: AppointmentFormInput) => {
+      const payload = appointmentFormSchema.parse(values)
+      if (dataClient) {
+        const created = await dataClient.appointments.create(payload)
+        void dataClient.sync.processPending()
+        return created
+      }
+
+      const res = await api.appointments.create(payload)
+      return res.appointment
+    },
+  })
+
   const onSubmit = handleSubmit(async (values) => {
     const currentService = activeServices.find(
       (service) => service.id === values.serviceId,
@@ -416,51 +430,13 @@ export function AppointmentDrawer({
       return
     }
 
-    const result = await runMutation(async () => {
-      const payload = appointmentFormSchema.parse(values)
-      if (dataClient) {
-        const created = await dataClient.appointments.create(payload)
-        void dataClient.sync.processPending()
-        return created
-      }
-
-      const res = await api.appointments.create(payload)
-      return res.appointment
-    })
-
-    if (result.ok) onSuccess(result.data)
+    try {
+      const created = await createAppointment.mutateAsync(values)
+      onSuccess(created)
+    } catch {
+      // Toast handled by mutation cache.
+    }
   })
-
-  useEffect(() => {
-    if (!open || !serviceId) {
-      setAvailableAddons([])
-      setAddonsLoading(false)
-      return
-    }
-
-    const ac = new AbortController()
-    setAddonsLoading(true)
-    ;(async () => {
-      try {
-        const addons = dataClient
-          ? await dataClient.services.addons.forService(serviceId)
-          : await api.services.addons
-              .forService(serviceId, { signal: ac.signal })
-              .then((r) => r.addons)
-        if (ac.signal.aborted) return
-        setAvailableAddons(addons)
-      } catch {
-        if (ac.signal.aborted) return
-        setAvailableAddons([])
-      } finally {
-        if (!ac.signal.aborted) setAddonsLoading(false)
-      }
-    })()
-
-    return () => {
-      ac.abort()
-    }
-  }, [dataClient, open, serviceId])
 
   useEffect(() => {
     if (!open || !date || !startTime || !endTime || !isOnline) return
@@ -592,7 +568,7 @@ export function AppointmentDrawer({
                 ) : (
                   <ClientPicker
                     clients={localClients}
-                    value={clientId}
+                    value={clientId ?? ''}
                     onChange={(id) =>
                       setValue('clientId', id, {
                         shouldDirty: true,

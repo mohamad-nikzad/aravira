@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -11,7 +12,6 @@ import {
 } from '@repo/ui/drawer'
 import { Button } from '@repo/ui/button'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field'
-import { FormRootError } from '@repo/ui/form'
 import { Input } from '@repo/ui/input'
 import { Spinner } from '@repo/ui/spinner'
 import { useDismissGuard } from '#/lib/use-dismiss-guard'
@@ -45,7 +45,6 @@ export function ServiceCategoryDrawer({
     control,
     handleSubmit,
     reset,
-    setError,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<ServiceCategoryCreateInput>({
     resolver: zodResolver(serviceCategoryFormSchema),
@@ -63,27 +62,27 @@ export function ServiceCategoryDrawer({
 
   const nameValue = useWatch({ control, name: 'name' })
 
-  const onSubmit = handleSubmit(async (values) => {
-    if (!dc) {
-      setError('root', { message: 'اتصال داده برقرار نیست' })
-      return
-    }
-    try {
+  const saveCategory = useMutation({
+    mutationFn: async (values: ServiceCategoryCreateInput) => {
+      if (!dc) {
+        throw new DataClientHttpError('اتصال داده برقرار نیست', 0, null)
+      }
       const payload = serviceCategoryFormSchema.parse(values)
       if (isEditing) {
         await dc.services.categories.update(category.id, payload)
       } else {
         await dc.services.categories.create(payload)
       }
+    },
+    meta: { errorMessage: 'ذخیره بخش انجام نشد' },
+  })
+
+  const onSubmit = handleSubmit(async (values) => {
+    try {
+      await saveCategory.mutateAsync(values)
       onSuccess()
-    } catch (err) {
-      const msg =
-        err instanceof DataClientHttpError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : 'خطایی رخ داد'
-      setError('root', { message: msg })
+    } catch {
+      // Toast handled by mutation cache.
     }
   })
 
@@ -116,7 +115,6 @@ export function ServiceCategoryDrawer({
               <Input id="service-category-name" {...register('name')} />
               {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
-            <FormRootError message={errors.root?.message} />
           </FieldGroup>
         </form>
         <DrawerFooter>

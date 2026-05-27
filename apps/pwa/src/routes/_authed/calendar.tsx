@@ -560,7 +560,7 @@ function CalendarPage() {
           </button>
           <button
             onClick={handleAddAppointment}
-            className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-lg shadow-primary/30 transition-all active:scale-[0.92] touch-manipulation"
+            className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-linear-to-br from-primary to-primary/85 text-primary-foreground shadow-lg shadow-primary/30 transition-all active:scale-[0.92] touch-manipulation"
             aria-label="نوبت جدید"
           >
             <Plus className="h-6 w-6" strokeWidth={2.5} />

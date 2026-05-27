@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Check, Plus, X } from 'lucide-react'
@@ -14,7 +15,6 @@ import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
 import { Textarea } from '@repo/ui/textarea'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field'
-import { FormRootError } from '@repo/ui/form'
 import {
   Select,
   SelectContent,
@@ -146,7 +146,6 @@ export function ServiceAddonDrawer({
     register,
     handleSubmit,
     reset,
-    setError,
     setValue,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<ServiceAddonFormInput>({
@@ -183,12 +182,11 @@ export function ServiceAddonDrawer({
     )
   }
 
-  const onSubmit = handleSubmit(async (values) => {
-    if (!dc) {
-      setError('root', { message: 'اتصال داده برقرار نیست' })
-      return
-    }
-    try {
+  const saveAddon = useMutation({
+    mutationFn: async (values: ServiceAddonFormInput) => {
+      if (!dc) {
+        throw new DataClientHttpError('اتصال داده برقرار نیست', 0, null)
+      }
       const payload = serviceAddonFormSchema.parse(
         values,
       ) as ServiceAddonCreatePayload
@@ -197,15 +195,19 @@ export function ServiceAddonDrawer({
       } else {
         await dc.services.addons.create(payload)
       }
+    },
+    meta: {
+      errorMessage: 'ذخیره افزودنی انجام نشد',
+      invalidatesQuery: ['manager', 'addons'],
+    },
+  })
+
+  const onSubmit = handleSubmit(async (values) => {
+    try {
+      await saveAddon.mutateAsync(values)
       onSuccess()
-    } catch (err) {
-      const msg =
-        err instanceof DataClientHttpError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : 'ذخیره افزودنی انجام نشد'
-      setError('root', { message: msg })
+    } catch {
+      // Toast handled by mutation cache.
     }
   })
 
@@ -477,7 +479,6 @@ export function ServiceAddonDrawer({
                 <FieldError>{errors.scopes.message}</FieldError>
               )}
             </div>
-            <FormRootError message={errors.root?.message} />
           </FieldGroup>
         </form>
         <DrawerFooter>

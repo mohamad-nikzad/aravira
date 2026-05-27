@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import {
   Check,
   ChevronDown,
@@ -26,7 +27,6 @@ import type { Client } from '@repo/salon-core/types'
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
 import { clientFormSchema } from '@repo/salon-core/forms/client'
 import type { ClientFormInput } from '@repo/salon-core/forms/client'
-import { DataClientHttpError } from '@repo/data-client'
 import { useManagerDataClient } from '#/lib/manager-data-client'
 import { useKeyboardInset } from '#/lib/use-keyboard-inset'
 import { api } from '#/lib/api-client'
@@ -53,7 +53,6 @@ export function ClientPicker({
   const {
     handleSubmit,
     reset,
-    setError,
     setValue,
     watch,
     formState: { errors, isSubmitting },
@@ -152,19 +151,26 @@ export function ClientPicker({
     reset({ name: '', phone: '', notes: '', tags: [] })
   }
 
+  const saveClient = useMutation({
+    mutationFn: async (values: ClientFormInput) => {
+      if (dataClient) {
+        const created = await dataClient.clients.create(values)
+        void dataClient.sync.processPending()
+        return created
+      }
+
+      const res = await api.clients.create({
+        ...values,
+        tags: values.tags ?? [],
+      })
+      return res.client
+    },
+    meta: { errorMessage: 'ذخیره مشتری انجام نشد' },
+  })
+
   const handleSaveNew = handleSubmit(async (values) => {
     try {
-      let created: Client
-      if (dataClient) {
-        created = await dataClient.clients.create(values)
-        void dataClient.sync.processPending()
-      } else {
-        const res = await api.clients.create({
-          ...values,
-          tags: values.tags ?? [],
-        })
-        created = res.client
-      }
+      const created = await saveClient.mutateAsync(values)
 
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur()
@@ -174,11 +180,8 @@ export function ClientPicker({
       setMode('closed')
       setQuery('')
       reset({ name: '', phone: '', notes: '', tags: [] })
-    } catch (err) {
-      setError('root', {
-        message:
-          err instanceof DataClientHttpError ? err.message : 'خطایی رخ داد',
-      })
+    } catch {
+      // Toast handled by mutation cache.
     }
   })
 
@@ -336,9 +339,6 @@ export function ClientPicker({
       )}
       {errors.phone && (
         <p className="text-xs text-destructive">{errors.phone.message}</p>
-      )}
-      {errors.root && (
-        <p className="text-xs text-destructive">{errors.root.message}</p>
       )}
 
       <div className={cn('flex gap-2', isTouch && 'flex-col-reverse')}>

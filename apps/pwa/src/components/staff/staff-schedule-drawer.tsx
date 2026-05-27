@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -20,8 +21,8 @@ import { formatPersianTime } from '@repo/salon-core/persian-digits'
 import { z } from 'zod'
 import { staffScheduleSchema } from '@repo/salon-core/forms/staff'
 import type { StaffScheduleFormInput } from '@repo/salon-core/forms/staff'
-import { runMutation } from '#/lib/run-mutation'
 import { useManagerDataClient } from '#/lib/manager-data-client'
+import { useStaffScheduleBundleQuery } from '#/lib/manager-data-queries'
 import { useDismissGuard } from '#/lib/use-dismiss-guard'
 
 const scheduleFormSchema = z.object({ rows: staffScheduleSchema })
@@ -89,7 +90,8 @@ export function StaffScheduleDrawer({
 }: StaffScheduleDrawerProps) {
   const dc = useManagerDataClient()
   const [salonHours, setSalonHours] = useState<BusinessHours | null>(null)
-  const [bundleLoading, setBundleLoading] = useState(false)
+  const bundleQuery = useStaffScheduleBundleQuery(staff?.id, open)
+  const bundleLoading = bundleQuery.isPending
 
   const {
     control,
@@ -107,35 +109,27 @@ export function StaffScheduleDrawer({
   const { fields } = useFieldArray({ control, name: 'rows' })
 
   useEffect(() => {
-    if (!open || !staff || !dc) return
-    let cancelled = false
-    setBundleLoading(true)
+    if (!open || !staff) return
     reset({ rows: defaultRows() })
-    void dc.staff.getScheduleBundle(staff.id).then((bundle) => {
-      if (cancelled) return
-      setBundleLoading(false)
-      if (!bundle) return
-      setSalonHours(bundle.businessHours)
-      const map = new Map(bundle.schedule.map((r) => [r.dayOfWeek, r]))
-      const base = defaultRows(bundle.businessHours)
-      reset({
-        rows: base.map((row) => {
-          const saved = map.get(row.dayOfWeek)
-          return saved
-            ? {
-                dayOfWeek: saved.dayOfWeek,
-                active: saved.active,
-                workingStart: saved.workingStart,
-                workingEnd: saved.workingEnd,
-              }
-            : row
-        }),
-      })
+    const bundle = bundleQuery.data
+    if (!bundle) return
+    setSalonHours(bundle.businessHours)
+    const map = new Map(bundle.schedule.map((r) => [r.dayOfWeek, r]))
+    const base = defaultRows(bundle.businessHours)
+    reset({
+      rows: base.map((row) => {
+        const saved = map.get(row.dayOfWeek)
+        return saved
+          ? {
+              dayOfWeek: saved.dayOfWeek,
+              active: saved.active,
+              workingStart: saved.workingStart,
+              workingEnd: saved.workingEnd,
+            }
+          : row
+      }),
     })
-    return () => {
-      cancelled = true
-    }
-  }, [open, staff, dc, reset])
+  }, [bundleQuery.data, open, reset, staff])
 
   const useSalonHours = () => {
     if (!salonHours) return
@@ -150,10 +144,24 @@ export function StaffScheduleDrawer({
     })
   }
 
+  const saveSchedule = useMutation({
+    mutationFn: ({
+      staffId,
+      rows,
+    }: {
+      staffId: string
+      rows: StaffScheduleFormInput
+    }) => dc!.staff.setSchedule(staffId, rows),
+  })
+
   const onSubmit = handleSubmit(async ({ rows }) => {
     if (!staff || !dc) return
-    const result = await runMutation(() => dc.staff.setSchedule(staff.id, rows))
-    if (result.ok) onSuccess()
+    try {
+      await saveSchedule.mutateAsync({ staffId: staff.id, rows })
+      onSuccess()
+    } catch {
+      // Toast handled by mutation cache.
+    }
   })
 
   const { requestClose, confirmDialog } = useDismissGuard({

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -48,11 +49,13 @@ import { eligibleStaffForService } from '@repo/salon-core/staff-service-autofill
 import type { Service, User } from '@repo/salon-core/types'
 import { availabilitySearchSchema } from '@repo/salon-core/forms/appointment'
 import type { AvailabilitySearchInput } from '@repo/salon-core/forms/appointment'
-import { ApiError } from '@repo/api-client'
 import { ServicePicker } from '#/components/services/service-picker'
 import { api } from '#/lib/api-client'
+import { getMutationErrorMessage } from '#/lib/query-client'
 import { useNetworkStatus } from '#/lib/network-status'
 import { useDismissGuard } from '#/lib/use-dismiss-guard'
+
+type AvailabilitySearchMode = 'day' | 'nearest'
 
 const ANY_STAFF_VALUE = '__any__'
 
@@ -152,8 +155,6 @@ export function AvailabilityDrawer({
   const serviceId = watch('serviceId')
   const staffSelection = watch('staffSelection')
   const date = watch('date')
-  const [loadingMode, setLoadingMode] = useState<'day' | 'nearest' | null>(null)
-  const [error, setError] = useState('')
   const [dayResponse, setDayResponse] =
     useState<DayAvailabilityResponse | null>(null)
   const [nearestResponse, setNearestResponse] =
@@ -179,14 +180,64 @@ export function AvailabilityDrawer({
   const hasVisibleResults =
     groupedSlots.length > 0 || nearestResponse?.slot != null
 
+  const searchAvailability = useMutation({
+    mutationFn: async ({
+      mode,
+      targetDate,
+      signal,
+    }: {
+      mode: AvailabilitySearchMode
+      targetDate: string
+      signal: AbortSignal
+    }) => {
+      const response = await api.appointments.availability(
+        {
+          mode,
+          serviceId,
+          date: targetDate,
+          ...(staffSelection !== ANY_STAFF_VALUE
+            ? { staffId: staffSelection }
+            : {}),
+        },
+        { signal },
+      )
+
+      if (mode === 'day' && response.mode === 'day') {
+        return { mode: 'day' as const, response }
+      }
+      if (mode === 'nearest' && response.mode === 'nearest') {
+        return { mode: 'nearest' as const, response }
+      }
+      throw new Error('پاسخ بررسی زمان کامل نبود.')
+    },
+    meta: { skipToast: true },
+    onSuccess: (result) => {
+      if (result.mode === 'day') {
+        setDayResponse(result.response)
+        setNearestResponse(null)
+        return
+      }
+      setNearestResponse(result.response)
+    },
+  })
+
+  const loadingMode = searchAvailability.isPending
+    ? searchAvailability.variables.mode
+    : null
+  const error = searchAvailability.error
+    ? getMutationErrorMessage(
+        searchAvailability.error,
+        'خطایی رخ داد. دوباره تلاش کنید.',
+      )
+    : ''
+
   const clearResults = useCallback(() => {
     abortRef.current?.abort()
     abortRef.current = null
-    setLoadingMode(null)
-    setError('')
+    searchAvailability.reset()
     setDayResponse(null)
     setNearestResponse(null)
-  }, [])
+  }, [searchAvailability])
 
   const resetDrawer = useCallback(() => {
     clearResults()
@@ -198,17 +249,13 @@ export function AvailabilityDrawer({
   }, [clearResults, initialDate, reset])
 
   const runSearch = useCallback(
-    async (mode: 'day' | 'nearest', targetDate = date) => {
-      if (!serviceId) {
-        return
-      }
+    (mode: AvailabilitySearchMode, targetDate = date) => {
+      if (!serviceId) return
 
       abortRef.current?.abort()
       const controller = new AbortController()
       abortRef.current = controller
 
-      setLoadingMode(mode)
-      setError('')
       if (mode === 'day') {
         setDayResponse(null)
         setNearestResponse(null)
@@ -216,51 +263,18 @@ export function AvailabilityDrawer({
         setNearestResponse(null)
       }
 
-      try {
-        const response = await api.appointments.availability(
-          {
-            mode,
-            serviceId,
-            date: targetDate,
-            ...(staffSelection !== ANY_STAFF_VALUE
-              ? { staffId: staffSelection }
-              : {}),
+      searchAvailability.mutate(
+        { mode, targetDate, signal: controller.signal },
+        {
+          onSettled: () => {
+            if (abortRef.current === controller) {
+              abortRef.current = null
+            }
           },
-          { signal: controller.signal },
-        )
-
-        if (controller.signal.aborted) {
-          return
-        }
-
-        if (mode === 'day' && response.mode === 'day') {
-          setDayResponse(response)
-          return
-        }
-
-        if (mode === 'nearest' && response.mode === 'nearest') {
-          setNearestResponse(response)
-          return
-        }
-
-        setError('پاسخ بررسی زمان کامل نبود.')
-      } catch (err) {
-        if (controller.signal.aborted) {
-          return
-        }
-        setError(
-          err instanceof ApiError
-            ? err.message
-            : 'خطایی رخ داد. دوباره تلاش کنید.',
-        )
-      } finally {
-        if (abortRef.current === controller) {
-          abortRef.current = null
-        }
-        setLoadingMode((current) => (current === mode ? null : current))
-      }
+        },
+      )
     },
-    [date, serviceId, staffSelection],
+    [date, searchAvailability, serviceId],
   )
 
   const { requestClose, confirmDialog } = useDismissGuard({
@@ -321,7 +335,6 @@ export function AvailabilityDrawer({
   const handleDayNavigation = (deltaDays: number) => {
     const nextDate = addDaysYmd(date, deltaDays)
     setValue('date', nextDate, { shouldValidate: false })
-    setError('')
     if (!serviceId) {
       setDayResponse(null)
       setNearestResponse(null)

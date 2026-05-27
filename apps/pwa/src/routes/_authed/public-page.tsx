@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
 import {
   Check,
@@ -49,6 +50,7 @@ import { toPersianDigits } from '@repo/salon-core/persian-digits'
 
 import { api } from '#/lib/api-client'
 import { env } from '#/env'
+import { salonPublicSettingsQueryKey } from '#/lib/query-keys'
 
 export const Route = createFileRoute('/_authed/public-page')({
   beforeLoad: ({ context }) => {
@@ -86,7 +88,7 @@ function publicUrlFor(slug: string): string {
 function PublicPageRoute() {
   const router = useRouter()
   const [data, setData] = useState<ManagerPublicSettingsResult | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const initializedRef = useRef(false)
 
   const [enabled, setEnabled] = useState(false)
   const [requests, setRequests] = useState(true)
@@ -95,8 +97,7 @@ function PublicPageRoute() {
   const [layoutId, setLayoutId] = useState<string>(DEFAULT_PUBLIC_LAYOUT_ID)
   const [services, setServices] = useState<ServiceRow[]>([])
   const [copied, setCopied] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [errMsg, setErrMsg] = useState<string | null>(null)
+  const [copyErrMsg, setCopyErrMsg] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
 
   const applyData = (result: ManagerPublicSettingsResult) => {
@@ -118,25 +119,36 @@ function PublicPageRoute() {
     setDirty(false)
   }
 
+  const { data: serverData, isPending } = useQuery({
+    queryKey: salonPublicSettingsQueryKey,
+    queryFn: ({ signal }) => api.salonPublicSettings.get({ signal }),
+  })
+
+  const savePublicSettings = useMutation({
+    mutationFn: () =>
+      api.salonPublicSettings.update({
+        enabled,
+        appointmentRequestsEnabled: requests,
+        bioText: bio.trim() || undefined,
+        themeId,
+        layoutId,
+        services: services.map((s) => ({
+          serviceId: s.serviceId,
+          visible: s.visible,
+        })),
+      }),
+    meta: {
+      errorMessage: 'ذخیره تنظیمات انجام نشد',
+      invalidatesQuery: salonPublicSettingsQueryKey,
+    },
+    onSuccess: (result) => applyData(result),
+  })
+
   useEffect(() => {
-    let cancelled = false
-    const ac = new AbortController()
-    setIsLoading(true)
-    void api.salonPublicSettings
-      .get({ signal: ac.signal })
-      .then((result) => {
-        if (cancelled) return
-        applyData(result)
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setIsLoading(false)
-      })
-    return () => {
-      cancelled = true
-      ac.abort()
-    }
-  }, [])
+    if (!serverData || initializedRef.current) return
+    applyData(serverData)
+    initializedRef.current = true
+  }, [serverData])
 
   const theme = resolvePublicTheme(themeId)
   const currentLayout =
@@ -168,39 +180,16 @@ function PublicPageRoute() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      setErrMsg('کپی لینک انجام نشد')
+      setCopyErrMsg('کپی لینک انجام نشد')
     }
   }
 
-  const save = async () => {
-    setErrMsg(null)
-    setSaving(true)
-    try {
-      const payload = {
-        enabled,
-        appointmentRequestsEnabled: requests,
-        bioText: bio.trim() || undefined,
-        themeId,
-        layoutId,
-        services: services.map((s) => ({
-          serviceId: s.serviceId,
-          visible: s.visible,
-        })),
-      }
-      const result = await api.salonPublicSettings.update(payload)
-      applyData(result)
-    } catch (err) {
-      const message =
-        err && typeof err === 'object' && 'message' in err
-          ? String(err.message)
-          : 'ذخیره تنظیمات انجام نشد'
-      setErrMsg(message)
-    } finally {
-      setSaving(false)
-    }
+  const save = () => {
+    setCopyErrMsg(null)
+    savePublicSettings.mutate()
   }
 
-  if (isLoading || !data) {
+  if (isPending || !data) {
     return (
       <div className="flex h-full items-center justify-center bg-background">
         <Spinner className="h-6 w-6" />
@@ -477,15 +466,17 @@ function PublicPageRoute() {
       </div>
 
       <div className="sticky bottom-0 border-t bg-background/95 px-4 py-3 backdrop-blur">
-        {errMsg && (
-          <p className="mb-2 text-center text-xs text-destructive">{errMsg}</p>
+        {copyErrMsg && (
+          <p className="mb-2 text-center text-xs text-destructive">
+            {copyErrMsg}
+          </p>
         )}
         <Button
           className="w-full"
-          disabled={saving || !dirty || bioOver}
+          disabled={savePublicSettings.isPending || !dirty || bioOver}
           onClick={save}
         >
-          {saving ? 'در حال ذخیره…' : 'ذخیره تغییرات'}
+          {savePublicSettings.isPending ? 'در حال ذخیره…' : 'ذخیره تغییرات'}
         </Button>
       </div>
     </div>

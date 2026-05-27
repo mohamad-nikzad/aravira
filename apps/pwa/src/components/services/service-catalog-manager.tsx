@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import {
   Banknote,
   ChevronDown,
@@ -102,14 +103,34 @@ export function ServiceCatalogManager({
     {},
   )
   const [openFamilies, setOpenFamilies] = useState<Record<string, boolean>>({})
-  const [importing, setImporting] = useState(false)
-  const [search, setSearch] = useState('')
   const [starterImportUsed, setStarterImportUsed] = useState(
     () =>
       typeof window !== 'undefined' &&
       window.localStorage.getItem(starterImportKey) === '1',
   )
-  const [error, setError] = useState<string | null>(null)
+
+  const importTemplatesMutation = useMutation({
+    mutationFn: () => {
+      if (!dc) {
+        throw new Error('اتصال داده برقرار نیست')
+      }
+      return dc.services.importStarterTemplates()
+    },
+    meta: { errorMessage: 'افزودن لیست آماده انجام نشد' },
+    onSuccess: () => {
+      window.localStorage.setItem(starterImportKey, '1')
+      setStarterImportUsed(true)
+      onChanged()
+    },
+  })
+
+  const importTemplates = () => {
+    if (!dc) return
+    importTemplatesMutation.mutate()
+  }
+
+  const importing = importTemplatesMutation.isPending
+  const [search, setSearch] = useState('')
 
   const catalog = useMemo(
     () => buildCatalog(categories, families, services),
@@ -183,24 +204,6 @@ export function ServiceCatalogManager({
       familyId !== undefined ? familyId : (families[0]?.id ?? null),
     )
     setServiceDrawerOpen(true)
-  }
-
-  const importTemplates = async () => {
-    if (!dc) return
-    setImporting(true)
-    setError(null)
-    try {
-      await dc.services.importStarterTemplates()
-      window.localStorage.setItem(starterImportKey, '1')
-      setStarterImportUsed(true)
-      onChanged()
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'افزودن لیست آماده انجام نشد',
-      )
-    } finally {
-      setImporting(false)
-    }
   }
 
   const noCatalog =
@@ -314,7 +317,6 @@ export function ServiceCatalogManager({
               </Button>
             ) : null}
           </div>
-          {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
         <div className="space-y-2 px-2 pb-2 sm:space-y-3 sm:px-4 sm:pb-4">
           {noCatalog ? (

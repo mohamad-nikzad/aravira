@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Banknote, Clock3, Pencil, Plus, Search, Sparkles } from 'lucide-react'
 import { Badge } from '@repo/ui/badge'
 import { Button } from '@repo/ui/button'
@@ -13,6 +14,9 @@ import type {
 } from '@repo/salon-core/types'
 import { toPersianDigits } from '@repo/salon-core/persian-digits'
 import { useManagerDataClient } from '#/lib/manager-data-client'
+import { useManagerAddonsQuery } from '#/lib/manager-data-queries'
+import { getMutationErrorMessage } from '#/lib/query-client'
+import { managerAddonsQueryKey } from '#/lib/query-keys'
 import { ServiceAddonDrawer } from './service-addon-drawer'
 
 interface ServiceAddonManagerProps {
@@ -48,34 +52,15 @@ export function ServiceAddonManager({
   onChanged,
 }: ServiceAddonManagerProps) {
   const dc = useManagerDataClient()
-  const [addons, setAddons] = useState<ServiceAddon[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const { data: addons = [], isPending, error } = useManagerAddonsQuery(!!dc)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedAddon, setSelectedAddon] = useState<ServiceAddon | null>(null)
   const [search, setSearch] = useState('')
-  const [error, setError] = useState<string | null>(null)
 
-  const refreshAddons = async () => {
-    if (!dc) return
-    setError(null)
-    try {
-      setAddons(await dc.services.addons.list({ includeInactive: true }))
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'خواندن افزودنی‌ها انجام نشد',
-      )
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (!dc) {
-      setLoading(false)
-      return
-    }
-    void refreshAddons()
-  }, [dc])
+  const errorMessage = error
+    ? getMutationErrorMessage(error, 'خواندن افزودنی‌ها انجام نشد')
+    : null
 
   const activeCount = addons.filter((addon) => addon.active).length
   const inactiveCount = addons.length - activeCount
@@ -97,7 +82,7 @@ export function ServiceAddonManager({
   const handleSuccess = () => {
     setDrawerOpen(false)
     setSelectedAddon(null)
-    void refreshAddons()
+    void queryClient.invalidateQueries({ queryKey: managerAddonsQueryKey })
     onChanged()
   }
 
@@ -161,10 +146,12 @@ export function ServiceAddonManager({
               افزودنی
             </Button>
           </div>
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {errorMessage && (
+            <p className="text-xs text-destructive">{errorMessage}</p>
+          )}
         </div>
         <div className="space-y-2 px-2 pb-2 sm:space-y-3 sm:px-4 sm:pb-4">
-          {loading ? (
+          {isPending ? (
             <div className="flex items-center justify-center rounded-lg border border-border/60 bg-background py-8">
               <Spinner />
             </div>

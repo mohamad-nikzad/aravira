@@ -1,14 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Card, CardContent, CardHeader } from '@repo/ui/card'
 import { Skeleton } from '@repo/ui/skeleton'
-import type {
-  Service,
-  ServiceCategory,
-  ServiceFamily,
-} from '@repo/salon-core/types'
 
 import { ServiceAddonManager } from '#/components/services/service-addon-manager'
 import { ServiceCatalogManager } from '#/components/services/service-catalog-manager'
@@ -17,6 +12,8 @@ import {
   useBumpOfflineData,
   useManagerDataClient,
 } from '#/lib/manager-data-client'
+import { useManagerServiceCatalogQuery } from '#/lib/manager-data-queries'
+import { managerServiceCatalogQueryKey } from '#/lib/query-keys'
 
 export const Route = createFileRoute('/_authed/services')({
   beforeLoad: ({ context }) => {
@@ -60,48 +57,24 @@ function ServicesSkeleton() {
 
 function ServicesPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user } = useAuth()
   const dc = useManagerDataClient()
   const bumpOfflineData = useBumpOfflineData()
-  const [services, setServices] = useState<Service[]>([])
-  const [categories, setCategories] = useState<ServiceCategory[]>([])
-  const [families, setFamilies] = useState<ServiceFamily[]>([])
-  const [loading, setLoading] = useState(true)
 
-  const refreshCatalog = useCallback(async () => {
-    if (!dc) return
-    const [nextCategories, nextFamilies, nextServices] = await Promise.all([
-      dc.services.categories.list({ includeInactive: true }),
-      dc.services.families.list({ includeInactive: true }),
-      dc.services.list({ includeInactive: true }),
-    ])
-    setCategories(nextCategories)
-    setFamilies(nextFamilies)
-    setServices(nextServices)
-  }, [dc])
+  const catalogQuery = useManagerServiceCatalogQuery(
+    !!dc && user?.role === 'manager',
+  )
+  const categories = catalogQuery.data?.categories ?? []
+  const families = catalogQuery.data?.families ?? []
+  const services = catalogQuery.data?.services ?? []
 
-  useEffect(() => {
-    if (!dc || user?.role !== 'manager') {
-      setLoading(false)
-      return
-    }
-
-    let cancelled = false
-    setLoading(true)
-    void refreshCatalog().finally(() => {
-      if (!cancelled) setLoading(false)
-    })
-    const unsubSvc = dc.services.subscribe((list) => {
-      if (!cancelled) setServices(list)
+  const refreshCatalog = () =>
+    void queryClient.invalidateQueries({
+      queryKey: managerServiceCatalogQueryKey,
     })
 
-    return () => {
-      cancelled = true
-      unsubSvc()
-    }
-  }, [dc, refreshCatalog, user?.role])
-
-  if (loading) {
+  if (catalogQuery.isPending && !!dc) {
     return <ServicesSkeleton />
   }
 
@@ -142,7 +115,7 @@ function ServicesPage() {
           families={families}
           starterImportKey={`saloora:starter-services-used:${user.salonId}`}
           onChanged={() => {
-            void refreshCatalog()
+            refreshCatalog()
             bumpOfflineData()
           }}
         />

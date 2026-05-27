@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@repo/ui/button'
@@ -22,7 +23,6 @@ import {
 } from '#/components/form-sheet'
 import { useDismissGuard } from '#/lib/use-dismiss-guard'
 import { useManagerDataClient } from '#/lib/manager-data-client'
-import { runMutation } from '#/lib/run-mutation'
 import { api } from '#/lib/api-client'
 
 const tagOptions = [
@@ -98,8 +98,8 @@ export function ClientDrawer({
     requestClose(false)
   }
 
-  const onSubmit = handleSubmit(async (values) => {
-    const result = await runMutation(async () => {
+  const saveClient = useMutation({
+    mutationFn: async (values: ClientFormInput) => {
       if (dataClient) {
         if (isEditing) {
           await dataClient.clients.update(client.id, values)
@@ -127,9 +127,17 @@ export function ClientDrawer({
         }
         throw error
       }
-    })
+    },
+    meta: { errorMessage: 'ذخیره اطلاعات مشتری انجام نشد' },
+  })
 
-    if (result.ok) onSuccess()
+  const onSubmit = handleSubmit(async (values) => {
+    try {
+      await saveClient.mutateAsync(values)
+      onSuccess()
+    } catch {
+      // Toast handled by mutation cache.
+    }
   })
 
   return (

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -25,7 +26,6 @@ import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
 import { staffCreateSchema } from '@repo/salon-core/forms/staff'
 import type { StaffCreateFormInput } from '@repo/salon-core/forms/staff'
 import { DataClientHttpError } from '@repo/data-client'
-import { runMutation } from '#/lib/run-mutation'
 import { api } from '#/lib/api-client'
 
 interface StaffDrawerProps {
@@ -79,8 +79,8 @@ export function StaffDrawer({
     requestClose(false)
   }
 
-  const onSubmit = handleSubmit(async (values) => {
-    const result = await runMutation(async () => {
+  const createStaff = useMutation({
+    mutationFn: async (values: StaffCreateFormInput) => {
       try {
         await api.staff.create({
           ...values,
@@ -96,9 +96,17 @@ export function StaffDrawer({
         }
         throw error
       }
-    })
+    },
+    meta: { errorMessage: 'افزودن پرسنل انجام نشد' },
+  })
 
-    if (result.ok) onSuccess()
+  const onSubmit = handleSubmit(async (values) => {
+    try {
+      await createStaff.mutateAsync(values)
+      onSuccess()
+    } catch {
+      // Toast handled by mutation cache.
+    }
   })
 
   return (

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -11,7 +12,6 @@ import {
 } from '@repo/ui/drawer'
 import { Button } from '@repo/ui/button'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field'
-import { FormRootError } from '@repo/ui/form'
 import { Input } from '@repo/ui/input'
 import {
   Select,
@@ -58,7 +58,6 @@ export function ServiceFamilyDrawer({
     control,
     handleSubmit,
     reset,
-    setError,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<ServiceFamilyCreateInput>({
     resolver: zodResolver(serviceFamilyFormSchema),
@@ -81,27 +80,27 @@ export function ServiceFamilyDrawer({
   const nameValue = useWatch({ control, name: 'name' })
   const categoryValue = useWatch({ control, name: 'categoryId' })
 
-  const onSubmit = handleSubmit(async (values) => {
-    if (!dc) {
-      setError('root', { message: 'اتصال داده برقرار نیست' })
-      return
-    }
-    try {
+  const saveFamily = useMutation({
+    mutationFn: async (values: ServiceFamilyCreateInput) => {
+      if (!dc) {
+        throw new DataClientHttpError('اتصال داده برقرار نیست', 0, null)
+      }
       const payload = serviceFamilyFormSchema.parse(values)
       if (isEditing) {
         await dc.services.families.update(family.id, payload)
       } else {
         await dc.services.families.create(payload)
       }
+    },
+    meta: { errorMessage: 'ذخیره گروه خدمات انجام نشد' },
+  })
+
+  const onSubmit = handleSubmit(async (values) => {
+    try {
+      await saveFamily.mutateAsync(values)
       onSuccess()
-    } catch (err) {
-      const msg =
-        err instanceof DataClientHttpError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : 'خطایی رخ داد'
-      setError('root', { message: msg })
+    } catch {
+      // Toast handled by mutation cache.
     }
   })
 
@@ -160,7 +159,6 @@ export function ServiceFamilyDrawer({
               <Input id="service-family-name" {...register('name')} />
               {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
-            <FormRootError message={errors.root?.message} />
           </FieldGroup>
         </form>
         <DrawerFooter>

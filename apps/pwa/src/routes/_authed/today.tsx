@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   AlertTriangle,
   CalendarDays,
@@ -1182,6 +1182,17 @@ function StaffTodayView({
     useState<StatusActionFeedback>(null)
   const [clockHm, setClockHm] = useState(() => salonCurrentHm())
 
+  const updateAppointmentStatus = useMutation({
+    mutationFn: ({
+      appointmentId,
+      status,
+    }: {
+      appointmentId: string
+      status: AppointmentWithDetails['status']
+    }) => api.appointments.updateStatus(appointmentId, status),
+    meta: { skipSuccessToast: true, skipErrorToast: true },
+  })
+
   useEffect(() => {
     const timer = window.setInterval(() => setClockHm(salonCurrentHm()), 60_000)
     return () => window.clearInterval(timer)
@@ -1275,7 +1286,10 @@ function StaffTodayView({
       message: 'در حال ثبت وضعیت...',
     })
     try {
-      const payload = await api.appointments.updateStatus(appointmentId, status)
+      const payload = await updateAppointmentStatus.mutateAsync({
+        appointmentId,
+        status,
+      })
       setStatusFeedback({
         appointmentId,
         status,
