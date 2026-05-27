@@ -499,7 +499,7 @@ function SettingsPage() {
                 icon={ListChecks}
                 label="راه‌اندازی سالن"
                 hint="مراحل آماده‌سازی"
-                href="/onboarding"
+                to="/onboarding"
               />
             </SettingsGroup>
           ) : null}

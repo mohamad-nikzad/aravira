@@ -1,10 +1,18 @@
-import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
+import {
+  Outlet,
+  createFileRoute,
+  isRedirect,
+  redirect,
+} from '@tanstack/react-router'
+import type { OnboardingResponse } from '@repo/api-client'
 import type { User } from '@repo/salon-core/types'
 
+import { api } from '#/lib/api-client'
 import { authQueryKey } from '#/lib/auth'
 import { BottomNav } from '#/components/bottom-nav'
 import { ManagerSyncBar } from '#/components/manager-sync-bar'
 import { ManagerDataClientProvider } from '#/lib/manager-data-client'
+import { onboardingQueryKey } from '#/lib/query-keys'
 
 export const Route = createFileRoute('/_authed')({
   beforeLoad: async ({ context, location }) => {
@@ -17,6 +25,23 @@ export const Route = createFileRoute('/_authed')({
         search: { redirect: location.pathname },
       })
     }
+
+    if (user.role === 'manager' && location.pathname !== '/onboarding') {
+      try {
+        const data = await context.queryClient.ensureQueryData<OnboardingResponse>({
+          queryKey: onboardingQueryKey,
+          queryFn: ({ signal }) => api.onboarding.get({ signal }),
+        })
+        const steps = data.onboarding.steps
+        if (!steps.servicesAdded || !steps.staffAdded) {
+          throw redirect({ to: '/onboarding' })
+        }
+      } catch (err) {
+        if (isRedirect(err)) throw err
+        // Offline / network failure: don't block the app.
+      }
+    }
+
     return { user }
   },
   component: AuthedLayout,
