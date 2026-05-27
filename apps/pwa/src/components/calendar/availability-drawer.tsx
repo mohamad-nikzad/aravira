@@ -32,11 +32,11 @@ import {
 } from '@repo/ui/select'
 import { Spinner } from '@repo/ui/spinner'
 import { cn } from '@repo/ui/utils'
-import {
-  AVAILABILITY_EMPTY_REASONS,
-  type AvailabilityEmptyReason,
-  type AvailabilityResponse,
-  type AvailabilitySlot,
+import { AVAILABILITY_EMPTY_REASONS } from '@repo/salon-core/availability'
+import type {
+  AvailabilityEmptyReason,
+  AvailabilityResponse,
+  AvailabilitySlot,
 } from '@repo/salon-core/availability'
 import { formatJalaliFullDate } from '@repo/salon-core/jalali'
 import {
@@ -46,10 +46,8 @@ import {
 import { addDaysYmd } from '@repo/salon-core/salon-local-time'
 import { eligibleStaffForService } from '@repo/salon-core/staff-service-autofill'
 import type { Service, User } from '@repo/salon-core/types'
-import {
-  availabilitySearchSchema,
-  type AvailabilitySearchInput,
-} from '@repo/salon-core/forms/appointment'
+import { availabilitySearchSchema } from '@repo/salon-core/forms/appointment'
+import type { AvailabilitySearchInput } from '@repo/salon-core/forms/appointment'
 import { ApiError } from '@repo/api-client'
 import { ServicePicker } from '#/components/services/service-picker'
 import { api } from '#/lib/api-client'
@@ -151,9 +149,9 @@ export function AvailabilityDrawer({
       date: initialDate,
     },
   })
-  const serviceId = watch('serviceId') ?? ''
-  const staffSelection = watch('staffSelection') ?? ANY_STAFF_VALUE
-  const date = watch('date') ?? initialDate
+  const serviceId = watch('serviceId')
+  const staffSelection = watch('staffSelection')
+  const date = watch('date')
   const [loadingMode, setLoadingMode] = useState<'day' | 'nearest' | null>(null)
   const [error, setError] = useState('')
   const [dayResponse, setDayResponse] =
@@ -469,7 +467,7 @@ export function AvailabilityDrawer({
                           </div>
                           <Badge variant="secondary" className="text-[10px]">
                             اولین زمان{' '}
-                            {formatPersianTime(group.slots[0]!.startTime)}
+                            {formatPersianTime(group.slots[0].startTime)}
                           </Badge>
                         </div>
                         <div className="grid grid-cols-1 gap-2">

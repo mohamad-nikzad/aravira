@@ -5,9 +5,10 @@ import {
   useEffect,
   useMemo,
   useState,
-  type ReactNode,
 } from 'react'
-import { createDataClient, type DataClient } from '@repo/data-client'
+import type { ReactNode } from 'react'
+import { createDataClient } from '@repo/data-client'
+import type { DataClient } from '@repo/data-client'
 
 import { env } from '#/env'
 
@@ -17,9 +18,15 @@ type ManagerDataContextValue = {
   bumpOfflineData: () => void
 }
 
-const ManagerDataClientContext = createContext<ManagerDataContextValue | null>(null)
+const ManagerDataClientContext = createContext<ManagerDataContextValue | null>(
+  null,
+)
 
-export function ManagerDataClientProvider({ children }: { children: ReactNode }) {
+export function ManagerDataClientProvider({
+  children,
+}: {
+  children: ReactNode
+}) {
   const [client] = useState<DataClient | null>(() =>
     typeof window === 'undefined'
       ? null
@@ -62,7 +69,9 @@ export function ManagerDataClientProvider({ children }: { children: ReactNode })
   }, [client])
 
   return (
-    <ManagerDataClientContext.Provider value={ctx}>{children}</ManagerDataClientContext.Provider>
+    <ManagerDataClientContext.Provider value={ctx}>
+      {children}
+    </ManagerDataClientContext.Provider>
   )
 }
 

@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Plus, X } from "lucide-react";
+import { useEffect, useMemo } from 'react'
+import { Controller, useForm, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Check, Plus, X } from 'lucide-react'
 import {
   Drawer,
   DrawerContent,
@@ -9,85 +9,85 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-} from "@repo/ui/drawer";
-import { Button } from "@repo/ui/button";
-import { Input } from "@repo/ui/input";
-import { Textarea } from "@repo/ui/textarea";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui/field";
-import { FormRootError } from "@repo/ui/form";
+} from '@repo/ui/drawer'
+import { Button } from '@repo/ui/button'
+import { Input } from '@repo/ui/input'
+import { Textarea } from '@repo/ui/textarea'
+import { Field, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field'
+import { FormRootError } from '@repo/ui/form'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/select";
-import { Spinner } from "@repo/ui/spinner";
+} from '@repo/ui/select'
+import { Spinner } from '@repo/ui/spinner'
 import type {
   Service,
   ServiceAddon,
   ServiceAddonScope,
   ServiceCategory,
   ServiceFamily,
-} from "@repo/salon-core/types";
-import {
-  serviceAddonFormSchema,
-  type ServiceAddonCreatePayload,
-  type ServiceAddonScopeInput,
-} from "@repo/salon-core/forms/service";
+} from '@repo/salon-core/types'
+import { serviceAddonFormSchema } from '@repo/salon-core/forms/service'
+import type {
+  ServiceAddonCreatePayload,
+  ServiceAddonScopeInput,
+} from '@repo/salon-core/forms/service'
 import {
   parseLocalizedInt,
   toPersianDigits,
-} from "@repo/salon-core/persian-digits";
-import { DataClientHttpError } from "@repo/data-client";
-import { useManagerDataClient } from "#/lib/manager-data-client";
-import { useDismissGuard } from "#/lib/use-dismiss-guard";
+} from '@repo/salon-core/persian-digits'
+import { DataClientHttpError } from '@repo/data-client'
+import { useManagerDataClient } from '#/lib/manager-data-client'
+import { useDismissGuard } from '#/lib/use-dismiss-guard'
 
 type ServiceAddonFormInput = {
-  name: string;
-  priceDelta: number;
-  durationDelta: number;
-  active: boolean;
-  sortOrder: number;
-  description?: string;
-  scopes: ServiceAddonScopeInput[];
-};
+  name: string
+  priceDelta: number
+  durationDelta: number
+  active: boolean
+  sortOrder: number
+  description?: string
+  scopes: ServiceAddonScopeInput[]
+}
 
 interface ServiceAddonDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  addon: ServiceAddon | null;
-  categories: ServiceCategory[];
-  families: ServiceFamily[];
-  services: Service[];
-  nextSortOrder: number;
-  onSuccess: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  addon: ServiceAddon | null
+  categories: ServiceCategory[]
+  families: ServiceFamily[]
+  services: Service[]
+  nextSortOrder: number
+  onSuccess: () => void
 }
 
 function scopeKey(scope: ServiceAddonScopeInput) {
-  if (scope.type === "category") return `category:${scope.categoryId}`;
-  if (scope.type === "family") return `family:${scope.familyId}`;
-  return `service:${scope.serviceId}`;
+  if (scope.type === 'category') return `category:${scope.categoryId}`
+  if (scope.type === 'family') return `family:${scope.familyId}`
+  return `service:${scope.serviceId}`
 }
 
 function addonScopeToInput(scope: ServiceAddonScope): ServiceAddonScopeInput {
-  if (scope.type === "category")
-    return { type: "category", categoryId: scope.categoryId };
-  if (scope.type === "family")
-    return { type: "family", familyId: scope.familyId };
-  return { type: "service", serviceId: scope.serviceId };
+  if (scope.type === 'category')
+    return { type: 'category', categoryId: scope.categoryId }
+  if (scope.type === 'family')
+    return { type: 'family', familyId: scope.familyId }
+  return { type: 'service', serviceId: scope.serviceId }
 }
 
 function emptyValues(sortOrder: number): ServiceAddonFormInput {
   return {
-    name: "",
+    name: '',
     priceDelta: 0,
     durationDelta: 0,
     active: true,
     sortOrder,
-    description: "",
+    description: '',
     scopes: [],
-  };
+  }
 }
 
 function addonToValues(addon: ServiceAddon): ServiceAddonFormInput {
@@ -97,9 +97,9 @@ function addonToValues(addon: ServiceAddon): ServiceAddonFormInput {
     durationDelta: addon.durationDelta,
     active: addon.active,
     sortOrder: addon.sortOrder,
-    description: addon.description ?? "",
+    description: addon.description ?? '',
     scopes: addon.scopes.map(addonScopeToInput),
-  };
+  }
 }
 
 function formatScope(
@@ -108,25 +108,25 @@ function formatScope(
   families: ServiceFamily[],
   services: Service[],
 ) {
-  if (scope.type === "category") {
+  if (scope.type === 'category') {
     return {
       label:
-        categories.find((item) => item.id === scope.categoryId)?.name ?? "دسته",
-      level: "دسته",
-    };
+        categories.find((item) => item.id === scope.categoryId)?.name ?? 'دسته',
+      level: 'دسته',
+    }
   }
-  if (scope.type === "family") {
+  if (scope.type === 'family') {
     return {
       label:
         families.find((item) => item.id === scope.familyId)?.name ??
-        "خانواده خدمت",
-      level: "خانواده خدمت",
-    };
+        'خانواده خدمت',
+      level: 'خانواده خدمت',
+    }
   }
   return {
-    label: services.find((item) => item.id === scope.serviceId)?.name ?? "خدمت",
-    level: "خدمت",
-  };
+    label: services.find((item) => item.id === scope.serviceId)?.name ?? 'خدمت',
+    level: 'خدمت',
+  }
 }
 
 export function ServiceAddonDrawer({
@@ -139,8 +139,8 @@ export function ServiceAddonDrawer({
   nextSortOrder,
   onSuccess,
 }: ServiceAddonDrawerProps) {
-  const dc = useManagerDataClient();
-  const isEditing = Boolean(addon);
+  const dc = useManagerDataClient()
+  const isEditing = Boolean(addon)
   const {
     control,
     register,
@@ -152,82 +152,82 @@ export function ServiceAddonDrawer({
   } = useForm<ServiceAddonFormInput>({
     resolver: zodResolver(serviceAddonFormSchema),
     defaultValues: emptyValues(nextSortOrder),
-  });
+  })
 
   useEffect(() => {
-    if (!open) return;
-    reset(addon ? addonToValues(addon) : emptyValues(nextSortOrder));
-  }, [addon, nextSortOrder, open, reset]);
+    if (!open) return
+    reset(addon ? addonToValues(addon) : emptyValues(nextSortOrder))
+  }, [addon, nextSortOrder, open, reset])
 
-  const watchedScopes = useWatch({ control, name: "scopes" });
-  const priceDelta = useWatch({ control, name: "priceDelta" }) ?? 0;
-  const durationDelta = useWatch({ control, name: "durationDelta" }) ?? 0;
-  const scopes = useMemo(() => watchedScopes ?? [], [watchedScopes]);
-  const scopeKeys = useMemo(() => new Set(scopes.map(scopeKey)), [scopes]);
+  const watchedScopes = useWatch({ control, name: 'scopes' })
+  const priceDelta = useWatch({ control, name: 'priceDelta' })
+  const durationDelta = useWatch({ control, name: 'durationDelta' })
+  const scopes = useMemo(() => watchedScopes, [watchedScopes])
+  const scopeKeys = useMemo(() => new Set(scopes.map(scopeKey)), [scopes])
 
   const addScope = (scope: ServiceAddonScopeInput) => {
-    const key = scopeKey(scope);
-    if (scopeKeys.has(key)) return;
-    setValue("scopes", [...scopes, scope], {
+    const key = scopeKey(scope)
+    if (scopeKeys.has(key)) return
+    setValue('scopes', [...scopes, scope], {
       shouldDirty: true,
       shouldValidate: true,
-    });
-  };
+    })
+  }
 
   const removeScope = (scope: ServiceAddonScopeInput) => {
-    const key = scopeKey(scope);
+    const key = scopeKey(scope)
     setValue(
-      "scopes",
+      'scopes',
       scopes.filter((item) => scopeKey(item) !== key),
       { shouldDirty: true, shouldValidate: true },
-    );
-  };
+    )
+  }
 
   const onSubmit = handleSubmit(async (values) => {
     if (!dc) {
-      setError("root", { message: "اتصال داده برقرار نیست" });
-      return;
+      setError('root', { message: 'اتصال داده برقرار نیست' })
+      return
     }
     try {
       const payload = serviceAddonFormSchema.parse(
         values,
-      ) as ServiceAddonCreatePayload;
+      ) as ServiceAddonCreatePayload
       if (isEditing && addon) {
-        await dc.services.addons.update(addon.id, payload);
+        await dc.services.addons.update(addon.id, payload)
       } else {
-        await dc.services.addons.create(payload);
+        await dc.services.addons.create(payload)
       }
-      onSuccess();
+      onSuccess()
     } catch (err) {
       const msg =
         err instanceof DataClientHttpError
           ? err.message
           : err instanceof Error
             ? err.message
-            : "ذخیره افزودنی انجام نشد";
-      setError("root", { message: msg });
+            : 'ذخیره افزودنی انجام نشد'
+      setError('root', { message: msg })
     }
-  });
+  })
 
   const { requestClose, confirmDialog } = useDismissGuard({
     isDirty: isDirty && !isSubmitting,
     onClose: () => onOpenChange(false),
-  });
+  })
 
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {
-      onOpenChange(true);
-      return;
+      onOpenChange(true)
+      return
     }
-    requestClose(false);
-  };
+    requestClose(false)
+  }
 
   return (
     <Drawer open={open} onOpenChange={handleOpenChange}>
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>
-            {isEditing ? "ویرایش افزودنی" : "افزودنی جدید"}
+            {isEditing ? 'ویرایش افزودنی' : 'افزودنی جدید'}
           </DrawerTitle>
           <DrawerDescription>
             افزودنی‌ها روی خدمت‌های انتخاب‌شده به قیمت یا زمان رزرو اضافه
@@ -241,7 +241,7 @@ export function ServiceAddonDrawer({
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="addon-name">نام افزودنی</FieldLabel>
-              <Input id="addon-name" {...register("name")} />
+              <Input id="addon-name" {...register('name')} />
               {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
             <div className="grid grid-cols-2 gap-3">
@@ -257,7 +257,7 @@ export function ServiceAddonDrawer({
                       id="addon-price"
                       type="text"
                       inputMode="numeric"
-                      value={toPersianDigits(field.value ?? 0)}
+                      value={toPersianDigits(field.value)}
                       onChange={(event) =>
                         field.onChange(
                           Math.max(
@@ -288,7 +288,7 @@ export function ServiceAddonDrawer({
                       id="addon-duration"
                       type="text"
                       inputMode="numeric"
-                      value={toPersianDigits(field.value ?? 0)}
+                      value={toPersianDigits(field.value)}
                       onChange={(event) =>
                         field.onChange(
                           Math.max(
@@ -316,7 +316,7 @@ export function ServiceAddonDrawer({
               <Textarea
                 id="addon-description"
                 rows={3}
-                {...register("description")}
+                {...register('description')}
               />
               {errors.description && (
                 <FieldError>{errors.description.message}</FieldError>
@@ -330,8 +330,8 @@ export function ServiceAddonDrawer({
                   name="active"
                   render={({ field }) => (
                     <Select
-                      value={field.value ? "on" : "off"}
-                      onValueChange={(value) => field.onChange(value === "on")}
+                      value={field.value ? 'on' : 'off'}
+                      onValueChange={(value) => field.onChange(value === 'on')}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue />
@@ -354,7 +354,7 @@ export function ServiceAddonDrawer({
                       id="addon-sort"
                       type="text"
                       inputMode="numeric"
-                      value={toPersianDigits(field.value ?? 0)}
+                      value={toPersianDigits(field.value)}
                       onChange={(event) =>
                         field.onChange(
                           Math.max(0, parseLocalizedInt(event.target.value, 0)),
@@ -378,7 +378,7 @@ export function ServiceAddonDrawer({
               <div className="grid gap-2 sm:grid-cols-3">
                 <Select
                   onValueChange={(value) =>
-                    addScope({ type: "category", categoryId: value })
+                    addScope({ type: 'category', categoryId: value })
                   }
                 >
                   <SelectTrigger className="w-full">
@@ -398,7 +398,7 @@ export function ServiceAddonDrawer({
                 </Select>
                 <Select
                   onValueChange={(value) =>
-                    addScope({ type: "family", familyId: value })
+                    addScope({ type: 'family', familyId: value })
                   }
                 >
                   <SelectTrigger className="w-full">
@@ -418,7 +418,7 @@ export function ServiceAddonDrawer({
                 </Select>
                 <Select
                   onValueChange={(value) =>
-                    addScope({ type: "service", serviceId: value })
+                    addScope({ type: 'service', serviceId: value })
                   }
                 >
                   <SelectTrigger className="w-full">
@@ -445,7 +445,7 @@ export function ServiceAddonDrawer({
                       categories,
                       families,
                       services,
-                    );
+                    )
                     return (
                       <span
                         key={scopeKey(scope)}
@@ -464,7 +464,7 @@ export function ServiceAddonDrawer({
                           <X className="h-3 w-3" />
                         </button>
                       </span>
-                    );
+                    )
                   })}
                 </div>
               ) : (
@@ -490,7 +490,7 @@ export function ServiceAddonDrawer({
             ) : (
               <Check className="ml-2 h-4 w-4" />
             )}
-            {isSubmitting ? "…" : isEditing ? "ذخیره" : "افزودن"}
+            {isSubmitting ? '…' : isEditing ? 'ذخیره' : 'افزودن'}
           </Button>
           <Button
             type="button"
@@ -504,5 +504,5 @@ export function ServiceAddonDrawer({
       </DrawerContent>
       {confirmDialog}
     </Drawer>
-  );
+  )
 }

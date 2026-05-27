@@ -1,13 +1,7 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import {
-  CalendarDays,
-  CalendarRange,
-  Inbox,
-  Menu,
-  Users,
-  type LucideIcon,
-} from 'lucide-react'
+import { CalendarDays, CalendarRange, Inbox, Menu, Users } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { cn } from '@repo/ui/utils'
 
 import { useAuth } from '#/lib/auth'
@@ -29,7 +23,13 @@ const managerItems: ReadonlyArray<NavItem> = [
     to: '/settings',
     label: 'بیشتر',
     icon: Menu,
-    matchPrefixes: ['/settings', '/dashboard', '/retention', '/services', '/staff'],
+    matchPrefixes: [
+      '/settings',
+      '/dashboard',
+      '/retention',
+      '/services',
+      '/staff',
+    ],
   },
 ]
 
@@ -59,7 +59,9 @@ export function BottomNav() {
       <div className="mx-auto flex max-w-lg items-stretch justify-around">
         {items.map((item) => {
           const prefixes = item.matchPrefixes ?? [item.to]
-          const isActive = prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+          const isActive = prefixes.some(
+            (p) => pathname === p || pathname.startsWith(`${p}/`),
+          )
           const Icon = item.icon
           return (
             <Link
@@ -67,7 +69,9 @@ export function BottomNav() {
               to={item.to}
               className={cn(
                 'relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-xs font-medium transition-colors touch-manipulation',
-                isActive ? 'text-primary' : 'text-muted-foreground active:text-foreground',
+                isActive
+                  ? 'text-primary'
+                  : 'text-muted-foreground active:text-foreground',
               )}
             >
               <div

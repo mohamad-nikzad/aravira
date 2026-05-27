@@ -54,7 +54,9 @@ export const Route = createFileRoute('/_authed/clients')({
 function ClientsError({ error }: { error: Error }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-      <p className="text-sm text-muted-foreground">فهرست مشتریان بارگذاری نشد</p>
+      <p className="text-sm text-muted-foreground">
+        فهرست مشتریان بارگذاری نشد
+      </p>
       <p className="text-xs text-destructive">{error.message}</p>
     </div>
   )
@@ -77,7 +79,12 @@ function InsightCard({
     tone === 'rose' ? 'bg-secondary text-plum-deep' : 'bg-sky-soft text-sky-fg'
   return (
     <div className="flex min-w-[150px] items-center gap-2.5 rounded-[18px] border border-line-soft bg-card p-3">
-      <div className={cn('flex size-10 shrink-0 items-center justify-center rounded-2xl', toneClass)}>
+      <div
+        className={cn(
+          'flex size-10 shrink-0 items-center justify-center rounded-2xl',
+          toneClass,
+        )}
+      >
         <Icon className="size-5" />
       </div>
       <div className="min-w-0">
@@ -119,7 +126,7 @@ function ClientsPage() {
 
   const idb = useClientsListIndexedDbSources(true, isOnline, liveData)
   const data = idb.data ?? liveData
-  const clients: Client[] = data?.clients ?? []
+  const clients: Client[] = data.clients
 
   const followUpIds = useMemo(
     () => new Set((retentionData?.items ?? []).map((item) => item.client.id)),
@@ -133,7 +140,9 @@ function ClientsPage() {
   )
   const newThisWeekCount = useMemo(() => {
     const cutoff = Date.now() - WEEK_MS
-    return clients.filter((client) => new Date(client.createdAt).getTime() >= cutoff).length
+    return clients.filter(
+      (client) => new Date(client.createdAt).getTime() >= cutoff,
+    ).length
   }, [clients])
 
   const filtered = useMemo(() => {
@@ -143,7 +152,8 @@ function ClientsPage() {
       if (filter === 'followup' && !followUpIds.has(client.id)) return false
       if (q) {
         return (
-          client.name.toLowerCase().includes(q) || (client.phone ?? '').includes(search.trim())
+          client.name.toLowerCase().includes(q) ||
+          (client.phone ?? '').includes(search.trim())
         )
       }
       return true
@@ -178,15 +188,17 @@ function ClientsPage() {
     void queryClient.invalidateQueries({ queryKey: clientsQueryKey })
   }
 
-  if (!data && idb.idbLoading) {
+  if (idb.idbLoading && !idb.hasSnapshot && !isOnline) {
     return <ClientsSkeleton />
   }
 
-  if (!data) {
+  if (!idb.hasSnapshot && !isOnline && !idb.idbLoading) {
     return (
       <div className="flex h-full flex-col bg-background">
         <header className="border-b border-line-soft bg-card px-5 pt-3.5 pb-4">
-          <h1 className="text-[22px] font-extrabold tracking-tight text-foreground">مشتریان</h1>
+          <h1 className="text-[22px] font-extrabold tracking-tight text-foreground">
+            مشتریان
+          </h1>
         </header>
 
         <NetworkStatusBanner
@@ -200,11 +212,7 @@ function ClientsPage() {
 
         <OfflineStateCard
           title="فهرست مشتریان فعلا بارگذاری نشده است"
-          description={
-            isOnline
-              ? 'دریافت فهرست مشتریان کامل نشد. دوباره تلاش کنید.'
-              : 'برای اولین بارگذاری مشتریان باید دوباره به اینترنت متصل شوید.'
-          }
+          description="برای اولین بارگذاری مشتریان باید دوباره به اینترنت متصل شوید."
           onAction={() => void refetch()}
         />
       </div>
@@ -216,9 +224,14 @@ function ClientsPage() {
       <header className="border-b border-line-soft bg-card px-5 pt-3.5 pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h1 className="text-[22px] font-extrabold tracking-tight text-foreground">مشتریان</h1>
+            <h1 className="text-[22px] font-extrabold tracking-tight text-foreground">
+              مشتریان
+            </h1>
             <p className="mt-0.5 text-[13px] text-muted-foreground">
-              <span className="tabular-nums">{toPersianDigits(clients.length)}</span> مشتری فعال
+              <span className="tabular-nums">
+                {toPersianDigits(clients.length)}
+              </span>{' '}
+              مشتری فعال
             </p>
           </div>
         </div>
@@ -255,7 +268,9 @@ function ClientsPage() {
                 <span
                   className={cn(
                     'rounded-md px-1.5 text-[10px] font-semibold tabular-nums',
-                    active ? 'bg-white/20 text-primary-foreground' : 'bg-card text-muted-foreground',
+                    active
+                      ? 'bg-white/20 text-primary-foreground'
+                      : 'bg-card text-muted-foreground',
                   )}
                 >
                   {toPersianDigits(chip.count)}
@@ -277,7 +292,13 @@ function ClientsPage() {
 
       <div className="flex-1 overflow-auto pb-24">
         <div className="flex gap-2.5 overflow-x-auto px-5 pt-4 pb-1 scrollbar-hide">
-          <InsightCard tone="rose" icon={Crown} label="VIP" sub="مشتری ویژه" value={vipCount} />
+          <InsightCard
+            tone="rose"
+            icon={Crown}
+            label="VIP"
+            sub="مشتری ویژه"
+            value={vipCount}
+          />
           <InsightCard
             tone="sky"
             icon={Sparkles}
@@ -292,10 +313,16 @@ function ClientsPage() {
             <div className="flex flex-col items-center gap-2 py-16 text-center">
               <SakuraMark size={56} color="var(--blush-soft)" />
               <p className="text-sm text-muted-foreground">
-                {search || filter !== 'all' ? 'مشتری‌ای یافت نشد' : 'هنوز مشتری‌ای ثبت نشده است'}
+                {search || filter !== 'all'
+                  ? 'مشتری‌ای یافت نشد'
+                  : 'هنوز مشتری‌ای ثبت نشده است'}
               </p>
               {!search && filter === 'all' ? (
-                <Button variant="link" onClick={handleAddClient} className="text-primary">
+                <Button
+                  variant="link"
+                  onClick={handleAddClient}
+                  className="text-primary"
+                >
                   اولین مشتری را اضافه کنید
                 </Button>
               ) : null}
@@ -308,7 +335,10 @@ function ClientsPage() {
                 </div>
                 <Card className="gap-0 overflow-hidden py-0">
                   {list.map((client, index) => {
-                    const accent = clientAccent(client, followUpIds.has(client.id))
+                    const accent = clientAccent(
+                      client,
+                      followUpIds.has(client.id),
+                    )
                     return (
                       <div
                         key={client.id}
@@ -336,7 +366,10 @@ function ClientsPage() {
                             {client.tags && client.tags.length > 0 ? (
                               <div className="mt-1.5 flex flex-wrap gap-1">
                                 {client.tags.slice(0, 2).map((tag) => (
-                                  <Badge key={tag.id} variant={tagTone(tag.label)}>
+                                  <Badge
+                                    key={tag.id}
+                                    variant={tagTone(tag.label)}
+                                  >
                                     {tag.label}
                                   </Badge>
                                 ))}

@@ -26,4 +26,5 @@ export const endpoints = {
   notificationTest: '/api/v1/notifications/test',
   notificationPreferences: '/api/v1/notification-preferences',
   businessSettings: '/api/v1/settings/business',
+  salonPublicSettings: '/api/v1/salon-public-settings',
 } as const

@@ -41,13 +41,13 @@ export function useKeyboardInset(active: boolean) {
     }
 
     const handleGeometryChange = (event: Event) => {
-      const target = event.target as VirtualKeyboardLike | null
-      setInset(target?.boundingRect?.height ?? 0)
+      const target = event.target as VirtualKeyboardLike
+      setInset(target.boundingRect.height)
     }
 
     if (vk) {
       vk.addEventListener('geometrychange', handleGeometryChange)
-      setInset(vk.boundingRect?.height ?? 0)
+      setInset(vk.boundingRect.height)
     } else if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', updateFromVisualViewport)
       window.visualViewport.addEventListener('scroll', updateFromVisualViewport)
@@ -62,8 +62,14 @@ export function useKeyboardInset(active: boolean) {
         }
       }
       if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', updateFromVisualViewport)
-        window.visualViewport.removeEventListener('scroll', updateFromVisualViewport)
+        window.visualViewport.removeEventListener(
+          'resize',
+          updateFromVisualViewport,
+        )
+        window.visualViewport.removeEventListener(
+          'scroll',
+          updateFromVisualViewport,
+        )
       }
       root.style.removeProperty('--keyboard-inset')
     }

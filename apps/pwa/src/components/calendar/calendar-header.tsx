@@ -1,4 +1,11 @@
-import { addDays, addWeeks, addMonths, subDays, subWeeks, subMonths } from 'date-fns'
+import {
+  addDays,
+  addWeeks,
+  addMonths,
+  subDays,
+  subWeeks,
+  subMonths,
+} from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import type { CalendarView } from '@repo/salon-core/types'

@@ -7,7 +7,12 @@ type SalooraMarkProps = {
 
 export function SalooraMark({ className, imageClassName }: SalooraMarkProps) {
   return (
-    <span className={cn('inline-flex shrink-0 items-center justify-center', className)}>
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center',
+        className,
+      )}
+    >
       <img
         src="/brand/saloora-mark-clean.png"
         alt=""

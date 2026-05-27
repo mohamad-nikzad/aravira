@@ -45,7 +45,9 @@ function RetentionPending() {
 function RetentionError({ error }: { error: Error }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-      <p className="text-sm text-muted-foreground">پیگیری مشتریان بارگذاری نشد</p>
+      <p className="text-sm text-muted-foreground">
+        پیگیری مشتریان بارگذاری نشد
+      </p>
       <p className="text-xs text-destructive">{error.message}</p>
     </div>
   )
@@ -81,11 +83,12 @@ function RetentionPage() {
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: FollowUpStatus }) =>
       api.retention.updateStatus(id, status),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: retentionQueryKey }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: retentionQueryKey }),
   })
 
-  const items: RetentionItem[] = data.items ?? []
-  const busyId = updateStatus.isPending ? updateStatus.variables?.id ?? null : null
+  const items: RetentionItem[] = data.items
+  const busyId = updateStatus.isPending ? updateStatus.variables.id : null
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -102,14 +105,17 @@ function RetentionPage() {
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-lg font-bold">پیگیری مشتریان</h1>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            لیست بر اساس داده واقعی نوبت‌ها ساخته می‌شود؛ پیام خودکار ارسال نمی‌شود.
+            لیست بر اساس داده واقعی نوبت‌ها ساخته می‌شود؛ پیام خودکار ارسال
+            نمی‌شود.
           </p>
         </div>
       </header>
 
       <div className="flex-1 space-y-3 overflow-auto p-4">
         {items.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">موردی در صف نیست.</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            موردی در صف نیست.
+          </p>
         ) : (
           items.map((item) => (
             <Card key={item.id} className="border-border/50">
@@ -127,23 +133,31 @@ function RetentionPage() {
                   </Badge>
                 </div>
 
-                <p className="text-sm text-muted-foreground">{item.suggestedReason}</p>
+                <p className="text-sm text-muted-foreground">
+                  {item.suggestedReason}
+                </p>
 
                 <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4">
                   <div>
                     <span className="block text-[10px]">آخرین مراجعه</span>
                     <span className="font-medium text-foreground" dir="ltr">
-                      {item.lastVisitDate ? toPersianDigits(item.lastVisitDate) : '—'}
+                      {item.lastVisitDate
+                        ? toPersianDigits(item.lastVisitDate)
+                        : '—'}
                     </span>
                   </div>
                   <div>
                     <span className="block text-[10px]">آخرین خدمت</span>
-                    <span className="font-medium text-foreground">{item.lastServiceName ?? '—'}</span>
+                    <span className="font-medium text-foreground">
+                      {item.lastServiceName ?? '—'}
+                    </span>
                   </div>
                   <div>
                     <span className="block text-[10px]">مراجعات</span>
                     <span className="font-medium text-foreground" dir="ltr">
-                      {new Intl.NumberFormat('fa-IR').format(item.completedCount)}
+                      {new Intl.NumberFormat('fa-IR').format(
+                        item.completedCount,
+                      )}
                     </span>
                   </div>
                   <div>
@@ -156,14 +170,24 @@ function RetentionPage() {
 
                 <div className="flex flex-wrap gap-2">
                   {item.client.phone ? (
-                    <Button size="sm" variant="outline" className="touch-manipulation gap-1" asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="touch-manipulation gap-1"
+                      asChild
+                    >
                       <a href={`tel:${item.client.phone}`}>
                         <Phone className="h-3.5 w-3.5" />
                         تماس
                       </a>
                     </Button>
                   ) : null}
-                  <Button size="sm" variant="secondary" className="touch-manipulation gap-1" asChild>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="touch-manipulation gap-1"
+                    asChild
+                  >
                     <a href={`/calendar?clientId=${item.client.id}`}>
                       <CalendarPlus className="h-3.5 w-3.5" />
                       نوبت
@@ -173,7 +197,9 @@ function RetentionPage() {
                     size="sm"
                     className="touch-manipulation gap-1"
                     disabled={busyId === item.id}
-                    onClick={() => updateStatus.mutate({ id: item.id, status: 'reviewed' })}
+                    onClick={() =>
+                      updateStatus.mutate({ id: item.id, status: 'reviewed' })
+                    }
                   >
                     <Check className="h-3.5 w-3.5" />
                     بررسی شد
@@ -183,12 +209,19 @@ function RetentionPage() {
                     variant="ghost"
                     className="touch-manipulation gap-1 text-muted-foreground"
                     disabled={busyId === item.id}
-                    onClick={() => updateStatus.mutate({ id: item.id, status: 'dismissed' })}
+                    onClick={() =>
+                      updateStatus.mutate({ id: item.id, status: 'dismissed' })
+                    }
                   >
                     <X className="h-3.5 w-3.5" />
                     رد
                   </Button>
-                  <Button size="sm" variant="link" className="touch-manipulation px-0" asChild>
+                  <Button
+                    size="sm"
+                    variant="link"
+                    className="touch-manipulation px-0"
+                    asChild
+                  >
                     <a href={`/clients/${item.client.id}`}>پروفایل</a>
                   </Button>
                 </div>

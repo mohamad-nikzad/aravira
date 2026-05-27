@@ -35,11 +35,15 @@ export function ServiceWorkerRegister() {
     if (!import.meta.env.PROD) {
       void (async () => {
         const registrations = await navigator.serviceWorker.getRegistrations()
-        await Promise.all(registrations.map((registration) => registration.unregister()))
+        await Promise.all(
+          registrations.map((registration) => registration.unregister()),
+        )
 
         if ('caches' in window) {
           const cacheNames = await window.caches.keys()
-          await Promise.all(cacheNames.map((cacheName) => window.caches.delete(cacheName)))
+          await Promise.all(
+            cacheNames.map((cacheName) => window.caches.delete(cacheName)),
+          )
         }
       })()
 
@@ -80,7 +84,9 @@ export function ServiceWorkerRegister() {
       updateToastIdRef.current = toastId
     }
 
-    const promptForServiceWorkerUpdate = (registration: ServiceWorkerRegistration) => {
+    const promptForServiceWorkerUpdate = (
+      registration: ServiceWorkerRegistration,
+    ) => {
       if (!registration.waiting) {
         return
       }
@@ -149,10 +155,16 @@ export function ServiceWorkerRegister() {
       window.location.reload()
     }
 
-    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange)
+    navigator.serviceWorker.addEventListener(
+      'controllerchange',
+      handleControllerChange,
+    )
 
     navigator.serviceWorker
-      .register(withPwaAssetVersion('/sw.js'), { scope: '/', updateViaCache: 'none' })
+      .register(withPwaAssetVersion('/sw.js'), {
+        scope: '/',
+        updateViaCache: 'none',
+      })
       .then((registration) => {
         const recheckForUpdates = () => {
           void checkForAppShellUpdate()
@@ -177,7 +189,10 @@ export function ServiceWorkerRegister() {
           }
 
           const handleStateChange = () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            if (
+              newWorker.state === 'installed' &&
+              navigator.serviceWorker.controller
+            ) {
               promptForServiceWorkerUpdate(registration)
             }
           }
@@ -192,13 +207,19 @@ export function ServiceWorkerRegister() {
         registration.addEventListener('updatefound', handleUpdateFound)
         window.addEventListener('focus', recheckForUpdates)
         document.addEventListener('visibilitychange', handleVisibilityChange)
-        const updateInterval = window.setInterval(recheckForUpdates, 10 * 60 * 1000)
+        const updateInterval = window.setInterval(
+          recheckForUpdates,
+          10 * 60 * 1000,
+        )
         recheckForUpdates()
 
         registrationCleanup = () => {
           registration.removeEventListener('updatefound', handleUpdateFound)
           window.removeEventListener('focus', recheckForUpdates)
-          document.removeEventListener('visibilitychange', handleVisibilityChange)
+          document.removeEventListener(
+            'visibilitychange',
+            handleVisibilityChange,
+          )
           window.clearInterval(updateInterval)
         }
       })

@@ -119,9 +119,7 @@ export function ServicePicker({
         }}
       >
         <CommandInput placeholder="جستجوی بخش، گروه یا خدمت..." />
-        <CommandList
-          className="max-h-[min(22rem,var(--radix-popover-content-available-height))] overscroll-contain overflow-y-auto"
-        >
+        <CommandList className="max-h-[min(22rem,var(--radix-popover-content-available-height))] overscroll-contain overflow-y-auto">
           <CommandEmpty>خدمتی پیدا نشد.</CommandEmpty>
           {groups.map((category) => (
             <CommandGroup
@@ -130,10 +128,7 @@ export function ServicePicker({
               className="pb-1 pt-1 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2"
             >
               {category.families.map((family) => (
-                <div
-                  key={family.familyId}
-                  className="mb-1"
-                >
+                <div key={family.familyId} className="mb-1">
                   <div className="flex items-center gap-1.5 px-2 pb-0.5 pt-1 text-[11px] font-medium text-muted-foreground">
                     {(() => {
                       const Icon = serviceIconFor(

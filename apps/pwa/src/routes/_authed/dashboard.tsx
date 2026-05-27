@@ -96,10 +96,16 @@ function StatCard({
       <CardContent className="py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1">
-            <p className="truncate text-xs font-medium text-muted-foreground">{title}</p>
-            <p className="break-words text-xl font-bold tracking-tight sm:text-2xl">{value}</p>
+            <p className="truncate text-xs font-medium text-muted-foreground">
+              {title}
+            </p>
+            <p className="break-words text-xl font-bold tracking-tight sm:text-2xl">
+              {value}
+            </p>
             {subtitle ? (
-              <p className="text-[11px] leading-5 text-muted-foreground">{subtitle}</p>
+              <p className="text-[11px] leading-5 text-muted-foreground">
+                {subtitle}
+              </p>
             ) : null}
           </div>
           <div className="shrink-0 rounded-xl bg-primary/10 p-2.5">
@@ -111,11 +117,22 @@ function StatCard({
   )
 }
 
-function ProgressBar({ value, max, color }: { value: number; max: number; color: string }) {
+function ProgressBar({
+  value,
+  max,
+  color,
+}: {
+  value: number
+  max: number
+  color: string
+}) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0
   return (
     <div className="h-2 w-full rounded-full bg-muted">
-      <div className={`h-2 rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+      <div
+        className={`h-2 rounded-full transition-all ${color}`}
+        style={{ width: `${pct}%` }}
+      />
     </div>
   )
 }
@@ -131,7 +148,10 @@ function DashboardPage() {
     refetchInterval: 60_000,
   })
 
-  const maxServiceCount = Math.max(...data.popularServices.map((s) => s.count), 1)
+  const maxServiceCount = Math.max(
+    ...data.popularServices.map((s) => s.count),
+    1,
+  )
   const maxStaffCount = Math.max(...data.staffLoad.map((s) => s.count), 1)
 
   return (
@@ -148,7 +168,9 @@ function DashboardPage() {
         </Button>
         <div className="min-w-0">
           <h1 className="truncate text-lg font-bold">داشبورد</h1>
-          <p className="truncate text-xs text-muted-foreground">آمار و گزارش‌های سالن</p>
+          <p className="truncate text-xs text-muted-foreground">
+            آمار و گزارش‌های سالن
+          </p>
         </div>
       </header>
 
@@ -201,16 +223,17 @@ function DashboardPage() {
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               {data.todayStatusBreakdown.map((item) => {
-                const meta =
-                  APPOINTMENT_STATUS[item.status as keyof typeof APPOINTMENT_STATUS]
+                const meta = APPOINTMENT_STATUS[item.status]
                 return (
                   <Badge
                     key={item.status}
                     variant="secondary"
-                    className={`text-xs gap-1.5 px-2.5 py-1 ${meta?.color ?? ''}`}
+                    className={`text-xs gap-1.5 px-2.5 py-1 ${meta.color}`}
                   >
-                    <span className="font-bold">{formatNumber(item.count)}</span>
-                    {meta?.label ?? item.status}
+                    <span className="font-bold">
+                      {formatNumber(item.count)}
+                    </span>
+                    {meta.label}
                   </Badge>
                 )
               })}
@@ -263,7 +286,11 @@ function DashboardPage() {
                       {formatNumber(staff.count)} نوبت
                     </span>
                   </div>
-                  <ProgressBar value={staff.count} max={maxStaffCount} color="bg-primary" />
+                  <ProgressBar
+                    value={staff.count}
+                    max={maxStaffCount}
+                    color="bg-primary"
+                  />
                 </div>
               ))}
             </CardContent>
@@ -280,7 +307,10 @@ function DashboardPage() {
             <CardContent>
               <div className="flex h-3 w-full overflow-hidden rounded-full">
                 {data.monthStatusBreakdown.map((item) => {
-                  const total = data.monthStatusBreakdown.reduce((sum, i) => sum + i.count, 0)
+                  const total = data.monthStatusBreakdown.reduce(
+                    (sum, i) => sum + i.count,
+                    0,
+                  )
                   const pct = total > 0 ? (item.count / total) * 100 : 0
                   return (
                     <div
@@ -293,18 +323,21 @@ function DashboardPage() {
               </div>
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
                 {data.monthStatusBreakdown.map((item) => {
-                  const label =
-                    APPOINTMENT_STATUS[item.status as keyof typeof APPOINTMENT_STATUS]?.label ??
-                    item.status
+                  const label = APPOINTMENT_STATUS[item.status].label
                   return (
-                    <div key={item.status} className="flex items-center gap-1.5 text-xs">
+                    <div
+                      key={item.status}
+                      className="flex items-center gap-1.5 text-xs"
+                    >
                       <div
                         className={`h-2.5 w-2.5 rounded-full ${
                           STATUS_COLORS[item.status] ?? 'bg-muted'
                         }`}
                       />
                       <span className="text-muted-foreground">{label}</span>
-                      <span className="font-medium">{formatNumber(item.count)}</span>
+                      <span className="font-medium">
+                        {formatNumber(item.count)}
+                      </span>
                     </div>
                   )
                 })}

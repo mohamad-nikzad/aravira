@@ -16,15 +16,16 @@ import {
   UserPlus,
   UserRoundSearch,
   Users,
-  type LucideIcon,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Switch } from '@repo/ui/switch'
 import { Input } from '@repo/ui/input'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field'
 import { FormRootError } from '@repo/ui/form'
 import { TimePicker } from '@repo/ui/time-picker'
-import { Badge, type badgeVariants } from '@repo/ui/badge'
+import { Badge } from '@repo/ui/badge'
+import type { badgeVariants } from '@repo/ui/badge'
 import { Card, CardContent, CardHeader } from '@repo/ui/card'
 import { Skeleton } from '@repo/ui/skeleton'
 import { Spinner } from '@repo/ui/spinner'
@@ -36,10 +37,8 @@ import {
   parseLocalizedInt,
   toPersianDigits,
 } from '@repo/salon-core/persian-digits'
-import {
-  businessSettingsSchema,
-  type BusinessSettingsPayload,
-} from '@repo/salon-core/forms/settings'
+import { businessSettingsSchema } from '@repo/salon-core/forms/settings'
+import type { BusinessSettingsPayload } from '@repo/salon-core/forms/settings'
 
 import { useAuth } from '#/lib/auth'
 import {
@@ -135,10 +134,16 @@ function SettingsRow({
       <div
         className={cn(
           'flex size-9 shrink-0 items-center justify-center rounded-xl',
-          danger ? 'bg-destructive-soft text-destructive' : 'bg-blush-soft text-plum-deep',
+          danger
+            ? 'bg-destructive-soft text-destructive'
+            : 'bg-blush-soft text-plum-deep',
         )}
       >
-        {loading ? <Spinner className="size-[18px]" /> : <Icon className="size-[18px]" />}
+        {loading ? (
+          <Spinner className="size-[18px]" />
+        ) : (
+          <Icon className="size-[18px]" />
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <div
@@ -149,10 +154,14 @@ function SettingsRow({
         >
           {label}
         </div>
-        {hint ? <div className="mt-0.5 text-[11px] text-muted-foreground">{hint}</div> : null}
+        {hint ? (
+          <div className="mt-0.5 text-[11px] text-muted-foreground">{hint}</div>
+        ) : null}
       </div>
       {badge ? <Badge variant={badgeTone}>{badge}</Badge> : null}
-      {!danger ? <ChevronLeft className="size-4 shrink-0 text-muted-foreground" /> : null}
+      {!danger ? (
+        <ChevronLeft className="size-4 shrink-0 text-muted-foreground" />
+      ) : null}
     </>
   )
 
@@ -174,7 +183,12 @@ function SettingsRow({
     )
   }
   return (
-    <button type="button" onClick={onClick} disabled={disabled} className={className}>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+    >
       {inner}
     </button>
   )
@@ -202,9 +216,15 @@ function ToggleRow({
       </div>
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold text-foreground">{label}</div>
-        {hint ? <div className="mt-0.5 text-[11px] text-muted-foreground">{hint}</div> : null}
+        {hint ? (
+          <div className="mt-0.5 text-[11px] text-muted-foreground">{hint}</div>
+        ) : null}
       </div>
-      <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
+      <Switch
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={onChange}
+      />
     </div>
   )
 }
@@ -319,18 +339,16 @@ function SettingsPage() {
   }, [dc, resetBusinessHours, user?.role])
 
   useEffect(() => {
-    let cancelled = false
     const ac = new AbortController()
     void api.notificationPreferences
       .get({ signal: ac.signal })
       .then((data) => {
-        if (!cancelled && data?.preferences) {
+        if (!ac.signal.aborted) {
           setLocalAlerts(Boolean(data.preferences.localAlertsEnabled))
         }
       })
       .catch(() => {})
     return () => {
-      cancelled = true
       ac.abort()
     }
   }, [])
@@ -342,7 +360,7 @@ function SettingsPage() {
     void api.dashboard
       .get({ signal: ac.signal })
       .then((data) => {
-        if (!cancelled && data && typeof data.totalClients === 'number') {
+        if (!cancelled && typeof data.totalClients === 'number') {
           setMetrics({
             monthRevenue: data.monthRevenue,
             totalClients: data.totalClients,
@@ -425,7 +443,9 @@ function SettingsPage() {
               {getInitials(user.name)}
             </div>
             <div className="relative min-w-0 flex-1">
-              <div className="truncate text-base font-bold text-foreground">{user.name}</div>
+              <div className="truncate text-base font-bold text-foreground">
+                {user.name}
+              </div>
               <div className="mt-0.5 text-xs text-sage-deep" dir="ltr">
                 {displayPhone(user.phone)}
               </div>
@@ -488,7 +508,7 @@ function SettingsPage() {
                 icon={Globe}
                 label="صفحه عمومی سالن"
                 hint="لینک نوبت‌گیری برای مشتریان"
-                href="/public-page"
+                to="/public-page"
               />
               <SettingsRow
                 icon={ListChecks}
@@ -558,7 +578,10 @@ function SettingsPage() {
                       onChange={(e) =>
                         setBusinessHoursValue(
                           'slotDurationMinutes',
-                          Math.max(5, parseLocalizedInt(e.target.value, slotMin)),
+                          Math.max(
+                            5,
+                            parseLocalizedInt(e.target.value, slotMin),
+                          ),
                         )
                       }
                       dir="rtl"

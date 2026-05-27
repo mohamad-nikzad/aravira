@@ -25,13 +25,13 @@ import {
 } from '@repo/ui/select'
 import { Spinner } from '@repo/ui/spinner'
 import { Badge } from '@repo/ui/badge'
-import {
-  type User,
-  type Service,
-  type ServiceAddon,
-  type Client,
-  type AppointmentWithDetails,
-  APPOINTMENT_STATUS,
+import { APPOINTMENT_STATUS } from '@repo/salon-core/types'
+import type {
+  User,
+  Service,
+  ServiceAddon,
+  Client,
+  AppointmentWithDetails,
 } from '@repo/salon-core/types'
 import {
   autoPickServiceForStaff,
@@ -62,8 +62,10 @@ import {
 import {
   appointmentFormSchema,
   completePlaceholderClientSchema,
-  type AppointmentFormInput,
-  type CompletePlaceholderClientInput,
+} from '@repo/salon-core/forms/appointment'
+import type {
+  AppointmentFormInput,
+  CompletePlaceholderClientInput,
 } from '@repo/salon-core/forms/appointment'
 import { ClientPicker } from '#/components/calendar/client-picker'
 import { useManagerDataClient } from '#/lib/manager-data-client'
@@ -132,9 +134,12 @@ export function AppointmentDetailDrawer({
   const [error, setError] = useState('')
   const [statusAction, setStatusAction] = useState<StatusActionState>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null)
+  const [editingAppointmentId, setEditingAppointmentId] = useState<
+    string | null
+  >(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [showCompleteClientDrawer, setShowCompleteClientDrawer] = useState(false)
+  const [showCompleteClientDrawer, setShowCompleteClientDrawer] =
+    useState(false)
   const [completeClientLoading, setCompleteClientLoading] = useState(false)
   const [duplicateClient, setDuplicateClient] = useState<Client | null>(null)
   const [localClients, setLocalClients] = useState<Client[]>(clients)
@@ -175,10 +180,10 @@ export function AppointmentDetailDrawer({
   const temporaryClientName = watchEdit('temporaryClientName') ?? ''
   const staffId = watchEdit('staffId') ?? ''
   const serviceId = watchEdit('serviceId') ?? ''
-  const date = watchEdit('date') ?? ''
-  const startTime = watchEdit('startTime') ?? ''
+  const date = watchEdit('date')
+  const startTime = watchEdit('startTime')
   const durationMinutes = Number(watchEdit('durationMinutes')) || 45
-  const endTime = watchEdit('endTime') ?? ''
+  const endTime = watchEdit('endTime')
   const addonIds = watchEdit('addonIds') ?? []
 
   const completeForm = useForm<CompletePlaceholderClientInput>({
@@ -199,12 +204,12 @@ export function AppointmentDetailDrawer({
     watch: watchComplete,
     formState: { errors: completeErrors },
   } = completeForm
-  const completeClientName = watchComplete('name') ?? ''
-  const completeClientPhone = watchComplete('phone') ?? ''
+  const completeClientName = watchComplete('name')
+  const completeClientPhone = watchComplete('phone')
 
   const staffRoleOnly = useMemo(
     () => staff.filter((m) => m.role === 'staff'),
-    [staff]
+    [staff],
   )
   const selectedEditService = useMemo(
     () => services.find((service) => service.id === serviceId),
@@ -268,10 +273,12 @@ export function AppointmentDetailDrawer({
   const applyDuration = (mins: number) => {
     const clamped = Math.min(
       APPOINTMENT_DURATION_BOUNDS.max,
-      Math.max(APPOINTMENT_DURATION_BOUNDS.min, mins)
+      Math.max(APPOINTMENT_DURATION_BOUNDS.min, mins),
     )
     setEditValue('durationMinutes', clamped, { shouldDirty: true })
-    setEditValue('endTime', endTimeFromDuration(startTime, clamped), { shouldDirty: true })
+    setEditValue('endTime', endTimeFromDuration(startTime, clamped), {
+      shouldDirty: true,
+    })
   }
 
   const applyEndTime = (et: string) => {
@@ -320,23 +327,32 @@ export function AppointmentDetailDrawer({
   const startEditing = () => {
     if (!appointment || readOnly) return
     setLocalClients(
-      appointment.client.isPlaceholder && !clients.some((client) => client.id === appointment.client.id)
+      appointment.client.isPlaceholder &&
+        !clients.some((client) => client.id === appointment.client.id)
         ? [appointment.client, ...clients]
-        : clients
+        : clients,
     )
     resetEditForm({
       useTemporaryClient: appointment.client.isPlaceholder,
-      temporaryClientName: appointment.client.isPlaceholder ? appointment.client.name : '',
-      temporaryClientNotes: appointment.client.isPlaceholder ? appointment.client.notes ?? '' : '',
+      temporaryClientName: appointment.client.isPlaceholder
+        ? appointment.client.name
+        : '',
+      temporaryClientNotes: appointment.client.isPlaceholder
+        ? (appointment.client.notes ?? '')
+        : '',
       clientId: appointment.client.isPlaceholder ? '' : appointment.clientId,
       staffId: appointment.staffId,
       serviceId: appointment.serviceId,
       date: appointment.date,
       startTime: appointment.startTime,
       endTime: appointment.endTime,
-      durationMinutes: durationMinutesFromRange(appointment.startTime, appointment.endTime),
+      durationMinutes: durationMinutesFromRange(
+        appointment.startTime,
+        appointment.endTime,
+      ),
       notes: appointment.notes || '',
-      addonIds: appointment.bookedAddons?.map((addon) => addon.serviceAddonId) ?? [],
+      addonIds:
+        appointment.bookedAddons?.map((addon) => addon.serviceAddonId) ?? [],
     })
     setStatus(appointment.status)
     setIsEditing(true)
@@ -376,10 +392,13 @@ export function AppointmentDetailDrawer({
     try {
       let updated: AppointmentWithDetails
       if (dataClient) {
-        updated = await dataClient.appointments.completePlaceholderClient(appointment.id, {
-          ...values,
-          notes: values.notes ?? undefined,
-        })
+        updated = await dataClient.appointments.completePlaceholderClient(
+          appointment.id,
+          {
+            ...values,
+            notes: values.notes ?? undefined,
+          },
+        )
         void dataClient.sync.processPending()
       } else {
         const data = await api.appointments.completePlaceholderClient(
@@ -403,7 +422,9 @@ export function AppointmentDetailDrawer({
         const payload = err.payload as { existingClient?: Client } | null
         setDuplicateClient(payload?.existingClient ?? null)
       } else {
-        setCompleteFormError('root', { message: 'خطایی رخ داد. لطفاً دوباره تلاش کنید.' })
+        setCompleteFormError('root', {
+          message: 'خطایی رخ داد. لطفاً دوباره تلاش کنید.',
+        })
       }
     } finally {
       setCompleteClientLoading(false)
@@ -419,7 +440,10 @@ export function AppointmentDetailDrawer({
     const eligibleAll = eligibleStaffForService(staff, id)
     const eligibleStaffMembers = eligibleStaffForService(staffRoleOnly, id)
     if (eligibleStaffMembers.length === 1) {
-      setEditValue('staffId', eligibleStaffMembers[0].id, { shouldDirty: true, shouldValidate: true })
+      setEditValue('staffId', eligibleStaffMembers[0].id, {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
     } else if (!eligibleAll.some((m) => m.id === staffId)) {
       setEditValue('staffId', '', { shouldDirty: true, shouldValidate: true })
     }
@@ -430,7 +454,10 @@ export function AppointmentDetailDrawer({
       ? addonIds.filter((id) => id !== addon.id)
       : [...addonIds, addon.id]
     const nextAddons = addonOptions.filter((item) => nextIds.includes(item.id))
-    setEditValue('addonIds', nextIds, { shouldDirty: true, shouldValidate: true })
+    setEditValue('addonIds', nextIds, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
     applyCatalogDuration(selectedEditService, nextAddons)
   }
 
@@ -441,8 +468,7 @@ export function AppointmentDetailDrawer({
 
     const eligible = eligibleServicesForStaff(member, services)
     const current = services.find((s) => s.id === serviceId)
-    const serviceStillOk =
-      !!current && eligible.some((s) => s.id === serviceId)
+    const serviceStillOk = !!current && eligible.some((s) => s.id === serviceId)
 
     if (!serviceStillOk) {
       const explicitList =
@@ -451,10 +477,16 @@ export function AppointmentDetailDrawer({
         staffHasExplicitServiceList: explicitList,
       })
       if (auto) {
-        setEditValue('serviceId', auto.id, { shouldDirty: true, shouldValidate: true })
+        setEditValue('serviceId', auto.id, {
+          shouldDirty: true,
+          shouldValidate: true,
+        })
         applyDuration(auto.duration)
       } else {
-        setEditValue('serviceId', '', { shouldDirty: true, shouldValidate: true })
+        setEditValue('serviceId', '', {
+          shouldDirty: true,
+          shouldValidate: true,
+        })
       }
     }
   }
@@ -463,7 +495,10 @@ export function AppointmentDetailDrawer({
     if (!appointment) return
     setError('')
 
-    const localCheck = validateAppointmentWindow(values.startTime, values.endTime)
+    const localCheck = validateAppointmentWindow(
+      values.startTime,
+      values.endTime,
+    )
     if (!localCheck.ok) {
       setEditError('root', { message: localCheck.error })
       return
@@ -491,9 +526,6 @@ export function AppointmentDetailDrawer({
         if (typeof data.removedAppointmentId === 'string') {
           return { type: 'deleted', id: data.removedAppointmentId }
         }
-        if (!data.appointment) {
-          throw new DataClientHttpError('پاسخ به‌روزرسانی کامل نبود', 500, data)
-        }
         return { type: 'updated', appointment: data.appointment }
       } catch (err) {
         if (err instanceof ApiError) {
@@ -513,28 +545,27 @@ export function AppointmentDetailDrawer({
       return
     }
 
-    let cancelled = false
-    const ctrl = new AbortController()
+    const ac = new AbortController()
     setAddonsLoading(true)
-
     ;(async () => {
       try {
         const addons = dataClient
           ? await dataClient.services.addons.forService(serviceId)
           : await api.services.addons
-              .forService(serviceId, { signal: ctrl.signal })
-              .then((r) => r.addons ?? [])
-        if (!cancelled) setAvailableAddons(addons)
+              .forService(serviceId, { signal: ac.signal })
+              .then((r) => r.addons)
+        if (ac.signal.aborted) return
+        setAvailableAddons(addons)
       } catch {
-        if (!cancelled) setAvailableAddons([])
+        if (ac.signal.aborted) return
+        setAvailableAddons([])
       } finally {
-        if (!cancelled) setAddonsLoading(false)
+        if (!ac.signal.aborted) setAddonsLoading(false)
       }
     })()
 
     return () => {
-      cancelled = true
-      ctrl.abort()
+      ac.abort()
     }
   }, [dataClient, isEditingCurrentAppointment, serviceId])
 
@@ -578,7 +609,7 @@ export function AppointmentDetailDrawer({
       if (dataClient) {
         const result = await dataClient.appointments.updateStatus(
           appointment.id,
-          nextStatus
+          nextStatus,
         )
         void dataClient.sync.processPending()
         setStatusAction({
@@ -596,12 +627,15 @@ export function AppointmentDetailDrawer({
         onSuccess(
           result.type === 'deleted'
             ? { type: 'deleted', id: result.id }
-            : { type: 'updated', appointment: result.appointment }
+            : { type: 'updated', appointment: result.appointment },
         )
         return
       }
 
-      const data = await api.appointments.updateStatus(appointment.id, nextStatus)
+      const data = await api.appointments.updateStatus(
+        appointment.id,
+        nextStatus,
+      )
 
       if (typeof data.removedAppointmentId === 'string') {
         setStatusAction({
@@ -610,13 +644,6 @@ export function AppointmentDetailDrawer({
           message: 'رزرو موقت لغو و حذف شد.',
         })
         onSuccess({ type: 'deleted', id: data.removedAppointmentId })
-        return
-      }
-
-      if (!data.appointment) {
-        setError('پاسخ تغییر وضعیت کامل نبود')
-        setStatusAction(null)
-        setLoading(false)
         return
       }
 
@@ -659,7 +686,10 @@ export function AppointmentDetailDrawer({
         </DrawerHeader>
 
         {isEditingCurrentAppointment ? (
-          <form onSubmit={handleUpdate} className="flex flex-col gap-4 overflow-auto px-4">
+          <form
+            onSubmit={handleUpdate}
+            className="flex flex-col gap-4 overflow-auto px-4"
+          >
             <FieldGroup>
               <Field>
                 <FieldLabel>مشتری</FieldLabel>
@@ -673,31 +703,45 @@ export function AppointmentDetailDrawer({
                       checked={useTemporaryClient}
                       onCheckedChange={(checked) => {
                         const enabled = checked === true
-                        setEditValue('useTemporaryClient', enabled, { shouldDirty: true, shouldValidate: true })
+                        setEditValue('useTemporaryClient', enabled, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
                         setError('')
                         if (enabled) {
                           setEditValue('clientId', '', { shouldDirty: true })
                           setEditValue(
                             'temporaryClientName',
-                            appointment.client.isPlaceholder ? appointment.client.name : '',
+                            appointment.client.isPlaceholder
+                              ? appointment.client.name
+                              : '',
                             { shouldDirty: true },
                           )
                           setEditValue(
                             'temporaryClientNotes',
-                            appointment.client.isPlaceholder ? appointment.client.notes ?? '' : '',
+                            appointment.client.isPlaceholder
+                              ? (appointment.client.notes ?? '')
+                              : '',
                             { shouldDirty: true },
                           )
                           return
                         }
-                        setEditValue('temporaryClientName', '', { shouldDirty: true })
-                        setEditValue('temporaryClientNotes', '', { shouldDirty: true })
+                        setEditValue('temporaryClientName', '', {
+                          shouldDirty: true,
+                        })
+                        setEditValue('temporaryClientNotes', '', {
+                          shouldDirty: true,
+                        })
                       }}
                       className="mt-0.5"
                     />
                     <div className="space-y-1">
-                      <p className="text-sm font-medium">بعداً اطلاعات مشتری را کامل می‌کنم</p>
+                      <p className="text-sm font-medium">
+                        بعداً اطلاعات مشتری را کامل می‌کنم
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        در حالت موقت فقط یک نام نمایشی نگه می‌داریم و شماره تماس بعداً تکمیل می‌شود.
+                        در حالت موقت فقط یک نام نمایشی نگه می‌داریم و شماره تماس
+                        بعداً تکمیل می‌شود.
                       </p>
                     </div>
                   </label>
@@ -705,33 +749,47 @@ export function AppointmentDetailDrawer({
                   {useTemporaryClient ? (
                     <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
                       <Field className="gap-2">
-                        <FieldLabel htmlFor="edit-temporary-client-name">نام مشتری</FieldLabel>
+                        <FieldLabel htmlFor="edit-temporary-client-name">
+                          نام مشتری
+                        </FieldLabel>
                         <Input
                           id="edit-temporary-client-name"
                           ref={temporaryClientNameRef}
                           value={temporaryClientName}
                           onChange={(event) =>
-                            setEditValue('temporaryClientName', event.target.value, {
-                              shouldDirty: true,
-                              shouldValidate: false,
-                            })
+                            setEditValue(
+                              'temporaryClientName',
+                              event.target.value,
+                              {
+                                shouldDirty: true,
+                                shouldValidate: false,
+                              },
+                            )
                           }
                           placeholder="مثلاً دوستِ سارا"
                         />
                         {editErrors.temporaryClientName && (
-                          <FieldError>{editErrors.temporaryClientName.message}</FieldError>
+                          <FieldError>
+                            {editErrors.temporaryClientName.message}
+                          </FieldError>
                         )}
                       </Field>
 
                       <Field className="gap-2">
-                        <FieldLabel htmlFor="edit-temporary-client-notes">یادداشت (اختیاری)</FieldLabel>
+                        <FieldLabel htmlFor="edit-temporary-client-notes">
+                          یادداشت (اختیاری)
+                        </FieldLabel>
                         <Input
                           id="edit-temporary-client-notes"
                           value={watchEdit('temporaryClientNotes') ?? ''}
                           onChange={(event) =>
-                            setEditValue('temporaryClientNotes', event.target.value, {
-                              shouldDirty: true,
-                            })
+                            setEditValue(
+                              'temporaryClientNotes',
+                              event.target.value,
+                              {
+                                shouldDirty: true,
+                              },
+                            )
                           }
                           placeholder="مثلاً شماره را بعداً می‌گیرم"
                         />
@@ -741,11 +799,18 @@ export function AppointmentDetailDrawer({
                     <ClientPicker
                       clients={localClients}
                       value={clientId}
-                      onChange={(id) => setEditValue('clientId', id, { shouldDirty: true, shouldValidate: true })}
+                      onChange={(id) =>
+                        setEditValue('clientId', id, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                      }
                       onClientCreated={handleClientCreated}
                     />
                   )}
-                  {editErrors.clientId && <FieldError>{editErrors.clientId.message}</FieldError>}
+                  {editErrors.clientId && (
+                    <FieldError>{editErrors.clientId.message}</FieldError>
+                  )}
                 </div>
               </Field>
 
@@ -802,15 +867,18 @@ export function AppointmentDetailDrawer({
                             <span className="min-w-0 flex-1">
                               <span className="block text-sm font-medium">
                                 {addon.name}
-                                {!availableAddons.some((item) => item.id === addon.id) ? (
+                                {!availableAddons.some(
+                                  (item) => item.id === addon.id,
+                                ) ? (
                                   <span className="mr-2 text-xs font-normal text-muted-foreground">
                                     تاریخی
                                   </span>
                                 ) : null}
                               </span>
                               <span className="block text-xs text-muted-foreground">
-                                +{toPersianDigits(addon.durationDelta)} دقیقه · +
-                                {tomansFormatter.format(addon.priceDelta)} تومان
+                                +{toPersianDigits(addon.durationDelta)} دقیقه ·
+                                +{tomansFormatter.format(addon.priceDelta)}{' '}
+                                تومان
                               </span>
                             </span>
                           </label>
@@ -821,8 +889,8 @@ export function AppointmentDetailDrawer({
                         </p>
                       )}
                       <div className="border-t border-border/60 pt-2 text-xs text-muted-foreground">
-                        جمع پیش‌نمایش: {toPersianDigits(previewDuration)} دقیقه ·{' '}
-                        {formatTomans(previewPrice)}
+                        جمع پیش‌نمایش: {toPersianDigits(previewDuration)} دقیقه
+                        · {formatTomans(previewPrice)}
                       </div>
                     </div>
                   </Field>
@@ -835,10 +903,17 @@ export function AppointmentDetailDrawer({
                   <JalaliDatePicker
                     id="edit-date"
                     value={date}
-                    onChange={(value) => setEditValue('date', value, { shouldDirty: true, shouldValidate: true })}
+                    onChange={(value) =>
+                      setEditValue('date', value, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
                     required
                   />
-                  {editErrors.date && <FieldError>{editErrors.date.message}</FieldError>}
+                  {editErrors.date && (
+                    <FieldError>{editErrors.date.message}</FieldError>
+                  )}
                 </Field>
 
                 <Field>
@@ -847,15 +922,24 @@ export function AppointmentDetailDrawer({
                     id="edit-time"
                     value={startTime}
                     onChange={(st) => {
-                      setEditValue('startTime', st, { shouldDirty: true, shouldValidate: true })
-                      setEditValue('endTime', endTimeFromDuration(st, durationMinutes), {
+                      setEditValue('startTime', st, {
                         shouldDirty: true,
                         shouldValidate: true,
                       })
+                      setEditValue(
+                        'endTime',
+                        endTimeFromDuration(st, durationMinutes),
+                        {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        },
+                      )
                     }}
                     label="ساعت شروع"
                   />
-                  {editErrors.startTime && <FieldError>{editErrors.startTime.message}</FieldError>}
+                  {editErrors.startTime && (
+                    <FieldError>{editErrors.startTime.message}</FieldError>
+                  )}
                 </Field>
               </div>
 
@@ -874,7 +958,9 @@ export function AppointmentDetailDrawer({
                   dir="rtl"
                   className="text-right tabular-nums"
                 />
-                {editErrors.durationMinutes && <FieldError>{editErrors.durationMinutes.message}</FieldError>}
+                {editErrors.durationMinutes && (
+                  <FieldError>{editErrors.durationMinutes.message}</FieldError>
+                )}
               </Field>
 
               <Field>
@@ -885,7 +971,9 @@ export function AppointmentDetailDrawer({
                   onChange={applyEndTime}
                   label="ساعت پایان"
                 />
-                {editErrors.endTime && <FieldError>{editErrors.endTime.message}</FieldError>}
+                {editErrors.endTime && (
+                  <FieldError>{editErrors.endTime.message}</FieldError>
+                )}
               </Field>
 
               <Field>
@@ -929,7 +1017,9 @@ export function AppointmentDetailDrawer({
                   <span className="truncate font-bold text-foreground">
                     {appointment.client.name}
                   </span>
-                  {isVip(appointment.client) ? <Badge variant="rose">VIP</Badge> : null}
+                  {isVip(appointment.client) ? (
+                    <Badge variant="rose">VIP</Badge>
+                  ) : null}
                   {appointment.client.isPlaceholder ? (
                     <Badge variant="amber">اطلاعات ناقص</Badge>
                   ) : null}
@@ -960,12 +1050,18 @@ export function AppointmentDetailDrawer({
                   <span>ساعت</span>
                   <Clock className="size-3.5" />
                 </div>
-                <div dir="ltr" className="mt-1 text-xl font-extrabold text-foreground tabular-nums">
+                <div
+                  dir="ltr"
+                  className="mt-1 text-xl font-extrabold text-foreground tabular-nums"
+                >
                   {formatPersianTime(appointment.startTime)}
                 </div>
                 <div className="mt-0.5 text-xs text-muted-foreground">
                   {toPersianDigits(
-                    durationMinutesFromRange(appointment.startTime, appointment.endTime),
+                    durationMinutesFromRange(
+                      appointment.startTime,
+                      appointment.endTime,
+                    ),
                   )}{' '}
                   دقیقه
                 </div>
@@ -976,9 +1072,14 @@ export function AppointmentDetailDrawer({
                   <Wallet className="size-3.5" />
                 </div>
                 <div className="mt-1 text-xl font-extrabold text-primary tabular-nums">
-                  {toPersianDigits(Math.round(appointment.bookedTotalPrice / 1000))} هـ
+                  {toPersianDigits(
+                    Math.round(appointment.bookedTotalPrice / 1000),
+                  )}{' '}
+                  هـ
                 </div>
-                <div className="mt-0.5 text-xs text-muted-foreground">تومان</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  تومان
+                </div>
               </div>
             </div>
 
@@ -994,7 +1095,10 @@ export function AppointmentDetailDrawer({
                   background: `color-mix(in oklch, ${appointment.service.color} 16%, transparent)`,
                 }}
               >
-                <Scissors className="size-4" style={{ color: appointment.service.color }} />
+                <Scissors
+                  className="size-4"
+                  style={{ color: appointment.service.color }}
+                />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="truncate font-bold text-foreground">
@@ -1023,8 +1127,9 @@ export function AppointmentDetailDrawer({
                     >
                       <span>{addon.bookedAddonName}</span>
                       <span>
-                        +{toPersianDigits(addon.bookedAddonDurationDelta)} دقیقه · +
-                        {tomansFormatter.format(addon.bookedAddonPriceDelta)} تومان
+                        +{toPersianDigits(addon.bookedAddonDurationDelta)} دقیقه
+                        · +{tomansFormatter.format(addon.bookedAddonPriceDelta)}{' '}
+                        تومان
                       </span>
                     </div>
                   ))}
@@ -1039,7 +1144,8 @@ export function AppointmentDetailDrawer({
                   {STATUS_SEGMENTS.map(({ key, label }) => {
                     const active = appointment.status === key
                     const saving =
-                      statusAction?.mode === 'saving' && statusAction.status === key
+                      statusAction?.mode === 'saving' &&
+                      statusAction.status === key
                     return (
                       <button
                         key={key}
@@ -1086,9 +1192,12 @@ export function AppointmentDetailDrawer({
 
             {appointment.client.isPlaceholder && !readOnly ? (
               <div className="rounded-2xl bg-amber-soft p-3.5 text-sm text-amber-fg">
-                <p className="font-medium">اطلاعات این مشتری هنوز کامل نشده است.</p>
+                <p className="font-medium">
+                  اطلاعات این مشتری هنوز کامل نشده است.
+                </p>
                 <p className="mt-1 text-xs opacity-90">
-                  شماره تماس و مشخصات نهایی را ثبت کنید تا این نوبت مثل یک مشتری عادی ادامه پیدا کند.
+                  شماره تماس و مشخصات نهایی را ثبت کنید تا این نوبت مثل یک مشتری
+                  عادی ادامه پیدا کند.
                 </p>
                 <Button
                   size="sm"
@@ -1121,7 +1230,9 @@ export function AppointmentDetailDrawer({
                 }
               >
                 {(loading || isEditSubmitting) && <Spinner className="mr-2" />}
-                {loading || isEditSubmitting ? 'در حال ذخیره…' : 'ذخیره تغییرات'}
+                {loading || isEditSubmitting
+                  ? 'در حال ذخیره…'
+                  : 'ذخیره تغییرات'}
               </Button>
               <Button
                 variant="outline"
@@ -1138,11 +1249,18 @@ export function AppointmentDetailDrawer({
               <p className="text-sm text-center text-muted-foreground mb-2">
                 آیا از حذف این نوبت مطمئن هستید؟
               </p>
-              <Button variant="destructive" onClick={handleDelete} disabled={loading}>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={loading}
+              >
                 {loading && <Spinner className="mr-2" />}
                 بله، حذف شود
               </Button>
-              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
                 انصراف
               </Button>
             </>
@@ -1171,7 +1289,10 @@ export function AppointmentDetailDrawer({
         </DrawerFooter>
       </DrawerContent>
 
-      <DrawerNested open={showCompleteClientDrawer} onOpenChange={setShowCompleteClientDrawer}>
+      <DrawerNested
+        open={showCompleteClientDrawer}
+        onOpenChange={setShowCompleteClientDrawer}
+      >
         <DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[92lvh]">
           <DrawerHeader>
             <DrawerTitle>تکمیل اطلاعات مشتری</DrawerTitle>
@@ -1183,21 +1304,29 @@ export function AppointmentDetailDrawer({
           <div className="min-h-0 flex-1 overflow-auto px-4 pb-4">
             <FieldGroup className="gap-4">
               <Field>
-                <FieldLabel htmlFor="complete-client-name">نام مشتری</FieldLabel>
+                <FieldLabel htmlFor="complete-client-name">
+                  نام مشتری
+                </FieldLabel>
                 <Input
                   id="complete-client-name"
                   ref={completeClientNameRef}
                   value={completeClientName}
                   onChange={(event) =>
-                    setCompleteValue('name', event.target.value, { shouldDirty: true })
+                    setCompleteValue('name', event.target.value, {
+                      shouldDirty: true,
+                    })
                   }
                   placeholder="نام کامل مشتری"
                 />
-                {completeErrors.name ? <FieldError>{completeErrors.name.message}</FieldError> : null}
+                {completeErrors.name ? (
+                  <FieldError>{completeErrors.name.message}</FieldError>
+                ) : null}
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="complete-client-phone">شماره تماس</FieldLabel>
+                <FieldLabel htmlFor="complete-client-phone">
+                  شماره تماس
+                </FieldLabel>
                 <Input
                   id="complete-client-phone"
                   type="tel"
@@ -1207,16 +1336,22 @@ export function AppointmentDetailDrawer({
                   dir="ltr"
                   className="text-left tabular-nums"
                 />
-                {completeErrors.phone ? <FieldError>{completeErrors.phone.message}</FieldError> : null}
+                {completeErrors.phone ? (
+                  <FieldError>{completeErrors.phone.message}</FieldError>
+                ) : null}
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="complete-client-notes">یادداشت (اختیاری)</FieldLabel>
+                <FieldLabel htmlFor="complete-client-notes">
+                  یادداشت (اختیاری)
+                </FieldLabel>
                 <Input
                   id="complete-client-notes"
                   value={watchComplete('notes') ?? ''}
                   onChange={(event) =>
-                    setCompleteValue('notes', event.target.value, { shouldDirty: true })
+                    setCompleteValue('notes', event.target.value, {
+                      shouldDirty: true,
+                    })
                   }
                   placeholder="یادداشت مشتری"
                 />
@@ -1228,7 +1363,8 @@ export function AppointmentDetailDrawer({
                     این شماره قبلاً برای {duplicateClient.name} ثبت شده است.
                   </p>
                   <p className="mt-1 text-xs text-amber-800">
-                    می‌توانید این نوبت را به همان مشتری موجود وصل کنید تا سابقه‌ها یکی بماند.
+                    می‌توانید این نوبت را به همان مشتری موجود وصل کنید تا
+                    سابقه‌ها یکی بماند.
                   </p>
                   <Button
                     type="button"
@@ -1236,7 +1372,10 @@ export function AppointmentDetailDrawer({
                     size="sm"
                     className="mt-3"
                     onClick={() => {
-                      setCompleteValue('reassignToExistingClientId', duplicateClient.id)
+                      setCompleteValue(
+                        'reassignToExistingClientId',
+                        duplicateClient.id,
+                      )
                       void submitCompleteClient()
                     }}
                     disabled={completeClientLoading}

@@ -1,6 +1,4 @@
-
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react'
 import {
   Banknote,
   ChevronDown,
@@ -13,41 +11,41 @@ import {
   PackageCheck,
   Search,
   Sparkles,
-} from "lucide-react";
-import { Badge } from "@repo/ui/badge";
-import { Button } from "@repo/ui/button";
-import { Card, CardTitle } from "@repo/ui/card";
-import { Input } from "@repo/ui/input";
+} from 'lucide-react'
+import { Badge } from '@repo/ui/badge'
+import { Button } from '@repo/ui/button'
+import { Card, CardTitle } from '@repo/ui/card'
+import { Input } from '@repo/ui/input'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@repo/ui/collapsible";
-import { Spinner } from "@repo/ui/spinner";
+} from '@repo/ui/collapsible'
+import { Spinner } from '@repo/ui/spinner'
 import type {
   Service,
   ServiceCategory,
   ServiceFamily,
-} from "@repo/salon-core/types";
-import { toPersianDigits } from "@repo/salon-core/persian-digits";
-import { useManagerDataClient } from "#/lib/manager-data-client";
-import { ServiceCategoryDrawer } from "./service-category-drawer";
-import { ServiceDrawer } from "./service-drawer";
-import { ServiceFamilyDrawer } from "./service-family-drawer";
+} from '@repo/salon-core/types'
+import { toPersianDigits } from '@repo/salon-core/persian-digits'
+import { useManagerDataClient } from '#/lib/manager-data-client'
+import { ServiceCategoryDrawer } from './service-category-drawer'
+import { ServiceDrawer } from './service-drawer'
+import { ServiceFamilyDrawer } from './service-family-drawer'
 
 interface ServiceCatalogManagerProps {
-  services: Service[];
-  categories: ServiceCategory[];
-  families: ServiceFamily[];
-  starterImportKey?: string;
-  onChanged: () => void;
+  services: Service[]
+  categories: ServiceCategory[]
+  families: ServiceFamily[]
+  starterImportKey?: string
+  onChanged: () => void
 }
 
 type CategoryNode = ServiceCategory & {
-  families: Array<ServiceFamily & { services: Service[] }>;
-};
+  families: Array<ServiceFamily & { services: Service[] }>
+}
 
-const STARTER_SERVICES_USED_KEY = "saloora:starter-services-used";
+const STARTER_SERVICES_USED_KEY = 'saloora:starter-services-used'
 
 function buildCatalog(
   categories: ServiceCategory[],
@@ -57,26 +55,26 @@ function buildCatalog(
   const familiesByCategory = new Map<
     string,
     Array<ServiceFamily & { services: Service[] }>
-  >();
-  const servicesByFamily = new Map<string, Service[]>();
+  >()
+  const servicesByFamily = new Map<string, Service[]>()
 
   for (const service of services) {
-    if (!service.familyId) continue;
-    const list = servicesByFamily.get(service.familyId) ?? [];
-    list.push(service);
-    servicesByFamily.set(service.familyId, list);
+    if (!service.familyId) continue
+    const list = servicesByFamily.get(service.familyId) ?? []
+    list.push(service)
+    servicesByFamily.set(service.familyId, list)
   }
 
   for (const family of families) {
-    const list = familiesByCategory.get(family.categoryId) ?? [];
-    list.push({ ...family, services: servicesByFamily.get(family.id) ?? [] });
-    familiesByCategory.set(family.categoryId, list);
+    const list = familiesByCategory.get(family.categoryId) ?? []
+    list.push({ ...family, services: servicesByFamily.get(family.id) ?? [] })
+    familiesByCategory.set(family.categoryId, list)
   }
 
   return categories.map((category) => ({
     ...category,
     families: familiesByCategory.get(category.id) ?? [],
-  }));
+  }))
 }
 
 export function ServiceCatalogManager({
@@ -86,129 +84,133 @@ export function ServiceCatalogManager({
   starterImportKey = STARTER_SERVICES_USED_KEY,
   onChanged,
 }: ServiceCatalogManagerProps) {
-  const dc = useManagerDataClient();
-  const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
-  const [familyDrawerOpen, setFamilyDrawerOpen] = useState(false);
-  const [serviceDrawerOpen, setServiceDrawerOpen] = useState(false);
+  const dc = useManagerDataClient()
+  const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false)
+  const [familyDrawerOpen, setFamilyDrawerOpen] = useState(false)
+  const [serviceDrawerOpen, setServiceDrawerOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] =
-    useState<ServiceCategory | null>(null);
+    useState<ServiceCategory | null>(null)
   const [selectedFamily, setSelectedFamily] = useState<ServiceFamily | null>(
     null,
-  );
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  )
+  const [selectedService, setSelectedService] = useState<Service | null>(null)
   const [defaultCategoryId, setDefaultCategoryId] = useState<string | null>(
     null,
-  );
-  const [defaultFamilyId, setDefaultFamilyId] = useState<string | null>(null);
+  )
+  const [defaultFamilyId, setDefaultFamilyId] = useState<string | null>(null)
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(
     {},
-  );
-  const [openFamilies, setOpenFamilies] = useState<Record<string, boolean>>({});
-  const [importing, setImporting] = useState(false);
-  const [search, setSearch] = useState("");
+  )
+  const [openFamilies, setOpenFamilies] = useState<Record<string, boolean>>({})
+  const [importing, setImporting] = useState(false)
+  const [search, setSearch] = useState('')
   const [starterImportUsed, setStarterImportUsed] = useState(
     () =>
-      typeof window !== "undefined" &&
-      window.localStorage.getItem(starterImportKey) === "1",
-  );
-  const [error, setError] = useState<string | null>(null);
+      typeof window !== 'undefined' &&
+      window.localStorage.getItem(starterImportKey) === '1',
+  )
+  const [error, setError] = useState<string | null>(null)
 
   const catalog = useMemo(
     () => buildCatalog(categories, families, services),
     [categories, families, services],
-  );
+  )
   const activeServicesCount = useMemo(
     () => services.filter((service) => service.active).length,
     [services],
-  );
-  const inactiveServicesCount = services.length - activeServicesCount;
+  )
+  const inactiveServicesCount = services.length - activeServicesCount
   const visibleCatalog = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase("fa-IR");
-    if (!query) return catalog;
+    const query = search.trim().toLocaleLowerCase('fa-IR')
+    if (!query) return catalog
 
     return catalog
       .map((category) => {
         const categoryMatches = category.name
-          .toLocaleLowerCase("fa-IR")
-          .includes(query);
+          .toLocaleLowerCase('fa-IR')
+          .includes(query)
 
         const visibleFamilies = category.families
           .map((family) => {
             const familyMatches = family.name
-              .toLocaleLowerCase("fa-IR")
-              .includes(query);
+              .toLocaleLowerCase('fa-IR')
+              .includes(query)
             const visibleServices =
               categoryMatches || familyMatches
                 ? family.services
                 : family.services.filter((service) =>
-                    service.name.toLocaleLowerCase("fa-IR").includes(query),
-                  );
+                    service.name.toLocaleLowerCase('fa-IR').includes(query),
+                  )
 
             if (
               !categoryMatches &&
               !familyMatches &&
               visibleServices.length === 0
             )
-              return null;
-            return { ...family, services: visibleServices };
+              return null
+            return { ...family, services: visibleServices }
           })
           .filter(
             (
               family,
             ): family is ServiceFamily & {
-              services: Service[];
+              services: Service[]
             } => Boolean(family),
-          );
+          )
 
-        if (!categoryMatches && visibleFamilies.length === 0) return null;
-        return { ...category, families: visibleFamilies };
+        if (!categoryMatches && visibleFamilies.length === 0) return null
+        return { ...category, families: visibleFamilies }
       })
-      .filter((category): category is CategoryNode => Boolean(category));
-  }, [catalog, search]);
+      .filter((category): category is CategoryNode => Boolean(category))
+  }, [catalog, search])
 
   const addCategory = () => {
-    setSelectedCategory(null);
-    setCategoryDrawerOpen(true);
-  };
+    setSelectedCategory(null)
+    setCategoryDrawerOpen(true)
+  }
 
   const addFamily = (categoryId?: string) => {
-    setSelectedFamily(null);
-    setDefaultCategoryId(categoryId ?? categories[0]?.id ?? null);
-    setFamilyDrawerOpen(true);
-  };
+    setSelectedFamily(null)
+    setDefaultCategoryId(
+      categoryId !== undefined ? categoryId : (categories[0]?.id ?? null),
+    )
+    setFamilyDrawerOpen(true)
+  }
 
   const addService = (familyId?: string) => {
-    setSelectedService(null);
-    setDefaultFamilyId(familyId ?? families[0]?.id ?? null);
-    setServiceDrawerOpen(true);
-  };
+    setSelectedService(null)
+    setDefaultFamilyId(
+      familyId !== undefined ? familyId : (families[0]?.id ?? null),
+    )
+    setServiceDrawerOpen(true)
+  }
 
   const importTemplates = async () => {
-    if (!dc) return;
-    setImporting(true);
-    setError(null);
+    if (!dc) return
+    setImporting(true)
+    setError(null)
     try {
-      await dc.services.importStarterTemplates();
-      window.localStorage.setItem(starterImportKey, "1");
-      setStarterImportUsed(true);
-      onChanged();
+      await dc.services.importStarterTemplates()
+      window.localStorage.setItem(starterImportKey, '1')
+      setStarterImportUsed(true)
+      onChanged()
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "افزودن لیست آماده انجام نشد",
-      );
+        err instanceof Error ? err.message : 'افزودن لیست آماده انجام نشد',
+      )
     } finally {
-      setImporting(false);
+      setImporting(false)
     }
-  };
+  }
 
   const noCatalog =
-    categories.length === 0 && families.length === 0 && services.length === 0;
-  const showStarterImport = noCatalog && !starterImportUsed;
-  const noSearchResults = !noCatalog && visibleCatalog.length === 0;
+    categories.length === 0 && families.length === 0 && services.length === 0
+  const showStarterImport = noCatalog && !starterImportUsed
+  const noSearchResults = !noCatalog && visibleCatalog.length === 0
 
   useEffect(() => {
-    setStarterImportUsed(window.localStorage.getItem(starterImportKey) === "1");
-  }, [starterImportKey]);
+    setStarterImportUsed(window.localStorage.getItem(starterImportKey) === '1')
+  }, [starterImportKey])
 
   return (
     <>
@@ -361,18 +363,18 @@ export function ServiceCatalogManager({
                 size="sm"
                 variant="outline"
                 className="mt-3 gap-1 touch-manipulation sm:mt-4"
-                onClick={() => setSearch("")}
+                onClick={() => setSearch('')}
               >
                 پاک کردن جستجو
               </Button>
             </div>
           ) : (
             visibleCatalog.map((category) => {
-              const categoryOpen = openCategories[category.id] ?? true;
+              const categoryOpen = openCategories[category.id] ?? true
               const categoryServiceCount = category.families.reduce(
                 (count, family) => count + family.services.length,
                 0,
-              );
+              )
               return (
                 <Collapsible
                   key={category.id}
@@ -391,7 +393,7 @@ export function ServiceCatalogManager({
                         variant="ghost"
                         size="icon-sm"
                         className="h-8 w-8 shrink-0 rounded-lg sm:h-9 sm:w-9"
-                        aria-label={categoryOpen ? "بستن بخش" : "باز کردن بخش"}
+                        aria-label={categoryOpen ? 'بستن بخش' : 'باز کردن بخش'}
                       >
                         {categoryOpen ? (
                           <ChevronDown className="h-4 w-4" />
@@ -412,7 +414,7 @@ export function ServiceCatalogManager({
                         )}
                       </div>
                       <p className="text-[11px] leading-4 text-muted-foreground sm:text-xs">
-                        {toPersianDigits(category.families.length)} گروه ·{" "}
+                        {toPersianDigits(category.families.length)} گروه ·{' '}
                         {toPersianDigits(categoryServiceCount)} خدمت
                       </p>
                     </div>
@@ -422,8 +424,8 @@ export function ServiceCatalogManager({
                       className="h-8 w-8 shrink-0 rounded-lg sm:h-9 sm:w-9"
                       aria-label={`ویرایش بخش ${category.name}`}
                       onClick={() => {
-                        setSelectedCategory(category);
-                        setCategoryDrawerOpen(true);
+                        setSelectedCategory(category)
+                        setCategoryDrawerOpen(true)
                       }}
                     >
                       <Pencil className="h-4 w-4" />
@@ -456,7 +458,7 @@ export function ServiceCatalogManager({
                       </div>
                     ) : (
                       category.families.map((family) => {
-                        const familyOpen = openFamilies[family.id] ?? true;
+                        const familyOpen = openFamilies[family.id] ?? true
                         return (
                           <Collapsible
                             key={family.id}
@@ -476,7 +478,7 @@ export function ServiceCatalogManager({
                                   size="icon-sm"
                                   className="h-8 w-8 shrink-0 rounded-lg sm:h-9 sm:w-9"
                                   aria-label={
-                                    familyOpen ? "بستن گروه" : "باز کردن گروه"
+                                    familyOpen ? 'بستن گروه' : 'باز کردن گروه'
                                   }
                                 >
                                   {familyOpen ? (
@@ -510,8 +512,8 @@ export function ServiceCatalogManager({
                                 className="h-8 w-8 shrink-0 rounded-lg sm:h-9 sm:w-9"
                                 aria-label={`ویرایش گروه ${family.name}`}
                                 onClick={() => {
-                                  setSelectedFamily(family);
-                                  setFamilyDrawerOpen(true);
+                                  setSelectedFamily(family)
+                                  setFamilyDrawerOpen(true)
                                 }}
                               >
                                 <Pencil className="h-4 w-4" />
@@ -567,7 +569,7 @@ export function ServiceCatalogManager({
                                             غیرفعال
                                           </Badge>
                                         )}
-                                        {service.kind === "combo" && (
+                                        {service.kind === 'combo' && (
                                           <Badge
                                             variant="outline"
                                             className="gap-1 text-[10px]"
@@ -582,14 +584,14 @@ export function ServiceCatalogManager({
                                           <Clock3 className="h-3 w-3" />
                                           {toPersianDigits(
                                             service.duration,
-                                          )}{" "}
+                                          )}{' '}
                                           دقیقه
                                         </span>
                                         <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 sm:px-2">
                                           <Banknote className="h-3 w-3" />
                                           {service.price > 0
-                                            ? `${toPersianDigits(service.price.toLocaleString("fa-IR"))} تومان`
-                                            : "قیمت وارد نشده"}
+                                            ? `${toPersianDigits(service.price.toLocaleString('fa-IR'))} تومان`
+                                            : 'قیمت وارد نشده'}
                                         </span>
                                       </div>
                                     </div>
@@ -599,8 +601,8 @@ export function ServiceCatalogManager({
                                       className="h-8 w-8 shrink-0 rounded-lg sm:h-9 sm:w-9"
                                       aria-label={`ویرایش خدمت ${service.name}`}
                                       onClick={() => {
-                                        setSelectedService(service);
-                                        setServiceDrawerOpen(true);
+                                        setSelectedService(service)
+                                        setServiceDrawerOpen(true)
                                       }}
                                     >
                                       <Pencil className="h-4 w-4" />
@@ -610,12 +612,12 @@ export function ServiceCatalogManager({
                               )}
                             </CollapsibleContent>
                           </Collapsible>
-                        );
+                        )
                       })
                     )}
                   </CollapsibleContent>
                 </Collapsible>
-              );
+              )
             })
           )}
         </div>
@@ -624,36 +626,36 @@ export function ServiceCatalogManager({
       <ServiceCategoryDrawer
         open={categoryDrawerOpen}
         onOpenChange={(open) => {
-          setCategoryDrawerOpen(open);
-          if (!open) setSelectedCategory(null);
+          setCategoryDrawerOpen(open)
+          if (!open) setSelectedCategory(null)
         }}
         category={selectedCategory}
         onSuccess={() => {
-          setCategoryDrawerOpen(false);
-          setSelectedCategory(null);
-          onChanged();
+          setCategoryDrawerOpen(false)
+          setSelectedCategory(null)
+          onChanged()
         }}
       />
       <ServiceFamilyDrawer
         open={familyDrawerOpen}
         onOpenChange={(open) => {
-          setFamilyDrawerOpen(open);
-          if (!open) setSelectedFamily(null);
+          setFamilyDrawerOpen(open)
+          if (!open) setSelectedFamily(null)
         }}
         family={selectedFamily}
         categories={categories}
         defaultCategoryId={defaultCategoryId}
         onSuccess={() => {
-          setFamilyDrawerOpen(false);
-          setSelectedFamily(null);
-          onChanged();
+          setFamilyDrawerOpen(false)
+          setSelectedFamily(null)
+          onChanged()
         }}
       />
       <ServiceDrawer
         open={serviceDrawerOpen}
         onOpenChange={(open) => {
-          setServiceDrawerOpen(open);
-          if (!open) setSelectedService(null);
+          setServiceDrawerOpen(open)
+          if (!open) setSelectedService(null)
         }}
         service={selectedService}
         services={services}
@@ -661,11 +663,11 @@ export function ServiceCatalogManager({
         families={families}
         defaultFamilyId={defaultFamilyId}
         onSuccess={() => {
-          setServiceDrawerOpen(false);
-          setSelectedService(null);
-          onChanged();
+          setServiceDrawerOpen(false)
+          setSelectedService(null)
+          onChanged()
         }}
       />
     </>
-  );
+  )
 }

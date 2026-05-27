@@ -9,7 +9,12 @@ interface StaffFilterProps {
   onClear?: () => void
 }
 
-export function StaffFilter({ staff, selectedIds, onToggle, onClear }: StaffFilterProps) {
+export function StaffFilter({
+  staff,
+  selectedIds,
+  onToggle,
+  onClear,
+}: StaffFilterProps) {
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -74,7 +79,9 @@ export function StaffFilter({ staff, selectedIds, onToggle, onClear }: StaffFilt
             >
               {getInitials(member.name)}
             </span>
-            <span className="max-w-20 truncate">{member.name.split(' ')[0]}</span>
+            <span className="max-w-20 truncate">
+              {member.name.split(' ')[0]}
+            </span>
           </button>
         )
       })}

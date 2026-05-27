@@ -44,7 +44,7 @@ export function useManagerTodayIndexedDbSources(
       return
     }
 
-    let cancelled = false
+    const ac = new AbortController()
 
     void (async () => {
       if (isOnline) {
@@ -66,7 +66,7 @@ export function useManagerTodayIndexedDbSources(
         client.today.dayLastSyncedAt(managerDate),
       ])
 
-      if (cancelled) return
+      if (ac.signal.aborted) return
       setRepo({
         loaded: true,
         data,
@@ -78,7 +78,7 @@ export function useManagerTodayIndexedDbSources(
     })()
 
     return () => {
-      cancelled = true
+      ac.abort()
     }
   }, [
     enabled,

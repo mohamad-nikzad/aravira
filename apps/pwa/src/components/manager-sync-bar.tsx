@@ -23,7 +23,10 @@ import { Spinner } from '@repo/ui/spinner'
 import { cn } from '@repo/ui/utils'
 
 import { useAuth } from '#/lib/auth'
-import { useBumpOfflineData, useManagerDataClient } from '#/lib/manager-data-client'
+import {
+  useBumpOfflineData,
+  useManagerDataClient,
+} from '#/lib/manager-data-client'
 
 function formatLastSync(iso: string | null): string {
   if (!iso) return 'هنوز همگام نشده'
@@ -41,13 +44,18 @@ function reviewHref(item: SyncReviewItem): string {
   if (item.entityType === 'appointment') return '/calendar'
   if (item.entityType === 'service') return '/services'
   if (item.entityType === 'business_settings') return '/settings'
-  if (item.entityType === 'staff_services' || item.entityType === 'staff_schedule') return '/staff'
+  if (
+    item.entityType === 'staff_services' ||
+    item.entityType === 'staff_schedule'
+  )
+    return '/staff'
   return '/calendar'
 }
 
 function reviewActionLabel(item: SyncReviewItem): string {
   if (item.actionLabel) return item.actionLabel
-  if (item.entityType === 'client' || item.entityType === 'appointment') return 'ویرایش و تلاش مجدد'
+  if (item.entityType === 'client' || item.entityType === 'appointment')
+    return 'ویرایش و تلاش مجدد'
   if (item.entityType === 'service') return 'رفتن به خدمات'
   if (item.entityType === 'business_settings') return 'رفتن به تنظیمات'
   return 'رفتن به پرسنل'
@@ -124,7 +132,10 @@ export function ManagerSyncBar() {
           {state.isSyncing ? (
             <Spinner className="size-4 shrink-0 text-muted-foreground" />
           ) : (
-            <span className="size-2 shrink-0 rounded-full bg-primary/80" aria-hidden />
+            <span
+              className="size-2 shrink-0 rounded-full bg-primary/80"
+              aria-hidden
+            />
           )}
           <span className="min-w-0 truncate">
             {state.authBlocked
@@ -171,7 +182,9 @@ export function ManagerSyncBar() {
             </p>
 
             {reviewItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground">موردی برای بازبینی ثبت نشده است.</p>
+              <p className="text-sm text-muted-foreground">
+                موردی برای بازبینی ثبت نشده است.
+              </p>
             ) : (
               <ul className="space-y-3">
                 {reviewItems.map((item) => (
@@ -179,14 +192,18 @@ export function ManagerSyncBar() {
                     key={item.queueRowId}
                     className="rounded-lg border border-border/80 bg-card p-3 text-sm shadow-sm"
                   >
-                    <div className="font-medium text-foreground">{item.title}</div>
+                    <div className="font-medium text-foreground">
+                      {item.title}
+                    </div>
                     {item.conflictCode && (
                       <div className="mt-1 font-mono text-xs text-muted-foreground">
                         {item.conflictCode}
                       </div>
                     )}
                     {item.lastError && (
-                      <div className="mt-1 text-xs text-muted-foreground">{item.lastError}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {item.lastError}
+                      </div>
                     )}
                     {item.description && (
                       <div className="mt-2 text-xs leading-5 text-foreground/80">
@@ -205,11 +222,13 @@ export function ManagerSyncBar() {
                         variant="default"
                         disabled={state.isSyncing}
                         onClick={() =>
-                          void client.sync.retryMutation(item.queueRowId).then(() => {
-                            bumpOfflineData()
-                            void refreshReview()
-                            void client.sync.processPending()
-                          })
+                          void client.sync
+                            .retryMutation(item.queueRowId)
+                            .then(() => {
+                              bumpOfflineData()
+                              void refreshReview()
+                              void client.sync.processPending()
+                            })
                         }
                       >
                         تلاش مجدد
@@ -223,8 +242,16 @@ export function ManagerSyncBar() {
                       >
                         حذف تغییر محلی
                       </Button>
-                      <Button type="button" size="sm" variant="secondary" asChild>
-                        <Link to={reviewHref(item)} onClick={() => setSheetOpen(false)}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        asChild
+                      >
+                        <Link
+                          to={reviewHref(item)}
+                          onClick={() => setSheetOpen(false)}
+                        >
                           {reviewActionLabel(item)}
                         </Link>
                       </Button>
@@ -245,8 +272,8 @@ export function ManagerSyncBar() {
           <AlertDialogHeader className="text-start">
             <AlertDialogTitle>حذف تغییر محلی؟</AlertDialogTitle>
             <AlertDialogDescription className="text-start">
-              این تغییر هنوز با سرور همگام نشده است. با حذف آن، نسخه محلی از صف خارج می‌شود و قابل
-              بازیابی نیست.
+              این تغییر هنوز با سرور همگام نشده است. با حذف آن، نسخه محلی از صف
+              خارج می‌شود و قابل بازیابی نیست.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -255,12 +282,14 @@ export function ManagerSyncBar() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 if (!discardItem) return
-                void client.sync.discardMutation(discardItem.queueRowId).then(() => {
-                  setDiscardItem(null)
-                  bumpOfflineData()
-                  void refreshReview()
-                  void client.sync.getState().then(setState)
-                })
+                void client.sync
+                  .discardMutation(discardItem.queueRowId)
+                  .then(() => {
+                    setDiscardItem(null)
+                    bumpOfflineData()
+                    void refreshReview()
+                    void client.sync.getState().then(setState)
+                  })
               }}
             >
               حذف تغییر

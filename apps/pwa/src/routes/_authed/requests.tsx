@@ -96,10 +96,22 @@ const EMPTY_COPY: Record<StatusTab, { title: string; sub: string }> = {
     title: 'فعلاً درخواستی نیست',
     sub: 'وقتی مشتری از صفحه عمومی سالن نوبت بخواهد، اینجا نمایش داده می‌شود.',
   },
-  approved: { title: 'موردی نیست', sub: 'درخواست‌های تأییدشده اینجا فهرست می‌شوند.' },
-  rejected: { title: 'موردی نیست', sub: 'درخواست‌های ردشده اینجا فهرست می‌شوند.' },
-  cancelled: { title: 'موردی نیست', sub: 'درخواست‌های لغوشده اینجا فهرست می‌شوند.' },
-  expired: { title: 'موردی نیست', sub: 'درخواست‌های منقضی‌شده اینجا فهرست می‌شوند.' },
+  approved: {
+    title: 'موردی نیست',
+    sub: 'درخواست‌های تأییدشده اینجا فهرست می‌شوند.',
+  },
+  rejected: {
+    title: 'موردی نیست',
+    sub: 'درخواست‌های ردشده اینجا فهرست می‌شوند.',
+  },
+  cancelled: {
+    title: 'موردی نیست',
+    sub: 'درخواست‌های لغوشده اینجا فهرست می‌شوند.',
+  },
+  expired: {
+    title: 'موردی نیست',
+    sub: 'درخواست‌های منقضی‌شده اینجا فهرست می‌شوند.',
+  },
 }
 
 const pendingKey = ['appointment-requests', 'pending'] as const
@@ -152,7 +164,7 @@ function RequestsPage() {
     initialData: initial,
     refetchInterval: 60_000,
   })
-  const pendingCount = pendingData?.requests.length ?? counts.pending ?? 0
+  const pendingCount = pendingData.requests.length
 
   const reportCount = useCallback((status: StatusTab, n: number) => {
     setCounts((prev) => (prev[status] === n ? prev : { ...prev, [status]: n }))
@@ -169,7 +181,9 @@ function RequestsPage() {
             <p className="mt-0.5 text-[13px] text-muted-foreground">
               {pendingCount > 0 ? (
                 <>
-                  <span className="tabular-nums">{toPersianDigits(pendingCount)}</span>{' '}
+                  <span className="tabular-nums">
+                    {toPersianDigits(pendingCount)}
+                  </span>{' '}
                   درخواست منتظر بررسی شماست
                 </>
               ) : (
@@ -302,8 +316,8 @@ function RequestsList({
           <PendingCard
             key={req.id}
             request={req}
-            staff={(staffData?.staff as User[] | undefined) ?? []}
-            services={(servicesData?.services as Service[] | undefined) ?? []}
+            staff={staffData?.staff ?? []}
+            services={servicesData?.services ?? []}
             onChanged={onChanged}
           />
         ) : (
@@ -357,7 +371,6 @@ function PendingCard({
   const capableStaff = useMemo(
     () =>
       staff.filter((u) => {
-        if (u.role !== 'staff' && u.role !== 'manager') return false
         if (u.serviceIds == null) return true
         return u.serviceIds.includes(request.serviceId)
       }),
@@ -375,15 +388,13 @@ function PendingCard({
   const name = request.existingClient?.name ?? request.customerName
 
   const approveMutation = useMutation({
-    mutationFn: () =>
-      api.appointmentRequests.approve(request.id, { staffId }),
+    mutationFn: () => api.appointmentRequests.approve(request.id, { staffId }),
     onSuccess: () => {
       setErrMsg(null)
       onChanged()
     },
     onError: (e: unknown) => {
-      const msg =
-        e instanceof ApiError ? e.message : 'تأیید درخواست انجام نشد'
+      const msg = e instanceof ApiError ? e.message : 'تأیید درخواست انجام نشد'
       setErrMsg(msg)
     },
   })
@@ -430,7 +441,9 @@ function PendingCard({
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[15px] font-bold text-foreground">{name}</span>
+            <span className="text-[15px] font-bold text-foreground">
+              {name}
+            </span>
             <Badge variant={isReturning ? 'mint' : 'sky'}>
               {isReturning ? 'بازگشتی' : 'جدید'}
             </Badge>
@@ -455,7 +468,9 @@ function PendingCard({
             <Badge variant="danger">خدمت تغییر کرده</Badge>
           )}
           <span className="text-[12px] tabular-nums text-muted-foreground">
-            {toPersianDigits(request.bookedServicePrice.toLocaleString('en-US'))}
+            {toPersianDigits(
+              request.bookedServicePrice.toLocaleString('en-US'),
+            )}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11.5px] text-muted-foreground">
@@ -540,7 +555,11 @@ function PendingCard({
             >
               انصراف
             </Button>
-            <Button variant="destructive" onClick={reject} disabled={submitting}>
+            <Button
+              variant="destructive"
+              onClick={reject}
+              disabled={submitting}
+            >
               رد درخواست
             </Button>
           </DialogFooter>
@@ -582,7 +601,8 @@ function DecidedCard({
           <Badge variant={meta.tone}>{meta.label}</Badge>
         </div>
         <p className="mt-0.5 truncate text-[11.5px] text-muted-foreground">
-          {request.bookedServiceName} · {formatJalaliFullDate(request.requestedDate)} ·{' '}
+          {request.bookedServiceName} ·{' '}
+          {formatJalaliFullDate(request.requestedDate)} ·{' '}
           <span className="tabular-nums">
             {formatPersianTime(request.requestedStartTime)}
           </span>

@@ -50,7 +50,10 @@ function isMobileContext() {
     return false
   }
 
-  return window.matchMedia('(max-width: 900px)').matches || navigator.maxTouchPoints > 0
+  return (
+    window.matchMedia('(max-width: 900px)').matches ||
+    navigator.maxTouchPoints > 0
+  )
 }
 
 function isIosSafari() {
@@ -62,7 +65,8 @@ function isIosSafari() {
   const isIosDevice =
     /iPad|iPhone|iPod/.test(userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  const isSafari = /Safari/.test(userAgent) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(userAgent)
+  const isSafari =
+    /Safari/.test(userAgent) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(userAgent)
 
   return isIosDevice && isSafari
 }
@@ -95,7 +99,8 @@ export function InstallPrompt() {
     const wasDismissed = window.localStorage.getItem(DISMISSED_KEY) === '1'
     const isFirstVisit = window.localStorage.getItem(FIRST_VISIT_KEY) !== '1'
     const hasValueMoment = window.localStorage.getItem(VALUE_MOMENT_KEY) === '1'
-    const alreadyAutoOpened = window.localStorage.getItem(AUTO_OPENED_KEY) === '1'
+    const alreadyAutoOpened =
+      window.localStorage.getItem(AUTO_OPENED_KEY) === '1'
 
     window.localStorage.setItem(FIRST_VISIT_KEY, '1')
 
@@ -136,13 +141,13 @@ export function InstallPrompt() {
       setOpen(false)
     }
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt as EventListener)
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
     window.addEventListener('appinstalled', handleAppInstalled)
 
     return () => {
       window.removeEventListener(
         'beforeinstallprompt',
-        handleBeforeInstallPrompt as EventListener,
+        handleBeforeInstallPrompt,
       )
       window.removeEventListener('appinstalled', handleAppInstalled)
     }
@@ -186,17 +191,28 @@ export function InstallPrompt() {
   }
 
   return (
-    <Drawer open={open} onOpenChange={handleOpenChange} dismissible={!isPending}>
+    <Drawer
+      open={open}
+      onOpenChange={handleOpenChange}
+      dismissible={!isPending}
+    >
       <DrawerContent className="max-h-[88lvh] rounded-t-[28px] border-border/70 bg-background/98 backdrop-blur">
         <DrawerHeader className="text-start">
           <div className="mb-3 flex items-center gap-3">
             <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-              {variant === 'ios' ? <Share className="size-5" /> : <Download className="size-5" />}
+              {variant === 'ios' ? (
+                <Share className="size-5" />
+              ) : (
+                <Download className="size-5" />
+              )}
             </div>
             <div className="space-y-1">
-              <DrawerTitle className="text-lg">نصب سالورا روی موبایل</DrawerTitle>
+              <DrawerTitle className="text-lg">
+                نصب سالورا روی موبایل
+              </DrawerTitle>
               <DrawerDescription className="text-sm leading-6">
-                بعد از استفاده روزانه، نصبش کنيد تا سريع تر و تمام صفحه در دسترس باشد.
+                بعد از استفاده روزانه، نصبش کنيد تا سريع تر و تمام صفحه در دسترس
+                باشد.
               </DrawerDescription>
             </div>
           </div>

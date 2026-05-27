@@ -24,7 +24,7 @@ export function useClientsListIndexedDbSources(
       return
     }
 
-    let cancelled = false
+    const ac = new AbortController()
     void (async () => {
       if (isOnline && live?.clients !== undefined) {
         await client.clients.hydrateListFromServer(live.clients)
@@ -33,12 +33,12 @@ export function useClientsListIndexedDbSources(
         client.clients.list(),
         client.clients.listLastSyncedAt(),
       ])
-      if (cancelled) return
+      if (ac.signal.aborted) return
       setRepo({ loaded: true, clients: rows, listUpdatedAt: ts })
     })()
 
     return () => {
-      cancelled = true
+      ac.abort()
     }
   }, [enabled, client, isOnline, live, offlineDataEpoch])
 
@@ -98,7 +98,7 @@ export function useClientSummaryIndexedDbSources(
       return
     }
 
-    let cancelled = false
+    const ac = new AbortController()
     void (async () => {
       if (isOnline && live) {
         await client.clients.hydrateSummaryFromServer(clientId, live)
@@ -107,12 +107,12 @@ export function useClientSummaryIndexedDbSources(
         client.clients.getSummary(clientId),
         client.clients.summaryLastSyncedAt(clientId),
       ])
-      if (cancelled) return
+      if (ac.signal.aborted) return
       setRepo({ loaded: true, summary, updatedAt: ts })
     })()
 
     return () => {
-      cancelled = true
+      ac.abort()
     }
   }, [enabled, client, isOnline, clientId, live, offlineDataEpoch])
 

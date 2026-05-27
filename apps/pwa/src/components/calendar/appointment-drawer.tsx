@@ -52,10 +52,8 @@ import {
   parseLocalizedInt,
   toPersianDigits,
 } from '@repo/salon-core/persian-digits'
-import {
-  appointmentFormSchema,
-  type AppointmentFormInput,
-} from '@repo/salon-core/forms/appointment'
+import { appointmentFormSchema } from '@repo/salon-core/forms/appointment'
+import type { AppointmentFormInput } from '@repo/salon-core/forms/appointment'
 import { api } from '#/lib/api-client'
 
 const DURATION_PRESETS = [30, 45, 60, 90, 120]
@@ -125,17 +123,17 @@ export function AppointmentDrawer({
     formState: { errors, isSubmitting, isDirty },
   } = form
 
-  const clientId = watch('clientId') ?? ''
-  const staffId = watch('staffId') ?? ''
-  const serviceId = watch('serviceId') ?? ''
+  const clientId = watch('clientId')
+  const staffId = watch('staffId')
+  const serviceId = watch('serviceId')
   const date = watch('date')
-  const startTime = watch('startTime') ?? '09:00'
+  const startTime = watch('startTime')
   const durationMinutes = Number(watch('durationMinutes')) || 45
   const endTime =
-    watch('endTime') ?? endTimeFromDuration(startTime, durationMinutes)
+    watch('endTime') || endTimeFromDuration(startTime, durationMinutes)
   const useTemporaryClient = Boolean(watch('useTemporaryClient'))
-  const temporaryClientName = watch('temporaryClientName') ?? ''
-  const addonIds = watch('addonIds') ?? []
+  const temporaryClientName = watch('temporaryClientName')
+  const addonIds = watch('addonIds')
   const activeServices = useMemo(
     () => services.filter((service) => service.active),
     [services],
@@ -427,9 +425,6 @@ export function AppointmentDrawer({
       }
 
       const res = await api.appointments.create(payload)
-      if (!res.appointment) {
-        throw new DataClientHttpError('پاسخ ثبت نوبت کامل نبود', 200, res)
-      }
       return res.appointment
     })
 
@@ -443,28 +438,27 @@ export function AppointmentDrawer({
       return
     }
 
-    let cancelled = false
-    const ctrl = new AbortController()
+    const ac = new AbortController()
     setAddonsLoading(true)
-
     ;(async () => {
       try {
         const addons = dataClient
           ? await dataClient.services.addons.forService(serviceId)
           : await api.services.addons
-              .forService(serviceId, { signal: ctrl.signal })
-              .then((r) => r.addons ?? [])
-        if (!cancelled) setAvailableAddons(addons)
+              .forService(serviceId, { signal: ac.signal })
+              .then((r) => r.addons)
+        if (ac.signal.aborted) return
+        setAvailableAddons(addons)
       } catch {
-        if (!cancelled) setAvailableAddons([])
+        if (ac.signal.aborted) return
+        setAvailableAddons([])
       } finally {
-        if (!cancelled) setAddonsLoading(false)
+        if (!ac.signal.aborted) setAddonsLoading(false)
       }
     })()
 
     return () => {
-      cancelled = true
-      ctrl.abort()
+      ac.abort()
     }
   }, [dataClient, open, serviceId])
 
@@ -481,7 +475,9 @@ export function AppointmentDrawer({
         const res = (await api.staff.bookingAvailability(
           { date, startTime, endTime },
           { signal: ctrl.signal },
-        )) as unknown as { staff?: Array<{ staffId: string; available: boolean }> }
+        )) as unknown as {
+          staff?: Array<{ staffId: string; available: boolean }>
+        }
         const next: Record<string, boolean> = {}
         for (const row of res.staff ?? []) {
           next[row.staffId] = row.available
@@ -667,8 +663,8 @@ export function AppointmentDrawer({
                         })}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        جمع پیش‌نمایش: {toPersianDigits(previewDuration)} دقیقه ·{' '}
-                        {priceLabel}
+                        جمع پیش‌نمایش: {toPersianDigits(previewDuration)} دقیقه
+                        · {priceLabel}
                       </p>
                     </>
                   ) : (

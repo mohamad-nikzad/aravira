@@ -14,7 +14,10 @@ import { Button } from '@repo/ui/button'
 import { SakuraMark } from '@repo/ui/sakura-mark'
 import type { AppointmentWithDetails } from '@repo/salon-core/types'
 import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
-import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-digits'
+import {
+  formatPersianTime,
+  toPersianDigits,
+} from '@repo/salon-core/persian-digits'
 import { formatPersianFullDate } from '@repo/salon-core/jalali-display'
 import { cn } from '@repo/ui/utils'
 
@@ -41,7 +44,7 @@ function getInitials(name: string): string {
  * itself). A cluster of size >= 2 means those appointments run concurrently.
  */
 export function buildConcurrencyClusters(
-  appointments: AppointmentWithDetails[]
+  appointments: AppointmentWithDetails[],
 ): Map<string, AppointmentWithDetails[]> {
   const result = new Map<string, AppointmentWithDetails[]>()
   const byDate = new Map<string, AppointmentWithDetails[]>()
@@ -53,7 +56,7 @@ export function buildConcurrencyClusters(
 
   for (const list of byDate.values()) {
     const sorted = [...list].sort(
-      (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
+      (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime),
     )
     let current: AppointmentWithDetails[] = []
     let clusterEnd = -1
@@ -98,24 +101,36 @@ export function ConcurrentAppointmentsSheet({
         ? [...cluster].sort(
             (a, b) =>
               timeToMinutes(a.startTime) - timeToMinutes(b.startTime) ||
-              a.staff.name.localeCompare(b.staff.name, 'fa')
+              a.staff.name.localeCompare(b.staff.name, 'fa'),
           )
         : [],
-    [cluster]
+    [cluster],
   )
 
   const winStart = useMemo(
-    () => (sorted.length ? Math.min(...sorted.map((a) => timeToMinutes(a.startTime))) : 0),
-    [sorted]
+    () =>
+      sorted.length
+        ? Math.min(...sorted.map((a) => timeToMinutes(a.startTime)))
+        : 0,
+    [sorted],
   )
   const winEnd = useMemo(
-    () => (sorted.length ? Math.max(...sorted.map((a) => timeToMinutes(a.endTime))) : 0),
-    [sorted]
+    () =>
+      sorted.length
+        ? Math.max(...sorted.map((a) => timeToMinutes(a.endTime)))
+        : 0,
+    [sorted],
   )
   const winDur = Math.max(1, winEnd - winStart)
 
   const lanes = useMemo(() => {
-    const map = new Map<string, { staff: AppointmentWithDetails['staff']; appts: AppointmentWithDetails[] }>()
+    const map = new Map<
+      string,
+      {
+        staff: AppointmentWithDetails['staff']
+        appts: AppointmentWithDetails[]
+      }
+    >()
     for (const apt of sorted) {
       const entry = map.get(apt.staffId)
       if (entry) entry.appts.push(apt)
@@ -164,7 +179,12 @@ export function ConcurrentAppointmentsSheet({
             <SakuraMark
               size={96}
               color="rgba(255,255,255,.05)"
-              style={{ position: 'absolute', bottom: -40, insetInlineStart: 70, transform: 'rotate(30deg)' }}
+              style={{
+                position: 'absolute',
+                bottom: -40,
+                insetInlineStart: 70,
+                transform: 'rotate(30deg)',
+              }}
             />
             <div className="relative flex items-center justify-between gap-3">
               <span className="text-[44px] font-extrabold leading-none tabular-nums">
@@ -180,7 +200,11 @@ export function ConcurrentAppointmentsSheet({
                   <span className="flex items-center gap-1" dir="ltr">
                     {formatPersianTime(sorted[0]?.startTime ?? '')} –{' '}
                     {formatPersianTime(
-                      sorted.reduce((latest, a) => (a.endTime > latest ? a.endTime : latest), sorted[0]?.endTime ?? '')
+                      sorted.reduce(
+                        (latest, a) =>
+                          a.endTime > latest ? a.endTime : latest,
+                        sorted[0]?.endTime ?? '',
+                      ),
                     )}
                     <Clock className="size-3.5" />
                   </span>
@@ -204,9 +228,13 @@ export function ConcurrentAppointmentsSheet({
                       key={t}
                       dir="ltr"
                       className="absolute top-0 -translate-x-1/2 text-[10.5px] font-medium text-muted-foreground tabular-nums"
-                      style={{ insetInlineStart: `${((t - winStart) / winDur) * 100}%` }}
+                      style={{
+                        insetInlineStart: `${((t - winStart) / winDur) * 100}%`,
+                      }}
                     >
-                      {formatPersianTime(`${String(Math.floor(t / 60)).padStart(2, '0')}:00`)}
+                      {formatPersianTime(
+                        `${String(Math.floor(t / 60)).padStart(2, '0')}:00`,
+                      )}
                     </span>
                   ))}
                 </div>
@@ -218,12 +246,17 @@ export function ConcurrentAppointmentsSheet({
                 {lanes.map((lane) => {
                   const color = staffColorVar(lane.staff.color)
                   return (
-                    <div key={lane.staff.id} className="flex items-center gap-2">
+                    <div
+                      key={lane.staff.id}
+                      className="flex items-center gap-2"
+                    >
                       <div className="relative h-7 flex-1 rounded-lg bg-card/70">
                         {lane.appts.map((apt) => {
                           const start = timeToMinutes(apt.startTime)
                           const end = timeToMinutes(apt.endTime)
-                          const isCancelled = apt.status === 'cancelled' || apt.status === 'no-show'
+                          const isCancelled =
+                            apt.status === 'cancelled' ||
+                            apt.status === 'no-show'
                           return (
                             <button
                               key={apt.id}
@@ -232,16 +265,20 @@ export function ConcurrentAppointmentsSheet({
                               title={`${apt.client.name} · ${apt.bookedServiceName}`}
                               className={cn(
                                 'absolute inset-y-0.5 flex items-center justify-center overflow-hidden rounded-md px-1.5 text-[10px] font-bold text-white transition-opacity active:opacity-80',
-                                isCancelled && 'opacity-60'
+                                isCancelled && 'opacity-60',
                               )}
                               style={{
                                 insetInlineStart: `${((start - winStart) / winDur) * 100}%`,
                                 width: `${((end - start) / winDur) * 100}%`,
                                 minWidth: 24,
-                                backgroundColor: isCancelled ? 'var(--destructive)' : color,
+                                backgroundColor: isCancelled
+                                  ? 'var(--destructive)'
+                                  : color,
                               }}
                             >
-                              <span className="truncate">{apt.client.name.split(' ')[0]}</span>
+                              <span className="truncate">
+                                {apt.client.name.split(' ')[0]}
+                              </span>
                             </button>
                           )
                         })}
@@ -271,8 +308,10 @@ export function ConcurrentAppointmentsSheet({
             <div className="overflow-hidden rounded-[18px] border border-border/60 bg-card">
               {sorted.map((apt, index) => {
                 const color = staffColorVar(apt.staff.color)
-                const duration = timeToMinutes(apt.endTime) - timeToMinutes(apt.startTime)
-                const isCancelled = apt.status === 'cancelled' || apt.status === 'no-show'
+                const duration =
+                  timeToMinutes(apt.endTime) - timeToMinutes(apt.startTime)
+                const isCancelled =
+                  apt.status === 'cancelled' || apt.status === 'no-show'
                 return (
                   <button
                     key={apt.id}
@@ -280,18 +319,24 @@ export function ConcurrentAppointmentsSheet({
                     onClick={() => onSelectAppointment(apt)}
                     className={cn(
                       'flex w-full items-center gap-3 px-3.5 py-3 text-start transition-colors active:bg-muted/50',
-                      index > 0 && 'border-t border-border/50'
+                      index > 0 && 'border-t border-border/50',
                     )}
                   >
                     <div className="min-w-[44px] text-center tabular-nums">
-                      <div className="text-[13px] font-bold text-foreground" dir="ltr">
+                      <div
+                        className="text-[13px] font-bold text-foreground"
+                        dir="ltr"
+                      >
                         {formatPersianTime(apt.startTime)}
                       </div>
                       <div className="text-[10px] text-muted-foreground">
                         {toPersianDigits(duration)} د
                       </div>
                     </div>
-                    <span className="h-9 w-1 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                    <span
+                      className="h-9 w-1 shrink-0 rounded-full"
+                      style={{ backgroundColor: color }}
+                    />
                     <span
                       className="flex size-9 shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
                       style={{
@@ -305,7 +350,7 @@ export function ConcurrentAppointmentsSheet({
                       <div
                         className={cn(
                           'truncate text-[13px] font-semibold text-foreground',
-                          isCancelled && 'line-through'
+                          isCancelled && 'line-through',
                         )}
                       >
                         {apt.client.name}

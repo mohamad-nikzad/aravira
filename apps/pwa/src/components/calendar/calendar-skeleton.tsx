@@ -36,7 +36,10 @@ export function CalendarSkeleton() {
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="flex-1 p-2 space-y-0">
           {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="flex items-stretch border-b border-border/30">
+            <div
+              key={i}
+              className="flex items-stretch border-b border-border/30"
+            >
               <div className="w-12 shrink-0 py-2 pr-1">
                 <Skeleton className="h-3 w-8 mr-auto" />
               </div>

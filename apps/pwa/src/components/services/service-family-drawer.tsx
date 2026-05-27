@@ -22,10 +22,8 @@ import {
 } from '@repo/ui/select'
 import { Spinner } from '@repo/ui/spinner'
 import { useDismissGuard } from '#/lib/use-dismiss-guard'
-import {
-  serviceFamilyFormSchema,
-  type ServiceFamilyCreateInput,
-} from '@repo/salon-core/forms/service'
+import { serviceFamilyFormSchema } from '@repo/salon-core/forms/service'
+import type { ServiceFamilyCreateInput } from '@repo/salon-core/forms/service'
 import type { ServiceCategory, ServiceFamily } from '@repo/salon-core/types'
 import { DataClientHttpError } from '@repo/data-client'
 import { useManagerDataClient } from '#/lib/manager-data-client'

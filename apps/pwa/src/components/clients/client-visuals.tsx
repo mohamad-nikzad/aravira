@@ -13,7 +13,10 @@ export function getInitials(name: string) {
   return `${parts[0][0]}${parts[1][0]}`
 }
 
-export function clientAccent(client: Pick<Client, 'tags'>, needsFollowUp = false) {
+export function clientAccent(
+  client: Pick<Client, 'tags'>,
+  needsFollowUp = false,
+) {
   if (isVip(client)) return 'var(--saloora-rose)'
   if (needsFollowUp) return 'var(--amber)'
   return 'var(--sky)'

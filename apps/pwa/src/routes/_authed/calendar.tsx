@@ -6,14 +6,14 @@ import { Plus, Search } from 'lucide-react'
 import { z } from 'zod'
 import type { AvailabilitySlot } from '@repo/salon-core/availability'
 import { cn } from '@repo/ui/utils'
-import {
-  WORKING_HOURS,
-  type AppointmentWithDetails,
-  type BusinessHours,
-  type CalendarView,
-  type Client,
-  type Service,
-  type User,
+import { WORKING_HOURS } from '@repo/salon-core/types'
+import type {
+  AppointmentWithDetails,
+  BusinessHours,
+  CalendarView,
+  Client,
+  Service,
+  User,
 } from '@repo/salon-core/types'
 
 import { api } from '#/lib/api-client'
@@ -30,11 +30,12 @@ import {
 import { CalendarSkeleton } from '#/components/calendar/calendar-skeleton'
 import { AppointmentDrawer } from '#/components/calendar/appointment-drawer'
 import { AvailabilityDrawer } from '#/components/calendar/availability-drawer'
+import { AppointmentDetailDrawer } from '#/components/calendar/appointment-detail-drawer'
+import type { AppointmentDetailChange } from '#/components/calendar/appointment-detail-drawer'
 import {
-  AppointmentDetailDrawer,
-  type AppointmentDetailChange,
-} from '#/components/calendar/appointment-detail-drawer'
-import { NetworkStatusBanner, OfflineStateCard } from '#/components/offline-state'
+  NetworkStatusBanner,
+  OfflineStateCard,
+} from '#/components/offline-state'
 
 const searchSchema = z.object({
   date: z.string().optional(),
@@ -87,14 +88,19 @@ function CalendarPage() {
   const queryClient = useQueryClient()
 
   const [view, setView] = useState<CalendarView>(() => {
-    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches) {
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(max-width: 640px)').matches
+    ) {
       return 'day'
     }
     return 'week'
   })
   const [navDate, setNavDate] = useState(() => new Date())
   const [titleAnchor, setTitleAnchor] = useState(() => new Date())
-  const [range, setRange] = useState<{ start: string; end: string } | null>(null)
+  const [range, setRange] = useState<{ start: string; end: string } | null>(
+    null,
+  )
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([])
   const [concurrentCluster, setConcurrentCluster] = useState<
     AppointmentWithDetails[] | null
@@ -193,7 +199,7 @@ function CalendarPage() {
 
   const businessHours: BusinessHours = useMemo(() => {
     const s = businessSource?.settings
-    if (s?.workingStart && s?.workingEnd && s?.slotDurationMinutes != null) {
+    if (s) {
       return {
         workingStart: s.workingStart,
         workingEnd: s.workingEnd,
@@ -266,7 +272,10 @@ function CalendarPage() {
   const handleVisibleRangeChange = useCallback(
     (start: string, endInclusive: string, activeStart: Date) => {
       const paddedStart = format(subDays(parseISO(start), 14), 'yyyy-MM-dd')
-      const paddedEnd = format(addDays(parseISO(endInclusive), 14), 'yyyy-MM-dd')
+      const paddedEnd = format(
+        addDays(parseISO(endInclusive), 14),
+        'yyyy-MM-dd',
+      )
       setRange({ start: paddedStart, end: paddedEnd })
       setTitleAnchor(activeStart)
     },
@@ -335,7 +344,9 @@ function CalendarPage() {
       setInitialClientIdForCreate(undefined)
       setInitialStaffIdForCreate(undefined)
       setInitialServiceIdForCreate(undefined)
-      void queryClient.invalidateQueries({ queryKey: ['appointments', 'range'] })
+      void queryClient.invalidateQueries({
+        queryKey: ['appointments', 'range'],
+      })
     },
     [queryClient, upsertAppointmentInCache],
   )
@@ -405,7 +416,9 @@ function CalendarPage() {
         upsertAppointmentInCache(change.appointment)
         setSelectedAppointment(change.appointment)
       }
-      void queryClient.invalidateQueries({ queryKey: ['appointments', 'range'] })
+      void queryClient.invalidateQueries({
+        queryKey: ['appointments', 'range'],
+      })
     },
     [queryClient, startDate, endDate, upsertAppointmentInCache],
   )
@@ -420,7 +433,14 @@ function CalendarPage() {
     void servicesQuery.refetch()
     void businessQuery.refetch()
     if (isManager) void clientsQuery.refetch()
-  }, [appointmentsQuery, staffQuery, servicesQuery, businessQuery, clientsQuery, isManager])
+  }, [
+    appointmentsQuery,
+    staffQuery,
+    servicesQuery,
+    businessQuery,
+    clientsQuery,
+    isManager,
+  ])
 
   if (appointmentsQuery.isLoading && !appointmentsSource) {
     return <CalendarSkeleton />
@@ -522,7 +542,9 @@ function CalendarPage() {
           onSlotSelect={handleSlotSelect}
           onEventClick={handleAppointmentClick}
           onClusterClick={setConcurrentCluster}
-          isRefreshing={appointmentsQuery.isFetching && !appointmentsQuery.isLoading}
+          isRefreshing={
+            appointmentsQuery.isFetching && !appointmentsQuery.isLoading
+          }
         />
       </div>
 

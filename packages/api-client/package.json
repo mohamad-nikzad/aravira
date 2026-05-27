@@ -12,6 +12,7 @@
     "./onboarding": "./src/onboarding.ts",
     "./retention": "./src/retention.ts",
     "./business-settings": "./src/business-settings.ts",
+    "./salon-public-settings": "./src/salon-public-settings.ts",
     "./clients": "./src/clients.ts",
     "./staff": "./src/staff.ts",
     "./services": "./src/services.ts",

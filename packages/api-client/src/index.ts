@@ -120,5 +120,14 @@ export type {
   NotificationType,
   UpdateNotificationPreferencesInput,
 } from './notifications'
+export { createSalonPublicSettingsApi } from './salon-public-settings'
+export type {
+  ManagerPublicSettingsResult,
+  ManagerPublicSettingsView,
+  ManagerServiceVisibilityView,
+  SalonPublicSettingsApi,
+  SalonPublicSettingsResponse,
+  UpdateSalonPublicSettingsInput,
+} from './salon-public-settings'
 export { endpoints } from './endpoints'
 export { ApiError, NetworkError } from './errors'

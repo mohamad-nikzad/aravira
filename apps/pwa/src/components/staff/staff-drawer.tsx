@@ -1,6 +1,6 @@
-import { useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from 'react'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   FormSheet,
   FormSheetContent,
@@ -8,37 +8,35 @@ import {
   FormSheetTitle,
   FormSheetDescription,
   FormSheetFooter,
-} from "#/components/form-sheet";
-import { useDismissGuard } from "#/lib/use-dismiss-guard";
-import { Button } from "@repo/ui/button";
-import { Input } from "@repo/ui/input";
-import { Field, FieldLabel, FieldGroup, FieldError } from "@repo/ui/field";
+} from '#/components/form-sheet'
+import { useDismissGuard } from '#/lib/use-dismiss-guard'
+import { Button } from '@repo/ui/button'
+import { Input } from '@repo/ui/input'
+import { Field, FieldLabel, FieldGroup, FieldError } from '@repo/ui/field'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/select";
-import { Spinner } from "@repo/ui/spinner";
-import { displayPhone, normalizePhone } from "@repo/salon-core/phone";
-import {
-  staffCreateSchema,
-  type StaffCreateFormInput,
-} from "@repo/salon-core/forms/staff";
-import { DataClientHttpError } from "@repo/data-client";
-import { runMutation } from "#/lib/run-mutation";
-import { api } from "#/lib/api-client";
+} from '@repo/ui/select'
+import { Spinner } from '@repo/ui/spinner'
+import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
+import { staffCreateSchema } from '@repo/salon-core/forms/staff'
+import type { StaffCreateFormInput } from '@repo/salon-core/forms/staff'
+import { DataClientHttpError } from '@repo/data-client'
+import { runMutation } from '#/lib/run-mutation'
+import { api } from '#/lib/api-client'
 
 interface StaffDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
-  roleLocked?: "staff" | "manager";
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess: () => void
+  roleLocked?: 'staff' | 'manager'
 }
 
-function emptyValues(roleLocked?: "staff" | "manager"): StaffCreateFormInput {
-  return { name: "", phone: "", password: "", role: roleLocked ?? "staff" };
+function emptyValues(roleLocked?: 'staff' | 'manager'): StaffCreateFormInput {
+  return { name: '', phone: '', password: '', role: roleLocked ?? 'staff' }
 }
 
 export function StaffDrawer({
@@ -57,51 +55,51 @@ export function StaffDrawer({
   } = useForm<StaffCreateFormInput>({
     resolver: zodResolver(staffCreateSchema),
     defaultValues: emptyValues(roleLocked),
-    mode: "onSubmit",
-  });
+    mode: 'onSubmit',
+  })
 
   useEffect(() => {
-    if (open) reset(emptyValues(roleLocked));
-  }, [open, roleLocked, reset]);
+    if (open) reset(emptyValues(roleLocked))
+  }, [open, roleLocked, reset])
 
-  const nameValue = watch("name");
-  const phoneValue = watch("phone");
-  const passwordValue = watch("password");
+  const nameValue = watch('name')
+  const phoneValue = watch('phone')
+  const passwordValue = watch('password')
 
   const { requestClose, confirmDialog } = useDismissGuard({
     isDirty: isDirty && !isSubmitting,
     onClose: () => onOpenChange(false),
-  });
+  })
 
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {
-      onOpenChange(true);
-      return;
+      onOpenChange(true)
+      return
     }
-    requestClose(false);
-  };
+    requestClose(false)
+  }
 
   const onSubmit = handleSubmit(async (values) => {
     const result = await runMutation(async () => {
       try {
         await api.staff.create({
           ...values,
-          role: (roleLocked ?? values.role ?? "staff") as "manager" | "staff",
-        });
+          role: roleLocked ?? values.role ?? 'staff',
+        })
       } catch (error) {
         if (error instanceof Error) {
           throw new DataClientHttpError(
-            error.message || "افزودن پرسنل انجام نشد",
+            error.message || 'افزودن پرسنل انجام نشد',
             0,
             null,
-          );
+          )
         }
-        throw error;
+        throw error
       }
-    });
+    })
 
-    if (result.ok) onSuccess();
-  });
+    if (result.ok) onSuccess()
+  })
 
   return (
     <FormSheet open={open} onOpenChange={handleOpenChange}>
@@ -123,7 +121,7 @@ export function StaffDrawer({
               <Input
                 id="staff-name"
                 placeholder="مثال: نرگس کاظمی"
-                {...register("name")}
+                {...register('name')}
               />
               {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
@@ -137,7 +135,7 @@ export function StaffDrawer({
                   <Input
                     id="staff-phone"
                     type="tel"
-                    value={displayPhone(field.value ?? "")}
+                    value={displayPhone(field.value)}
                     onChange={(e) =>
                       field.onChange(normalizePhone(e.target.value))
                     }
@@ -157,7 +155,7 @@ export function StaffDrawer({
                 id="staff-password"
                 type="password"
                 placeholder="رمز ورود به سیستم"
-                {...register("password")}
+                {...register('password')}
               />
               {errors.password && (
                 <FieldError>{errors.password.message}</FieldError>
@@ -168,7 +166,7 @@ export function StaffDrawer({
               <Field>
                 <FieldLabel>نقش</FieldLabel>
                 <Input
-                  value={roleLocked === "staff" ? "پرسنل" : "مدیر"}
+                  value={roleLocked === 'staff' ? 'پرسنل' : 'مدیر'}
                   disabled
                 />
               </Field>
@@ -180,10 +178,8 @@ export function StaffDrawer({
                   name="role"
                   render={({ field }) => (
                     <Select
-                      value={field.value ?? "staff"}
-                      onValueChange={(v) =>
-                        field.onChange(v as "staff" | "manager")
-                      }
+                      value={field.value ?? 'staff'}
+                      onValueChange={(v) => field.onChange(v)}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue />
@@ -209,7 +205,7 @@ export function StaffDrawer({
             className="touch-manipulation"
           >
             {isSubmitting && <Spinner className="ml-2" />}
-            {isSubmitting ? "در حال افزودن…" : "افزودن پرسنل"}
+            {isSubmitting ? 'در حال افزودن…' : 'افزودن پرسنل'}
           </Button>
           <Button
             type="button"
@@ -223,5 +219,5 @@ export function StaffDrawer({
       </FormSheetContent>
       {confirmDialog}
     </FormSheet>
-  );
+  )
 }

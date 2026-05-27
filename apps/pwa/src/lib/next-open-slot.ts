@@ -36,10 +36,11 @@ export function getNextOpenSlot(params: {
     }
   }
 
-  const tomorrowMatch = params.tomorrowRanges[0]
-  if (!tomorrowMatch) {
+  if (params.tomorrowRanges.length === 0) {
     return null
   }
+
+  const tomorrowMatch = params.tomorrowRanges[0]
 
   return {
     dayLabel: 'فردا',

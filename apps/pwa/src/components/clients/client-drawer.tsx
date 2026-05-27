@@ -8,7 +8,8 @@ import { Field, FieldLabel, FieldGroup, FieldError } from '@repo/ui/field'
 import { Spinner } from '@repo/ui/spinner'
 import type { Client } from '@repo/salon-core/types'
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
-import { clientFormSchema, type ClientFormInput } from '@repo/salon-core/forms/client'
+import { clientFormSchema } from '@repo/salon-core/forms/client'
+import type { ClientFormInput } from '@repo/salon-core/forms/client'
 import { DataClientHttpError } from '@repo/data-client'
 
 import {
@@ -24,7 +25,13 @@ import { useManagerDataClient } from '#/lib/manager-data-client'
 import { runMutation } from '#/lib/run-mutation'
 import { api } from '#/lib/api-client'
 
-const tagOptions = ['VIP', 'حساسیت', 'رنگ خاص', 'نیاز به پیگیری', 'بدقول'] as const
+const tagOptions = [
+  'VIP',
+  'حساسیت',
+  'رنگ خاص',
+  'نیاز به پیگیری',
+  'بدقول',
+] as const
 
 interface ClientDrawerProps {
   open: boolean
@@ -49,7 +56,12 @@ function toFormValues(client: Client): ClientFormInput {
   }
 }
 
-export function ClientDrawer({ open, onOpenChange, client, onSuccess }: ClientDrawerProps) {
+export function ClientDrawer({
+  open,
+  onOpenChange,
+  client,
+  onSuccess,
+}: ClientDrawerProps) {
   const dataClient = useManagerDataClient()
   const isEditing = !!client
 
@@ -89,7 +101,7 @@ export function ClientDrawer({ open, onOpenChange, client, onSuccess }: ClientDr
   const onSubmit = handleSubmit(async (values) => {
     const result = await runMutation(async () => {
       if (dataClient) {
-        if (isEditing && client) {
+        if (isEditing) {
           await dataClient.clients.update(client.id, values)
         } else {
           await dataClient.clients.create(values)
@@ -100,14 +112,18 @@ export function ClientDrawer({ open, onOpenChange, client, onSuccess }: ClientDr
 
       const payload = { ...values, tags: values.tags ?? [] }
       try {
-        if (isEditing && client) {
+        if (isEditing) {
           await api.clients.update(client.id, payload)
         } else {
           await api.clients.create(payload)
         }
       } catch (error) {
         if (error instanceof Error) {
-          throw new DataClientHttpError(error.message || 'ذخیره اطلاعات مشتری انجام نشد', 0, null)
+          throw new DataClientHttpError(
+            error.message || 'ذخیره اطلاعات مشتری انجام نشد',
+            0,
+            null,
+          )
         }
         throw error
       }
@@ -120,9 +136,13 @@ export function ClientDrawer({ open, onOpenChange, client, onSuccess }: ClientDr
     <FormSheet open={open} onOpenChange={handleOpenChange}>
       <FormSheetContent onRequestClose={() => requestClose(false)}>
         <FormSheetHeader>
-          <FormSheetTitle>{isEditing ? 'ویرایش مشتری' : 'مشتری جدید'}</FormSheetTitle>
+          <FormSheetTitle>
+            {isEditing ? 'ویرایش مشتری' : 'مشتری جدید'}
+          </FormSheetTitle>
           <FormSheetDescription>
-            {isEditing ? 'اطلاعات مشتری را به‌روز کنید' : 'مشتری جدید به سالن اضافه کنید'}
+            {isEditing
+              ? 'اطلاعات مشتری را به‌روز کنید'
+              : 'مشتری جدید به سالن اضافه کنید'}
           </FormSheetDescription>
         </FormSheetHeader>
 
@@ -133,7 +153,11 @@ export function ClientDrawer({ open, onOpenChange, client, onSuccess }: ClientDr
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="client-name">نام</FieldLabel>
-              <Input id="client-name" placeholder="نام مشتری" {...register('name')} />
+              <Input
+                id="client-name"
+                placeholder="نام مشتری"
+                {...register('name')}
+              />
               {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
 
@@ -146,8 +170,10 @@ export function ClientDrawer({ open, onOpenChange, client, onSuccess }: ClientDr
                   <Input
                     id="client-phone"
                     type="tel"
-                    value={displayPhone(field.value ?? '')}
-                    onChange={(e) => field.onChange(normalizePhone(e.target.value))}
+                    value={displayPhone(field.value)}
+                    onChange={(e) =>
+                      field.onChange(normalizePhone(e.target.value))
+                    }
                     onBlur={field.onBlur}
                     placeholder="۰۹۱۲…"
                     dir="ltr"
@@ -190,7 +216,9 @@ export function ClientDrawer({ open, onOpenChange, client, onSuccess }: ClientDr
                           className="touch-manipulation"
                         >
                           <Badge
-                            variant={current.includes(label) ? 'default' : 'outline'}
+                            variant={
+                              current.includes(label) ? 'default' : 'outline'
+                            }
                             className="px-2.5 py-1"
                           >
                             {label}

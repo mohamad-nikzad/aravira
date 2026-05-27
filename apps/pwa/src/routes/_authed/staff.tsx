@@ -1,6 +1,20 @@
 import { useState, useEffect } from 'react'
-import { createFileRoute, redirect, useNavigate, Link } from '@tanstack/react-router'
-import { ArrowRight, Plus, Search, Phone, Shield, User as UserIcon, ListChecks, Clock3 } from 'lucide-react'
+import {
+  createFileRoute,
+  redirect,
+  useNavigate,
+  Link,
+} from '@tanstack/react-router'
+import {
+  ArrowRight,
+  Plus,
+  Search,
+  Phone,
+  Shield,
+  User as UserIcon,
+  ListChecks,
+  Clock3,
+} from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
 import { Avatar, AvatarFallback } from '@repo/ui/avatar'
@@ -76,7 +90,7 @@ function StaffPage() {
   const filteredStaff = staff.filter(
     (member) =>
       member.name.toLowerCase().includes(search.toLowerCase()) ||
-      member.phone.includes(search)
+      member.phone.includes(search),
   )
 
   const handleAddStaff = () => {
@@ -128,10 +142,16 @@ function StaffPage() {
           </Button>
           <div className="min-w-0">
             <h1 className="truncate text-lg font-bold">پرسنل</h1>
-            <p className="truncate text-xs text-muted-foreground">نقش‌ها، خدمات و ساعت کاری</p>
+            <p className="truncate text-xs text-muted-foreground">
+              نقش‌ها، خدمات و ساعت کاری
+            </p>
           </div>
         </div>
-        <Button size="sm" onClick={handleAddStaff} className="gap-1.5 touch-manipulation">
+        <Button
+          size="sm"
+          onClick={handleAddStaff}
+          className="gap-1.5 touch-manipulation"
+        >
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">پرسنل جدید</span>
         </Button>
@@ -157,7 +177,10 @@ function StaffPage() {
         ) : (
           <div className="divide-y divide-border/50">
             {filteredStaff.map((member) => (
-              <div key={member.id} className="flex items-center gap-3 px-4 py-3">
+              <div
+                key={member.id}
+                className="flex items-center gap-3 px-4 py-3"
+              >
                 <Avatar className="h-10 w-10">
                   <AvatarFallback
                     className="text-foreground text-sm font-medium"
@@ -171,7 +194,9 @@ function StaffPage() {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="font-medium text-sm truncate">{member.name}</p>
+                    <p className="font-medium text-sm truncate">
+                      {member.name}
+                    </p>
                     <Badge variant="secondary" className="text-[10px]">
                       {member.role === 'manager' ? (
                         <span className="flex items-center gap-1">
@@ -186,7 +211,10 @@ function StaffPage() {
                       )}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5" dir="ltr">
+                  <p
+                    className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"
+                    dir="ltr"
+                  >
                     <Phone className="h-3 w-3" />
                     {displayPhone(member.phone)}
                   </p>

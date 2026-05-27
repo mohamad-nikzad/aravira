@@ -5,4 +5,4 @@ export {
   serviceFamilyName,
   type ServiceCategoryGroup,
   type ServiceFamilyGroup,
-} from "@repo/salon-core/service-catalog";
+} from '@repo/salon-core/service-catalog'

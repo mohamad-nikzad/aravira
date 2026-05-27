@@ -1,11 +1,7 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from 'react'
-import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { createContext, useCallback, useContext, useMemo } from 'react'
+import type { ReactNode } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 import { ApiError } from '@repo/api-client'
 import type { User } from '@repo/salon-core/types'
 
@@ -19,7 +15,9 @@ import {
 
 export const authQueryKey = ['auth', 'me'] as const
 
-async function fetchSessionUser({ signal }: { signal?: AbortSignal } = {}): Promise<User | null> {
+async function fetchSessionUser({
+  signal,
+}: { signal?: AbortSignal } = {}): Promise<User | null> {
   try {
     const res = await api.auth.me({ signal })
     writeSnapshot(SESSION_USER_CACHE_KEY, res.user)
@@ -100,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       user: query.data ?? null,
-      loading: query.isPending && query.data === undefined,
+      loading: query.isLoading,
       logout,
       refresh,
       setUser,

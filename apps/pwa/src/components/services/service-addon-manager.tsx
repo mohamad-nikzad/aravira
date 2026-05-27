@@ -1,44 +1,44 @@
-import { useEffect, useMemo, useState } from "react";
-import { Banknote, Clock3, Pencil, Plus, Search, Sparkles } from "lucide-react";
-import { Badge } from "@repo/ui/badge";
-import { Button } from "@repo/ui/button";
-import { Card, CardTitle } from "@repo/ui/card";
-import { Input } from "@repo/ui/input";
-import { Spinner } from "@repo/ui/spinner";
+import { useEffect, useMemo, useState } from 'react'
+import { Banknote, Clock3, Pencil, Plus, Search, Sparkles } from 'lucide-react'
+import { Badge } from '@repo/ui/badge'
+import { Button } from '@repo/ui/button'
+import { Card, CardTitle } from '@repo/ui/card'
+import { Input } from '@repo/ui/input'
+import { Spinner } from '@repo/ui/spinner'
 import type {
   Service,
   ServiceAddon,
   ServiceCategory,
   ServiceFamily,
-} from "@repo/salon-core/types";
-import { toPersianDigits } from "@repo/salon-core/persian-digits";
-import { useManagerDataClient } from "#/lib/manager-data-client";
-import { ServiceAddonDrawer } from "./service-addon-drawer";
+} from '@repo/salon-core/types'
+import { toPersianDigits } from '@repo/salon-core/persian-digits'
+import { useManagerDataClient } from '#/lib/manager-data-client'
+import { ServiceAddonDrawer } from './service-addon-drawer'
 
 interface ServiceAddonManagerProps {
-  categories: ServiceCategory[];
-  families: ServiceFamily[];
-  services: Service[];
-  onChanged: () => void;
+  categories: ServiceCategory[]
+  families: ServiceFamily[]
+  services: Service[]
+  onChanged: () => void
 }
 
 function scopeLabel(addon: ServiceAddon) {
-  if (addon.scopes.length === 0) return "بدون دامنه";
+  if (addon.scopes.length === 0) return 'بدون دامنه'
   const counts = addon.scopes.reduce(
     (sum, scope) => ({
-      category: sum.category + (scope.type === "category" ? 1 : 0),
-      family: sum.family + (scope.type === "family" ? 1 : 0),
-      service: sum.service + (scope.type === "service" ? 1 : 0),
+      category: sum.category + (scope.type === 'category' ? 1 : 0),
+      family: sum.family + (scope.type === 'family' ? 1 : 0),
+      service: sum.service + (scope.type === 'service' ? 1 : 0),
     }),
     { category: 0, family: 0, service: 0 },
-  );
+  )
   return [
     counts.category ? `${toPersianDigits(counts.category)} دسته` : null,
     counts.family ? `${toPersianDigits(counts.family)} خانواده خدمت` : null,
     counts.service ? `${toPersianDigits(counts.service)} خدمت` : null,
   ]
     .filter(Boolean)
-    .join(" · ");
+    .join(' · ')
 }
 
 export function ServiceAddonManager({
@@ -47,60 +47,59 @@ export function ServiceAddonManager({
   services,
   onChanged,
 }: ServiceAddonManagerProps) {
-  const dc = useManagerDataClient();
-  const [addons, setAddons] = useState<ServiceAddon[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedAddon, setSelectedAddon] = useState<ServiceAddon | null>(null);
-  const [search, setSearch] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const dc = useManagerDataClient()
+  const [addons, setAddons] = useState<ServiceAddon[]>([])
+  const [loading, setLoading] = useState(true)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [selectedAddon, setSelectedAddon] = useState<ServiceAddon | null>(null)
+  const [search, setSearch] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
   const refreshAddons = async () => {
-    if (!dc) return;
-    setError(null);
+    if (!dc) return
+    setError(null)
     try {
-      setAddons(await dc.services.addons.list({ includeInactive: true }));
+      setAddons(await dc.services.addons.list({ includeInactive: true }))
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "خواندن افزودنی‌ها انجام نشد",
-      );
+        err instanceof Error ? err.message : 'خواندن افزودنی‌ها انجام نشد',
+      )
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   useEffect(() => {
     if (!dc) {
-      setLoading(false);
-      return;
+      setLoading(false)
+      return
     }
-    void refreshAddons();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dc]);
+    void refreshAddons()
+  }, [dc])
 
-  const activeCount = addons.filter((addon) => addon.active).length;
-  const inactiveCount = addons.length - activeCount;
+  const activeCount = addons.filter((addon) => addon.active).length
+  const inactiveCount = addons.length - activeCount
   const filteredAddons = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase("fa-IR");
-    if (!query) return addons;
+    const query = search.trim().toLocaleLowerCase('fa-IR')
+    if (!query) return addons
     return addons.filter((addon) =>
-      addon.name.toLocaleLowerCase("fa-IR").includes(query),
-    );
-  }, [addons, search]);
+      addon.name.toLocaleLowerCase('fa-IR').includes(query),
+    )
+  }, [addons, search])
   const nextSortOrder =
-    addons.reduce((max, addon) => Math.max(max, addon.sortOrder), 0) + 10;
+    addons.reduce((max, addon) => Math.max(max, addon.sortOrder), 0) + 10
 
   const openNew = () => {
-    setSelectedAddon(null);
-    setDrawerOpen(true);
-  };
+    setSelectedAddon(null)
+    setDrawerOpen(true)
+  }
 
   const handleSuccess = () => {
-    setDrawerOpen(false);
-    setSelectedAddon(null);
-    void refreshAddons();
-    onChanged();
-  };
+    setDrawerOpen(false)
+    setSelectedAddon(null)
+    void refreshAddons()
+    onChanged()
+  }
 
   return (
     <>
@@ -176,8 +175,8 @@ export function ServiceAddonManager({
               </div>
               <p className="text-sm font-medium">
                 {addons.length === 0
-                  ? "هنوز افزودنی ثبت نشده."
-                  : "نتیجه‌ای پیدا نشد."}
+                  ? 'هنوز افزودنی ثبت نشده.'
+                  : 'نتیجه‌ای پیدا نشد.'}
               </p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 افزودنی‌ها مثل طراحی ناخن یا مواد اضافه به رزروهای مرتبط اضافه
@@ -206,14 +205,14 @@ export function ServiceAddonManager({
                     <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 sm:px-2">
                       <Banknote className="h-3 w-3" />
                       {addon.priceDelta > 0
-                        ? `${toPersianDigits(addon.priceDelta.toLocaleString("fa-IR"))} تومان`
-                        : "بدون افزایش قیمت"}
+                        ? `${toPersianDigits(addon.priceDelta.toLocaleString('fa-IR'))} تومان`
+                        : 'بدون افزایش قیمت'}
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 sm:px-2">
                       <Clock3 className="h-3 w-3" />
                       {addon.durationDelta > 0
                         ? `${toPersianDigits(addon.durationDelta)} دقیقه`
-                        : "بدون افزایش زمان"}
+                        : 'بدون افزایش زمان'}
                     </span>
                   </div>
                 </div>
@@ -223,8 +222,8 @@ export function ServiceAddonManager({
                   className="h-8 w-8 shrink-0 rounded-lg sm:h-9 sm:w-9"
                   aria-label={`ویرایش افزودنی ${addon.name}`}
                   onClick={() => {
-                    setSelectedAddon(addon);
-                    setDrawerOpen(true);
+                    setSelectedAddon(addon)
+                    setDrawerOpen(true)
                   }}
                 >
                   <Pencil className="h-4 w-4" />
@@ -245,5 +244,5 @@ export function ServiceAddonManager({
         onSuccess={handleSuccess}
       />
     </>
-  );
+  )
 }

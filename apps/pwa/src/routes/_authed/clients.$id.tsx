@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useNavigate,
+} from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowRight,
@@ -24,7 +29,10 @@ import {
   parseGregorianToJalali,
 } from '@repo/salon-core/jalali'
 import { displayPhone } from '@repo/salon-core/phone'
-import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-digits'
+import {
+  formatPersianTime,
+  toPersianDigits,
+} from '@repo/salon-core/persian-digits'
 
 import { api } from '#/lib/api-client'
 import { useNetworkStatus } from '#/lib/network-status'
@@ -62,7 +70,9 @@ export const Route = createFileRoute('/_authed/clients/$id')({
 function ClientDetailError({ error }: { error: Error }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-      <p className="text-sm text-muted-foreground">پروفایل مشتری بارگذاری نشد</p>
+      <p className="text-sm text-muted-foreground">
+        پروفایل مشتری بارگذاری نشد
+      </p>
       <p className="text-xs text-destructive">{error.message}</p>
       <Button asChild variant="outline">
         <Link to="/clients">بازگشت به فهرست</Link>
@@ -121,7 +131,9 @@ function ClientStat({
       >
         {value}
       </div>
-      <div className="mt-1 text-[10px] font-medium text-muted-foreground">{label}</div>
+      <div className="mt-1 text-[10px] font-medium text-muted-foreground">
+        {label}
+      </div>
     </div>
   )
 }
@@ -147,15 +159,20 @@ function ClientDetailPage() {
   const idb = useClientSummaryIndexedDbSources(true, isOnline, id, liveData)
   const data = idb.data ?? liveData
 
-  if (!data && idb.idbLoading) {
+  if (idb.idbLoading && !idb.hasSnapshot && !isOnline) {
     return <ClientSummarySkeleton />
   }
 
-  if (!data) {
+  if (!idb.hasSnapshot && !isOnline && !idb.idbLoading) {
     return (
       <div className="flex h-full flex-col bg-background">
         <header className="flex items-center gap-3 border-b border-line-soft bg-card px-3 py-3">
-          <Button variant="ghost" size="icon-sm" className="shrink-0 touch-manipulation" asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0 touch-manipulation"
+            asChild
+          >
             <Link to="/clients" aria-label="بازگشت">
               <ArrowRight className="h-5 w-5" />
             </Link>
@@ -176,11 +193,7 @@ function ClientDetailPage() {
 
         <OfflineStateCard
           title="پروفایل مشتری فعلا در دسترس نیست"
-          description={
-            isOnline
-              ? 'بارگذاری پروفایل کامل نشد یا این مشتری پیدا نشد.'
-              : 'برای باز کردن این پروفایل باید قبلا یک بار آن را با اینترنت دیده باشید.'
-          }
+          description="برای باز کردن این پروفایل باید قبلا یک بار آن را با اینترنت دیده باشید."
           actionLabel="بازگشت به فهرست"
           onAction={() => navigate({ to: '/clients' })}
         />
@@ -188,13 +201,19 @@ function ClientDetailPage() {
     )
   }
 
-  const { client, tags, stats, upcomingAppointment, history, openFollowUps } = data
+  const { client, tags, stats, upcomingAppointment, history, openFollowUps } =
+    data
   const accent = clientAccent(client, openFollowUps.length > 0)
 
   return (
     <div className="flex h-full flex-col bg-background">
       <header className="flex items-center gap-3 border-b border-line-soft bg-card px-3 py-2.5">
-        <Button variant="ghost" size="icon-sm" className="shrink-0 touch-manipulation" asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="shrink-0 touch-manipulation"
+          asChild
+        >
           <Link to="/clients" aria-label="بازگشت">
             <ArrowRight className="h-5 w-5" />
           </Link>
@@ -202,7 +221,10 @@ function ClientDetailPage() {
         <ClientAvatar name={client.name} accent={accent} size={40} />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-base font-bold">{client.name}</h1>
-          <p className="truncate text-xs tabular-nums text-muted-foreground" dir="ltr">
+          <p
+            className="truncate text-xs tabular-nums text-muted-foreground"
+            dir="ltr"
+          >
             {displayPhone(client.phone)}
           </p>
         </div>
@@ -237,14 +259,22 @@ function ClientDetailPage() {
             </Button>
           ) : null}
           {isOnline ? (
-            <Button variant="secondary" className="flex-1 touch-manipulation gap-1.5" asChild>
+            <Button
+              variant="secondary"
+              className="flex-1 touch-manipulation gap-1.5"
+              asChild
+            >
               <a href={`/calendar?clientId=${client.id}`}>
                 <CalendarPlus className="h-4 w-4" />
                 نوبت جدید
               </a>
             </Button>
           ) : (
-            <Button variant="secondary" className="flex-1 touch-manipulation gap-1.5" disabled>
+            <Button
+              variant="secondary"
+              className="flex-1 touch-manipulation gap-1.5"
+              disabled
+            >
               <CalendarPlus className="h-4 w-4" />
               نوبت جدید
             </Button>
@@ -286,7 +316,9 @@ function ClientDetailPage() {
               <ClipboardList className="h-4 w-4" />
               یادداشت
             </div>
-            <p className="text-sm leading-relaxed text-foreground">{client.notes}</p>
+            <p className="text-sm leading-relaxed text-foreground">
+              {client.notes}
+            </p>
           </Card>
         )}
 
@@ -320,15 +352,20 @@ function ClientDetailPage() {
         {upcomingAppointment && (
           <Card className="gap-0 border-primary/30 bg-primary/5 p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <span className="text-sm font-bold text-foreground">نوبت پیشِ رو</span>
-              <Badge variant="plum">{APPOINTMENT_STATUS[upcomingAppointment.status].label}</Badge>
+              <span className="text-sm font-bold text-foreground">
+                نوبت پیشِ رو
+              </span>
+              <Badge variant="plum">
+                {APPOINTMENT_STATUS[upcomingAppointment.status].label}
+              </Badge>
             </div>
             <p className="text-sm font-medium text-foreground">
               {formatJalaliFullDate(upcomingAppointment.date)}
             </p>
             <p className="mt-1 text-xs text-muted-foreground" dir="ltr">
               {formatPersianTime(upcomingAppointment.startTime)} –{' '}
-              {formatPersianTime(upcomingAppointment.endTime)} · {upcomingAppointment.staff.name}
+              {formatPersianTime(upcomingAppointment.endTime)} ·{' '}
+              {upcomingAppointment.staff.name}
             </p>
             <p className="mt-1 text-sm text-foreground">
               {upcomingAppointment.bookedServiceName}
@@ -341,7 +378,9 @@ function ClientDetailPage() {
 
         {openFollowUps.length > 0 && (
           <Card className="gap-0 overflow-hidden py-0">
-            <div className="px-4 pt-3.5 pb-2 text-sm font-bold text-foreground">پیگیری‌های باز</div>
+            <div className="px-4 pt-3.5 pb-2 text-sm font-bold text-foreground">
+              پیگیری‌های باز
+            </div>
             <div className="px-4 pb-3 space-y-2">
               {openFollowUps.map((fu) => (
                 <div
@@ -373,7 +412,11 @@ function ClientDetailPage() {
             ) : (
               history
                 .slice()
-                .sort((a, b) => `${b.date} ${b.startTime}`.localeCompare(`${a.date} ${a.startTime}`))
+                .sort((a, b) =>
+                  `${b.date} ${b.startTime}`.localeCompare(
+                    `${a.date} ${a.startTime}`,
+                  ),
+                )
                 .map((apt, index) => {
                   const isDone = apt.status === 'completed'
                   return (
@@ -387,7 +430,9 @@ function ClientDetailPage() {
                       <div
                         className={cn(
                           'flex size-9 shrink-0 items-center justify-center rounded-xl',
-                          isDone ? 'bg-mint-soft text-mint-fg' : 'bg-paper-deep text-sage-deep',
+                          isDone
+                            ? 'bg-mint-soft text-mint-fg'
+                            : 'bg-paper-deep text-sage-deep',
                         )}
                       >
                         {isDone ? (
@@ -407,7 +452,10 @@ function ClientDetailPage() {
                           {shortJalali(apt.date)} · {apt.staff.name}
                         </p>
                       </div>
-                      <Badge variant={isDone ? 'mint' : 'neutral'} className="shrink-0">
+                      <Badge
+                        variant={isDone ? 'mint' : 'neutral'}
+                        className="shrink-0"
+                      >
                         {APPOINTMENT_STATUS[apt.status].label}
                       </Badge>
                     </div>

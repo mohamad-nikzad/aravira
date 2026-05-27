@@ -19,6 +19,7 @@ import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AuthedServicesRouteImport } from './routes/_authed/services'
 import { Route as AuthedRetentionRouteImport } from './routes/_authed/retention'
 import { Route as AuthedRequestsRouteImport } from './routes/_authed/requests'
+import { Route as AuthedPublicPageRouteImport } from './routes/_authed/public-page'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as AuthedClientsRouteImport } from './routes/_authed/clients'
 import { Route as AuthedCalendarRouteImport } from './routes/_authed/calendar'
@@ -73,6 +74,11 @@ const AuthedRequestsRoute = AuthedRequestsRouteImport.update({
   path: '/requests',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedPublicPageRoute = AuthedPublicPageRouteImport.update({
+  id: '/public-page',
+  path: '/public-page',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof AuthedCalendarRoute
   '/clients': typeof AuthedClientsRouteWithChildren
   '/dashboard': typeof AuthedDashboardRoute
+  '/public-page': typeof AuthedPublicPageRoute
   '/requests': typeof AuthedRequestsRoute
   '/retention': typeof AuthedRetentionRoute
   '/services': typeof AuthedServicesRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/calendar': typeof AuthedCalendarRoute
   '/clients': typeof AuthedClientsRouteWithChildren
   '/dashboard': typeof AuthedDashboardRoute
+  '/public-page': typeof AuthedPublicPageRoute
   '/requests': typeof AuthedRequestsRoute
   '/retention': typeof AuthedRetentionRoute
   '/services': typeof AuthedServicesRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/_authed/calendar': typeof AuthedCalendarRoute
   '/_authed/clients': typeof AuthedClientsRouteWithChildren
   '/_authed/dashboard': typeof AuthedDashboardRoute
+  '/_authed/public-page': typeof AuthedPublicPageRoute
   '/_authed/requests': typeof AuthedRequestsRoute
   '/_authed/retention': typeof AuthedRetentionRoute
   '/_authed/services': typeof AuthedServicesRoute
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/clients'
     | '/dashboard'
+    | '/public-page'
     | '/requests'
     | '/retention'
     | '/services'
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/clients'
     | '/dashboard'
+    | '/public-page'
     | '/requests'
     | '/retention'
     | '/services'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/_authed/calendar'
     | '/_authed/clients'
     | '/_authed/dashboard'
+    | '/_authed/public-page'
     | '/_authed/requests'
     | '/_authed/retention'
     | '/_authed/services'
@@ -269,6 +281,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRequestsRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/public-page': {
+      id: '/_authed/public-page'
+      path: '/public-page'
+      fullPath: '/public-page'
+      preLoaderRoute: typeof AuthedPublicPageRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/dashboard': {
       id: '/_authed/dashboard'
       path: '/dashboard'
@@ -316,6 +335,7 @@ interface AuthedRouteChildren {
   AuthedCalendarRoute: typeof AuthedCalendarRoute
   AuthedClientsRoute: typeof AuthedClientsRouteWithChildren
   AuthedDashboardRoute: typeof AuthedDashboardRoute
+  AuthedPublicPageRoute: typeof AuthedPublicPageRoute
   AuthedRequestsRoute: typeof AuthedRequestsRoute
   AuthedRetentionRoute: typeof AuthedRetentionRoute
   AuthedServicesRoute: typeof AuthedServicesRoute
@@ -328,6 +348,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedCalendarRoute: AuthedCalendarRoute,
   AuthedClientsRoute: AuthedClientsRouteWithChildren,
   AuthedDashboardRoute: AuthedDashboardRoute,
+  AuthedPublicPageRoute: AuthedPublicPageRoute,
   AuthedRequestsRoute: AuthedRequestsRoute,
   AuthedRetentionRoute: AuthedRetentionRoute,
   AuthedServicesRoute: AuthedServicesRoute,

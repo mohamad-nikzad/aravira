@@ -1,13 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import FullCalendar from '@fullcalendar/react'
-import type { DateSelectArg, DatesSetArg, EventClickArg, EventInput } from '@fullcalendar/core'
+import type {
+  DateSelectArg,
+  DatesSetArg,
+  EventClickArg,
+  EventInput,
+} from '@fullcalendar/core'
 import faLocale from '@fullcalendar/core/locales/fa'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
 import { format, subDays } from 'date-fns'
-import { WORKING_HOURS, type AppointmentWithDetails, type BusinessHours, type CalendarView } from '@repo/salon-core/types'
+import { WORKING_HOURS } from '@repo/salon-core/types'
+import type {
+  AppointmentWithDetails,
+  BusinessHours,
+  CalendarView,
+} from '@repo/salon-core/types'
 import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import {
   expandedZonedToDate,
@@ -18,7 +28,10 @@ import {
 } from '@repo/salon-core/jalali-display'
 import { cn } from '@repo/ui/utils'
 import { formatCompactServiceLabel } from '#/components/services/service-catalog-groups'
-import { formatPersianTime, toPersianDigits } from '@repo/salon-core/persian-digits'
+import {
+  formatPersianTime,
+  toPersianDigits,
+} from '@repo/salon-core/persian-digits'
 import { salonTodayYmd } from '@repo/salon-core/salon-local-time'
 import { buildConcurrencyClusters } from '#/components/calendar/concurrent-appointments-sheet'
 
@@ -53,7 +66,15 @@ function fcDayCellToDate(cell: { date: unknown }): Date {
   const d = cell.date
   if (d instanceof Date && !Number.isNaN(d.getTime())) return d
   if (Array.isArray(d) && d.length >= 3) {
-    return new Date(d[0] as number, (d[1] as number) - 1, d[2] as number, 12, 0, 0, 0)
+    return new Date(
+      d[0] as number,
+      (d[1] as number) - 1,
+      d[2] as number,
+      12,
+      0,
+      0,
+      0,
+    )
   }
   return new Date(d as number)
 }
@@ -79,8 +100,14 @@ function minutesToSlotDuration(minutes: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`
 }
 
-function appointmentServiceLabel(apt: AppointmentWithDetails, view: CalendarView) {
-  const base = view === 'week' ? apt.bookedServiceName : formatCompactServiceLabel(apt.service)
+function appointmentServiceLabel(
+  apt: AppointmentWithDetails,
+  view: CalendarView,
+) {
+  const base =
+    view === 'week'
+      ? apt.bookedServiceName
+      : formatCompactServiceLabel(apt.service)
   if (view === 'week' || apt.bookedAddonCount <= 0) return base
   return `${base} +${toPersianDigits(apt.bookedAddonCount)}`
 }
@@ -90,7 +117,11 @@ export interface SalonFullCalendarProps {
   appointments: AppointmentWithDetails[]
   view: CalendarView
   currentDate: Date
-  onVisibleRangeChange: (start: string, endInclusive: string, activeStart: Date) => void
+  onVisibleRangeChange: (
+    start: string,
+    endInclusive: string,
+    activeStart: Date,
+  ) => void
   onSlotSelect: (dateStr: string, timeStr: string) => void
   onEventClick: (appointment: AppointmentWithDetails) => void
   /** Week view: tapping a collapsed "N همزمان" pill resolves to the overlapping cluster. */
@@ -166,7 +197,9 @@ export function SalonFullCalendar({
     if (view !== 'week') {
       // Agenda/list view shows only today onward, never past days.
       const source =
-        view === 'list' ? appointments.filter((a) => a.date >= salonTodayYmd()) : appointments
+        view === 'list'
+          ? appointments.filter((a) => a.date >= salonTodayYmd())
+          : appointments
       return source.map(buildSingle)
     }
 
@@ -184,8 +217,14 @@ export function SalonFullCalendar({
       const key = ids[0]
       if (emitted.has(key)) continue
       emitted.add(key)
-      const startMin = cluster.reduce((min, c) => (c.startTime < min ? c.startTime : min), cluster[0].startTime)
-      const endMax = cluster.reduce((max, c) => (c.endTime > max ? c.endTime : max), cluster[0].endTime)
+      const startMin = cluster.reduce(
+        (min, c) => (c.startTime < min ? c.startTime : min),
+        cluster[0].startTime,
+      )
+      const endMax = cluster.reduce(
+        (max, c) => (c.endTime > max ? c.endTime : max),
+        cluster[0].endTime,
+      )
       const dotColors: string[] = []
       for (const c of cluster) {
         const v = staffColorToCssVar(c.staff.color)
@@ -228,7 +267,7 @@ export function SalonFullCalendar({
       const endInclusive = format(subDays(arg.end, 1), 'yyyy-MM-dd')
       onVisibleRangeChange(start, endInclusive, arg.view.activeStart)
     },
-    [onVisibleRangeChange]
+    [onVisibleRangeChange],
   )
 
   const handleDateSelect = useCallback(
@@ -241,7 +280,7 @@ export function SalonFullCalendar({
       onSlotSelect(dateStr, timeStr)
       arg.view.calendar.unselect()
     },
-    [onSlotSelect, bh.workingStart]
+    [onSlotSelect, bh.workingStart],
   )
 
   const selectAllow = useCallback(
@@ -252,14 +291,15 @@ export function SalonFullCalendar({
       boundary.setHours(endH, endM, 0, 0)
       return span.start < boundary
     },
-    [bh.workingEnd]
+    [bh.workingEnd],
   )
 
   const handleEventClick = useCallback(
     (info: EventClickArg) => {
       info.jsEvent.preventDefault()
       if (info.event.extendedProps.kind === 'cluster') {
-        const ids = (info.event.extendedProps.clusterIds as string[] | undefined) ?? []
+        const ids =
+          (info.event.extendedProps.clusterIds as string[] | undefined) ?? []
         const resolved = ids
           .map((cid) => appointmentsById.get(cid))
           .filter((a): a is AppointmentWithDetails => Boolean(a))
@@ -271,7 +311,7 @@ export function SalonFullCalendar({
       const apt = appointmentsById.get(id)
       if (apt) onEventClick(apt)
     },
-    [appointmentsById, onEventClick, onClusterClick]
+    [appointmentsById, onEventClick, onClusterClick],
   )
 
   const handleDateClick = useCallback(
@@ -282,7 +322,7 @@ export function SalonFullCalendar({
         onSlotSelect(format(arg.date, 'yyyy-MM-dd'), format(arg.date, 'HH:mm'))
       }
     },
-    [onSlotSelect, bh.workingStart]
+    [onSlotSelect, bh.workingStart],
   )
 
   return (
@@ -290,7 +330,7 @@ export function SalonFullCalendar({
       className={cn(
         'salon-fullcalendar relative h-full min-h-[400px] flex-1',
         view === 'list' && 'salon-fullcalendar--list',
-        className
+        className,
       )}
     >
       {isRefreshing && (
@@ -302,7 +342,10 @@ export function SalonFullCalendar({
             <span className="calendar-refresh-dot" aria-hidden="true" />
             <span>در حال به‌روزرسانی تقویم…</span>
           </div>
-          <div className="calendar-refresh-bar mt-2 h-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+          <div
+            className="calendar-refresh-bar mt-2 h-1 overflow-hidden rounded-full bg-muted"
+            aria-hidden="true"
+          >
             <span />
           </div>
         </div>
@@ -358,9 +401,13 @@ export function SalonFullCalendar({
           if (viewType === 'dayGridMonth') return undefined
           if (arg.event.extendedProps.kind === 'cluster') {
             const count = arg.event.extendedProps.count as number
-            const dotColors = (arg.event.extendedProps.dotColors as string[] | undefined) ?? []
+            const dotColors =
+              (arg.event.extendedProps.dotColors as string[] | undefined) ?? []
             const dots = dotColors
-              .map((c) => `<span class="fc-apt-cluster-dot" style="background:${c}"></span>`)
+              .map(
+                (c) =>
+                  `<span class="fc-apt-cluster-dot" style="background:${c}"></span>`,
+              )
               .join('')
             return {
               html: `<div class="fc-apt-cluster">
@@ -420,7 +467,9 @@ export function SalonFullCalendar({
           const e = arg.end ? expandedZonedToDate(arg.end) : s
           return `${formatPersianTimeHm(s)} – ${formatPersianTimeHm(e)}`
         }}
-        listDayFormat={(arg) => formatPersianListDayRelative(expandedZonedToDate(arg.date))}
+        listDayFormat={(arg) =>
+          formatPersianListDayRelative(expandedZonedToDate(arg.date))
+        }
         listDaySideFormat={false}
         noEventsText="نوبتی در این بازه نیست"
         eventDisplay="block"

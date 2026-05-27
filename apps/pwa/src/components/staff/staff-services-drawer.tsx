@@ -1,6 +1,6 @@
-import { useEffect, useMemo } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useMemo } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Drawer,
   DrawerContent,
@@ -8,30 +8,28 @@ import {
   DrawerTitle,
   DrawerDescription,
   DrawerFooter,
-} from "@repo/ui/drawer";
-import { Button } from "@repo/ui/button";
-import { FormRootError } from "@repo/ui/form";
-import { Checkbox } from "@repo/ui/checkbox";
-import { Switch } from "@repo/ui/switch";
-import { Spinner } from "@repo/ui/spinner";
-import type { User, Service } from "@repo/salon-core/types";
-import {
-  staffServiceIdsSchema,
-  type StaffServiceIdsInput,
-} from "@repo/salon-core/forms/staff";
-import { toPersianDigits } from "@repo/salon-core/persian-digits";
-import { cn } from "@repo/ui/utils";
-import { runMutation } from "#/lib/run-mutation";
-import { useManagerDataClient } from "#/lib/manager-data-client";
-import { groupServicesByCatalog } from "#/components/services/service-catalog-groups";
-import { useDismissGuard } from "#/lib/use-dismiss-guard";
+} from '@repo/ui/drawer'
+import { Button } from '@repo/ui/button'
+import { FormRootError } from '@repo/ui/form'
+import { Checkbox } from '@repo/ui/checkbox'
+import { Switch } from '@repo/ui/switch'
+import { Spinner } from '@repo/ui/spinner'
+import type { User, Service } from '@repo/salon-core/types'
+import { staffServiceIdsSchema } from '@repo/salon-core/forms/staff'
+import type { StaffServiceIdsInput } from '@repo/salon-core/forms/staff'
+import { toPersianDigits } from '@repo/salon-core/persian-digits'
+import { cn } from '@repo/ui/utils'
+import { runMutation } from '#/lib/run-mutation'
+import { useManagerDataClient } from '#/lib/manager-data-client'
+import { groupServicesByCatalog } from '#/components/services/service-catalog-groups'
+import { useDismissGuard } from '#/lib/use-dismiss-guard'
 
 interface StaffServicesDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  staff: User | null;
-  services: Service[];
-  onSuccess: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  staff: User | null
+  services: Service[]
+  onSuccess: () => void
 }
 
 export function StaffServicesDrawer({
@@ -41,7 +39,7 @@ export function StaffServicesDrawer({
   services,
   onSuccess,
 }: StaffServicesDrawerProps) {
-  const dc = useManagerDataClient();
+  const dc = useManagerDataClient()
   const {
     handleSubmit,
     reset,
@@ -52,87 +50,87 @@ export function StaffServicesDrawer({
   } = useForm<StaffServiceIdsInput>({
     resolver: zodResolver(staffServiceIdsSchema),
     defaultValues: { serviceIds: null },
-  });
-  const serviceIds = watch("serviceIds");
-  const selected = useMemo(() => new Set(serviceIds ?? []), [serviceIds]);
-  const unrestricted = serviceIds == null;
+  })
+  const serviceIds = watch('serviceIds')
+  const selected = useMemo(() => new Set(serviceIds ?? []), [serviceIds])
+  const unrestricted = serviceIds == null
 
   const activeServices = useMemo(
     () => services.filter((s) => s.active),
     [services],
-  );
+  )
 
   const serviceGroups = useMemo(
     () => groupServicesByCatalog(activeServices),
     [activeServices],
-  );
+  )
 
   useEffect(() => {
-    if (!open || !staff) return;
-    reset({ serviceIds: staff.serviceIds ?? null });
-  }, [open, reset, staff]);
+    if (!open || !staff) return
+    reset({ serviceIds: staff.serviceIds ?? null })
+  }, [open, reset, staff])
 
   const toggleService = (serviceId: string, checked: boolean) => {
-    const next = new Set(selected);
-    if (checked) next.add(serviceId);
-    else next.delete(serviceId);
-    setValue("serviceIds", [...next], {
+    const next = new Set(selected)
+    if (checked) next.add(serviceId)
+    else next.delete(serviceId)
+    setValue('serviceIds', [...next], {
       shouldDirty: true,
       shouldValidate: false,
-    });
-  };
+    })
+  }
 
   const handleUnrestrictedChange = (checked: boolean) => {
     if (checked) {
-      setValue("serviceIds", null, { shouldDirty: true });
-      return;
+      setValue('serviceIds', null, { shouldDirty: true })
+      return
     }
     setValue(
-      "serviceIds",
+      'serviceIds',
       selected.size === 0 ? activeServices.map((s) => s.id) : [...selected],
       {
         shouldDirty: true,
         shouldValidate: false,
       },
-    );
-  };
+    )
+  }
 
   const handleSave = handleSubmit(async (values) => {
-    if (!staff) return;
+    if (!staff) return
     if (values.serviceIds != null && values.serviceIds.length === 0) {
-      setError("root", {
+      setError('root', {
         message:
-          "حداقل یک خدمت انتخاب کنید، یا حالت «همه خدمات» را فعال بگذارید.",
-      });
-      return;
+          'حداقل یک خدمت انتخاب کنید، یا حالت «همه خدمات» را فعال بگذارید.',
+      })
+      return
     }
 
     if (!dc) {
-      setError("root", { message: "اتصال داده برقرار نیست" });
-      return;
+      setError('root', { message: 'اتصال داده برقرار نیست' })
+      return
     }
 
     const result = await runMutation(() =>
       dc.staff.setServiceIds(staff.id, values.serviceIds ?? null),
-    );
-    if (result.ok) onSuccess();
-  });
+    )
+    if (result.ok) onSuccess()
+  })
 
   const { requestClose, confirmDialog } = useDismissGuard({
     isDirty: isDirty && !isSubmitting,
     onClose: () => {
-      reset({ serviceIds: null });
-      onOpenChange(false);
+      reset({ serviceIds: null })
+      onOpenChange(false)
     },
-  });
+  })
 
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {
-      onOpenChange(true);
-      return;
+      onOpenChange(true)
+      return
     }
-    requestClose(false);
-  };
+    requestClose(false)
+  }
 
   return (
     <Drawer open={open} onOpenChange={handleOpenChange}>
@@ -145,12 +143,12 @@ export function StaffServicesDrawer({
                 <span className="font-medium text-foreground">
                   {staff.name}
                 </span>
-                {" — "}
+                {' — '}
                 مشخص کنید این پرسنل کدام خدمات را انجام می‌دهد. اگر محدودیتی
                 نباشد، همه خدمات فعال برایشان در نوبت‌گیری در نظر گرفته می‌شود.
               </>
             ) : (
-              "یک پرسنل را انتخاب کنید."
+              'یک پرسنل را انتخاب کنید.'
             )}
           </DrawerDescription>
         </DrawerHeader>
@@ -210,14 +208,14 @@ export function StaffServicesDrawer({
                               <label
                                 key={svc.id}
                                 className={cn(
-                                  "flex w-full min-w-0 cursor-pointer items-start gap-3 rounded-md px-2 py-2.5 text-sm transition-colors",
-                                  "hover:bg-accent/40",
+                                  'flex w-full min-w-0 cursor-pointer items-start gap-3 rounded-md px-2 py-2.5 text-sm transition-colors',
+                                  'hover:bg-accent/40',
                                 )}
                               >
                                 <span className="min-w-0 flex-1 leading-snug">
                                   {svc.name}
                                   <span className="text-muted-foreground text-xs">
-                                    {" "}
+                                    {' '}
                                     · {toPersianDigits(svc.duration)} دقیقه
                                   </span>
                                 </span>
@@ -251,7 +249,7 @@ export function StaffServicesDrawer({
             className="touch-manipulation"
           >
             {isSubmitting && <Spinner className="ml-2" />}
-            {isSubmitting ? "در حال ذخیره…" : "ذخیره"}
+            {isSubmitting ? 'در حال ذخیره…' : 'ذخیره'}
           </Button>
           <Button
             variant="outline"
@@ -265,5 +263,5 @@ export function StaffServicesDrawer({
       </DrawerContent>
       {confirmDialog}
     </Drawer>
-  );
+  )
 }

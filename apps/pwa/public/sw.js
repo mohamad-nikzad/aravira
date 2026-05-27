@@ -162,7 +162,7 @@ function createOfflineDocument(pathname) {
 </html>`,
     {
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
-    }
+    },
   )
 }
 
@@ -187,7 +187,7 @@ self.addEventListener('install', (event) => {
     (async () => {
       const cache = await caches.open(STATIC_CACHE_NAME)
       await cache.addAll(PRECACHE_ASSETS)
-    })()
+    })(),
   )
 })
 
@@ -204,10 +204,10 @@ self.addEventListener('activate', (event) => {
       await Promise.all(
         names
           .filter((name) => !CACHE_NAMES.includes(name))
-          .map((name) => caches.delete(name))
+          .map((name) => caches.delete(name)),
       )
       await self.clients.claim()
-    })()
+    })(),
   )
 })
 
@@ -236,7 +236,7 @@ self.addEventListener('push', (event) => {
       data: { url: payload.url, tag: payload.tag },
       lang: 'fa',
       dir: 'rtl',
-    })
+    }),
   )
 })
 
@@ -250,7 +250,10 @@ self.addEventListener('notificationclick', (event) => {
       .matchAll({ type: 'window', includeUncontrolled: true })
       .then(async (clientList) => {
         for (const client of clientList) {
-          if (!client.url.startsWith(self.location.origin) || !('focus' in client)) {
+          if (
+            !client.url.startsWith(self.location.origin) ||
+            !('focus' in client)
+          ) {
             continue
           }
 
@@ -264,7 +267,7 @@ self.addEventListener('notificationclick', (event) => {
         if (self.clients.openWindow) {
           return self.clients.openWindow(url)
         }
-      })
+      }),
   )
 })
 
@@ -294,16 +297,21 @@ self.addEventListener('fetch', (event) => {
 
           return response
         } catch {
-          const cached = await navigationCache.match(request, { ignoreSearch: true })
+          const cached = await navigationCache.match(request, {
+            ignoreSearch: true,
+          })
           if (cached) return cached
 
-          const fallback = await findNavigationFallback(navigationCache, url.pathname)
+          const fallback = await findNavigationFallback(
+            navigationCache,
+            url.pathname,
+          )
           if (fallback) return fallback
 
           const offlineLaunch = await caches.match('/offline-launch.html')
           return offlineLaunch ?? createOfflineDocument(url.pathname)
         }
-      })()
+      })(),
     )
     return
   }
@@ -327,7 +335,7 @@ self.addEventListener('fetch', (event) => {
             new Response(null, { status: 504, statusText: 'Offline' })
           )
         }
-      })()
+      })(),
     )
     return
   }
@@ -360,7 +368,7 @@ self.addEventListener('fetch', (event) => {
           (await caches.match(request)) ||
           new Response(null, { status: 504, statusText: 'Offline' })
         )
-      })()
+      })(),
     )
   }
 })

@@ -1,4 +1,9 @@
-import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import {
+  Link,
+  createFileRoute,
+  redirect,
+  useNavigate,
+} from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -9,7 +14,8 @@ import { FormRootError } from '@repo/ui/form'
 import { Spinner } from '@repo/ui/spinner'
 import { ApiError } from '@repo/api-client'
 import { displayPhone } from '@repo/salon-core/phone'
-import { loginSchema, type LoginFormInput } from '@repo/salon-core/forms/auth'
+import { loginSchema } from '@repo/salon-core/forms/auth'
+import type { LoginFormInput } from '@repo/salon-core/forms/auth'
 import type { User } from '@repo/salon-core/types'
 
 import { api } from '#/lib/api-client'
@@ -51,7 +57,7 @@ function LoginPage() {
     defaultValues: { phone: '', password: '' },
   })
 
-  const phoneValue = watch('phone') ?? ''
+  const phoneValue = watch('phone')
 
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -73,14 +79,22 @@ function LoginPage() {
     <main className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-background p-4">
       <div className="relative w-full max-w-sm">
         <div className="mb-10 text-center">
-          <h1 className="text-3xl font-black text-foreground tracking-tight">سالورا</h1>
-          <p className="mt-2 text-sm text-muted-foreground">مدیریت هوشمند سالن زیبایی</p>
+          <h1 className="text-3xl font-black text-foreground tracking-tight">
+            سالورا
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            مدیریت هوشمند سالن زیبایی
+          </p>
         </div>
 
         <div className="rounded-2xl border border-border/60 bg-card/95 p-6 shadow-sm">
           <div className="mb-6 text-center">
-            <h2 className="text-base font-semibold text-foreground">خوش آمدید</h2>
-            <p className="mt-1 text-sm text-muted-foreground">برای ادامه وارد شوید</p>
+            <h2 className="text-base font-semibold text-foreground">
+              خوش آمدید
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              برای ادامه وارد شوید
+            </p>
           </div>
 
           <form onSubmit={onSubmit} noValidate>
@@ -92,7 +106,9 @@ function LoginPage() {
                   type="tel"
                   value={displayPhone(phoneValue)}
                   onChange={(event) =>
-                    setValue('phone', event.target.value, { shouldValidate: false })
+                    setValue('phone', event.target.value, {
+                      shouldValidate: false,
+                    })
                   }
                   placeholder="مثلاً ۰۹۱۲۰۰۰۰۰۰۰"
                   autoComplete="username"
@@ -101,7 +117,9 @@ function LoginPage() {
                   className="h-12 rounded-xl bg-muted/40 border-border/50 text-base text-left tabular-nums"
                   dir="ltr"
                 />
-                {errors.phone && <FieldError>{errors.phone.message}</FieldError>}
+                {errors.phone && (
+                  <FieldError>{errors.phone.message}</FieldError>
+                )}
               </Field>
 
               <Field>
@@ -115,7 +133,9 @@ function LoginPage() {
                   className="h-12 rounded-xl bg-muted/40 border-border/50"
                   {...passwordField}
                 />
-                {errors.password && <FieldError>{errors.password.message}</FieldError>}
+                {errors.password && (
+                  <FieldError>{errors.password.message}</FieldError>
+                )}
               </Field>
 
               <FormRootError message={errors.root?.message} />
@@ -144,15 +164,20 @@ function LoginPage() {
 
         {showDemoCredentials && (
           <div className="mt-5 rounded-xl bg-muted/40 p-4">
-            <p className="mb-2 text-xs font-medium text-muted-foreground">حساب‌های آزمایشی:</p>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
+              حساب‌های آزمایشی:
+            </p>
             <div className="space-y-0.5">
               <p className="text-xs text-muted-foreground" dir="ltr">
                 مدیر: {displayPhone('09120000000')}
               </p>
               <p className="text-xs text-muted-foreground" dir="ltr">
-                پرسنل: {displayPhone('09120000001')}، {displayPhone('09120000002')}
+                پرسنل: {displayPhone('09120000001')}،{' '}
+                {displayPhone('09120000002')}
               </p>
-              <p className="text-xs text-muted-foreground">رمز (همه): admin123</p>
+              <p className="text-xs text-muted-foreground">
+                رمز (همه): admin123
+              </p>
             </div>
           </div>
         )}

@@ -5,8 +5,8 @@ import {
   useEffect,
   useMemo,
   useState,
-  type ReactNode,
 } from 'react'
+import type { ReactNode } from 'react'
 
 export type Theme = 'light' | 'dark' | 'system'
 
@@ -44,7 +44,9 @@ function applyTheme(resolved: ResolvedTheme) {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => readStoredTheme())
-  const [systemDark, setSystemDark] = useState<boolean>(() => systemPrefersDark())
+  const [systemDark, setSystemDark] = useState<boolean>(() =>
+    systemPrefersDark(),
+  )
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)')

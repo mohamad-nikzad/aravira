@@ -54,10 +54,8 @@ import {
 } from '#/lib/manager-data-client'
 import { useManagerTodayIndexedDbSources } from '#/lib/use-manager-today-indexeddb'
 import { AppointmentDrawer } from '#/components/calendar/appointment-drawer'
-import {
-  AppointmentDetailDrawer,
-  type AppointmentDetailChange,
-} from '#/components/calendar/appointment-detail-drawer'
+import { AppointmentDetailDrawer } from '#/components/calendar/appointment-detail-drawer'
+import type { AppointmentDetailChange } from '#/components/calendar/appointment-detail-drawer'
 import { AvailabilityDrawer } from '#/components/calendar/availability-drawer'
 import { StatusPill } from '#/components/status-pill'
 import {
@@ -1074,7 +1072,7 @@ function StaffActionButtons({
             disabled={isSaving || networkBlocked}
             onClick={() => onPatchStatus(appointment.id, 'confirmed')}
           >
-            {isSaving && currentFeedback?.status === 'confirmed' && (
+            {isSaving && currentFeedback.status === 'confirmed' && (
               <Spinner className="ml-1.5 size-3" />
             )}
             تایید
@@ -1086,7 +1084,7 @@ function StaffActionButtons({
           disabled={isSaving || networkBlocked}
           onClick={() => onPatchStatus(appointment.id, 'completed')}
         >
-          {isSaving && currentFeedback?.status === 'completed' && (
+          {isSaving && currentFeedback.status === 'completed' && (
             <Spinner className="ml-1.5 size-3" />
           )}
           انجام شد
@@ -1098,7 +1096,7 @@ function StaffActionButtons({
           disabled={isSaving || networkBlocked}
           onClick={() => onPatchStatus(appointment.id, 'no-show')}
         >
-          {isSaving && currentFeedback?.status === 'no-show' && (
+          {isSaving && currentFeedback.status === 'no-show' && (
             <Spinner className="ml-1.5 size-3" />
           )}
           غیبت
@@ -1185,10 +1183,7 @@ function StaffTodayView({
   const [clockHm, setClockHm] = useState(() => salonCurrentHm())
 
   useEffect(() => {
-    const timer = window.setInterval(
-      () => setClockHm(salonCurrentHm()),
-      60_000,
-    )
+    const timer = window.setInterval(() => setClockHm(salonCurrentHm()), 60_000)
     return () => window.clearInterval(timer)
   }, [])
 

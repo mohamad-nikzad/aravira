@@ -1,9 +1,7 @@
-
-
-import { useEffect, useState } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Clock3, PackageCheck, Trash2 } from "lucide-react";
+import { useEffect, useState } from 'react'
+import { Controller, useForm, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Clock3, PackageCheck, Trash2 } from 'lucide-react'
 import {
   FormSheet,
   FormSheetContent,
@@ -11,78 +9,76 @@ import {
   FormSheetTitle,
   FormSheetDescription,
   FormSheetFooter,
-} from "#/components/form-sheet";
-import { useDismissGuard } from "#/lib/use-dismiss-guard";
-import { Button } from "@repo/ui/button";
-import { Input } from "@repo/ui/input";
-import { Textarea } from "@repo/ui/textarea";
-import { Field, FieldLabel, FieldGroup, FieldError } from "@repo/ui/field";
-import { FormRootError } from "@repo/ui/form";
+} from '#/components/form-sheet'
+import { useDismissGuard } from '#/lib/use-dismiss-guard'
+import { Button } from '@repo/ui/button'
+import { Input } from '@repo/ui/input'
+import { Textarea } from '@repo/ui/textarea'
+import { Field, FieldLabel, FieldGroup, FieldError } from '@repo/ui/field'
+import { FormRootError } from '@repo/ui/form'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/select";
-import { Spinner } from "@repo/ui/spinner";
-import {
-  STAFF_COLORS,
-  type Service,
-  type ServiceCategory,
-  type ServiceFamily,
-} from "@repo/salon-core/types";
-import { normalizeCalendarColorId } from "@repo/salon-core/calendar-colors";
-import { calendarColorOptions } from "@repo/brand-tokens/calendar-colors";
+} from '@repo/ui/select'
+import { Spinner } from '@repo/ui/spinner'
+import { STAFF_COLORS } from '@repo/salon-core/types'
+import type {
+  Service,
+  ServiceCategory,
+  ServiceFamily,
+} from '@repo/salon-core/types'
+import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
+import { calendarColorOptions } from '@repo/brand-tokens/calendar-colors'
 import {
   parseLocalizedInt,
   toPersianDigits,
-} from "@repo/salon-core/persian-digits";
-import {
-  serviceFormSchema,
-  type ServiceFormInput,
-} from "@repo/salon-core/forms/service";
-import { DataClientHttpError } from "@repo/data-client";
-import { useManagerDataClient } from "#/lib/manager-data-client";
-import { ServicePicker } from "./service-picker";
+} from '@repo/salon-core/persian-digits'
+import { serviceFormSchema } from '@repo/salon-core/forms/service'
+import type { ServiceFormInput } from '@repo/salon-core/forms/service'
+import { DataClientHttpError } from '@repo/data-client'
+import { useManagerDataClient } from '#/lib/manager-data-client'
+import { ServicePicker } from './service-picker'
 
 interface ServiceDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  service: Service | null;
-  services: Service[];
-  categories: ServiceCategory[];
-  families: ServiceFamily[];
-  defaultFamilyId?: string | null;
-  onSuccess: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  service: Service | null
+  services: Service[]
+  categories: ServiceCategory[]
+  families: ServiceFamily[]
+  defaultFamilyId?: string | null
+  onSuccess: () => void
 }
 
 function emptyValues(defaultFamilyId?: string | null): ServiceFormInput {
   return {
-    name: "",
-    familyId: defaultFamilyId ?? "",
-    category: "hair",
+    name: '',
+    familyId: defaultFamilyId ?? '',
+    category: 'hair',
     duration: 45,
     price: 0,
     color: STAFF_COLORS[0],
     active: true,
-    description: "",
-    kind: "standard",
-  };
+    description: '',
+    kind: 'standard',
+  }
 }
 
 function serviceToFormValues(service: Service): ServiceFormInput {
   return {
     name: service.name,
-    familyId: service.familyId ?? "",
+    familyId: service.familyId ?? '',
     category: service.category,
     duration: service.duration,
     price: service.price,
     color: normalizeCalendarColorId(service.color),
     active: service.active,
-    description: service.description ?? "",
-    kind: service.kind ?? "standard",
-  };
+    description: service.description ?? '',
+    kind: service.kind ?? 'standard',
+  }
 }
 
 export function ServiceDrawer({
@@ -95,11 +91,11 @@ export function ServiceDrawer({
   defaultFamilyId,
   onSuccess,
 }: ServiceDrawerProps) {
-  const dc = useManagerDataClient();
-  const isEditing = !!service;
-  const [componentIds, setComponentIds] = useState<string[]>([]);
-  const [initialComponentIds, setInitialComponentIds] = useState<string[]>([]);
-  const [loadingComponents, setLoadingComponents] = useState(false);
+  const dc = useManagerDataClient()
+  const isEditing = !!service
+  const [componentIds, setComponentIds] = useState<string[]>([])
+  const [initialComponentIds, setInitialComponentIds] = useState<string[]>([])
+  const [loadingComponents, setLoadingComponents] = useState(false)
   const {
     register,
     control,
@@ -110,136 +106,138 @@ export function ServiceDrawer({
   } = useForm<ServiceFormInput>({
     resolver: zodResolver(serviceFormSchema),
     defaultValues: emptyValues(defaultFamilyId),
-    mode: "onSubmit",
-  });
+    mode: 'onSubmit',
+  })
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) return
     reset(
       service
         ? serviceToFormValues(service)
         : emptyValues(defaultFamilyId ?? families[0]?.id),
-    );
-  }, [defaultFamilyId, families, open, reset, service]);
+    )
+  }, [defaultFamilyId, families, open, reset, service])
 
-  const nameValue = useWatch({ control, name: "name" });
-  const familyValue = useWatch({ control, name: "familyId" });
-  const kindValue = useWatch({ control, name: "kind" });
-  const activeValue = useWatch({ control, name: "active" });
-  const isCombo = kindValue === "combo";
+  const nameValue = useWatch({ control, name: 'name' })
+  const familyValue = useWatch({ control, name: 'familyId' })
+  const kindValue = useWatch({ control, name: 'kind' })
+  const activeValue = useWatch({ control, name: 'active' })
+  const isCombo = kindValue === 'combo'
   const componentServices = componentIds
     .map((id) => services.find((item) => item.id === id))
-    .filter((item): item is Service => Boolean(item));
+    .filter((item): item is Service => Boolean(item))
   const componentTotals = componentServices.reduce(
     (sum, item) => ({
       duration: sum.duration + item.duration,
       price: sum.price + item.price,
     }),
     { duration: 0, price: 0 },
-  );
+  )
   const selectableComponentServices = services.filter(
-    (item) => item.kind !== "combo" && item.id !== service?.id,
-  );
+    (item) => item.kind !== 'combo' && item.id !== service?.id,
+  )
 
   useEffect(() => {
-    if (!open) return;
-    if (!service || service.kind !== "combo" || !dc) {
-      setComponentIds([]);
-      setInitialComponentIds([]);
-      return;
+    if (!open) return
+    if (!service || service.kind !== 'combo' || !dc) {
+      setComponentIds([])
+      setInitialComponentIds([])
+      return
     }
-    setLoadingComponents(true);
+    setLoadingComponents(true)
     dc.services.comboComponents
       .get(service.id)
       .then((combo) => {
         const ids =
           combo?.components.map((component) => component.componentServiceId) ??
-          [];
-        setComponentIds(ids);
-        setInitialComponentIds(ids);
+          []
+        setComponentIds(ids)
+        setInitialComponentIds(ids)
       })
-      .finally(() => setLoadingComponents(false));
-  }, [dc, open, service]);
+      .finally(() => setLoadingComponents(false))
+  }, [dc, open, service])
 
   const onSubmit = handleSubmit(async (values) => {
     if (!dc) {
-      setError("root", { message: "اتصال داده برقرار نیست" });
-      return;
+      setError('root', { message: 'اتصال داده برقرار نیست' })
+      return
     }
 
     try {
-      const payload = serviceFormSchema.parse(values);
+      const payload = serviceFormSchema.parse(values)
       if (!payload.familyId) {
-        setError("familyId", { message: "گروه خدمات را انتخاب کنید" });
-        return;
+        setError('familyId', { message: 'گروه خدمات را انتخاب کنید' })
+        return
       }
       if (isEditing) {
         const shouldStageComboActivation =
-          payload.kind === "combo" && payload.active && componentIds.length > 0;
+          payload.kind === 'combo' && payload.active && componentIds.length > 0
         await dc.services.update(service.id, {
           ...payload,
           color: normalizeCalendarColorId(payload.color),
           active: shouldStageComboActivation ? false : payload.active,
-        });
-        if (payload.kind === "combo") {
+        })
+        if (payload.kind === 'combo') {
           await dc.services.comboComponents.update(service.id, {
             componentServiceIds: componentIds,
-          });
+          })
           if (shouldStageComboActivation) {
-            await dc.services.update(service.id, { active: true });
+            await dc.services.update(service.id, { active: true })
           }
         }
       } else {
         const shouldStageComboActivation =
-          payload.kind === "combo" && payload.active && componentIds.length > 0;
+          payload.kind === 'combo' && payload.active && componentIds.length > 0
         const created = await dc.services.create({
           ...payload,
           color: normalizeCalendarColorId(payload.color),
           active: shouldStageComboActivation ? false : payload.active,
-        });
-        if (payload.kind === "combo") {
+        })
+        if (payload.kind === 'combo') {
           await dc.services.comboComponents.update(created.id, {
             componentServiceIds: componentIds,
-          });
+          })
           if (shouldStageComboActivation) {
-            await dc.services.update(created.id, { active: true });
+            await dc.services.update(created.id, { active: true })
           }
         }
       }
-      onSuccess();
+      onSuccess()
     } catch (err) {
       const msg =
         err instanceof DataClientHttpError
           ? err.message
           : err instanceof Error
             ? err.message
-            : "خطایی رخ داد";
-      setError("root", { message: msg });
+            : 'خطایی رخ داد'
+      setError('root', { message: msg })
     }
-  });
+  })
 
   const componentsDirty =
     componentIds.length !== initialComponentIds.length ||
-    componentIds.some((id, i) => id !== initialComponentIds[i]);
+    componentIds.some((id, i) => id !== initialComponentIds[i])
 
   const { requestClose, confirmDialog } = useDismissGuard({
     isDirty: (isDirty || componentsDirty) && !isSubmitting,
     onClose: () => onOpenChange(false),
-  });
+  })
 
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {
-      onOpenChange(true);
-      return;
+      onOpenChange(true)
+      return
     }
-    requestClose(false);
-  };
+    requestClose(false)
+  }
 
   return (
     <FormSheet open={open} onOpenChange={handleOpenChange}>
       <FormSheetContent onRequestClose={() => requestClose(false)}>
         <FormSheetHeader>
-          <FormSheetTitle>{isEditing ? "ویرایش خدمت" : "خدمت جدید"}</FormSheetTitle>
+          <FormSheetTitle>
+            {isEditing ? 'ویرایش خدمت' : 'خدمت جدید'}
+          </FormSheetTitle>
           <FormSheetDescription>
             نام، زمان انجام و قیمت را وارد کنید
           </FormSheetDescription>
@@ -252,7 +250,7 @@ export function ServiceDrawer({
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="svc-name">نام خدمت</FieldLabel>
-              <Input id="svc-name" {...register("name")} />
+              <Input id="svc-name" {...register('name')} />
               {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
             <Field>
@@ -262,7 +260,7 @@ export function ServiceDrawer({
                 name="familyId"
                 render={({ field }) => (
                   <Select
-                    value={field.value ?? ""}
+                    value={field.value ?? ''}
                     onValueChange={field.onChange}
                   >
                     <SelectTrigger className="w-full">
@@ -274,14 +272,14 @@ export function ServiceDrawer({
                           family.categoryName ??
                           categories.find(
                             (category) => category.id === family.categoryId,
-                          )?.name;
+                          )?.name
                         return (
                           <SelectItem key={family.id} value={family.id}>
                             {categoryName
                               ? `${categoryName} / ${family.name}`
                               : family.name}
                           </SelectItem>
-                        );
+                        )
                       })}
                     </SelectContent>
                   </Select>
@@ -362,7 +360,7 @@ export function ServiceDrawer({
               <Textarea
                 id="svc-description"
                 rows={3}
-                {...register("description")}
+                {...register('description')}
               />
               {errors.description && (
                 <FieldError>{errors.description.message}</FieldError>
@@ -376,10 +374,8 @@ export function ServiceDrawer({
                   name="kind"
                   render={({ field }) => (
                     <Select
-                      value={field.value ?? "standard"}
-                      onValueChange={(v) =>
-                        field.onChange(v as ServiceFormInput["kind"])
-                      }
+                      value={field.value ?? 'standard'}
+                      onValueChange={(v) => field.onChange(v)}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue />
@@ -400,8 +396,8 @@ export function ServiceDrawer({
                   name="active"
                   render={({ field }) => (
                     <Select
-                      value={field.value ? "on" : "off"}
-                      onValueChange={(v) => field.onChange(v === "on")}
+                      value={field.value ? 'on' : 'off'}
+                      onValueChange={(v) => field.onChange(v === 'on')}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue />
@@ -486,8 +482,8 @@ export function ServiceDrawer({
                     </div>
                     <p className="mt-1 font-semibold">
                       {componentTotals.price > 0
-                        ? `${toPersianDigits(componentTotals.price.toLocaleString("fa-IR"))} تومان`
-                        : "قیمت وارد نشده"}
+                        ? `${toPersianDigits(componentTotals.price.toLocaleString('fa-IR'))} تومان`
+                        : 'قیمت وارد نشده'}
                     </p>
                   </div>
                 </div>
@@ -501,12 +497,12 @@ export function ServiceDrawer({
                   }
                   placeholder={
                     loadingComponents
-                      ? "در حال خواندن اجزا..."
-                      : "افزودن خدمت به پکیج"
+                      ? 'در حال خواندن اجزا...'
+                      : 'افزودن خدمت به پکیج'
                   }
                   disabled={loadingComponents || isSubmitting}
                   getDisabledReason={(item) =>
-                    componentIds.includes(item.id) ? "انتخاب شده" : null
+                    componentIds.includes(item.id) ? 'انتخاب شده' : null
                   }
                 />
                 {componentServices.length > 0 ? (
@@ -521,11 +517,11 @@ export function ServiceDrawer({
                             {item.name}
                           </p>
                           <p className="text-[11px] text-muted-foreground">
-                            {toPersianDigits(item.duration)} دقیقه ·{" "}
+                            {toPersianDigits(item.duration)} دقیقه ·{' '}
                             {item.price > 0
-                              ? `${toPersianDigits(item.price.toLocaleString("fa-IR"))} تومان`
-                              : "قیمت وارد نشده"}
-                            {!item.active ? " · غیرفعال" : ""}
+                              ? `${toPersianDigits(item.price.toLocaleString('fa-IR'))} تومان`
+                              : 'قیمت وارد نشده'}
+                            {!item.active ? ' · غیرفعال' : ''}
                           </p>
                         </div>
                         <Button
@@ -569,7 +565,7 @@ export function ServiceDrawer({
             className="touch-manipulation"
           >
             {isSubmitting && <Spinner className="ml-2" />}
-            {isSubmitting ? "…" : isEditing ? "ذخیره" : "افزودن"}
+            {isSubmitting ? '…' : isEditing ? 'ذخیره' : 'افزودن'}
           </Button>
           <Button
             type="button"
@@ -583,5 +579,5 @@ export function ServiceDrawer({
       </FormSheetContent>
       {confirmDialog}
     </FormSheet>
-  );
+  )
 }

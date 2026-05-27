@@ -1,4 +1,9 @@
-import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import {
+  Link,
+  createFileRoute,
+  redirect,
+  useNavigate,
+} from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@repo/ui/button'
@@ -14,7 +19,8 @@ import { FormRootError } from '@repo/ui/form'
 import { Spinner } from '@repo/ui/spinner'
 import { ApiError } from '@repo/api-client'
 import { displayPhone } from '@repo/salon-core/phone'
-import { signupSchema, type SignupFormInput } from '@repo/salon-core/forms/auth'
+import { signupSchema } from '@repo/salon-core/forms/auth'
+import type { SignupFormInput } from '@repo/salon-core/forms/auth'
 import type { User } from '@repo/salon-core/types'
 
 import { api } from '#/lib/api-client'
@@ -66,9 +72,9 @@ function SignupPage() {
     },
   })
 
-  const slug = watch('slug') ?? 'salon'
-  const managerPhone = watch('managerPhone') ?? ''
-  const slugEdited = watch('slug') !== makeSlug(watch('salonName') ?? '')
+  const slug = watch('slug')
+  const managerPhone = watch('managerPhone')
+  const slugEdited = watch('slug') !== makeSlug(watch('salonName'))
 
   function handleSalonNameChange(value: string) {
     setValue('salonName', value, { shouldValidate: false })
@@ -98,7 +104,9 @@ function SignupPage() {
     <main className="flex min-h-dvh items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-black tracking-tight text-foreground">ساخت سالن جدید</h1>
+          <h1 className="text-2xl font-black tracking-tight text-foreground">
+            ساخت سالن جدید
+          </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             سالن خود را در سالورا بسازید و نوبت‌ها را مدیریت کنید
           </p>
@@ -111,14 +119,16 @@ function SignupPage() {
                 <FieldLabel htmlFor="salonName">نام سالن</FieldLabel>
                 <Input
                   id="salonName"
-                  value={watch('salonName') ?? ''}
+                  value={watch('salonName')}
                   onChange={(e) => handleSalonNameChange(e.target.value)}
                   placeholder="مثلاً سالن رز"
                   autoComplete="organization"
                   disabled={isSubmitting}
                   className="h-12 rounded-lg bg-muted/40"
                 />
-                {errors.salonName && <FieldError>{errors.salonName.message}</FieldError>}
+                {errors.salonName && (
+                  <FieldError>{errors.salonName.message}</FieldError>
+                )}
               </Field>
 
               <Field>
@@ -127,7 +137,9 @@ function SignupPage() {
                   id="slug"
                   value={slug}
                   onChange={(e) => {
-                    setValue('slug', makeSlug(e.target.value), { shouldValidate: false })
+                    setValue('slug', makeSlug(e.target.value), {
+                      shouldValidate: false,
+                    })
                   }}
                   placeholder="rose-salon"
                   autoComplete="off"
@@ -135,7 +147,9 @@ function SignupPage() {
                   dir="ltr"
                   className="h-12 rounded-lg bg-muted/40 text-left"
                 />
-                <FieldDescription dir="ltr">saloora.beauty/{slug || 'salon'}</FieldDescription>
+                <FieldDescription dir="ltr">
+                  saloora.beauty/{slug || 'salon'}
+                </FieldDescription>
                 {errors.slug && <FieldError>{errors.slug.message}</FieldError>}
               </Field>
 
@@ -149,17 +163,23 @@ function SignupPage() {
                   className="h-12 rounded-lg bg-muted/40"
                   {...managerNameField}
                 />
-                {errors.managerName && <FieldError>{errors.managerName.message}</FieldError>}
+                {errors.managerName && (
+                  <FieldError>{errors.managerName.message}</FieldError>
+                )}
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="managerPhone">شماره موبایل مدیر</FieldLabel>
+                <FieldLabel htmlFor="managerPhone">
+                  شماره موبایل مدیر
+                </FieldLabel>
                 <Input
                   id="managerPhone"
                   type="tel"
                   value={displayPhone(managerPhone)}
                   onChange={(e) =>
-                    setValue('managerPhone', e.target.value, { shouldValidate: false })
+                    setValue('managerPhone', e.target.value, {
+                      shouldValidate: false,
+                    })
                   }
                   placeholder="۰۹۱۲۰۰۰۰۰۰۰"
                   autoComplete="username"
@@ -168,7 +188,9 @@ function SignupPage() {
                   dir="ltr"
                   className="h-12 rounded-lg bg-muted/40 text-left tabular-nums"
                 />
-                {errors.managerPhone && <FieldError>{errors.managerPhone.message}</FieldError>}
+                {errors.managerPhone && (
+                  <FieldError>{errors.managerPhone.message}</FieldError>
+                )}
               </Field>
 
               <Field>
@@ -182,7 +204,9 @@ function SignupPage() {
                   className="h-12 rounded-lg bg-muted/40"
                   {...passwordField}
                 />
-                {errors.password && <FieldError>{errors.password.message}</FieldError>}
+                {errors.password && (
+                  <FieldError>{errors.password.message}</FieldError>
+                )}
               </Field>
 
               <FormRootError message={errors.root?.message} />

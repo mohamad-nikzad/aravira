@@ -30,7 +30,11 @@ export function ClientsSkeleton() {
       <div className="bg-card px-4 pb-3">
         <div className="relative">
           <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="جستجوی مشتری…" disabled className="pr-9 h-10 bg-muted/50 border-0" />
+          <Input
+            placeholder="جستجوی مشتری…"
+            disabled
+            className="pr-9 h-10 bg-muted/50 border-0"
+          />
         </div>
       </div>
 

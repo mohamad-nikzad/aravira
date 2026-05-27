@@ -18,15 +18,24 @@ export function readSnapshot<T>(key: string): OfflineSnapshot<T> | null {
   try {
     const raw = window.localStorage.getItem(storageKey(key))
     if (!raw) return null
-    const parsed = JSON.parse(raw) as OfflineSnapshot<T>
-    if (!parsed || typeof parsed !== 'object' || !('updatedAt' in parsed)) return null
-    return parsed
+    const parsed: unknown = JSON.parse(raw)
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      !('updatedAt' in parsed)
+    ) {
+      return null
+    }
+    return parsed as OfflineSnapshot<T>
   } catch {
     return null
   }
 }
 
-export function writeSnapshot<T>(key: string, data: T): OfflineSnapshot<T> | null {
+export function writeSnapshot<T>(
+  key: string,
+  data: T,
+): OfflineSnapshot<T> | null {
   if (typeof window === 'undefined') return null
   const snapshot: OfflineSnapshot<T> = {
     data,

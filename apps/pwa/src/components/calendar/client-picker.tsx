@@ -1,5 +1,13 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Check, ChevronDown, ChevronLeft, Plus, Search, UserPlus, X } from 'lucide-react'
+import {
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  Plus,
+  Search,
+  UserPlus,
+  X,
+} from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Input } from '@repo/ui/input'
@@ -16,7 +24,8 @@ import { useIsTouch } from '@repo/ui/use-mobile'
 import { cn } from '@repo/ui/utils'
 import type { Client } from '@repo/salon-core/types'
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
-import { clientFormSchema, type ClientFormInput } from '@repo/salon-core/forms/client'
+import { clientFormSchema } from '@repo/salon-core/forms/client'
+import type { ClientFormInput } from '@repo/salon-core/forms/client'
 import { DataClientHttpError } from '@repo/data-client'
 import { useManagerDataClient } from '#/lib/manager-data-client'
 import { useKeyboardInset } from '#/lib/use-keyboard-inset'
@@ -54,8 +63,8 @@ export function ClientPicker({
   })
   const searchRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const newName = watch('name') ?? ''
-  const newPhone = watch('phone') ?? ''
+  const newName = watch('name')
+  const newPhone = watch('phone')
 
   useKeyboardInset(isTouch && mode !== 'closed')
 
@@ -92,7 +101,10 @@ export function ClientPicker({
   useEffect(() => {
     if (isTouch || mode === 'closed') return
     function handleClick(e: MouseEvent | TouchEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         if (document.activeElement instanceof HTMLElement) {
           document.activeElement.blur()
         }
@@ -147,7 +159,10 @@ export function ClientPicker({
         created = await dataClient.clients.create(values)
         void dataClient.sync.processPending()
       } else {
-        const res = await api.clients.create({ ...values, tags: values.tags ?? [] })
+        const res = await api.clients.create({
+          ...values,
+          tags: values.tags ?? [],
+        })
         created = res.client
       }
 
@@ -161,7 +176,8 @@ export function ClientPicker({
       reset({ name: '', phone: '', notes: '', tags: [] })
     } catch (err) {
       setError('root', {
-        message: err instanceof DataClientHttpError ? err.message : 'خطایی رخ داد',
+        message:
+          err instanceof DataClientHttpError ? err.message : 'خطایی رخ داد',
       })
     }
   })
@@ -239,7 +255,9 @@ export function ClientPicker({
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate text-sm">{client.name}</p>
                 <p className="text-xs text-muted-foreground" dir="ltr">
-                  {client.isPlaceholder ? 'اطلاعات ناقص' : displayPhone(client.phone)}
+                  {client.isPlaceholder
+                    ? 'اطلاعات ناقص'
+                    : displayPhone(client.phone)}
                 </p>
               </div>
               {client.id === value && (
@@ -264,7 +282,9 @@ export function ClientPicker({
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
               <UserPlus className="h-3.5 w-3.5" />
             </div>
-            <span className="truncate">افزودن «{query.trim()}» به عنوان مشتری جدید</span>
+            <span className="truncate">
+              افزودن «{query.trim()}» به عنوان مشتری جدید
+            </span>
           </button>
         ) : (
           <button
@@ -311,9 +331,15 @@ export function ClientPicker({
         className="text-left tabular-nums"
       />
 
-      {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
-      {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
-      {errors.root && <p className="text-xs text-destructive">{errors.root.message}</p>}
+      {errors.name && (
+        <p className="text-xs text-destructive">{errors.name.message}</p>
+      )}
+      {errors.phone && (
+        <p className="text-xs text-destructive">{errors.phone.message}</p>
+      )}
+      {errors.root && (
+        <p className="text-xs text-destructive">{errors.root.message}</p>
+      )}
 
       <div className={cn('flex gap-2', isTouch && 'flex-col-reverse')}>
         {isTouch && (
@@ -333,7 +359,11 @@ export function ClientPicker({
           disabled={isSubmitting || !newName.trim() || !newPhone.trim()}
           onClick={() => void handleSaveNew()}
         >
-          {isSubmitting ? <Spinner className="ml-1.5 h-3.5 w-3.5" /> : <Plus className="ml-1.5 h-3.5 w-3.5" />}
+          {isSubmitting ? (
+            <Spinner className="ml-1.5 h-3.5 w-3.5" />
+          ) : (
+            <Plus className="ml-1.5 h-3.5 w-3.5" />
+          )}
           {isSubmitting ? 'در حال ذخیره…' : 'ذخیره و انتخاب'}
         </Button>
       </div>
@@ -378,7 +408,10 @@ export function ClientPicker({
   }
 
   return (
-    <div ref={containerRef} className="rounded-xl border border-primary/30 bg-card shadow-sm overflow-hidden">
+    <div
+      ref={containerRef}
+      className="rounded-xl border border-primary/30 bg-card shadow-sm overflow-hidden"
+    >
       {mode === 'searching' && searchingBody}
       {mode === 'adding' && addingBody}
     </div>
