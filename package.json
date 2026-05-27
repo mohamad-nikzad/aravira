@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "dev": "turbo run dev --filter=@repo/app --filter=@repo/web --filter=@repo/api",
+    "dev": "turbo run dev --filter=@repo/pwa --filter=@repo/web --filter=@repo/api",
     "dev:app": "pnpm --filter @repo/app dev",
     "dev:web": "pnpm --filter @repo/web dev",
     "dev:api": "pnpm --filter @repo/api dev",

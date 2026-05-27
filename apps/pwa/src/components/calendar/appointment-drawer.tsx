@@ -20,7 +20,7 @@ import { Spinner } from '@repo/ui/spinner'
 import { Textarea } from '@repo/ui/textarea'
 import { cn } from '@repo/ui/utils'
 import { ChevronDown, Check } from 'lucide-react'
-import { getInitials } from '#/components/clients/client-visuals'
+import { StaffPicker } from '#/components/calendar/staff-picker'
 import type {
   User,
   Service,
@@ -187,15 +187,33 @@ export function AppointmentDrawer({
     }
     return counts
   }, [activeServices, staffRoleOnly])
+  const serviceIdsWithAvailableStaff = useMemo(() => {
+    const ids = new Set<string>()
+    for (const service of activeServices) {
+      const eligible = eligibleStaffForService(staffRoleOnly, service.id)
+      if (eligible.some((member) => staffSlotOk[member.id] !== false)) {
+        ids.add(service.id)
+      }
+    }
+    return ids
+  }, [activeServices, staffRoleOnly, staffSlotOk])
   const serviceDisabledReason = useCallback(
     (service: Service) => {
       if (!serviceIdsWithStaff.has(service.id)) return 'بدون پرسنل'
+      if (!serviceIdsWithAvailableStaff.has(service.id)) {
+        return 'پرسنل در دسترس نیست'
+      }
       if (selectedStaff && !selectedStaffEligibleServiceIds.has(service.id)) {
         return 'برای این پرسنل نیست'
       }
       return null
     },
-    [selectedStaff, selectedStaffEligibleServiceIds, serviceIdsWithStaff],
+    [
+      selectedStaff,
+      selectedStaffEligibleServiceIds,
+      serviceIdsWithAvailableStaff,
+      serviceIdsWithStaff,
+    ],
   )
   const selectedServiceHasStaff =
     !selectedService || serviceIdsWithStaff.has(selectedService.id)
@@ -317,14 +335,16 @@ export function AppointmentDrawer({
     const svc = services.find((s) => s.id === id)
     if (svc) applyDuration(svc.duration)
 
-    const eligibleAll = eligibleStaffForService(staff, id)
     const eligibleStaffMembers = eligibleStaffForService(staffRoleOnly, id)
-    if (eligibleStaffMembers.length === 1) {
+    const currentStillEligible =
+      !!staffId && eligibleStaffMembers.some((m) => m.id === staffId)
+    if (currentStillEligible) return
+    if (eligibleStaffMembers.length > 0) {
       setValue('staffId', eligibleStaffMembers[0].id, {
         shouldDirty: true,
         shouldValidate: true,
       })
-    } else if (!eligibleAll.some((m) => m.id === staffId)) {
+    } else {
       setValue('staffId', '', { shouldDirty: true, shouldValidate: true })
     }
   }
@@ -653,55 +673,29 @@ export function AppointmentDrawer({
 
               <Field>
                 <FieldLabel>پرسنل</FieldLabel>
-                <div className="flex flex-wrap gap-2">
-                  {staffRoleOnly.map((member) => {
+                <StaffPicker
+                  staff={staffRoleOnly}
+                  value={staffId || undefined}
+                  onChange={handleStaffChange}
+                  getStatus={(member) => {
                     const unavailable = staffSlotOk[member.id] === false
                     const noServices =
                       (staffServiceCounts.get(member.id) ?? 0) === 0
                     const serviceMismatch =
-                      serviceId &&
+                      !!serviceId &&
                       !eligibleStaffForService([member], serviceId).length
-                    const disabled =
-                      unavailable || noServices || Boolean(serviceMismatch)
-                    const selected = staffId === member.id
-                    return (
-                      <button
-                        key={member.id}
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => handleStaffChange(member.id)}
-                        title={
-                          unavailable
-                            ? 'خارج از برنامه'
-                            : noServices
-                              ? 'خدمتی ندارد'
-                              : serviceMismatch
-                                ? 'این خدمت را انجام نمی‌دهد'
-                                : undefined
-                        }
-                        className={cn(
-                          'flex items-center gap-2 rounded-full border py-1 pe-3 ps-1 text-sm transition-colors',
-                          selected
-                            ? 'border-transparent bg-primary text-primary-foreground'
-                            : 'border-transparent bg-blush-soft text-foreground hover:bg-secondary/60',
-                          disabled && 'cursor-not-allowed opacity-40',
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'flex size-7 items-center justify-center rounded-full text-[11px] font-bold',
-                            selected
-                              ? 'bg-primary-foreground/20 text-primary-foreground'
-                              : 'bg-secondary text-plum-deep',
-                          )}
-                        >
-                          {getInitials(member.name)}
-                        </span>
-                        {member.name}
-                      </button>
-                    )
-                  })}
-                </div>
+                    if (unavailable)
+                      return { disabled: true, reason: 'خارج از برنامه' }
+                    if (noServices)
+                      return { disabled: true, reason: 'خدمتی ندارد' }
+                    if (serviceMismatch)
+                      return {
+                        disabled: true,
+                        reason: 'این خدمت را انجام نمی‌دهد',
+                      }
+                    return undefined
+                  }}
+                />
                 {errors.staffId && (
                   <FieldError>{errors.staffId.message}</FieldError>
                 )}

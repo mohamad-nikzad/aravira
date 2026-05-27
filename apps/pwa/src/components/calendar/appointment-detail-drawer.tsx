@@ -72,6 +72,7 @@ import { ClientPicker } from '#/components/calendar/client-picker'
 import { useManagerDataClient } from '#/lib/manager-data-client'
 import { useServiceAddons } from '#/lib/use-service-addons'
 import { ServicePicker } from '#/components/services/service-picker'
+import { StaffPicker } from '#/components/calendar/staff-picker'
 import { DataClientHttpError } from '@repo/data-client'
 import { useNetworkStatus } from '#/lib/network-status'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
@@ -383,14 +384,16 @@ export function AppointmentDetailDrawer({
     const svc = services.find((s) => s.id === id)
     if (svc) applyDuration(svc.duration)
 
-    const eligibleAll = eligibleStaffForService(staff, id)
     const eligibleStaffMembers = eligibleStaffForService(staffRoleOnly, id)
-    if (eligibleStaffMembers.length === 1) {
+    const currentStillEligible =
+      !!staffId && eligibleStaffMembers.some((m) => m.id === staffId)
+    if (currentStillEligible) return
+    if (eligibleStaffMembers.length > 0) {
       setEditValue('staffId', eligibleStaffMembers[0].id, {
         shouldDirty: true,
         shouldValidate: true,
       })
-    } else if (!eligibleAll.some((m) => m.id === staffId)) {
+    } else {
       setEditValue('staffId', '', { shouldDirty: true, shouldValidate: true })
     }
   }
@@ -816,22 +819,22 @@ export function AppointmentDetailDrawer({
               <div className="flex min-w-0 flex-col gap-7">
                 <Field>
                   <FieldLabel>پرسنل</FieldLabel>
-                  <Select
+                  <StaffPicker
+                    staff={staffRoleOnly}
                     value={staffId || undefined}
-                    onValueChange={handleEditStaffChange}
-                    required
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="انتخاب پرسنل" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {staffRoleOnly.map((member) => (
-                        <SelectItem key={member.id} value={member.id}>
-                          {member.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={handleEditStaffChange}
+                    getStatus={(member) => {
+                      const serviceMismatch =
+                        !!serviceId &&
+                        !eligibleStaffForService([member], serviceId).length
+                      if (serviceMismatch)
+                        return {
+                          disabled: true,
+                          reason: 'این خدمت را انجام نمی‌دهد',
+                        }
+                      return undefined
+                    }}
+                  />
                 </Field>
 
                 <Field>

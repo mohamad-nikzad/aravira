@@ -111,7 +111,7 @@ export function JalaliDatePicker({ value, onChange, id, className }: JalaliDateP
         id={id}
         onClick={() => handleOpen(true)}
         className={cn(
-          'border-input bg-blush-soft dark:bg-input/30 flex h-9 w-full items-center justify-between rounded-md border px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none',
+          'border-input bg-blush-soft dark:bg-input/30 flex h-9 touch:h-11 w-full min-w-0 items-center justify-between rounded-md border px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none md:text-sm',
           'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
           !value && 'text-muted-foreground',
           className,
@@ -135,7 +135,7 @@ export function JalaliDatePicker({ value, onChange, id, className }: JalaliDateP
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 touch-manipulation"
+                className="touch-manipulation"
                 onClick={goNext}
               >
                 <ChevronRightIcon className="h-5 w-5" />
@@ -147,7 +147,7 @@ export function JalaliDatePicker({ value, onChange, id, className }: JalaliDateP
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 touch-manipulation"
+                className="touch-manipulation"
                 onClick={goPrev}
               >
                 <ChevronLeftIcon className="h-5 w-5" />
@@ -163,13 +163,13 @@ export function JalaliDatePicker({ value, onChange, id, className }: JalaliDateP
               ))}
             </div>
 
-            {/* Day grid — 44px minimum touch targets */}
+            {/* Day grid — 44px touch targets (matches calendar cell size) */}
             <div className="flex flex-col gap-1">
               {weeks.map((week, wi) => (
                 <div key={wi} className="grid grid-cols-7 gap-1">
                   {week.map((day, di) => {
                     if (day === null) {
-                      return <div key={di} className="aspect-square" />
+                      return <div key={di} className="aspect-square min-h-11" />
                     }
 
                     const isToday =
@@ -189,7 +189,7 @@ export function JalaliDatePicker({ value, onChange, id, className }: JalaliDateP
                         type="button"
                         onClick={() => handleDayClick(day)}
                         className={cn(
-                          'aspect-square min-h-[44px] rounded-xl text-sm font-medium transition-colors touch-manipulation active:scale-95',
+                          'aspect-square min-h-11 rounded-xl text-sm font-medium transition-colors touch-manipulation active:scale-95',
                           'hover:bg-accent hover:text-accent-foreground',
                           isToday && !isSelected && 'bg-accent text-accent-foreground ring-1 ring-primary/30',
                           isSelected &&
