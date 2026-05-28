@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import { ApiError } from '@repo/api-client'
+import { clearOfflineDatabase } from '@repo/data-client'
 import type { User } from '@repo/salon-core/types'
 
 import { api } from '#/lib/api-client'
@@ -92,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       /* ignore — clear local state regardless */
     }
     setUser(null)
+    await clearOfflineDatabase()
     await queryClient.invalidateQueries()
   }, [queryClient, setUser])
 

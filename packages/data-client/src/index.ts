@@ -3,7 +3,11 @@ export type { DataClient } from './core/compose-data-client'
 export { composeDataClient } from './core/compose-data-client'
 export { createFetchHttpTransport, type CreateFetchHttpTransportOptions } from './adapters/http/fetch-http-transport'
 export { IndexedDbLocalDataPort } from './adapters/indexeddb/indexed-db-local-data-port'
-export { SalonOfflineDexie } from './adapters/indexeddb/salon-offline-db'
+export {
+  SalonOfflineDexie,
+  clearOfflineDatabase,
+  DEFAULT_OFFLINE_DB_NAME,
+} from './adapters/indexeddb/salon-offline-db'
 export { MemoryLocalDataPort } from './adapters/memory/memory-local-data-port'
 export { NullLocalDataPort } from './ports/local-data-port'
 export { DataClientHttpError, type HttpTransportPort, type HttpMethod } from './ports/http-transport'

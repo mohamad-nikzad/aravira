@@ -18,6 +18,7 @@ import {
 import { FormRootError } from '@repo/ui/form'
 import { Spinner } from '@repo/ui/spinner'
 import { ApiError } from '@repo/api-client'
+import { clearOfflineDatabase } from '@repo/data-client'
 import { displayPhone } from '@repo/salon-core/phone'
 import { signupSchema } from '@repo/salon-core/forms/auth'
 import type { SignupFormInput } from '@repo/salon-core/forms/auth'
@@ -86,6 +87,7 @@ function SignupPage() {
   const onSubmit = handleSubmit(async (values) => {
     try {
       const data = await api.auth.signup(values)
+      await clearOfflineDatabase()
       setUser(data.user)
       await navigate({ to: homePathForRole(data.user.role) })
     } catch (err) {

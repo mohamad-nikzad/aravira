@@ -13,6 +13,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field'
 import { FormRootError } from '@repo/ui/form'
 import { Spinner } from '@repo/ui/spinner'
 import { ApiError } from '@repo/api-client'
+import { clearOfflineDatabase } from '@repo/data-client'
 import { displayPhone } from '@repo/salon-core/phone'
 import { loginSchema } from '@repo/salon-core/forms/auth'
 import type { LoginFormInput } from '@repo/salon-core/forms/auth'
@@ -62,6 +63,7 @@ function LoginPage() {
   const onSubmit = handleSubmit(async (values) => {
     try {
       const data = await api.auth.login(values)
+      await clearOfflineDatabase()
       setUser(data.user)
       await navigate({ to: redirectTo ?? homePathForRole(data.user.role) })
     } catch (err) {
