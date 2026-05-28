@@ -1,0 +1,50 @@
+import { betterAuth } from 'better-auth'
+import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { username } from 'better-auth/plugins/username'
+import { organization } from 'better-auth/plugins/organization'
+import { bearer } from 'better-auth/plugins/bearer'
+import { getDb } from '@repo/database/client'
+import {
+  user,
+  session,
+  account,
+  verification,
+  organization as organizationTable,
+  member,
+  invitation,
+} from '@repo/database/schema'
+
+const trustedOrigins = [process.env.PWA_ORIGIN].filter(
+  (origin): origin is string => Boolean(origin)
+)
+
+export const auth = betterAuth({
+  database: drizzleAdapter(getDb(), {
+    provider: 'pg',
+    schema: {
+      user,
+      session,
+      account,
+      verification,
+      organization: organizationTable,
+      member,
+      invitation,
+    },
+  }),
+  basePath: '/api/v1/auth',
+  emailAndPassword: { enabled: true },
+  session: {
+    expiresIn: 60 * 60 * 24 * 7, // 7d
+    updateAge: 60 * 60 * 24, // roll daily
+    cookieCache: { enabled: true, maxAge: 60 },
+  },
+  // UUID ids keep Better Auth's PKs compatible with the existing uuid salon_id
+  // FK columns across the domain schema.
+  advanced: { database: { generateId: 'uuid' } },
+  plugins: [
+    username({ minUsernameLength: 10, maxUsernameLength: 15 }), // 11-digit 09xxxxxxxxx fits
+    organization({ allowUserToCreateOrganization: false }), // only the signup wrapper creates orgs
+    bearer(), // native bearer-token transport (future)
+  ],
+  trustedOrigins,
+})

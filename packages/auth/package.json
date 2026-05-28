@@ -4,6 +4,8 @@
   "private": true,
   "exports": {
     ".": "./src/index.ts",
+    "./server": "./src/server.ts",
+    "./permissions": "./src/permissions.ts",
     "./auth": "./src/auth.ts",
     "./auth-next": "./src/auth-next.ts",
     "./authz": "./src/authz.ts",
@@ -23,6 +25,7 @@
     "@repo/database": "workspace:*",
     "@repo/salon-core": "workspace:*",
     "bcryptjs": "^3.0.3",
+    "better-auth": "^1.6.11",
     "jose": "^6.2.2",
     "next": "16.2.0",
     "react": "19.1.0",
