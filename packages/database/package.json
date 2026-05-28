@@ -6,6 +6,7 @@
     ".": "./src/index.ts",
     "./appointments": "./src/appointments.ts",
     "./auth-users": "./src/auth-users.ts",
+    "./members": "./src/internal/member-queries.ts",
     "./clients": "./src/clients.ts",
     "./dashboard": "./src/dashboard.ts",
     "./onboarding": "./src/onboarding.ts",

@@ -1,209 +1,298 @@
 # Migrate to Better Auth (username + organization plugins)
 
+> **Revised 2026-05-28.** The original plan targeted a Next.js full-stack `apps/app`
+> that has since been superseded. The current client topology and scope decisions
+> are reflected below.
+
 ## Context
 
-`@repo/auth` is a hand-rolled JWT + bcrypt stack: phone+password login, custom `requireTenant` middleware, role checks (`manager`/`staff`), and a one-salon-per-user model where `users.salonId` is a NOT NULL FK. Every domain table (23 of them) carries `salonId`. There is no real production data yet, so we can change the schema freely.
+`@repo/auth` is a hand-rolled JWT + bcrypt stack: phone+password login, custom
+`requireTenant` middleware, role checks (`manager`/`staff`), and a one-salon-per-user
+model where `users.salonId` is a NOT NULL FK. Every domain table carries `salonId`.
 
-We want to:
-1. Replace the in-house auth with Better Auth, configured for **phone-as-username + password** (synthetic email under the hood).
-2. Replace the in-house tenant/role plumbing with Better Auth's **organization plugin** (salon ↔ organization, members with `owner`/`admin`/`member` roles).
-3. Keep **both** Next.js API route and Hono compatibility during the transition — Better Auth is mounted at both entrypoints.
-4. Self-signup creates a salon + owner. Staff are created by the manager only (no email invite flow — direct `addMember` after server-side user creation).
+**No real data exists** — everything in the DB is throwaway test users/data. We can
+drop tables, wipe the DB, and regenerate the migration baseline freely. No backfill,
+no data-preservation step, no migration-of-existing-rows anywhere in this plan.
 
-Outcome: one canonical session/cookie produced by Better Auth, served identically through Next.js (`/api/auth/*`) and Hono (`/api/v1/auth/*`), with the active salon tracked on the session by the organization plugin.
+### Current topology (what actually exists)
+
+- **`apps/api` (Hono)** — the single auth backend. Mounts routes under `/api/v1/*`.
+- **`apps/pwa`** — TanStack Router SPA. Talks to Hono via `@repo/api-client` with
+  `credentials: 'include'` (cross-origin **cookie** session). Does **not** import
+  `@repo/auth` or `better-auth/react`.
+- **`apps/native`** — Expo app. Uses the **same** `@repo/api-client`, but with a
+  **bearer token** stored in `expo-secure-store`.
+- **`apps/app`** — old Next.js full-stack app with its own API routes wired into
+  `@repo/auth`'s `auth-next`/`tenant-next` exports. **Out of scope** (see below).
+- **`apps/web`** — marketing site. No auth. Untouched.
+
+### Scope decisions for this migration
+
+1. Replace the in-house auth on **Hono + PWA only**.
+2. **`apps/native` is considered but not changed now.** We keep a token path alive
+   (Better Auth `bearer` plugin) so native can adopt it later without a redesign,
+   but we do not preserve its current `{ user, token }` response contract and we
+   accept that native is broken until it's migrated separately.
+3. **`apps/app` is out of scope and allowed to break.** We leave `@repo/auth`'s
+   legacy files (`auth.ts`, `auth-next.ts`, `tenant.ts`, `tenant-next.ts`,
+   `signup.ts`) in place so we don't actively rip it out, but we will not keep it
+   building. The schema rewrite below will break its direct DB usage; that's accepted.
 
 ---
 
-## Decisions locked in
+## Auth model: session-based (not JWT + refresh)
 
-| Decision | Choice |
-|---|---|
-| Credential shape | Phone-as-username (e.g. `09121234567`), synthesized email `${phone}@aravira.local` |
-| Role mapping | Built-in `owner` (signup creator) / `admin` (future) / `member` (= staff) |
-| Compatibility | Better Auth handler mounted in **both** Next.js and Hono |
-| Tenant model | Drop `users.salonId` FK; rely on `organization` + `member` tables and `session.activeOrganizationId` |
-| Data | No backfill — wipe DB, regenerate Drizzle baseline migration |
+Better Auth is **session-based by default**, and that is the right fit here:
+
+- The source of truth is a row in the `session` table. The client holds a signed,
+  httpOnly session token; every request resolves it against the DB.
+- A short-lived **cookie cache** (~30–60s) avoids a Postgres read on every request,
+  while the DB row stays authoritative.
+- Sessions are **rolling** (`expiresIn` + `updateAge`) — activity slides the expiry
+  forward. There is no separate refresh token to rotate.
+
+Why session over JWT+refresh for us:
+
+| | Session (chosen) | JWT + refresh |
+|---|---|---|
+| Revocation | Delete the row → instant cutoff (manager fires staff, access dies now) | Access token valid until expiry; needs a denylist (= a DB lookup, i.e. sessions but worse) |
+| Where it shines | One service, one DB — exactly us | Many services / edge verifying statelessly |
+| Our deployment | Postgres is right there; lookup is cheap + cached | Iran/VPS, no Cloudflare Workers — no edge tier where stateless JWT pays off |
+| Complexity | Built in | Hand-rolled rotation, reuse detection, denylist |
+
+**One model, two transports**: cookie for the PWA (browser), `Authorization: Bearer`
+for native (via the `bearer` plugin) — both backed by the same `session` table.
+
+Token storage per client:
+- **PWA**: httpOnly + Secure + `SameSite=None` cookie (never localStorage — httpOnly
+  keeps it out of reach of XSS). This is what the API already sets today.
+- **Native (later)**: session token in `expo-secure-store` (Keychain/Keystore), sent
+  as a bearer header.
+
+Lifetimes to set deliberately:
+- `session.expiresIn: 7d`, `session.updateAge: 1d` (rolling).
+- `session.cookieCache: { enabled: true, maxAge: 60 }` to spare Postgres on the PWA hot path.
 
 ---
 
 ## Architecture
 
 ```
-@repo/auth (new)
- ├─ src/server.ts   → exports `auth` (betterAuth instance)
- ├─ src/client.ts   → exports `authClient` (createAuthClient + plugins)
- ├─ src/permissions.ts → tenant context helpers (replaces tenant.ts)
- └─ src/index.ts    → re-exports
+@repo/auth
+ ├─ src/server.ts       → exports `auth` (betterAuth instance)   [NEW]
+ ├─ src/client.ts       → exports `authClient` (web only)        [NEW]
+ ├─ src/permissions.ts  → role → permission map                 [NEW]
+ ├─ src/auth.ts, auth-next.ts, tenant.ts, tenant-next.ts, signup.ts  [LEGACY, kept for apps/app]
+ └─ src/index.ts        → re-exports
 
-apps/api (Hono)
- └─ app.ts → app.on(["GET","POST"], "/api/v1/auth/*", c => auth.handler(c.req.raw))
- └─ middleware/auth.ts → requireTenant() now wraps auth.api.getSession()
+apps/api (Hono)         ← ONLY place Better Auth is mounted
+ ├─ app.ts → app.on(["GET","POST"], "/api/v1/auth/*", c => auth.handler(c.req.raw))
+ ├─ middleware/auth.ts  → requireTenant() wraps auth.api.getSession()
+ ├─ routes/auth.ts      → keep only the signup-salon wrapper
+ └─ routes/staff.ts     → signUpEmail + addMember + salon_member sidecar
 
-apps/app (Next.js)
- └─ app/api/auth/[...all]/route.ts → export { GET, POST } from toNextJsHandler(auth)
- └─ components/auth-provider.tsx → uses authClient.useSession()
+apps/pwa (TanStack SPA)
+ └─ keeps cookie session via @repo/api-client (credentials: 'include')
 ```
 
-Both Better Auth mounts share the same `auth` instance from `@repo/auth/server`, the same Postgres, and the same cookie domain — so a login through either entrypoint is recognized by both.
+Better Auth is **not** mounted in Next.js (the old `[...all]` / `toNextJsHandler`
+approach is dropped — the PWA isn't a Next.js app).
 
 ---
 
-## Better Auth config (`packages/auth/src/server.ts`)
+## Phased rollout
 
-```ts
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { username } from "better-auth/plugins/username";
-import { organization } from "better-auth/plugins/organization";
-import { db } from "@repo/database";
+Each phase is independently committable and ends with a **gate** that must pass
+before starting the next. Phases 1–3 are server-only (PWA still runs on the legacy
+endpoints until Phase 4 cuts it over).
 
-export const auth = betterAuth({
-  database: drizzleAdapter(db, { provider: "pg" }),
-  basePath: "/api/v1/auth", // Hono path; Next.js handler maps /api/auth/* → same routes
-  emailAndPassword: { enabled: true },
-  plugins: [
-    username({ minUsernameLength: 10, maxUsernameLength: 15 }), // phone-shaped
-    organization({
-      allowUserToCreateOrganization: false, // only our signup-salon wrapper creates orgs
-    }),
-  ],
-  trustedOrigins: [process.env.APP_URL!],
-});
-```
-
-`BETTER_AUTH_SECRET` (32+ chars) and `BETTER_AUTH_URL` go in `.env.local`. Remove `JWT_SECRET`.
-
-> Note on dual mounts: Better Auth derives request paths from the incoming URL, not `basePath`. The Next.js catch-all handler (`/api/auth/[...all]`) and the Hono `/api/v1/auth/*` mount both invoke `auth.handler(req)`. Set the client `baseURL` to whichever is canonical (we'll use `/api/v1/auth` to match the existing Hono migration), and the Next handler stays available as a fallback.
+| Phase | Scope | Outcome |
+|---|---|---|
+| 0 | Package + config skeleton | `auth` instance compiles, no behavior change |
+| 1 | Database schema | Better Auth tables + sidecars exist on a clean baseline |
+| 2 | Hono mount + middleware | Better Auth handler live; `requireTenant` reads BA sessions |
+| 3 | Signup + staff wrappers | New users/orgs created through Better Auth |
+| 4 | PWA cutover | PWA logs in/out via Better Auth; legacy auth retired from the live path |
 
 ---
 
-## Schema changes (`packages/database/src/schema.ts`)
+### Phase 0 — Package + Better Auth config skeleton
 
-1. Run `npx @better-auth/cli@latest generate --config packages/auth/src/server.ts` to emit Drizzle definitions for: `user`, `session` (with `activeOrganizationId`), `account`, `verification`, `organization`, `member`, `invitation`. Add the `username`/`displayUsername` columns from the plugin.
-2. Repurpose our existing `users` table → drop it and introduce **`salon_member`** with the salon-specific profile fields:
-   ```
-   salon_member { id, userId (FK better_auth.user.id), organizationId (FK organization.id),
-                  displayName, color, active, createdAt }
-   ```
-   `role` lives on Better Auth's `member` row, not here. `salon_member` is a 1:1 sidecar to `member` for our domain attributes (color, active).
-3. Map `salons` → `organization`:
-   - Keep our domain fields (`timezone`, `locale`, `status`, `phone`, `address`) by either (a) writing them to `organization.metadata` JSON, or (b) creating a sidecar `salon_profile { organizationId PK, timezone, locale, status, ... }`. **Pick (b)** for typed access from queries.
-4. Update all 23 FKs that currently reference `salons.id` → reference `organization.id` (column renamed `organizationId` everywhere).
-5. Wipe `packages/database/drizzle/*` migrations, then `pnpm db:generate` + `pnpm db:push` to produce a single clean baseline.
+Stand up the `auth` instance without wiring it to anything yet.
 
----
+**Do**
+- `packages/auth/package.json` — add `better-auth` (keep `bcryptjs`/`jose`; legacy
+  files stay for the frozen apps/app).
+- Create `packages/auth/src/server.ts`:
+  ```ts
+  import { betterAuth } from "better-auth";
+  import { drizzleAdapter } from "better-auth/adapters/drizzle";
+  import { username } from "better-auth/plugins/username";
+  import { organization } from "better-auth/plugins/organization";
+  import { bearer } from "better-auth/plugins/bearer";
+  import { db } from "@repo/database";
 
-## Middleware (`apps/api/src/middleware/auth.ts`)
-
-Replace JWT verify with:
-```ts
-export const requireTenant = (perm?: TenantPermission) =>
-  createMiddleware(async (c, next) => {
-    const session = await auth.api.getSession({ headers: c.req.raw.headers });
-    if (!session?.user) return c.json({ error: "unauthorized" }, 401);
-    const orgId = session.session.activeOrganizationId;
-    if (!orgId) return c.json({ error: "no active salon" }, 403);
-
-    const member = await auth.api.getActiveMember({ headers: c.req.raw.headers });
-    if (perm && !hasPermission(member.role, perm)) return c.json({ error: "forbidden" }, 403);
-
-    c.set("tenant", {
-      userId: session.user.id,
-      salonId: orgId,
-      role: member.role, // 'owner' | 'admin' | 'member'
-      name: session.user.name,
-      phone: session.user.username,
-    });
-    await next();
+  export const auth = betterAuth({
+    database: drizzleAdapter(db, { provider: "pg" }),
+    basePath: "/api/v1/auth",
+    emailAndPassword: { enabled: true },
+    session: {
+      expiresIn: 60 * 60 * 24 * 7,   // 7d
+      updateAge: 60 * 60 * 24,        // roll daily
+      cookieCache: { enabled: true, maxAge: 60 },
+    },
+    plugins: [
+      username({ minUsernameLength: 10, maxUsernameLength: 15 }), // 11-digit 09xxxxxxxxx fits
+      organization({ allowUserToCreateOrganization: false }),     // only our signup wrapper creates orgs
+      bearer(),                                                   // native token transport (future)
+    ],
+    trustedOrigins: [process.env.PWA_ORIGIN!],
   });
-```
-`hasPermission` lives in `packages/auth/src/permissions.ts` and maps `owner`/`admin` → manager-tier perms, `member` → staff-tier.
+  ```
+- Create `packages/auth/src/permissions.ts` — `mapRole` (`owner`/`admin` → `manager`,
+  `member` → `staff`) + reuse the permission sets from `tenant.ts`.
+- Env: add `BETTER_AUTH_SECRET` (32+ chars), `BETTER_AUTH_URL`, `PWA_ORIGIN` to
+  `.env.local` / `.env.example`. Keep `JWT_SECRET` (legacy).
+- `packages/auth/src/index.ts` — add new exports beside the legacy re-exports.
 
-All 17 Hono routes keep using `c.var.tenant.salonId` — they don't need to change because the field is preserved.
-
----
-
-## Signup flow (`apps/api/src/routes/auth.ts` — wrapper kept)
-
-Better Auth's stock signup only creates a `user`. Wrap it with one Hono route `POST /api/v1/auth/signup-salon` that, in a transaction:
-
-1. `auth.api.signUpEmail({ body: { email: `${phone}@aravira.local`, username: phone, name, password } })`
-2. `auth.api.createOrganization({ body: { name: salonName, slug, userId } })` (uses the `allowUserToCreateOrganization: false` server-API bypass — server-side calls are always allowed)
-3. Insert `salon_profile` (timezone, locale, status, phone, address)
-4. `auth.api.setActiveOrganization({ headers, body: { organizationId } })`
-
-The signup user automatically becomes `owner` of the org.
-
-## Add-staff flow (`apps/api/src/routes/staff.ts` — already exists)
-
-`POST /api/v1/staff` (manager-only) replaces direct DB insert with:
-1. `auth.api.signUpEmail({ body: { email: `${phone}@aravira.local`, username: phone, name, password } })` — server-side, no session impact for the caller.
-2. `auth.api.addMember({ body: { userId, role: "member", organizationId: c.var.tenant.salonId } })`
-3. Insert `salon_member` sidecar row (color, active).
-
-No email invite is sent — direct provisioning, matching today's UX.
+**Gate**
+- `pnpm --filter @repo/auth typecheck` green. No runtime behavior changed yet.
 
 ---
 
-## Client (`apps/app`)
+### Phase 1 — Database schema
 
-`packages/auth/src/client.ts`:
-```ts
-import { createAuthClient } from "better-auth/react";
-import { usernameClient } from "better-auth/client/plugins";
-import { organizationClient } from "better-auth/client/plugins";
-export const authClient = createAuthClient({
-  baseURL: "/api/v1/auth",
-  plugins: [usernameClient(), organizationClient()],
-});
-```
+Generate Better Auth tables and the salon sidecars on a clean baseline.
 
-- `apps/app/app/login/page.tsx` → `authClient.signIn.username({ username: phone, password })`
-- `apps/app/app/signup/page.tsx` → POST to `/api/v1/auth/signup-salon` (our wrapper)
-- `apps/app/components/auth-provider.tsx` → drop the custom `refresh()`/cookie reader, use `authClient.useSession()` and `authClient.useActiveOrganization()`.
-- `apps/app/components/staff/staff-drawer.tsx` → no change (still POSTs to `/api/staff`).
-- `apps/app/app/api/auth/[...all]/route.ts` (new) → `export const { GET, POST } = toNextJsHandler(auth)` so Next.js direct calls still work.
+**Do**
+1. `npx @better-auth/cli@latest generate --config packages/auth/src/server.ts` →
+   Drizzle defs for `user`, `session` (with `activeOrganizationId`), `account`,
+   `verification`, `organization`, `member`, `invitation`, plus `username`/
+   `displayUsername`.
+2. **Do not mass-rename `salonId` → `organizationId`.** Keep the TS field `salonId`
+   and DB column `salon_id`; just **repoint the FK target** from `salons.id` to
+   `organization.id`. Column name and FK target are independent in Drizzle, so all 23
+   domain tables and every `salonId` query stay as-is — far less churn/risk.
+3. Add typed sidecars:
+   ```
+   salon_profile { organizationId PK (FK organization.id), timezone, locale,
+                   status, phone, address }
+   salon_member  { id, userId (FK user.id), organizationId (FK organization.id),
+                   displayName, color, active, createdAt }
+   ```
+   `role` lives on Better Auth's `member` row, not on `salon_member`.
+4. Drop the old `users` table from the new path.
+5. Wipe `packages/database/drizzle/*`, then `pnpm db:generate` + `pnpm db:push` for a
+   single clean baseline. (This is what breaks the frozen apps/app — accepted.)
 
----
-
-## Files to modify / create
-
-**Create**
-- `packages/auth/src/server.ts` (Better Auth instance)
-- `packages/auth/src/client.ts` (React client)
-- `packages/auth/src/permissions.ts` (role → permission map)
-- `apps/app/app/api/auth/[...all]/route.ts` (Next.js mount)
-
-**Modify**
-- `packages/auth/package.json` — add `better-auth`, drop `bcryptjs`/`jose`
-- `packages/auth/src/index.ts` — re-export `auth`, `authClient`, types
-- `packages/database/src/schema.ts` — add Better Auth tables, rename `salons`→sidecar, drop `users`, add `salon_member`, rename `salonId`→`organizationId` across FKs
-- `apps/api/src/app.ts` — mount `auth.handler` on `/api/v1/auth/*`
-- `apps/api/src/middleware/auth.ts` — `requireTenant` uses `auth.api.getSession`
-- `apps/api/src/routes/auth.ts` — keep only `signup-salon` wrapper; delete login/logout/me (Better Auth provides them)
-- `apps/api/src/routes/staff.ts` — use `signUpEmail` + `addMember`
-- `apps/app/components/auth-provider.tsx` — `authClient.useSession()`
-- `apps/app/app/login/page.tsx`, `app/signup/page.tsx` — call new endpoints
-
-**Delete**
-- `apps/app/app/api/auth/login/route.ts`, `logout/route.ts`, `me/route.ts`, `signup/route.ts` (replaced by `[...all]` catch-all)
-- `packages/auth/src/auth.ts`, `signup.ts`, `tenant.ts` (replaced)
-- `packages/database/drizzle/*.sql` (regenerate clean baseline — DB will be wiped)
-
-**Env**
-- Add `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` to `.env.local` and `.env.example`
-- Remove `JWT_SECRET`
+**Gate**
+- `pnpm db:push` succeeds against a wiped DB. `pnpm --filter @repo/database typecheck` green.
 
 ---
 
-## Verification
+### Phase 2 — Hono mount + tenant middleware
 
-1. `pnpm db:push` succeeds with clean schema.
-2. `GET /api/v1/auth/ok` → `{ status: "ok" }` (via Hono).
-3. `GET /api/auth/ok` → same (via Next.js mount).
-4. Signup flow: `POST /api/v1/auth/signup-salon` with `{ salonName, slug, name, phone, password }` → returns session cookie, `useSession()` returns user, `useActiveOrganization()` returns the new salon.
-5. Login flow: `authClient.signIn.username({ username: phone, password })` → cookie set, redirect to `/`.
-6. Manager adds staff: `POST /api/v1/staff` → new user created, appears in `listMembers`, can log in with their own phone+password.
-7. Staff sign-in → `c.var.tenant.role === "member"`; calling `/api/v1/settings` (manager-only) returns 403.
-8. Existing tenant-isolation test (`apps/api/__tests__/tenant-isolation.test.ts`) still passes — salons cannot see each other's data.
-9. `pnpm typecheck && pnpm test` green across the workspace.
+Make Better Auth sessions the source of truth for the API.
+
+**Do**
+- `apps/api/src/app.ts` — mount the handler:
+  ```ts
+  app.on(["GET", "POST"], "/api/v1/auth/*", (c) => auth.handler(c.req.raw));
+  ```
+  (CORS already allows `Authorization` + `credentials: true`; cross-origin cookie
+  needs `SameSite=None; Secure`, already set.)
+- `apps/api/src/middleware/auth.ts` — rewrite `requireTenant`. Derive `salonId` from
+  the user's **single member row** (not `session.activeOrganizationId`):
+  ```ts
+  export const requireTenant = (perm?: TenantPermission) =>
+    factory.createMiddleware(async (c, next) => {
+      const session = await auth.api.getSession({ headers: c.req.raw.headers });
+      if (!session?.user) return error(c, "دسترسی غیرمجاز", 401);
+
+      const member = await getMemberForUser(session.user.id);
+      if (!member) return error(c, "دسترسی غیرمجاز", 403);
+
+      const role = mapRole(member.role); // 'manager' | 'staff'
+      if (perm && !hasTenantPermission(role, perm)) return error(c, "دسترسی غیرمجاز", 403);
+
+      c.set("tenant", {
+        userId: session.user.id,
+        salonId: member.organizationId,
+        role,
+        name: session.user.name,
+        phone: session.user.username,
+      });
+      await next();
+    });
+  ```
+  The `TenantUser` shape is preserved → **no domain route changes needed**.
+
+**Gate**
+- A row seeded directly (user + org + member) authenticates: `GET /api/v1/auth/get-session`
+  returns the session, and a `requireTenant`-guarded route returns 200 with correct
+  `salonId`/`role`. Manager-only route returns 403 for a `member`.
+
+---
+
+### Phase 3 — Signup + add-staff wrappers
+
+Replace the hand-rolled creation paths with Better Auth server APIs.
+
+**Do**
+- `apps/api/src/routes/auth.ts` — keep one wrapper `POST /api/v1/auth/signup`
+  (transaction):
+  1. `auth.api.signUpEmail({ body: { email: `${phone}@aravira.local`, username: phone, name, password } })`
+  2. `auth.api.createOrganization({ body: { name: salonName, slug, userId } })`
+     (server-side call bypasses `allowUserToCreateOrganization: false`)
+  3. Insert `salon_profile`
+  4. Issue the session (cookie set by Better Auth)
+
+  Drop the hand-rolled `login`/`logout`/`me` — Better Auth's handler serves
+  `/sign-in`, `/sign-out`, `/get-session` under `/api/v1/auth/*`.
+- `apps/api/src/routes/staff.ts` — manager-only `POST /api/v1/staff`:
+  1. `auth.api.signUpEmail(...)` (server-side; no session impact for the caller)
+  2. `auth.api.addMember({ body: { userId, role: "member", organizationId: c.var.tenant.salonId } })`
+  3. Insert `salon_member` sidecar (color, active). No email invite.
+
+**Gate**
+- Signup → org + `salon_profile` + owner membership created; session cookie returned.
+- Manager adds staff → new user + `member(role: member)` + `salon_member`; staff can
+  sign in; `c.var.tenant.role === 'staff'`.
+- `pnpm --filter @repo/api test` green (auth/staff route tests updated).
+
+---
+
+### Phase 4 — PWA cutover
+
+Point the PWA at Better Auth and retire the legacy auth from the live path.
+
+**Do**
+- `packages/api-client/src/endpoints.ts` / `auth.ts` — align auth paths with Better
+  Auth (`sign-in`/`sign-out`/`get-session`); keep `signup` wrapper + a `me` shim that
+  returns the legacy `User` (role mapped, `salonId` from member row) so
+  [apps/pwa/src/lib/auth.tsx](apps/pwa/src/lib/auth.tsx) stays untouched.
+- PWA login/signup — call the new endpoints. **Sign-in decision still open**:
+  - **(a)** add `better-auth/react` `authClient` to the PWA and call
+    `authClient.signIn.username(...)` (documented happy path), or
+  - **(b)** keep the PWA uniform on `@repo/api-client` by POSTing to the raw
+    `/api/v1/auth/sign-in/username` JSON endpoint.
+  - If (a): create `packages/auth/src/client.ts` (web auth client). If (b): no new file.
+- The PWA already uses `credentials: 'include'`
+  ([apps/pwa/src/lib/api-client.ts](apps/pwa/src/lib/api-client.ts)) — cookie session
+  needs no transport change.
+
+**Gate (full migration acceptance)**
+1. PWA login: username sign-in → cookie set → `/me` shim returns legacy `User`
+   (`role: 'manager'`, `salonId` from member row) → redirect to app.
+2. Revocation: deleting the session row immediately 401s the next PWA request.
+3. Tenant-isolation test (`apps/api/__tests__/tenant-isolation.test.ts`) still passes.
+4. `pnpm typecheck && pnpm test` green for `apps/api`, `apps/pwa`, `@repo/auth`,
+   `@repo/api-client`. (`apps/app` excluded — known broken, out of scope.)
+
+---
+
+## Out of scope (allowed to break)
+
+- `apps/native`, `apps/web`.
+- `apps/app` and `@repo/auth`'s legacy files (`auth.ts`, `auth-next.ts`, `tenant.ts`,
+  `tenant-next.ts`, `signup.ts`) — left in place, not kept building.

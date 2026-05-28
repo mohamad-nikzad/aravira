@@ -1,46 +1,33 @@
-import { getCookie } from 'hono/cookie'
-import { verifySession } from '@repo/auth/auth'
-import { getUserById } from '@repo/database/auth-users'
+import { auth } from '@repo/auth/server'
+import { mapRole } from '@repo/auth/permissions'
 import {
   hasTenantPermission,
   type TenantPermission,
-  type TenantUser,
 } from '@repo/auth/tenant'
+import { getMemberForUser } from '@repo/database/members'
 import { factory } from '../factory'
 import { error } from '../lib/responses'
 
-function extractBearer(req: Request): string | null {
-  const header = req.headers.get('authorization') ?? req.headers.get('Authorization')
-  if (!header) return null
-  const match = header.match(/^Bearer\s+(.+)$/i)
-  return match ? match[1].trim() : null
-}
-
-async function resolveTenant(c: Parameters<typeof getCookie>[0]): Promise<TenantUser | null> {
-  const req = c.req.raw
-  const token = extractBearer(req) ?? getCookie(c, 'session') ?? null
-  if (!token) return null
-  const userId = await verifySession(token)
-  if (!userId) return null
-  const user = await getUserById(userId)
-  if (!user) return null
-  return {
-    userId: user.id,
-    salonId: user.salonId,
-    role: user.role,
-    name: user.name,
-    phone: user.phone,
-  }
-}
-
 export function requireTenant(permission?: TenantPermission) {
   return factory.createMiddleware(async (c, next) => {
-    const tenant = await resolveTenant(c)
-    if (!tenant) return error(c, 'دسترسی غیرمجاز', 401)
-    if (permission && !hasTenantPermission(tenant.role, permission)) {
+    const session = await auth.api.getSession({ headers: c.req.raw.headers })
+    if (!session?.user) return error(c, 'دسترسی غیرمجاز', 401)
+
+    const member = await getMemberForUser(session.user.id)
+    if (!member) return error(c, 'دسترسی غیرمجاز', 403)
+
+    const role = mapRole(member.role)
+    if (permission && !hasTenantPermission(role, permission)) {
       return error(c, 'دسترسی غیرمجاز', 403)
     }
-    c.set('tenant', tenant)
+
+    c.set('tenant', {
+      userId: member.userId,
+      salonId: member.organizationId,
+      role,
+      name: member.name,
+      phone: member.username,
+    })
     await next()
   })
 }
