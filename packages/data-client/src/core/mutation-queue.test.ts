@@ -8,6 +8,8 @@ function service(overrides: Partial<Service> = {}): Service {
     id: 'service-1',
     name: 'Cut',
     category: 'hair',
+    categoryId: 'cat-stub',
+    familyId: null,
     duration: 30,
     price: 100,
     color: 'bg-staff-1',

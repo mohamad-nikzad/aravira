@@ -22,5 +22,9 @@ export {
   validateComboServiceIsBookable,
   validateActiveServiceIds,
   validateServiceAddonDeltas,
+  CatalogReferenceError,
 } from './internal/service-queries'
-export type { ServiceAddonScopeInput } from './internal/service-queries'
+export type {
+  ServiceAddonScopeInput,
+  CatalogReferenceErrorReason,
+} from './internal/service-queries'

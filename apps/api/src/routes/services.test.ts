@@ -49,6 +49,7 @@ const authHeaders = { Authorization: 'Bearer testtoken' }
 
 const validCreate = {
   name: 'Haircut',
+  categoryId: 'cat1',
   familyId: 'fam1',
   duration: 30,
   price: 100000,
@@ -92,14 +93,24 @@ describe('services router', () => {
     expect(res.status).toBe(403)
   })
 
-  it('400 when familyId missing on create', async () => {
+  it('400 when categoryId missing on create', async () => {
+    const res = await app.request('/api/v1/services', {
+      method: 'POST',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...validCreate, categoryId: undefined }),
+    })
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: 'بخش خدمات را انتخاب کنید' })
+  })
+
+  it('200 on create without a family', async () => {
+    vi.mocked(db.createService).mockResolvedValue({ id: 'svc2', name: 'Haircut' } as never)
     const res = await app.request('/api/v1/services', {
       method: 'POST',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...validCreate, familyId: undefined }),
     })
-    expect(res.status).toBe(400)
-    expect(await res.json()).toEqual({ error: 'گروه خدمات را انتخاب کنید' })
+    expect(res.status).toBe(200)
   })
 
   it('200 on create', async () => {
@@ -152,6 +163,33 @@ describe('services router', () => {
     vi.mocked(db.getServiceById).mockResolvedValue(undefined as never)
     const res = await app.request('/api/v1/services/missing', { headers: authHeaders })
     expect(res.status).toBe(404)
+  })
+
+  it('PATCH with familyId: null clears the family', async () => {
+    vi.mocked(db.updateService).mockResolvedValue({ id: 'svc1', familyId: null } as never)
+    const res = await app.request('/api/v1/services/svc1', {
+      method: 'PATCH',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ familyId: null }),
+    })
+    expect(res.status).toBe(200)
+    expect(db.updateService).toHaveBeenCalledWith(
+      'svc1',
+      's1',
+      expect.objectContaining({ familyId: null }),
+    )
+  })
+
+  it('PATCH without familyId omits the field from the patch', async () => {
+    vi.mocked(db.updateService).mockResolvedValue({ id: 'svc1' } as never)
+    const res = await app.request('/api/v1/services/svc1', {
+      method: 'PATCH',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Renamed' }),
+    })
+    expect(res.status).toBe(200)
+    const patch = vi.mocked(db.updateService).mock.calls[0]?.[2] as Record<string, unknown>
+    expect('familyId' in patch).toBe(false)
   })
 
   it('404 on PATCH missing', async () => {

@@ -18,6 +18,39 @@ export const catalogEntityIdSchema = z
   .trim()
   .min(1, formMessages.required)
 
+const SERVICE_CATEGORY_REQUIRED = 'بخش خدمات را انتخاب کنید'
+
+/** Service's required category reference, with a service-specific message. */
+export const serviceCategoryIdSchema = z
+  .string({ required_error: SERVICE_CATEGORY_REQUIRED })
+  .trim()
+  .min(1, SERVICE_CATEGORY_REQUIRED)
+
+/** Optional catalog reference: empty string / null collapses to `undefined`. */
+export const optionalCatalogEntityIdSchema = z
+  .union([z.string(), z.null()])
+  .optional()
+  .transform((value) => {
+    const trimmed = typeof value === 'string' ? value.trim() : ''
+    return trimmed.length > 0 ? trimmed : undefined
+  })
+
+/**
+ * Nullable catalog reference for patch payloads: preserves the `null` vs
+ * `undefined` distinction so the API can tell "clear this field" (`null`)
+ * apart from "leave it alone" (`undefined`). Empty / whitespace strings
+ * are treated as `null` (clear).
+ */
+export const nullableCatalogEntityIdSchema = z
+  .union([z.string(), z.null()])
+  .optional()
+  .transform((value) => {
+    if (value === undefined) return undefined
+    if (value === null) return null
+    const trimmed = value.trim()
+    return trimmed.length > 0 ? trimmed : null
+  })
+
 const legacyServiceCategoryKeys = Object.keys(SERVICE_CATEGORIES) as [
   keyof typeof SERVICE_CATEGORIES,
   ...(keyof typeof SERVICE_CATEGORIES)[],
@@ -36,7 +69,8 @@ export const calendarColorIdSchema = z
 
 export const serviceFormSchema = z.object({
   name: requiredTextSchema,
-  familyId: catalogEntityIdSchema.optional(),
+  categoryId: serviceCategoryIdSchema,
+  familyId: optionalCatalogEntityIdSchema,
   category: serviceCategorySchema.default('hair'),
   duration: durationMinutesSchema,
   price: nonNegativeMoneySchema,
@@ -52,7 +86,8 @@ export const serviceCreateSchema = serviceFormSchema.extend({
 
 export const serviceUpdateSchema = z.object({
   name: requiredTextSchema.optional(),
-  familyId: catalogEntityIdSchema.optional(),
+  categoryId: serviceCategoryIdSchema.optional(),
+  familyId: nullableCatalogEntityIdSchema,
   duration: durationMinutesSchema.optional(),
   price: nonNegativeMoneySchema.optional(),
   color: calendarColorIdSchema.optional(),

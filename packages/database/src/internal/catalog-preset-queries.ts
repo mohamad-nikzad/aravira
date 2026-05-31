@@ -138,6 +138,7 @@ export async function applyCatalogPreset(input: {
             .insert(services)
             .values({
               salonId: input.salonId,
+              categoryId: categoryRow.id,
               familyId: familyRow.id,
               name: variant.name,
               duration: variant.duration,

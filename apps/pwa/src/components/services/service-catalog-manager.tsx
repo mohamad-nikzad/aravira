@@ -1,20 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import {
-  Banknote,
   ChevronDown,
   ChevronLeft,
-  Clock3,
   FolderPlus,
   Layers3,
   LayoutTemplate,
-  Pencil,
   Plus,
-  PackageCheck,
   Search,
   Sparkles,
 } from 'lucide-react'
-import { Badge } from '@repo/ui/badge'
 import { Button } from '@repo/ui/button'
 import { Card, CardTitle } from '@repo/ui/card'
 import { Input } from '@repo/ui/input'
@@ -36,12 +31,13 @@ import type {
   ServiceCategory,
   ServiceFamily,
 } from '@repo/salon-core/types'
-import { toPersianDigits } from '@repo/salon-core/persian-digits'
 import { useManagerDataClient } from '#/lib/manager-data-client'
 import { CatalogPresetPicker } from '#/components/catalog-preset-picker'
 import { ServiceCategoryDrawer } from './service-category-drawer'
 import { ServiceDrawer } from './service-drawer'
 import { ServiceFamilyDrawer } from './service-family-drawer'
+import { buildCatalog } from './catalog-tree'
+import { ServiceRow } from './service-row'
 
 interface ServiceCatalogManagerProps {
   services: Service[]
@@ -51,41 +47,7 @@ interface ServiceCatalogManagerProps {
   onChanged: () => void
 }
 
-type CategoryNode = ServiceCategory & {
-  families: Array<ServiceFamily & { services: Service[] }>
-}
-
 const STARTER_SERVICES_USED_KEY = 'saloora:starter-services-used'
-
-function buildCatalog(
-  categories: ServiceCategory[],
-  families: ServiceFamily[],
-  services: Service[],
-): CategoryNode[] {
-  const familiesByCategory = new Map<
-    string,
-    Array<ServiceFamily & { services: Service[] }>
-  >()
-  const servicesByFamily = new Map<string, Service[]>()
-
-  for (const service of services) {
-    if (!service.familyId) continue
-    const list = servicesByFamily.get(service.familyId) ?? []
-    list.push(service)
-    servicesByFamily.set(service.familyId, list)
-  }
-
-  for (const family of families) {
-    const list = familiesByCategory.get(family.categoryId) ?? []
-    list.push({ ...family, services: servicesByFamily.get(family.id) ?? [] })
-    familiesByCategory.set(family.categoryId, list)
-  }
-
-  return categories.map((category) => ({
-    ...category,
-    families: familiesByCategory.get(category.id) ?? [],
-  }))
-}
 
 export function ServiceCatalogManager({
   services,
@@ -192,8 +154,23 @@ export function ServiceCatalogManager({
             } => Boolean(family),
           )
 
-        if (!categoryMatches && visibleFamilies.length === 0) return null
-        return { ...category, families: visibleFamilies }
+        const visibleUngrouped = categoryMatches
+          ? category.ungroupedServices
+          : category.ungroupedServices.filter((service) =>
+              service.name.toLocaleLowerCase('fa-IR').includes(query),
+            )
+
+        if (
+          !categoryMatches &&
+          visibleFamilies.length === 0 &&
+          visibleUngrouped.length === 0
+        )
+          return null
+        return {
+          ...category,
+          families: visibleFamilies,
+          ungroupedServices: visibleUngrouped,
+        }
       })
       .filter((category): category is CategoryNode => Boolean(category))
   }, [catalog, search])
@@ -211,11 +188,10 @@ export function ServiceCatalogManager({
     setFamilyDrawerOpen(true)
   }
 
-  const addService = (familyId?: string) => {
+  const addService = (categoryId?: string, familyId?: string) => {
     setSelectedService(null)
-    setDefaultFamilyId(
-      familyId !== undefined ? familyId : (families[0]?.id ?? null),
-    )
+    setDefaultCategoryId(categoryId ?? categories[0]?.id ?? null)
+    setDefaultFamilyId(familyId ?? null)
     setServiceDrawerOpen(true)
   }
 
@@ -302,7 +278,7 @@ export function ServiceCatalogManager({
               size="sm"
               className="justify-center gap-1 touch-manipulation"
               onClick={() => addService()}
-              disabled={families.length === 0}
+              disabled={categories.length === 0}
             >
               <Plus className="h-4 w-4" />
               خدمت
@@ -415,10 +391,11 @@ export function ServiceCatalogManager({
           ) : (
             visibleCatalog.map((category) => {
               const categoryOpen = openCategories[category.id] ?? true
-              const categoryServiceCount = category.families.reduce(
-                (count, family) => count + family.services.length,
-                0,
-              )
+              const categoryServiceCount =
+                category.families.reduce(
+                  (count, family) => count + family.services.length,
+                  0,
+                ) + category.ungroupedServices.length
               return (
                 <Collapsible
                   key={category.id}
@@ -485,27 +462,61 @@ export function ServiceCatalogManager({
                       aria-label={`افزودن گروه به ${category.name}`}
                       onClick={() => addFamily(category.id)}
                     >
+                      <Layers3 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      className="h-8 w-8 shrink-0 rounded-lg sm:h-9 sm:w-9"
+                      aria-label={`افزودن خدمت به ${category.name}`}
+                      onClick={() => addService(category.id)}
+                    >
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                   <CollapsibleContent className="space-y-1.5 p-1.5 sm:space-y-2 sm:p-2">
-                    {category.families.length === 0 ? (
+                    {category.ungroupedServices.length > 0 ? (
+                      <div className="space-y-1 sm:space-y-1.5">
+                        {category.ungroupedServices.map((service) => (
+                          <ServiceRow
+                            key={service.id}
+                            service={service}
+                            onEdit={() => {
+                              setSelectedService(service)
+                              setServiceDrawerOpen(true)
+                            }}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                    {category.families.length === 0 &&
+                    category.ungroupedServices.length === 0 ? (
                       <div className="rounded-md border border-dashed border-border/60 px-3 py-3 text-center sm:py-4">
                         <p className="text-xs text-muted-foreground">
-                          گروهی برای این بخش ثبت نشده.
+                          هنوز خدمتی در این بخش نیست.
                         </p>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="mt-3 gap-1 touch-manipulation"
-                          onClick={() => addFamily(category.id)}
-                        >
-                          <Layers3 className="h-4 w-4" />
-                          ساخت گروه
-                        </Button>
+                        <div className="mt-3 flex flex-col justify-center gap-2 sm:flex-row">
+                          <Button
+                            size="sm"
+                            className="gap-1 touch-manipulation"
+                            onClick={() => addService(category.id)}
+                          >
+                            <Plus className="h-4 w-4" />
+                            افزودن خدمت
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1 touch-manipulation"
+                            onClick={() => addFamily(category.id)}
+                          >
+                            <Layers3 className="h-4 w-4" />
+                            ساخت گروه
+                          </Button>
+                        </div>
                       </div>
-                    ) : (
-                      category.families.map((family) => {
+                    ) : null}
+                    {category.families.map((family) => {
                         const familyOpen = openFamilies[family.id] ?? true
                         return (
                           <Collapsible
@@ -571,7 +582,7 @@ export function ServiceCatalogManager({
                                 variant="ghost"
                                 className="h-8 w-8 shrink-0 rounded-lg sm:h-9 sm:w-9"
                                 aria-label={`افزودن خدمت به ${family.name}`}
-                                onClick={() => addService(family.id)}
+                                onClick={() => addService(category.id, family.id)}
                               >
                                 <Plus className="h-4 w-4" />
                               </Button>
@@ -586,7 +597,7 @@ export function ServiceCatalogManager({
                                     size="sm"
                                     variant="outline"
                                     className="mt-3 gap-1 touch-manipulation"
-                                    onClick={() => addService(family.id)}
+                                    onClick={() => addService(category.id, family.id)}
                                   >
                                     <Plus className="h-4 w-4" />
                                     افزودن خدمت
@@ -594,75 +605,20 @@ export function ServiceCatalogManager({
                                 </div>
                               ) : (
                                 family.services.map((service) => (
-                                  <div
+                                  <ServiceRow
                                     key={service.id}
-                                    className="group flex items-center gap-2 rounded-lg border border-border/50 bg-background px-2 py-2 transition-colors hover:border-primary/30 hover:bg-primary/5 sm:px-3 sm:py-2.5"
-                                  >
-                                    <div
-                                      className="h-8 w-1.5 shrink-0 rounded-full sm:h-10"
-                                      style={{
-                                        backgroundColor: `var(--calendar-${service.color})`,
-                                      }}
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <p className="truncate text-sm font-medium">
-                                          {service.name}
-                                        </p>
-                                        {!service.active && (
-                                          <Badge
-                                            variant="secondary"
-                                            className="text-[10px]"
-                                          >
-                                            غیرفعال
-                                          </Badge>
-                                        )}
-                                        {service.kind === 'combo' && (
-                                          <Badge
-                                            variant="outline"
-                                            className="gap-1 text-[10px]"
-                                          >
-                                            <PackageCheck className="h-3 w-3" />
-                                            پکیج
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground sm:mt-1 sm:gap-1.5 sm:text-[11px]">
-                                        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 sm:px-2">
-                                          <Clock3 className="h-3 w-3" />
-                                          {toPersianDigits(
-                                            service.duration,
-                                          )}{' '}
-                                          دقیقه
-                                        </span>
-                                        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 sm:px-2">
-                                          <Banknote className="h-3 w-3" />
-                                          {service.price > 0
-                                            ? `${toPersianDigits(service.price.toLocaleString('fa-IR'))} تومان`
-                                            : 'قیمت وارد نشده'}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <Button
-                                      size="icon-sm"
-                                      variant="ghost"
-                                      className="h-8 w-8 shrink-0 rounded-lg sm:h-9 sm:w-9"
-                                      aria-label={`ویرایش خدمت ${service.name}`}
-                                      onClick={() => {
-                                        setSelectedService(service)
-                                        setServiceDrawerOpen(true)
-                                      }}
-                                    >
-                                      <Pencil className="h-4 w-4" />
-                                    </Button>
-                                  </div>
+                                    service={service}
+                                    onEdit={() => {
+                                      setSelectedService(service)
+                                      setServiceDrawerOpen(true)
+                                    }}
+                                  />
                                 ))
                               )}
                             </CollapsibleContent>
                           </Collapsible>
                         )
-                      })
-                    )}
+                      })}
                   </CollapsibleContent>
                 </Collapsible>
               )
@@ -709,6 +665,7 @@ export function ServiceCatalogManager({
         services={services}
         categories={categories}
         families={families}
+        defaultCategoryId={defaultCategoryId}
         defaultFamilyId={defaultFamilyId}
         onSuccess={() => {
           setServiceDrawerOpen(false)

@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, ne, or } from 'drizzle-orm'
+import { and, asc, eq, inArray, ne, or, sql } from 'drizzle-orm'
 import { PERSIAN_STARTER_SERVICE_TEMPLATES } from '@repo/salon-core/starter-service-templates'
 import type {
   ComboComponent,
@@ -22,6 +22,7 @@ import {
 } from '../schema'
 import { joinedRowToService, rowToServiceCategory, rowToServiceFamily } from './row-mappers'
 import { isClientProvidedEntityId } from './client-queries'
+import { resolveServiceCategory } from './service-catalog-resolution'
 
 type CreateCategoryInput = {
   id?: string
@@ -41,6 +42,11 @@ type CreateFamilyInput = {
 }
 
 type UpdateFamilyInput = Partial<Pick<ServiceFamily, 'categoryId' | 'name' | 'active'>>
+
+export {
+  CatalogReferenceError,
+  type CatalogReferenceErrorReason,
+} from './service-catalog-resolution'
 
 export type ServiceAddonScopeInput =
   | { type: 'category'; categoryId: string }
@@ -83,7 +89,7 @@ export function normalizeServiceAddonScopes(
   scopes: ServiceAddonScopeInput[],
   catalog: {
     families: Array<{ id: string; categoryId: string }>
-    services: Array<{ id: string; familyId: string }>
+    services: Array<{ id: string; familyId: string | null }>
   }
 ): ServiceAddonScopeInput[] {
   const categoryIds = new Set(scopes.filter((scope) => scope.type === 'category').map((scope) => scope.categoryId))
@@ -209,7 +215,7 @@ export async function getAllServices(salonId: string, includeInactive = false): 
         })
         .from(services)
         .leftJoin(serviceFamilies, eq(services.familyId, serviceFamilies.id))
-        .leftJoin(serviceCategories, eq(serviceFamilies.categoryId, serviceCategories.id))
+        .leftJoin(serviceCategories, eq(services.categoryId, serviceCategories.id))
         .where(eq(services.salonId, salonId))
         .orderBy(asc(serviceCategories.name), asc(serviceFamilies.name), asc(services.name))
     : await db
@@ -226,7 +232,7 @@ export async function getAllServices(salonId: string, includeInactive = false): 
         })
         .from(services)
         .leftJoin(serviceFamilies, eq(services.familyId, serviceFamilies.id))
-        .leftJoin(serviceCategories, eq(serviceFamilies.categoryId, serviceCategories.id))
+        .leftJoin(serviceCategories, eq(services.categoryId, serviceCategories.id))
         .where(and(eq(services.salonId, salonId), eq(services.active, true)))
         .orderBy(asc(serviceCategories.name), asc(serviceFamilies.name), asc(services.name))
   return rows.map(joinedRowToService)
@@ -248,48 +254,35 @@ export async function getServiceById(id: string, salonId: string): Promise<Servi
     })
     .from(services)
     .leftJoin(serviceFamilies, eq(services.familyId, serviceFamilies.id))
-    .leftJoin(serviceCategories, eq(serviceFamilies.categoryId, serviceCategories.id))
+    .leftJoin(serviceCategories, eq(services.categoryId, serviceCategories.id))
     .where(and(eq(services.id, id), eq(services.salonId, salonId)))
     .limit(1)
   const row = rows[0]
   return row ? joinedRowToService(row) : undefined
 }
 
-async function getActiveFamily(familyId: string, salonId: string) {
-  const db = getDb()
-  const [row] = await db
-    .select({ id: serviceFamilies.id, categoryName: serviceCategories.name })
-    .from(serviceFamilies)
-    .innerJoin(serviceCategories, eq(serviceFamilies.categoryId, serviceCategories.id))
-    .where(
-      and(
-        eq(serviceFamilies.id, familyId),
-        eq(serviceFamilies.salonId, salonId),
-        eq(serviceFamilies.active, true),
-        eq(serviceCategories.active, true)
-      )
-    )
-    .limit(1)
-  return row
-}
-
 export async function createService(
   input: Pick<Service, 'name' | 'duration' | 'price' | 'color'> & {
     id?: string
     salonId: string
-    familyId: string
+    categoryId?: string | null
+    familyId?: string | null
     active?: boolean
     description?: string | null
     kind?: Service['kind']
   }
 ): Promise<Service> {
   const db = getDb()
-  const family = await getActiveFamily(input.familyId, input.salonId)
-  if (!family) throw new Error('service family not found or inactive')
+  const categoryId = await resolveServiceCategory(
+    input.salonId,
+    input.categoryId,
+    input.familyId
+  )
   const values: typeof services.$inferInsert = {
     salonId: input.salonId,
     name: input.name,
-    familyId: input.familyId,
+    categoryId,
+    familyId: input.familyId ?? null,
     duration: input.duration,
     price: input.price,
     color: input.color,
@@ -316,10 +309,12 @@ export async function updateService(
   const db = getDb()
   const existing = await getServiceById(id, salonId)
   if (!existing) return undefined
-  if (data.familyId === null) throw new Error('service family is required')
-  if (data.familyId !== undefined) {
-    const family = await getActiveFamily(data.familyId, salonId)
-    if (!family) throw new Error('service family not found or inactive')
+  let nextCategoryId: string | undefined
+  if (data.categoryId !== undefined || data.familyId !== undefined) {
+    const familyId = data.familyId !== undefined ? data.familyId : existing.familyId
+    const categoryId =
+      data.categoryId !== undefined ? data.categoryId : existing.categoryId
+    nextCategoryId = await resolveServiceCategory(salonId, categoryId, familyId)
   }
   await assertActiveComboHasComponents(
     {
@@ -333,6 +328,7 @@ export async function updateService(
     .update(services)
     .set({
       ...(data.name !== undefined ? { name: data.name } : {}),
+      ...(nextCategoryId !== undefined ? { categoryId: nextCategoryId } : {}),
       ...(data.familyId !== undefined ? { familyId: data.familyId } : {}),
       ...(data.duration !== undefined ? { duration: data.duration } : {}),
       ...(data.price !== undefined ? { price: data.price } : {}),
@@ -376,7 +372,7 @@ export async function getComboComponents(
       )
     )
     .leftJoin(serviceFamilies, eq(services.familyId, serviceFamilies.id))
-    .leftJoin(serviceCategories, eq(serviceFamilies.categoryId, serviceCategories.id))
+    .leftJoin(serviceCategories, eq(services.categoryId, serviceCategories.id))
     .where(
       and(
         eq(serviceComboComponents.salonId, salonId),
@@ -537,7 +533,11 @@ async function normalizeAndValidateAddonScopes(
     throw new Error('service add-on service scope not found')
   }
 
-  const serviceFamilyIds = [...new Set(serviceRows.map((row) => row.familyId))]
+  const serviceFamilyIds = [
+    ...new Set(
+      serviceRows.map((row) => row.familyId).filter((id): id is string => id !== null)
+    ),
+  ]
   const serviceFamilyRows =
     serviceFamilyIds.length === 0
       ? []
@@ -791,13 +791,14 @@ export async function getActiveServiceAddonsForService(
       id: services.id,
       active: services.active,
       familyId: services.familyId,
-      categoryId: serviceFamilies.categoryId,
+      categoryId: services.categoryId,
     })
     .from(services)
-    .innerJoin(serviceFamilies, eq(services.familyId, serviceFamilies.id))
     .where(and(eq(services.id, serviceId), eq(services.salonId, salonId), eq(services.active, true)))
     .limit(1)
   if (!service) return []
+
+  const familyId = service.familyId
 
   const rows = await db
     .selectDistinct({ addon: serviceAddons })
@@ -811,7 +812,12 @@ export async function getActiveServiceAddonsForService(
     )
     .leftJoin(
       serviceAddonFamilyScopes,
-      and(eq(serviceAddonFamilyScopes.addonId, serviceAddons.id), eq(serviceAddonFamilyScopes.scopeId, service.familyId))
+      familyId
+        ? and(
+            eq(serviceAddonFamilyScopes.addonId, serviceAddons.id),
+            eq(serviceAddonFamilyScopes.scopeId, familyId)
+          )
+        : sql`false`
     )
     .leftJoin(
       serviceAddonServiceScopes,
@@ -823,7 +829,7 @@ export async function getActiveServiceAddonsForService(
         eq(serviceAddons.active, true),
         or(
           eq(serviceAddonCategoryScopes.scopeId, service.categoryId),
-          eq(serviceAddonFamilyScopes.scopeId, service.familyId),
+          familyId ? eq(serviceAddonFamilyScopes.scopeId, familyId) : undefined,
           eq(serviceAddonServiceScopes.scopeId, service.id)
         )
       )
@@ -996,6 +1002,7 @@ export async function importStarterServiceTemplates(salonId: string): Promise<{
         importedServices.push(
           await createService({
             salonId,
+            categoryId: category.id,
             familyId: family.id,
             active: true,
             kind: serviceTemplate.kind ?? 'standard',

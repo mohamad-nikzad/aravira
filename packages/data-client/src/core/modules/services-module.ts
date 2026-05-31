@@ -62,9 +62,9 @@ type ApplyCatalogPresetResponse = {
 
 export type ServiceCreateInput = {
   name: string
-  familyId?: string
+  categoryId: string
+  familyId?: string | null
   category?: Service['category']
-  categoryId?: string | null
   categoryName?: string | null
   familyName?: string | null
   duration: number
@@ -427,7 +427,8 @@ export function createServicesModule(
           {
             body: {
               name: input.name,
-              familyId: input.familyId,
+              categoryId: input.categoryId,
+              familyId: input.familyId ?? null,
               duration: input.duration,
               price: input.price,
               color: input.color,
@@ -445,16 +446,16 @@ export function createServicesModule(
       }
 
       const id = newOfflineEntityId()
-      if (!input.familyId) {
-        throw new DataClientHttpError('گروه خدمات را انتخاب کنید', 400, null)
+      if (!input.categoryId) {
+        throw new DataClientHttpError('بخش خدمات را انتخاب کنید', 400, null)
       }
       const service: Service = {
         id,
         name: input.name,
         category: input.category ?? 'hair',
-        familyId: input.familyId,
+        familyId: input.familyId ?? null,
         familyName: input.familyName ?? null,
-        categoryId: input.categoryId ?? null,
+        categoryId: input.categoryId,
         categoryName: input.categoryName ?? null,
         duration: input.duration,
         price: input.price,
@@ -493,7 +494,8 @@ export function createServicesModule(
             id,
             body: {
               name: input.name,
-              familyId: input.familyId,
+              categoryId: input.categoryId,
+              familyId: input.familyId ?? null,
               duration: input.duration,
               price: input.price,
               color: input.color,

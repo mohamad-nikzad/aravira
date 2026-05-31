@@ -50,13 +50,20 @@ interface ServiceDrawerProps {
   services: Service[]
   categories: ServiceCategory[]
   families: ServiceFamily[]
+  defaultCategoryId?: string | null
   defaultFamilyId?: string | null
   onSuccess: () => void
 }
 
-function emptyValues(defaultFamilyId?: string | null): ServiceFormInput {
+const NO_FAMILY_VALUE = '__none__'
+
+function emptyValues(
+  defaultCategoryId?: string | null,
+  defaultFamilyId?: string | null,
+): ServiceFormInput {
   return {
     name: '',
+    categoryId: defaultCategoryId ?? '',
     familyId: defaultFamilyId ?? '',
     category: 'hair',
     duration: 45,
@@ -71,6 +78,7 @@ function emptyValues(defaultFamilyId?: string | null): ServiceFormInput {
 function serviceToFormValues(service: Service): ServiceFormInput {
   return {
     name: service.name,
+    categoryId: service.categoryId ?? '',
     familyId: service.familyId ?? '',
     category: service.category,
     duration: service.duration,
@@ -89,6 +97,7 @@ export function ServiceDrawer({
   services,
   categories,
   families,
+  defaultCategoryId,
   defaultFamilyId,
   onSuccess,
 }: ServiceDrawerProps) {
@@ -104,25 +113,37 @@ export function ServiceDrawer({
     control,
     handleSubmit,
     reset,
+    setValue,
     setError,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<ServiceFormInput>({
     resolver: zodResolver(serviceFormSchema),
-    defaultValues: emptyValues(defaultFamilyId),
+    defaultValues: emptyValues(defaultCategoryId, defaultFamilyId),
     mode: 'onSubmit',
   })
 
   useEffect(() => {
     if (!open) return
-    reset(
-      service
-        ? serviceToFormValues(service)
-        : emptyValues(defaultFamilyId ?? families[0]?.id),
-    )
-  }, [defaultFamilyId, families, open, reset, service])
+    if (service) {
+      reset(serviceToFormValues(service))
+      return
+    }
+    const familyForDefault = defaultFamilyId
+      ? families.find((family) => family.id === defaultFamilyId)
+      : undefined
+    const initialCategoryId =
+      defaultCategoryId ??
+      familyForDefault?.categoryId ??
+      categories[0]?.id ??
+      ''
+    reset(emptyValues(initialCategoryId, defaultFamilyId))
+  }, [categories, defaultCategoryId, defaultFamilyId, families, open, reset, service])
 
   const nameValue = useWatch({ control, name: 'name' })
-  const familyValue = useWatch({ control, name: 'familyId' })
+  const categoryValue = useWatch({ control, name: 'categoryId' })
+  const familyOptions = families.filter(
+    (family) => family.categoryId === categoryValue,
+  )
   const kindValue = useWatch({ control, name: 'kind' })
   const activeValue = useWatch({ control, name: 'active' })
   const isCombo = kindValue === 'combo'
@@ -161,14 +182,16 @@ export function ServiceDrawer({
         throw new DataClientHttpError('اتصال داده برقرار نیست', 0, null)
       }
       const payload = serviceFormSchema.parse(values)
-      if (!payload.familyId) {
-        throw new DataClientHttpError('گروه خدمات را انتخاب کنید', 0, null)
+      if (!payload.categoryId) {
+        throw new DataClientHttpError('بخش خدمات را انتخاب کنید', 0, null)
       }
+      const familyId = payload.familyId ?? null
       if (isEditing) {
         const shouldStageComboActivation =
           payload.kind === 'combo' && payload.active && componentIds.length > 0
         await dc.services.update(service.id, {
           ...payload,
+          familyId,
           color: normalizeCalendarColorId(payload.color),
           active: shouldStageComboActivation ? false : payload.active,
         })
@@ -187,6 +210,7 @@ export function ServiceDrawer({
         payload.kind === 'combo' && payload.active && componentIds.length > 0
       const created = await dc.services.create({
         ...payload,
+        familyId,
         color: normalizeCalendarColorId(payload.color),
         active: shouldStageComboActivation ? false : payload.active,
       })
@@ -204,8 +228,8 @@ export function ServiceDrawer({
 
   const onSubmit = handleSubmit(async (values) => {
     const payload = serviceFormSchema.safeParse(values)
-    if (payload.success && !payload.data.familyId) {
-      setError('familyId', { message: 'گروه خدمات را انتخاب کنید' })
+    if (payload.success && !payload.data.categoryId) {
+      setError('categoryId', { message: 'بخش خدمات را انتخاب کنید' })
       return
     }
     try {
@@ -256,33 +280,58 @@ export function ServiceDrawer({
               {errors.name && <FieldError>{errors.name.message}</FieldError>}
             </Field>
             <Field>
-              <FieldLabel>گروه خدمات</FieldLabel>
+              <FieldLabel>بخش</FieldLabel>
+              <Controller
+                control={control}
+                name="categoryId"
+                render={({ field }) => (
+                  <Select
+                    value={field.value ?? ''}
+                    onValueChange={(value) => {
+                      field.onChange(value)
+                      setValue('familyId', '', { shouldDirty: true })
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="انتخاب بخش" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.categoryId && (
+                <FieldError>{errors.categoryId.message}</FieldError>
+              )}
+            </Field>
+            <Field>
+              <FieldLabel>گروه (اختیاری)</FieldLabel>
               <Controller
                 control={control}
                 name="familyId"
                 render={({ field }) => (
                   <Select
-                    value={field.value ?? ''}
-                    onValueChange={field.onChange}
+                    value={field.value ? field.value : NO_FAMILY_VALUE}
+                    onValueChange={(value) =>
+                      field.onChange(value === NO_FAMILY_VALUE ? '' : value)
+                    }
+                    disabled={!categoryValue}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="انتخاب گروه" />
+                      <SelectValue placeholder="بدون گروه" />
                     </SelectTrigger>
                     <SelectContent>
-                      {families.map((family) => {
-                        const categoryName =
-                          family.categoryName ??
-                          categories.find(
-                            (category) => category.id === family.categoryId,
-                          )?.name
-                        return (
-                          <SelectItem key={family.id} value={family.id}>
-                            {categoryName
-                              ? `${categoryName} / ${family.name}`
-                              : family.name}
-                          </SelectItem>
-                        )
-                      })}
+                      <SelectItem value={NO_FAMILY_VALUE}>بدون گروه</SelectItem>
+                      {familyOptions.map((family) => (
+                        <SelectItem key={family.id} value={family.id}>
+                          {family.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}
@@ -560,7 +609,7 @@ export function ServiceDrawer({
             disabled={
               isSubmitting ||
               !nameValue ||
-              !familyValue ||
+              !categoryValue ||
               (isCombo && activeValue && componentIds.length === 0)
             }
             className="touch-manipulation"

@@ -22,9 +22,9 @@ export interface Service {
   name: string
   /** Deprecated legacy bucket kept until the grouped catalog UI fully replaces it. */
   category: 'hair' | 'nails' | 'skincare' | 'spa'
-  categoryId?: string | null
+  categoryId: string
   categoryName?: string | null
-  familyId?: string | null
+  familyId: string | null
   familyName?: string | null
   duration: number // in minutes
   price: number
@@ -73,7 +73,7 @@ export interface ComboComponentsSummary {
 export type ServiceAddonScope =
   | { type: 'category'; categoryId: string; categoryName: string; active: boolean }
   | { type: 'family'; familyId: string; familyName: string; categoryId: string; active: boolean }
-  | { type: 'service'; serviceId: string; serviceName: string; familyId: string; active: boolean }
+  | { type: 'service'; serviceId: string; serviceName: string; familyId: string | null; active: boolean }
 
 export interface ServiceAddon {
   id: string

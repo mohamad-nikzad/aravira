@@ -712,6 +712,7 @@ async function seedServiceCatalog(salonId: string, rows: SeedServiceRow[]) {
       .insert(services)
       .values({
         salonId,
+        categoryId: category.id,
         familyId: family.id,
         name: row.name,
         duration: row.duration,
@@ -722,6 +723,7 @@ async function seedServiceCatalog(salonId: string, rows: SeedServiceRow[]) {
       .onConflictDoUpdate({
         target: [services.salonId, services.name],
         set: {
+          categoryId: category.id,
           familyId: family.id,
           duration: row.duration,
           price: row.price,
@@ -808,6 +810,7 @@ async function seedServiceCombos(salonId: string, rows: SeedComboRow[]) {
       .insert(services)
       .values({
         salonId,
+        categoryId: category.id,
         familyId: family.id,
         name: row.name,
         duration: row.duration,
@@ -820,6 +823,7 @@ async function seedServiceCombos(salonId: string, rows: SeedComboRow[]) {
       .onConflictDoUpdate({
         target: [services.salonId, services.name],
         set: {
+          categoryId: category.id,
           familyId: family.id,
           duration: row.duration,
           price: row.price,

@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { serviceFormSchema } from './service'
+import { serviceFormSchema, serviceUpdateSchema } from './service'
 
 describe('serviceFormSchema', () => {
   it('trims name and normalizes numeric Persian-digit strings', () => {
     const result = serviceFormSchema.parse({
       name: '  کوتاهی مو  ',
+      categoryId: 'cat1',
       category: 'hair',
       duration: '۶۰',
       price: '۲۵۰۰۰۰',
@@ -15,6 +16,8 @@ describe('serviceFormSchema', () => {
 
     expect(result).toEqual({
       name: 'کوتاهی مو',
+      categoryId: 'cat1',
+      familyId: undefined,
       category: 'hair',
       duration: 60,
       price: 250000,
@@ -27,6 +30,7 @@ describe('serviceFormSchema', () => {
   it('defaults active to true and legacy color ids to calendar color ids', () => {
     const result = serviceFormSchema.parse({
       name: 'مانیکور',
+      categoryId: 'cat1',
       category: 'nails',
       duration: 45,
       price: 0,
@@ -81,5 +85,28 @@ describe('serviceFormSchema', () => {
         color: 'rose',
       }).success,
     ).toBe(false)
+  })
+})
+
+describe('serviceUpdateSchema familyId null semantics', () => {
+  it('omits familyId when absent from payload', () => {
+    const result = serviceUpdateSchema.parse({ name: 'x' })
+    expect(result.familyId).toBeUndefined()
+    expect('familyId' in result).toBe(false)
+  })
+
+  it('preserves familyId: null to signal "clear the family"', () => {
+    const result = serviceUpdateSchema.parse({ familyId: null })
+    expect(result.familyId).toBeNull()
+  })
+
+  it('treats empty string familyId as null (clear)', () => {
+    const result = serviceUpdateSchema.parse({ familyId: '   ' })
+    expect(result.familyId).toBeNull()
+  })
+
+  it('keeps a real familyId string', () => {
+    const result = serviceUpdateSchema.parse({ familyId: 'fam-123' })
+    expect(result.familyId).toBe('fam-123')
   })
 })

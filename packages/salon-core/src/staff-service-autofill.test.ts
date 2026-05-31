@@ -23,6 +23,8 @@ const svc = (over: Partial<Service> & Pick<Service, 'id' | 'name' | 'category'>)
   price: 1,
   color: 'bg-staff-1',
   active: true,
+  categoryId: 'cat-stub',
+  familyId: null,
   ...over,
 })
 

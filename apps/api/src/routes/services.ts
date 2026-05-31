@@ -3,6 +3,7 @@ import type { Context } from 'hono'
 import { z } from 'zod'
 import { isManagerRole } from '@repo/auth/tenant'
 import {
+  CatalogReferenceError,
   createService,
   getActiveServiceAddonsForService,
   getAllServices,
@@ -81,6 +82,7 @@ export const services = new Hono<AppEnv>()
       const { salonId } = c.var.tenant
       const {
         name,
+        categoryId,
         familyId,
         duration,
         price,
@@ -91,8 +93,8 @@ export const services = new Hono<AppEnv>()
         kind,
       } = c.req.valid('json')
 
-      if (!familyId) {
-        return error(c, 'گروه خدمات را انتخاب کنید', 400)
+      if (!categoryId) {
+        return error(c, 'بخش خدمات را انتخاب کنید', 400)
       }
 
       if (id !== undefined && id !== null && !isClientProvidedEntityId(String(id))) {
@@ -102,7 +104,8 @@ export const services = new Hono<AppEnv>()
       try {
         const service = await createService({
           name,
-          familyId,
+          categoryId,
+          familyId: familyId ?? null,
           duration,
           price,
           color,
@@ -119,6 +122,9 @@ export const services = new Hono<AppEnv>()
         }
         if (isActiveComboMissingComponentsError(err)) {
           return error(c, 'پکیج فعال باید حداقل یک خدمت در ترکیب خود داشته باشد', 400)
+        }
+        if (err instanceof CatalogReferenceError) {
+          return error(c, 'بخش یا گروه انتخاب‌شده معتبر نیست', 400)
         }
         throw err
       }
@@ -153,12 +159,13 @@ export const services = new Hono<AppEnv>()
     async (c) => {
       const { salonId } = c.var.tenant
       const { id } = c.req.valid('param')
-      const { name, familyId, duration, price, color, active, description, kind } =
+      const { name, categoryId, familyId, duration, price, color, active, description, kind } =
         c.req.valid('json')
 
       const patch: Partial<Service> = {}
       if (name !== undefined) patch.name = name
-      if (familyId !== undefined) patch.familyId = familyId
+      if (categoryId !== undefined) patch.categoryId = categoryId
+      if (familyId !== undefined) patch.familyId = familyId ?? null
       if (duration !== undefined) patch.duration = duration
       if (price !== undefined) patch.price = price
       if (color !== undefined) patch.color = color
@@ -176,6 +183,9 @@ export const services = new Hono<AppEnv>()
         }
         if (isActiveComboMissingComponentsError(err)) {
           return error(c, 'پکیج فعال باید حداقل یک خدمت در ترکیب خود داشته باشد', 400)
+        }
+        if (err instanceof CatalogReferenceError) {
+          return error(c, 'بخش یا گروه انتخاب‌شده معتبر نیست', 400)
         }
         throw err
       }

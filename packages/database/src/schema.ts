@@ -272,9 +272,12 @@ export const services = pgTable(
     salonId: uuid('salon_id')
       .notNull()
       .references(() => organization.id, { onDelete: 'restrict' }),
-    familyId: uuid('family_id')
+    categoryId: uuid('category_id')
       .notNull()
-      .references(() => serviceFamilies.id, { onDelete: 'restrict' }),
+      .references(() => serviceCategories.id, { onDelete: 'restrict' }),
+    familyId: uuid('family_id').references(() => serviceFamilies.id, {
+      onDelete: 'set null',
+    }),
     name: text('name').notNull(),
     duration: integer('duration').notNull(),
     price: integer('price').notNull(),
@@ -286,6 +289,7 @@ export const services = pgTable(
   },
   (t) => [
     uniqueIndex('services_salon_id_name_unique').on(t.salonId, t.name),
+    index('services_salon_id_category_id_idx').on(t.salonId, t.categoryId),
     index('services_salon_id_family_id_idx').on(t.salonId, t.familyId),
     index('services_salon_id_active_idx').on(t.salonId, t.active),
   ]

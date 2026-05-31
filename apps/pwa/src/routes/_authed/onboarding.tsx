@@ -478,8 +478,15 @@ function ServiceStep({
       return
     }
     try {
+      const categoryName = SERVICE_CATEGORIES[values.category].label
+      const existing = await dc.services.categories.list()
+      const match = existing.find((cat) => cat.name === categoryName)
+      const categoryId = match
+        ? match.id
+        : (await dc.services.categories.create({ name: categoryName })).id
       await dc.services.create({
         name: values.name,
+        categoryId,
         category: values.category,
         duration: values.duration,
         price: values.price,

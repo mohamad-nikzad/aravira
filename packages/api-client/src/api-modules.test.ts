@@ -157,6 +157,7 @@ describe('api modules', () => {
 
     await api.create({
       name: 'Cut',
+      categoryId: 'cat-1',
       familyId: 'family-1',
       duration: 45,
       price: 100,
@@ -168,6 +169,7 @@ describe('api modules', () => {
       method: 'POST',
       body: {
         name: 'Cut',
+        categoryId: 'cat-1',
         familyId: 'family-1',
         duration: 45,
         price: 100,
