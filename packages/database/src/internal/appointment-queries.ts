@@ -8,11 +8,20 @@ import type {
 import { detectScheduleOverlaps } from '@repo/salon-core/appointment-conflict'
 import { endTimeFromDuration } from '@repo/salon-core/appointment-time'
 import { getDb } from '../client'
-import { appointmentAddonLines, appointments, clients, services, users } from '../schema'
+import {
+  appointmentAddonLines,
+  appointments,
+  clients,
+  member,
+  salonMember,
+  services,
+  user,
+} from '../schema'
 import {
   attachAppointmentDetails,
   rowToAppointment,
   rowToAppointmentAddonLine,
+  staffUserSelect,
 } from './row-mappers'
 import { isClientProvidedEntityId } from './client-queries'
 import { getActiveServiceAddonsForService, getServiceById } from './service-queries'
@@ -189,12 +198,14 @@ export async function getAppointmentsWithDetailsByDateRange(
     .select({
       appointment: appointments,
       client: clients,
-      staff: users,
+      staff: staffUserSelect,
       service: services,
     })
     .from(appointments)
     .innerJoin(clients, and(eq(appointments.clientId, clients.id), eq(clients.salonId, salonId)))
-    .innerJoin(users, and(eq(appointments.staffId, users.id), eq(users.salonId, salonId)))
+    .innerJoin(user, eq(appointments.staffId, user.id))
+    .innerJoin(member, and(eq(member.userId, user.id), eq(member.organizationId, salonId)))
+    .leftJoin(salonMember, and(eq(salonMember.userId, user.id), eq(salonMember.organizationId, salonId)))
     .innerJoin(services, and(eq(appointments.serviceId, services.id), eq(services.salonId, salonId)))
     .where(and(...conditions))
     .orderBy(asc(appointments.date), asc(appointments.startTime))
@@ -213,12 +224,14 @@ export async function getClientAppointmentsWithDetails(
     .select({
       appointment: appointments,
       client: clients,
-      staff: users,
+      staff: staffUserSelect,
       service: services,
     })
     .from(appointments)
     .innerJoin(clients, and(eq(appointments.clientId, clients.id), eq(clients.salonId, salonId)))
-    .innerJoin(users, and(eq(appointments.staffId, users.id), eq(users.salonId, salonId)))
+    .innerJoin(user, eq(appointments.staffId, user.id))
+    .innerJoin(member, and(eq(member.userId, user.id), eq(member.organizationId, salonId)))
+    .leftJoin(salonMember, and(eq(salonMember.userId, user.id), eq(salonMember.organizationId, salonId)))
     .innerJoin(services, and(eq(appointments.serviceId, services.id), eq(services.salonId, salonId)))
     .where(and(eq(appointments.salonId, salonId), eq(appointments.clientId, clientId)))
     .orderBy(desc(appointments.date), desc(appointments.startTime))
@@ -237,12 +250,14 @@ export async function getAppointmentWithDetailsById(
     .select({
       appointment: appointments,
       client: clients,
-      staff: users,
+      staff: staffUserSelect,
       service: services,
     })
     .from(appointments)
     .innerJoin(clients, and(eq(appointments.clientId, clients.id), eq(clients.salonId, salonId)))
-    .innerJoin(users, and(eq(appointments.staffId, users.id), eq(users.salonId, salonId)))
+    .innerJoin(user, eq(appointments.staffId, user.id))
+    .innerJoin(member, and(eq(member.userId, user.id), eq(member.organizationId, salonId)))
+    .leftJoin(salonMember, and(eq(salonMember.userId, user.id), eq(salonMember.organizationId, salonId)))
     .innerJoin(services, and(eq(appointments.serviceId, services.id), eq(services.salonId, salonId)))
     .where(and(eq(appointments.id, id), eq(appointments.salonId, salonId)))
     .limit(1)

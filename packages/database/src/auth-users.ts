@@ -1,6 +1,1 @@
-export {
-  createUser,
-  getUserById,
-  getUserByPhone,
-  getUserWithPasswordByPhone,
-} from './internal/user-queries'
+export { getUserById } from './internal/user-queries'

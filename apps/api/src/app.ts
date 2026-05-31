@@ -26,7 +26,7 @@ import { today } from './routes/today'
 import { notifications } from './routes/notifications'
 import { push } from './routes/push'
 import { appointments } from './routes/appointments'
-import { auth } from './routes/auth'
+import { authRoute } from './routes/auth'
 import { auth as authServer } from '@repo/auth/server'
 import { publicRoutes } from './routes/public'
 import { appointmentRequestsRoute } from './routes/appointment-requests'
@@ -59,8 +59,10 @@ const app = new Hono<AppEnv>()
     }),
   )
   .use(bodyLimit({ maxSize: 2 * 1024 * 1024 }))
-  // Better Auth owns /api/v1/auth/* (sign-in, sign-out, get-session, …).
-  // Mounted ahead of the legacy auth route, which Phase 3 trims to the signup wrapper.
+  // Our `/api/v1/auth/signup` wrapper is matched first; everything else under
+  // `/api/v1/auth/*` (sign-in, sign-out, get-session, …) falls through to the
+  // Better Auth handler below.
+  .route('/api/v1/auth', authRoute)
   .on(['GET', 'POST'], '/api/v1/auth/*', (c) => authServer.handler(c.req.raw))
   .route('/health', health)
   .route('/api/v1/clients', clients)
@@ -80,7 +82,6 @@ const app = new Hono<AppEnv>()
   .route('/api/v1/notifications', notifications)
   .route('/api/v1/push', push)
   .route('/api/v1/appointments', appointments)
-  .route('/api/v1/auth', auth)
   .route('/api/v1/public', publicRoutes)
   .route('/api/v1/appointment-requests', appointmentRequestsRoute)
   .onError(errorHandler)

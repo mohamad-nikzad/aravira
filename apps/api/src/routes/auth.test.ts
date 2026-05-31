@@ -1,42 +1,46 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@repo/auth/auth', () => ({
-  login: vi.fn(),
-  createSession: vi.fn(),
-  getCurrentUserFromRequest: vi.fn(),
-  verifySession: vi.fn(),
-}))
-
-vi.mock('@repo/auth/signup', () => ({
-  createSalonWorkspace: vi.fn(),
-  SignupConflictError: class SignupConflictError extends Error {
-    constructor(message: string) {
-      super(message)
-      this.name = 'SignupConflictError'
-    }
-  },
-  SignupValidationError: class SignupValidationError extends Error {
-    constructor(message: string) {
-      super(message)
-      this.name = 'SignupValidationError'
-    }
+vi.mock('@repo/auth/server', () => ({
+  auth: {
+    api: {
+      getSession: vi.fn(),
+      signUpEmail: vi.fn(),
+      createOrganization: vi.fn(),
+    },
+    handler: vi.fn(),
   },
 }))
 
-vi.mock('@repo/database/auth-users', () => ({
-  getUserById: vi.fn(),
+vi.mock('@repo/database/members', () => ({
+  getMemberForUser: vi.fn(),
 }))
 
-import {
-  createSession,
-  getCurrentUserFromRequest,
-  login,
-} from '@repo/auth/auth'
-import {
-  createSalonWorkspace,
-  SignupConflictError,
-  SignupValidationError,
-} from '@repo/auth/signup'
+vi.mock('@repo/database/staff', () => ({
+  getUserWithServiceIds: vi.fn(),
+}))
+
+vi.mock('@repo/database/client', () => {
+  const stub: {
+    transaction: (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>
+    insert: () => { values: () => Promise<void> }
+    select: () => {
+      from: () => { leftJoin?: unknown; where: () => { limit: () => Promise<unknown[]> } }
+    }
+  } = {
+    transaction: async (fn) => fn(stub),
+    insert: () => ({ values: async () => undefined }),
+    select: () => ({
+      from: () => ({
+        where: () => ({ limit: async () => [] as unknown[] }),
+      }),
+    }),
+  }
+  return { getDb: () => stub }
+})
+
+import { auth as authServer } from '@repo/auth/server'
+import { getMemberForUser } from '@repo/database/members'
+import { getUserWithServiceIds } from '@repo/database/staff'
 
 process.env.NODE_ENV = 'test'
 process.env.DATABASE_URL = 'postgres://stub'
@@ -44,153 +48,139 @@ process.env.JWT_SECRET = 'test-secret'
 
 const { app } = await import('../app')
 
-const sampleUser = {
-  id: 'u1',
-  salonId: 's1',
-  name: 'Manager',
-  phone: '09120000000',
-  role: 'manager' as const,
-  color: 'blue',
-  createdAt: new Date(),
+const validBody = {
+  salonName: 'My Salon',
+  slug: 'my-salon',
+  managerName: 'Ali',
+  managerPhone: '09121234567',
+  password: 'secret123',
+}
+
+function jsonHeaders() {
+  return { 'Content-Type': 'application/json' }
+}
+
+function mockSignUpResponse(opts: { ok: boolean; userId?: string; status?: number; setCookie?: string }) {
+  const headers = new Headers()
+  if (opts.setCookie) headers.set('set-cookie', opts.setCookie)
+  const body = opts.ok ? { user: { id: opts.userId ?? 'u1' } } : { error: 'fail' }
+  return new Response(JSON.stringify(body), { status: opts.status ?? (opts.ok ? 200 : 400), headers })
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
 })
 
-function jsonHeaders() {
-  return { 'Content-Type': 'application/json' }
-}
-
-describe('auth router', () => {
-  describe('POST /login', () => {
-    it('returns 400 on invalid body', async () => {
-      const res = await app.request('/api/v1/auth/login', {
-        method: 'POST',
-        headers: jsonHeaders(),
-        body: JSON.stringify({ phone: '', password: '' }),
-      })
-      expect(res.status).toBe(400)
+describe('auth signup route', () => {
+  it('returns 400 on invalid body', async () => {
+    const res = await app.request('/api/v1/auth/signup', {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify({ ...validBody, slug: '' }),
     })
+    expect(res.status).toBe(400)
+  })
 
-    it('returns 401 when login fails', async () => {
-      vi.mocked(login).mockResolvedValue(null)
-      const res = await app.request('/api/v1/auth/login', {
-        method: 'POST',
-        headers: jsonHeaders(),
-        body: JSON.stringify({ phone: '09121234567', password: 'secret123' }),
-      })
-      expect(res.status).toBe(401)
-      expect(await res.json()).toEqual({
-        error: 'شماره موبایل یا رمز عبور اشتباه است',
-      })
+  it('returns 409 when signUpEmail rejects as duplicate', async () => {
+    vi.mocked(authServer.api.signUpEmail).mockRejectedValue(
+      new Error('user already exists')
+    )
+    const res = await app.request('/api/v1/auth/signup', {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify(validBody),
     })
-
-    it('returns 200 with user/token and sets session cookie', async () => {
-      vi.mocked(login).mockResolvedValue({ user: sampleUser, token: 'tok-abc' } as never)
-      const res = await app.request('/api/v1/auth/login', {
-        method: 'POST',
-        headers: jsonHeaders(),
-        body: JSON.stringify({ phone: '09121234567', password: 'secret123' }),
-      })
-      expect(res.status).toBe(200)
-      const body = (await res.json()) as { user: typeof sampleUser; token: string }
-      expect(body.token).toBe('tok-abc')
-      expect(body.user.id).toBe('u1')
-      const setCookie = res.headers.get('set-cookie') ?? ''
-      expect(setCookie).toContain('session=tok-abc')
-      expect(setCookie.toLowerCase()).toContain('httponly')
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({
+      error: 'این شماره موبایل قبلاً ثبت شده است',
     })
   })
 
-  describe('POST /logout', () => {
-    it('returns 200 and deletes the session cookie', async () => {
-      const res = await app.request('/api/v1/auth/logout', { method: 'POST' })
-      expect(res.status).toBe(200)
-      expect(await res.json()).toEqual({ success: true })
-      const setCookie = res.headers.get('set-cookie') ?? ''
-      expect(setCookie).toContain('session=')
+  it('returns 409 when createOrganization rejects as duplicate slug', async () => {
+    vi.mocked(authServer.api.signUpEmail).mockResolvedValue(
+      mockSignUpResponse({ ok: true, userId: 'u1' }) as never
+    )
+    vi.mocked(authServer.api.createOrganization).mockRejectedValue(
+      new Error('slug already exists')
+    )
+    const res = await app.request('/api/v1/auth/signup', {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify(validBody),
+    })
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({
+      error: 'این آدرس سالن قبلاً ثبت شده است',
     })
   })
 
-  describe('GET /me', () => {
-    it('returns 401 when unauthenticated', async () => {
-      vi.mocked(getCurrentUserFromRequest).mockResolvedValue(null)
-      const res = await app.request('/api/v1/auth/me')
-      expect(res.status).toBe(401)
-      expect(await res.json()).toEqual({ error: 'وارد نشده‌اید' })
-    })
-
-    it('returns 200 with user when authenticated', async () => {
-      vi.mocked(getCurrentUserFromRequest).mockResolvedValue(sampleUser as never)
-      const res = await app.request('/api/v1/auth/me')
-      expect(res.status).toBe(200)
-      expect(await res.json()).toEqual({ user: { ...sampleUser, createdAt: sampleUser.createdAt.toISOString() } })
-    })
-  })
-
-  describe('POST /signup', () => {
-    const validBody = {
-      salonName: 'My Salon',
+  it('returns 200 with salon/user/redirectTo and forwards Set-Cookie', async () => {
+    vi.mocked(authServer.api.signUpEmail).mockResolvedValue(
+      mockSignUpResponse({
+        ok: true,
+        userId: 'u1',
+        setCookie: 'better-auth.session_token=tok; HttpOnly; Path=/',
+      }) as never
+    )
+    vi.mocked(authServer.api.createOrganization).mockResolvedValue({
+      id: 's1',
+      name: 'My Salon',
       slug: 'my-salon',
-      managerName: 'Ali',
-      managerPhone: '09121234567',
-      password: 'secret123',
+    } as never)
+    const res = await app.request('/api/v1/auth/signup', {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify(validBody),
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      salon: { id: string }
+      user: { id: string }
+      redirectTo: string
     }
+    expect(body.salon.id).toBe('s1')
+    expect(body.user.id).toBe('u1')
+    expect(body.redirectTo).toBe('/onboarding')
+    expect(res.headers.get('set-cookie') ?? '').toContain('better-auth.session_token=tok')
+  })
+})
 
-    it('returns 400 on invalid body', async () => {
-      const res = await app.request('/api/v1/auth/signup', {
-        method: 'POST',
-        headers: jsonHeaders(),
-        body: JSON.stringify({ ...validBody, slug: '' }),
-      })
-      expect(res.status).toBe(400)
-    })
+describe('auth /me shim', () => {
+  it('returns 401 when there is no session', async () => {
+    vi.mocked(authServer.api.getSession).mockResolvedValue(null as never)
+    const res = await app.request('/api/v1/auth/me')
+    expect(res.status).toBe(401)
+  })
 
-    it('returns 409 on conflict', async () => {
-      vi.mocked(createSalonWorkspace).mockRejectedValue(
-        new SignupConflictError('این آدرس سالن قبلاً ثبت شده است'),
-      )
-      const res = await app.request('/api/v1/auth/signup', {
-        method: 'POST',
-        headers: jsonHeaders(),
-        body: JSON.stringify(validBody),
-      })
-      expect(res.status).toBe(409)
-      expect(await res.json()).toEqual({
-        error: 'این آدرس سالن قبلاً ثبت شده است',
-      })
+  it('resolves the Better Auth session into the legacy User shape', async () => {
+    vi.mocked(authServer.api.getSession).mockResolvedValue({
+      user: { id: 'u1' },
+    } as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({
+      userId: 'u1',
+      organizationId: 's1',
+      role: 'owner',
+      name: 'Ali',
+      username: '09121234567',
     })
+    const fullUser = {
+      id: 'u1',
+      salonId: 's1',
+      name: 'Ali',
+      role: 'manager' as const,
+      color: 'blue',
+      phone: '09121234567',
+      createdAt: new Date('2026-01-01'),
+      serviceIds: null,
+    }
+    vi.mocked(getUserWithServiceIds).mockResolvedValue(fullUser)
 
-    it('returns 400 on validation error from workspace', async () => {
-      vi.mocked(createSalonWorkspace).mockRejectedValue(
-        new SignupValidationError('شماره موبایل مدیر معتبر نیست'),
-      )
-      const res = await app.request('/api/v1/auth/signup', {
-        method: 'POST',
-        headers: jsonHeaders(),
-        body: JSON.stringify(validBody),
-      })
-      expect(res.status).toBe(400)
-    })
-
-    it('returns 200 with salon, user, token, and redirectTo', async () => {
-      vi.mocked(createSalonWorkspace).mockResolvedValue({
-        salon: { id: 's1', name: 'My Salon', slug: 'my-salon' },
-        user: sampleUser,
-      } as never)
-      vi.mocked(createSession).mockResolvedValue('tok-new')
-      const res = await app.request('/api/v1/auth/signup', {
-        method: 'POST',
-        headers: jsonHeaders(),
-        body: JSON.stringify(validBody),
-      })
-      expect(res.status).toBe(200)
-      const body = (await res.json()) as { token: string; redirectTo: string }
-      expect(body.token).toBe('tok-new')
-      expect(body.redirectTo).toBe('/onboarding')
-      const setCookie = res.headers.get('set-cookie') ?? ''
-      expect(setCookie).toContain('session=tok-new')
-    })
+    const res = await app.request('/api/v1/auth/me')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { user: { id: string; salonId: string; role: string } }
+    expect(body.user.id).toBe('u1')
+    expect(body.user.salonId).toBe('s1')
+    expect(body.user.role).toBe('manager')
+    expect(getUserWithServiceIds).toHaveBeenCalledWith('u1', 's1')
   })
 })

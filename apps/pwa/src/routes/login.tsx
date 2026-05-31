@@ -69,7 +69,9 @@ function LoginPage() {
     } catch (err) {
       const message =
         err instanceof ApiError
-          ? err.message || 'شماره موبایل یا رمز عبور اشتباه است'
+          ? err.status === 401
+            ? 'شماره موبایل یا رمز عبور اشتباه است'
+            : err.message || 'شماره موبایل یا رمز عبور اشتباه است'
           : 'خطایی رخ داد. لطفا دوباره تلاش کنید.'
       setError('root', { message })
     }

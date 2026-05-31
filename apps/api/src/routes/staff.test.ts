@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@repo/database/staff', () => ({
   getAllStaff: vi.fn(),
-  createUser: vi.fn(),
   getUserById: vi.fn(),
   getUserWithServiceIds: vi.fn(),
   setStaffServiceIds: vi.fn(),
@@ -13,17 +12,30 @@ vi.mock('@repo/database/staff', () => ({
   validateActiveServiceIds: vi.fn(),
 }))
 
-vi.mock('@repo/auth/auth', () => ({
-  verifySession: vi.fn(),
+vi.mock('@repo/auth/server', () => ({
+  auth: {
+    api: {
+      getSession: vi.fn(),
+      signUpEmail: vi.fn(),
+      addMember: vi.fn(),
+    },
+  },
 }))
 
-vi.mock('@repo/database/auth-users', () => ({
-  getUserById: vi.fn(),
+vi.mock('@repo/database/members', () => ({
+  getMemberForUser: vi.fn(),
 }))
+
+vi.mock('@repo/database/client', () => {
+  const stub = {
+    insert: () => ({ values: async () => undefined }),
+  }
+  return { getDb: () => stub }
+})
 
 import * as db from '@repo/database/staff'
-import { verifySession } from '@repo/auth/auth'
-import { getUserById as getAuthUserById } from '@repo/database/auth-users'
+import { auth as authServer } from '@repo/auth/server'
+import { getMemberForUser } from '@repo/database/members'
 
 process.env.NODE_ENV = 'test'
 process.env.DATABASE_URL = 'postgres://stub'
@@ -53,8 +65,8 @@ const validCreate = {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(verifySession).mockResolvedValue('u1')
-  vi.mocked(getAuthUserById).mockResolvedValue(managerUser as never)
+  vi.mocked(authServer.api.getSession).mockImplementation(async (args: any) => (args?.headers?.get?.('Authorization') ? { user: { id: 'u1' } } : null) as never)
+  vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u1', organizationId: 's1', role: 'owner', name: 'Manager', username: '09120000000' } as never)
 })
 
 describe('staff router', () => {
@@ -64,7 +76,7 @@ describe('staff router', () => {
   })
 
   it('200 on GET / for any authed user', async () => {
-    vi.mocked(getAuthUserById).mockResolvedValue(staffUser as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
     vi.mocked(db.getAllStaff).mockResolvedValue([{ id: 'u2' }] as never)
     const res = await app.request('/api/v1/staff', { headers: authHeaders })
     expect(res.status).toBe(200)
@@ -72,7 +84,7 @@ describe('staff router', () => {
   })
 
   it('staff is 403 on POST', async () => {
-    vi.mocked(getAuthUserById).mockResolvedValue(staffUser as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
     const res = await app.request('/api/v1/staff', {
       method: 'POST',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
@@ -92,7 +104,9 @@ describe('staff router', () => {
 
   it('200 on POST create', async () => {
     vi.mocked(db.getAllStaff).mockResolvedValue([] as never)
-    vi.mocked(db.createUser).mockResolvedValue({ id: 'u3', name: 'Ali' } as never)
+    vi.mocked(authServer.api.signUpEmail).mockResolvedValue({ user: { id: 'u3' } } as never)
+    vi.mocked(authServer.api.addMember).mockResolvedValue({} as never)
+    vi.mocked(db.getUserById).mockResolvedValue({ id: 'u3', name: 'Ali' } as never)
     const res = await app.request('/api/v1/staff', {
       method: 'POST',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
@@ -104,7 +118,7 @@ describe('staff router', () => {
 
   it('409 on duplicate phone', async () => {
     vi.mocked(db.getAllStaff).mockResolvedValue([] as never)
-    vi.mocked(db.createUser).mockRejectedValue(new Error('unique violation'))
+    vi.mocked(authServer.api.signUpEmail).mockRejectedValue(new Error('unique violation'))
     const res = await app.request('/api/v1/staff', {
       method: 'POST',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
@@ -149,7 +163,7 @@ describe('staff router', () => {
   })
 
   it('staff is 403 on booking-availability', async () => {
-    vi.mocked(getAuthUserById).mockResolvedValue(staffUser as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
     const res = await app.request(
       '/api/v1/staff/booking-availability?date=2026-05-18&startTime=10:00&endTime=10:30',
       { headers: authHeaders },

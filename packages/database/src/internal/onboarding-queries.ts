@@ -3,10 +3,11 @@ import { getDb } from '../client'
 import {
   appointments,
   businessSettings,
+  member,
+  organization,
   salonOnboarding,
-  salons,
+  salonProfile,
   services,
-  users,
 } from '../schema'
 
 export type OnboardingStatus = {
@@ -43,14 +44,15 @@ export async function getOnboardingStatus(salonId: string): Promise<OnboardingSt
   ] = await Promise.all([
     db
       .select({
-        id: salons.id,
-        name: salons.name,
-        slug: salons.slug,
-        phone: salons.phone,
-        address: salons.address,
+        id: organization.id,
+        name: organization.name,
+        slug: organization.slug,
+        phone: salonProfile.phone,
+        address: salonProfile.address,
       })
-      .from(salons)
-      .where(eq(salons.id, salonId))
+      .from(organization)
+      .leftJoin(salonProfile, eq(salonProfile.organizationId, organization.id))
+      .where(eq(organization.id, salonId))
       .limit(1),
 
     db
@@ -71,8 +73,8 @@ export async function getOnboardingStatus(salonId: string): Promise<OnboardingSt
 
     db
       .select({ value: count() })
-      .from(users)
-      .where(and(eq(users.salonId, salonId), eq(users.role, 'staff'), eq(users.active, true))),
+      .from(member)
+      .where(and(eq(member.organizationId, salonId), eq(member.role, 'member'))),
 
     db
       .select({ value: count() })

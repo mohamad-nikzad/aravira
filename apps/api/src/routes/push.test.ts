@@ -9,18 +9,18 @@ vi.mock('@repo/database/push', () => ({
   deletePushSubscriptionForUser: vi.fn(),
 }))
 
-vi.mock('@repo/auth/auth', () => ({
-  verifySession: vi.fn(),
+vi.mock('@repo/auth/server', () => ({
+  auth: { api: { getSession: vi.fn() } },
 }))
 
-vi.mock('@repo/database/auth-users', () => ({
-  getUserById: vi.fn(),
+vi.mock('@repo/database/members', () => ({
+  getMemberForUser: vi.fn(),
 }))
 
 import { isWebPushConfigured } from '@repo/notifications'
 import * as pushDb from '@repo/database/push'
-import { verifySession } from '@repo/auth/auth'
-import { getUserById } from '@repo/database/auth-users'
+import { auth as authServer } from '@repo/auth/server'
+import { getMemberForUser } from '@repo/database/members'
 
 process.env.NODE_ENV = 'test'
 process.env.DATABASE_URL = 'postgres://stub'
@@ -42,8 +42,8 @@ const jsonHeaders = { ...authHeaders, 'Content-Type': 'application/json' }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(verifySession).mockResolvedValue('u1')
-  vi.mocked(getUserById).mockResolvedValue(managerUser as never)
+  vi.mocked(authServer.api.getSession).mockImplementation(async (args: any) => (args?.headers?.get?.('Authorization') ? { user: { id: 'u1' } } : null) as never)
+  vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u1', organizationId: 's1', role: 'owner', name: 'Manager', username: '09120000000' } as never)
   vi.mocked(isWebPushConfigured).mockReturnValue(true)
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = 'pk-test'
 })

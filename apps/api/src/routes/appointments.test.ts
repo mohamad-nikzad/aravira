@@ -28,18 +28,18 @@ vi.mock('@repo/notifications', () => ({
   sendWebPushToUser: vi.fn(),
 }))
 
-vi.mock('@repo/auth/auth', () => ({
-  verifySession: vi.fn(),
+vi.mock('@repo/auth/server', () => ({
+  auth: { api: { getSession: vi.fn() } },
 }))
 
-vi.mock('@repo/database/auth-users', () => ({
-  getUserById: vi.fn(),
+vi.mock('@repo/database/members', () => ({
+  getMemberForUser: vi.fn(),
 }))
 
 import * as appts from '@repo/database/appointments'
 import * as clientsDb from '@repo/database/clients'
-import { verifySession } from '@repo/auth/auth'
-import { getUserById } from '@repo/database/auth-users'
+import { auth as authServer } from '@repo/auth/server'
+import { getMemberForUser } from '@repo/database/members'
 
 process.env.NODE_ENV = 'test'
 process.env.DATABASE_URL = 'postgres://stub'
@@ -63,13 +63,13 @@ const jsonHeaders = { ...authHeaders, 'Content-Type': 'application/json' }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(verifySession).mockResolvedValue('u1')
-  vi.mocked(getUserById).mockResolvedValue(managerUser as never)
+  vi.mocked(authServer.api.getSession).mockImplementation(async (args: any) => (args?.headers?.get?.('Authorization') ? { user: { id: 'u1' } } : null) as never)
+  vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u1', organizationId: 's1', role: 'owner', name: 'Manager', username: '09120000000' } as never)
 })
 
 describe('appointments router', () => {
   it('GET / returns 401 without auth', async () => {
-    vi.mocked(verifySession).mockResolvedValue(null as never)
+    vi.mocked(authServer.api.getSession).mockResolvedValue(null as never)
     const res = await app.request('/api/v1/appointments?startDate=2026-01-01&endDate=2026-01-02')
     expect(res.status).toBe(401)
   })
@@ -80,8 +80,8 @@ describe('appointments router', () => {
   })
 
   it('GET / scopes to staff when role=staff', async () => {
-    vi.mocked(getUserById).mockResolvedValue(staffUser as never)
-    vi.mocked(verifySession).mockResolvedValue('u2')
+    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
+    vi.mocked(authServer.api.getSession).mockResolvedValue({ user: { id: 'u2' } } as never)
     vi.mocked(appts.getAppointmentsWithDetailsByDateRange).mockResolvedValue([] as never)
     const res = await app.request(
       '/api/v1/appointments?startDate=2026-01-01&endDate=2026-01-02',
@@ -112,7 +112,7 @@ describe('appointments router', () => {
   })
 
   it('POST / returns 403 for staff role', async () => {
-    vi.mocked(getUserById).mockResolvedValue(staffUser as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
     const res = await app.request('/api/v1/appointments', {
       method: 'POST',
       headers: jsonHeaders,
@@ -214,7 +214,7 @@ describe('appointments router', () => {
   })
 
   it('GET /:id 403 for staff viewing other staff appointment', async () => {
-    vi.mocked(getUserById).mockResolvedValue(staffUser as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
     vi.mocked(appts.getAppointmentWithDetailsById).mockResolvedValue({
       id: 'a1',
       staffId: 'other',
@@ -224,7 +224,7 @@ describe('appointments router', () => {
   })
 
   it('PATCH /:id 403 for staff doing non-status patch', async () => {
-    vi.mocked(getUserById).mockResolvedValue(staffUser as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
     vi.mocked(appts.getAppointmentById).mockResolvedValue({
       id: 'a1',
       staffId: 'u2',
@@ -243,7 +243,7 @@ describe('appointments router', () => {
   })
 
   it('PATCH /:id allows staff status-only update on own appointment', async () => {
-    vi.mocked(getUserById).mockResolvedValue(staffUser as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
     vi.mocked(appts.getAppointmentById).mockResolvedValue({
       id: 'a1',
       staffId: 'u2',
@@ -306,7 +306,7 @@ describe('appointments router', () => {
   })
 
   it('DELETE /:id returns 403 for staff', async () => {
-    vi.mocked(getUserById).mockResolvedValue(staffUser as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
     const res = await app.request('/api/v1/appointments/a1', {
       method: 'DELETE',
       headers: authHeaders,

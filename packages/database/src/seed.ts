@@ -3,18 +3,16 @@
  *   pnpm db:push
  *   pnpm db:seed
  */
-import bcrypt from 'bcryptjs'
-import { drizzle } from 'drizzle-orm/postgres-js'
-import { and, asc, count, eq, inArray, like } from 'drizzle-orm'
-import postgres from 'postgres'
-import { getDatabaseUrl } from './config'
+import { and, count, eq, inArray, like } from 'drizzle-orm'
 import {
   addDaysYmd,
   salonCurrentHm,
   salonTodayYmd,
 } from '@repo/salon-core/salon-local-time'
-import * as schema from './schema'
-import { seedCatalogPresets } from './seed/catalog-presets'
+import { auth } from '@repo/auth/server'
+import { mapRole } from '@repo/auth/permissions'
+import type { UserRole } from '@repo/salon-core/types'
+import { getDb } from './client'
 import {
   appointments,
   businessSettings,
@@ -22,7 +20,11 @@ import {
   clientTags,
   clients,
   locations,
+  member,
+  organization,
   resources,
+  salonMember,
+  salonProfile,
   serviceComboComponents,
   serviceAddonCategoryScopes,
   serviceAddonFamilyScopes,
@@ -30,17 +32,184 @@ import {
   serviceCategories,
   serviceFamilies,
   serviceAddonServiceScopes,
-  salons,
   services,
   staffSchedules,
   staffServices,
-  users,
+  user,
 } from './schema'
+import { seedCatalogPresets } from './seed/catalog-presets'
 
-const client = postgres(getDatabaseUrl({ preferDirect: true }), { max: 1 })
-const db = drizzle(client, { schema })
+const db = getDb()
 
-const passwordHash = bcrypt.hashSync('admin123', 10)
+const SEED_PASSWORD = 'admin123'
+
+type SeedStaff = {
+  id: string
+  phone: string
+  name: string
+  role: UserRole
+  color: string | null
+  active: boolean
+}
+
+/**
+ * Create (or reuse) a Better Auth user keyed by phone. Better Auth hashes
+ * passwords with scrypt, so seed users must be created via the sign-up API to
+ * be loginable — we cannot insert a precomputed hash directly.
+ */
+async function ensureUser({
+  phone,
+  name,
+}: {
+  phone: string
+  name: string
+}): Promise<string> {
+  const [existing] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.username, phone))
+    .limit(1)
+  if (existing) return existing.id
+
+  const res = await auth.api.signUpEmail({
+    body: {
+      email: `${phone}@aravira.local`,
+      password: SEED_PASSWORD,
+      name,
+      username: phone,
+    },
+  })
+  return res.user.id
+}
+
+/**
+ * Create (or reuse) a salon organization owned by `ownerUserId`, and upsert its
+ * salon_profile sidecar. createOrganization also creates the owner `member` row.
+ */
+async function ensureOrg({
+  name,
+  slug,
+  ownerUserId,
+  profile,
+}: {
+  name: string
+  slug: string
+  ownerUserId: string
+  profile: { phone: string; address: string }
+}): Promise<string> {
+  const [existing] = await db
+    .select({ id: organization.id })
+    .from(organization)
+    .where(eq(organization.slug, slug))
+    .limit(1)
+
+  let orgId = existing?.id
+  if (!orgId) {
+    const created = await auth.api.createOrganization({
+      body: { name, slug, userId: ownerUserId },
+    })
+    if (!created) throw new Error(`createOrganization returned empty for ${slug}`)
+    orgId = created.id
+  }
+
+  await db
+    .insert(salonProfile)
+    .values({
+      organizationId: orgId,
+      timezone: 'Asia/Tehran',
+      locale: 'fa-IR',
+      status: 'active',
+      phone: profile.phone,
+      address: profile.address,
+    })
+    .onConflictDoUpdate({
+      target: salonProfile.organizationId,
+      set: {
+        timezone: 'Asia/Tehran',
+        locale: 'fa-IR',
+        status: 'active',
+        phone: profile.phone,
+        address: profile.address,
+      },
+    })
+
+  return orgId
+}
+
+/** Idempotently add a Better Auth org membership (skips if already a member). */
+async function ensureOrgMember(
+  userId: string,
+  organizationId: string,
+  role: string,
+): Promise<void> {
+  const [existing] = await db
+    .select({ id: member.id })
+    .from(member)
+    .where(
+      and(eq(member.userId, userId), eq(member.organizationId, organizationId)),
+    )
+    .limit(1)
+  if (existing) return
+  await auth.api.addMember({ body: { userId, role, organizationId } })
+}
+
+/** Upsert the salon_member sidecar (color / displayName / active per user-org). */
+async function ensureSalonMember({
+  userId,
+  organizationId,
+  displayName,
+  color,
+  active,
+}: {
+  userId: string
+  organizationId: string
+  displayName: string
+  color: string
+  active: boolean
+}): Promise<void> {
+  await db
+    .insert(salonMember)
+    .values({ userId, organizationId, displayName, color, active })
+    .onConflictDoUpdate({
+      target: [salonMember.userId, salonMember.organizationId],
+      set: { displayName, color, active },
+    })
+}
+
+/**
+ * Resolve a salon's staff into the legacy `User`-ish shape the seed logic
+ * expects, by joining Better Auth member + user with the salon_member sidecar.
+ */
+async function getSalonStaff(organizationId: string): Promise<SeedStaff[]> {
+  const rows = await db
+    .select({
+      id: user.id,
+      phone: user.username,
+      name: user.name,
+      role: member.role,
+      color: salonMember.color,
+      active: salonMember.active,
+    })
+    .from(member)
+    .innerJoin(user, eq(member.userId, user.id))
+    .leftJoin(
+      salonMember,
+      and(
+        eq(salonMember.userId, user.id),
+        eq(salonMember.organizationId, organizationId),
+      ),
+    )
+    .where(eq(member.organizationId, organizationId))
+
+  return rows.map((row) => ({
+    id: row.id,
+    phone: row.phone ?? '',
+    name: row.name,
+    role: mapRole(row.role),
+    color: row.color,
+    active: row.active ?? true,
+  }))
+}
 
 function formatDate(d: Date) {
   return d.toISOString().split('T')[0]
@@ -788,23 +957,11 @@ async function seedRetentionAndFeaturesDemo(salonId: string) {
     await db.delete(clients).where(inArray(clients.id, demoIds))
   }
 
-  const manager = await db
-    .select()
-    .from(users)
-    .where(and(eq(users.salonId, salonId), eq(users.role, 'manager')))
-    .limit(1)
-    .then((r) => r[0])
-  const staffOrdered = await db
-    .select()
-    .from(users)
-    .where(
-      and(
-        eq(users.salonId, salonId),
-        eq(users.active, true),
-        eq(users.role, 'staff'),
-      ),
-    )
-    .orderBy(asc(users.name))
+  const salonStaff = await getSalonStaff(salonId)
+  const manager = salonStaff.find((s) => s.role === 'manager')
+  const staffOrdered = salonStaff
+    .filter((s) => s.role === 'staff' && s.active)
+    .sort((a, b) => a.name.localeCompare(b.name))
   const staffA =
     staffOrdered.find((staff) => staff.phone === '09120000001') ??
     staffOrdered[0]
@@ -1182,70 +1339,65 @@ async function seedRetentionAndFeaturesDemo(salonId: string) {
   console.log('Feature demo: clients 09129900101–09129900108 refreshed.')
 }
 
+/** Owner + staff identities for the primary salon. */
+const PRIMARY_OWNER = { phone: '09120000000', name: 'مدیر سالن', color: 'gold' }
+const PRIMARY_STAFF = [
+  { phone: '09120000001', name: 'نیلوفر کاظمی', color: 'coral' },
+  { phone: '09120000002', name: 'مریم احمدی', color: 'rose' },
+  { phone: '09120000003', name: 'سارا محمودی', color: 'violet' },
+  { phone: '09120000004', name: 'الهام رضایی', color: 'mint' },
+] as const
+const SECOND_OWNER = { phone: '09130000000', name: 'مدیر نیلوفر', color: 'gold' }
+
 async function main() {
-  const [primarySalon] = await db
-    .insert(salons)
-    .values({
+  // --- Primary salon: owner user + organization + sidecars ---
+  const primaryOwnerId = await ensureUser(PRIMARY_OWNER)
+  const primarySalon = {
+    id: await ensureOrg({
       name: 'سالن آراویرا',
       slug: 'aravira',
-      phone: '02100000000',
-      address: 'تهران',
-      timezone: 'Asia/Tehran',
-      locale: 'fa-IR',
-      status: 'active',
-    })
-    .onConflictDoUpdate({
-      target: salons.slug,
-      set: {
-        name: 'سالن آراویرا',
-        phone: '02100000000',
-        address: 'تهران',
-        timezone: 'Asia/Tehran',
-        locale: 'fa-IR',
-        status: 'active',
-        updatedAt: new Date(),
-      },
-    })
-    .returning()
+      ownerUserId: primaryOwnerId,
+      profile: { phone: '02100000000', address: 'تهران' },
+    }),
+  }
+  await ensureSalonMember({
+    userId: primaryOwnerId,
+    organizationId: primarySalon.id,
+    displayName: PRIMARY_OWNER.name,
+    color: PRIMARY_OWNER.color,
+    active: true,
+  })
 
-  const [secondSalon] = await db
-    .insert(salons)
-    .values({
+  // --- Primary salon staff ---
+  for (const s of PRIMARY_STAFF) {
+    const staffId = await ensureUser(s)
+    await ensureOrgMember(staffId, primarySalon.id, 'member')
+    await ensureSalonMember({
+      userId: staffId,
+      organizationId: primarySalon.id,
+      displayName: s.name,
+      color: s.color,
+      active: true,
+    })
+  }
+
+  // --- Second salon: owner user + organization + sidecars ---
+  const secondOwnerId = await ensureUser(SECOND_OWNER)
+  const secondSalon = {
+    id: await ensureOrg({
       name: 'سالن نیلوفر',
       slug: 'niloufar',
-      phone: '02100000001',
-      address: 'تهران، سعادت‌آباد',
-      timezone: 'Asia/Tehran',
-      locale: 'fa-IR',
-      status: 'active',
-    })
-    .onConflictDoUpdate({
-      target: salons.slug,
-      set: {
-        name: 'سالن نیلوفر',
-        phone: '02100000001',
-        address: 'تهران، سعادت‌آباد',
-        timezone: 'Asia/Tehran',
-        locale: 'fa-IR',
-        status: 'active',
-        updatedAt: new Date(),
-      },
-    })
-    .returning()
-
-  // Repair early local seeds that were inserted without the leading zero.
-  await db
-    .update(users)
-    .set({ phone: '09120000000' })
-    .where(eq(users.phone, '9120000000'))
-  await db
-    .update(users)
-    .set({ phone: '09120000001' })
-    .where(eq(users.phone, '9120000001'))
-  await db
-    .update(users)
-    .set({ phone: '09120000002' })
-    .where(eq(users.phone, '9120000002'))
+      ownerUserId: secondOwnerId,
+      profile: { phone: '02100000001', address: 'تهران، سعادت‌آباد' },
+    }),
+  }
+  await ensureSalonMember({
+    userId: secondOwnerId,
+    organizationId: secondSalon.id,
+    displayName: SECOND_OWNER.name,
+    color: SECOND_OWNER.color,
+    active: true,
+  })
 
   await db
     .insert(businessSettings)
@@ -1352,77 +1504,6 @@ async function main() {
   await seedServiceCombos(primarySalon.id, primarySeedCombos)
   await seedServiceAddons(primarySalon.id, primarySeedAddons)
 
-  const [{ value: userCount }] = await db
-    .select({ value: count() })
-    .from(users)
-    .where(eq(users.salonId, primarySalon.id))
-  if (userCount === 0) {
-    await db.insert(users).values([
-      {
-        salonId: primarySalon.id,
-        name: 'مدیر سالن',
-        phone: '09120000000',
-        passwordHash,
-        role: 'manager',
-        color: 'gold',
-        active: true,
-      },
-      {
-        salonId: primarySalon.id,
-        name: 'نیلوفر کاظمی',
-        phone: '09120000001',
-        passwordHash,
-        role: 'staff',
-        color: 'coral',
-        active: true,
-      },
-      {
-        salonId: primarySalon.id,
-        name: 'مریم احمدی',
-        phone: '09120000002',
-        passwordHash,
-        role: 'staff',
-        color: 'rose',
-        active: true,
-      },
-    ])
-  }
-
-  /** Extra demo staff (idempotent) — only one service for autofill smoke tests. */
-  const [existingSara] = await db
-    .select()
-    .from(users)
-    .where(eq(users.phone, '09120000003'))
-    .limit(1)
-  if (!existingSara) {
-    await db.insert(users).values({
-      salonId: primarySalon.id,
-      name: 'سارا محمودی',
-      phone: '09120000003',
-      passwordHash,
-      role: 'staff',
-      color: 'violet',
-      active: true,
-    })
-  }
-
-  const [existingElham] = await db
-    .select()
-    .from(users)
-    .where(eq(users.phone, '09120000004'))
-    .limit(1)
-  if (!existingElham) {
-    await db.insert(users).values({
-      salonId: primarySalon.id,
-      name: 'الهام رضایی',
-      phone: '09120000004',
-      passwordHash,
-      role: 'staff',
-      color: 'mint',
-      active: true,
-    })
-  }
-
   const clientRows = [
     { name: 'زهرا کریمی', phone: '09121234567', notes: 'مشتری ثابت' },
     { name: 'نازنین حسینی', phone: '09122345678', notes: null },
@@ -1445,10 +1526,7 @@ async function main() {
       .values(clientRows.map((row) => ({ ...row, salonId: primarySalon.id })))
   }
 
-  const allUsers = await db
-    .select()
-    .from(users)
-    .where(eq(users.salonId, primarySalon.id))
+  const allUsers = await getSalonStaff(primarySalon.id)
   const allServices = await db
     .select()
     .from(services)
@@ -1459,17 +1537,9 @@ async function main() {
     .where(eq(clients.salonId, primarySalon.id))
 
   const manager = allUsers.find((u) => u.role === 'manager')
-  const staffUsersOrdered = await db
-    .select()
-    .from(users)
-    .where(
-      and(
-        eq(users.salonId, primarySalon.id),
-        eq(users.active, true),
-        eq(users.role, 'staff'),
-      ),
-    )
-    .orderBy(asc(users.name))
+  const staffUsersOrdered = allUsers
+    .filter((u) => u.role === 'staff' && u.active)
+    .sort((a, b) => a.name.localeCompare(b.name))
   const staffHair = staffUsersOrdered.find(
     (staff) => staff.phone === '09120000001',
   )
@@ -1487,13 +1557,13 @@ async function main() {
 
   /** Full-week hours so calendar bookings on any weekday match E2E + demo (UTC weekday from YYYY-MM-DD). */
   const primaryWeek = [0, 1, 2, 3, 4, 5, 6] as const
-  for (const member of staffUsersOrdered) {
+  for (const staffMember of staffUsersOrdered) {
     for (const dayOfWeek of primaryWeek) {
       await db
         .insert(staffSchedules)
         .values({
           salonId: primarySalon.id,
-          staffId: member.id,
+          staffId: staffMember.id,
           dayOfWeek,
           workingStart: '09:00',
           workingEnd: '18:00',
@@ -1699,22 +1769,6 @@ async function main() {
     ])
   }
 
-  const [{ value: secondUserCount }] = await db
-    .select({ value: count() })
-    .from(users)
-    .where(eq(users.salonId, secondSalon.id))
-  if (secondUserCount === 0) {
-    await db.insert(users).values({
-      salonId: secondSalon.id,
-      name: 'مدیر نیلوفر',
-      phone: '09130000000',
-      passwordHash,
-      role: 'manager',
-      color: 'gold',
-      active: true,
-    })
-  }
-
   await seedServiceCatalog(secondSalon.id, secondSalonSeedServices)
 
   const [{ value: secondClientCount }] = await db
@@ -1743,11 +1797,10 @@ async function main() {
   console.log(
     'Staff specialties: hair, nails, skin/epilation, lashes/brows/permanent makeup.',
   )
-  await client.end()
+  process.exit(0)
 }
 
-main().catch(async (e) => {
+main().catch((e) => {
   console.error(e)
-  await client.end({ timeout: 1 })
   process.exit(1)
 })

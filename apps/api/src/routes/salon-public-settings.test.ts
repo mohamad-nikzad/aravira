@@ -10,17 +10,17 @@ vi.mock('@repo/database/public', () => ({
   cancelAppointmentRequestByToken: vi.fn(),
 }))
 
-vi.mock('@repo/auth/auth', () => ({
-  verifySession: vi.fn(),
+vi.mock('@repo/auth/server', () => ({
+  auth: { api: { getSession: vi.fn() } },
 }))
 
-vi.mock('@repo/database/auth-users', () => ({
-  getUserById: vi.fn(),
+vi.mock('@repo/database/members', () => ({
+  getMemberForUser: vi.fn(),
 }))
 
 import * as pub from '@repo/database/public'
-import { verifySession } from '@repo/auth/auth'
-import { getUserById } from '@repo/database/auth-users'
+import { auth as authServer } from '@repo/auth/server'
+import { getMemberForUser } from '@repo/database/members'
 
 process.env.NODE_ENV = 'test'
 process.env.DATABASE_URL = 'postgres://stub'
@@ -55,8 +55,8 @@ const sampleResult = {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(verifySession).mockResolvedValue('u1')
-  vi.mocked(getUserById).mockResolvedValue(managerUser as never)
+  vi.mocked(authServer.api.getSession).mockImplementation(async (args: any) => (args?.headers?.get?.('Authorization') ? { user: { id: 'u1' } } : null) as never)
+  vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u1', organizationId: 's1', role: 'owner', name: 'Manager', username: '09120000000' } as never)
 })
 
 describe('salon-public-settings router', () => {
@@ -66,7 +66,7 @@ describe('salon-public-settings router', () => {
   })
 
   it('403 on GET for staff', async () => {
-    vi.mocked(getUserById).mockResolvedValue(staffUser as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
     const res = await app.request('/api/v1/salon-public-settings', {
       headers: authHeaders,
     })
@@ -86,7 +86,7 @@ describe('salon-public-settings router', () => {
   })
 
   it('403 on PUT for staff', async () => {
-    vi.mocked(getUserById).mockResolvedValue(staffUser as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
     const res = await app.request('/api/v1/salon-public-settings', {
       method: 'PUT',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },

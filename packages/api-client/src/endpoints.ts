@@ -3,9 +3,9 @@
 // origin (e.g. `https://api.saloora.beauty`), and these paths are appended.
 export const endpoints = {
   auth: {
-    login: '/api/v1/auth/login',
+    signIn: '/api/v1/auth/sign-in/username',
     signup: '/api/v1/auth/signup',
-    logout: '/api/v1/auth/logout',
+    signOut: '/api/v1/auth/sign-out',
     me: '/api/v1/auth/me',
   },
   today: '/api/v1/today',

@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm'
 import type { BusinessHours, StaffSchedule, User } from '@repo/salon-core/types'
 import {
   dayOfWeekFromDate,
@@ -6,18 +6,29 @@ import {
   type StaffAvailabilityResult,
 } from '@repo/salon-core/staff-availability'
 import { getDb } from '../client'
-import { staffSchedules, staffServices, users } from '../schema'
-import { rowToStaffSchedule, rowToUser } from './row-mappers'
+import { member, salonMember, staffSchedules, staffServices, user } from '../schema'
+import { rowToStaffSchedule, rowToUser, staffUserSelect } from './row-mappers'
 import { getUserById } from './user-queries'
 import { getBusinessSettings } from './settings-queries'
 
 export async function getAllStaff(salonId: string): Promise<User[]> {
   const db = getDb()
-  const rows = await db
-    .select()
-    .from(users)
-    .where(and(eq(users.salonId, salonId), eq(users.active, true)))
-    .orderBy(asc(users.name))
+  const joined = await db
+    .select(staffUserSelect)
+    .from(member)
+    .innerJoin(user, eq(member.userId, user.id))
+    .leftJoin(
+      salonMember,
+      and(eq(salonMember.userId, user.id), eq(salonMember.organizationId, salonId))
+    )
+    .where(
+      and(
+        eq(member.organizationId, salonId),
+        or(isNull(salonMember.active), eq(salonMember.active, true))
+      )
+    )
+    .orderBy(asc(user.name))
+  const rows = joined.map(rowToUser)
   if (rows.length === 0) return []
 
   const ids = rows.map((r) => r.id)
@@ -36,9 +47,8 @@ export async function getAllStaff(salonId: string): Promise<User[]> {
     byUser.set(row.staffUserId, cur)
   }
 
-  return rows.map((row) => {
-    const base = rowToUser(row)
-    const assigned = byUser.get(row.id)
+  return rows.map((base) => {
+    const assigned = byUser.get(base.id)
     if (assigned === undefined) {
       return { ...base, serviceIds: null as string[] | null }
     }

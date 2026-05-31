@@ -5,7 +5,7 @@ import { DEFAULT_PUBLIC_LAYOUT_ID } from '@repo/salon-core/public-layouts'
 import type { Service } from '@repo/salon-core/types'
 
 import { getDb } from '../client'
-import { salonPublicSettings, salons, servicePublicVisibility } from '../schema'
+import { organization, salonPublicSettings, servicePublicVisibility } from '../schema'
 import { getAllServices } from './service-queries'
 
 export type ManagerPublicSettingsView = {
@@ -41,9 +41,9 @@ export async function getManagerPublicSettings(
 ): Promise<ManagerPublicSettingsResult> {
   const db = getDb()
   const salonRows = await db
-    .select({ slug: salons.slug, name: salons.name })
-    .from(salons)
-    .where(eq(salons.id, salonId))
+    .select({ slug: organization.slug, name: organization.name })
+    .from(organization)
+    .where(eq(organization.id, salonId))
     .limit(1)
   const slug = salonRows[0]?.slug ?? ''
   const salonName = salonRows[0]?.name ?? ''

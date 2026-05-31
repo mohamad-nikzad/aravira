@@ -62,7 +62,7 @@ describe('api modules', () => {
   it('wraps dashboard routes', async () => {
     const { client, calls } = createMockedFetchClient({})
     await createDashboardApi(client).get()
-    expectLastCall(calls, { path: '/api/dashboard' })
+    expectLastCall(calls, { path: '/api/v1/dashboard' })
   })
 
   it('wraps onboarding routes', async () => {
@@ -70,11 +70,11 @@ describe('api modules', () => {
     const api = createOnboardingApi(client)
 
     await api.get()
-    expectLastCall(calls, { path: '/api/onboarding' })
+    expectLastCall(calls, { path: '/api/v1/onboarding' })
 
     await api.update('confirm-profile')
     expectLastCall(calls, {
-      path: '/api/onboarding',
+      path: '/api/v1/onboarding',
       method: 'PATCH',
       body: { action: 'confirm-profile' },
     })
@@ -85,11 +85,11 @@ describe('api modules', () => {
     const api = createRetentionApi(client)
 
     await api.list()
-    expectLastCall(calls, { path: '/api/retention' })
+    expectLastCall(calls, { path: '/api/v1/retention' })
 
     await api.updateStatus('follow-1', 'reviewed')
     expectLastCall(calls, {
-      path: '/api/retention/follow-1',
+      path: '/api/v1/retention/follow-1',
       method: 'PATCH',
       body: { status: 'reviewed' },
     })
@@ -100,11 +100,11 @@ describe('api modules', () => {
     const api = createBusinessSettingsApi(client)
 
     await api.get()
-    expectLastCall(calls, { path: '/api/settings/business' })
+    expectLastCall(calls, { path: '/api/v1/settings/business' })
 
     await api.update({ workingStart: '09:00', workingEnd: '18:00' })
     expectLastCall(calls, {
-      path: '/api/settings/business',
+      path: '/api/v1/settings/business',
       method: 'PATCH',
       body: { workingStart: '09:00', workingEnd: '18:00' },
     })
@@ -115,31 +115,31 @@ describe('api modules', () => {
     const api = createClientsApi(client)
 
     await api.list()
-    expectLastCall(calls, { path: '/api/clients' })
+    expectLastCall(calls, { path: '/api/v1/clients' })
 
     await api.get('client-1')
-    expectLastCall(calls, { path: '/api/clients/client-1' })
+    expectLastCall(calls, { path: '/api/v1/clients/client-1' })
 
     await api.create({ name: 'Nika', phone: '09123456789', tags: [] })
     expectLastCall(calls, {
-      path: '/api/clients',
+      path: '/api/v1/clients',
       method: 'POST',
       body: { name: 'Nika', phone: '09123456789', tags: [] },
     })
 
     await api.update('client-1', { notes: 'VIP' })
     expectLastCall(calls, {
-      path: '/api/clients/client-1',
+      path: '/api/v1/clients/client-1',
       method: 'PATCH',
       body: { notes: 'VIP' },
     })
 
     await api.summary('client-1')
-    expectLastCall(calls, { path: '/api/clients/client-1/summary' })
+    expectLastCall(calls, { path: '/api/v1/clients/client-1/summary' })
 
     await api.createFollowUp('client-1', { reason: 'manual', dueDate: '2026-05-12' })
     expectLastCall(calls, {
-      path: '/api/clients/client-1/follow-ups',
+      path: '/api/v1/clients/client-1/follow-ups',
       method: 'POST',
       body: { reason: 'manual', dueDate: '2026-05-12' },
     })
@@ -150,10 +150,10 @@ describe('api modules', () => {
     const api = createServicesApi(client)
 
     await api.list({ includeInactive: true })
-    expectLastCall(calls, { path: '/api/services?all=1' })
+    expectLastCall(calls, { path: '/api/v1/services?all=1' })
 
     await api.get('service-1')
-    expectLastCall(calls, { path: '/api/services/service-1' })
+    expectLastCall(calls, { path: '/api/v1/services/service-1' })
 
     await api.create({
       name: 'Cut',
@@ -164,7 +164,7 @@ describe('api modules', () => {
       active: true,
     })
     expectLastCall(calls, {
-      path: '/api/services',
+      path: '/api/v1/services',
       method: 'POST',
       body: {
         name: 'Cut',
@@ -178,25 +178,25 @@ describe('api modules', () => {
 
     await api.update('service-1', { active: false })
     expectLastCall(calls, {
-      path: '/api/services/service-1',
+      path: '/api/v1/services/service-1',
       method: 'PATCH',
       body: { active: false },
     })
 
     await api.comboComponents.get('combo-1')
-    expectLastCall(calls, { path: '/api/services/combo-1/combo-components' })
+    expectLastCall(calls, { path: '/api/v1/services/combo-1/combo-components' })
 
     await api.comboComponents.update('combo-1', {
       componentServiceIds: ['service-1', 'service-2'],
     })
     expectLastCall(calls, {
-      path: '/api/services/combo-1/combo-components',
+      path: '/api/v1/services/combo-1/combo-components',
       method: 'PUT',
       body: { componentServiceIds: ['service-1', 'service-2'] },
     })
 
     await api.addons.list({ includeInactive: true })
-    expectLastCall(calls, { path: '/api/service-addons?all=1' })
+    expectLastCall(calls, { path: '/api/v1/service-addons?all=1' })
 
     await api.addons.create({
       name: 'دیزاین',
@@ -206,7 +206,7 @@ describe('api modules', () => {
       scopes: [{ type: 'category', categoryId: 'category-1' }],
     })
     expectLastCall(calls, {
-      path: '/api/service-addons',
+      path: '/api/v1/service-addons',
       method: 'POST',
       body: {
         name: 'دیزاین',
@@ -219,34 +219,34 @@ describe('api modules', () => {
 
     await api.addons.update('addon-1', { active: false })
     expectLastCall(calls, {
-      path: '/api/service-addons/addon-1',
+      path: '/api/v1/service-addons/addon-1',
       method: 'PATCH',
       body: { active: false },
     })
 
     await api.addons.forService('service-1')
-    expectLastCall(calls, { path: '/api/services/service-1/addons' })
+    expectLastCall(calls, { path: '/api/v1/services/service-1/addons' })
 
     await api.categories.list({ includeInactive: true })
-    expectLastCall(calls, { path: '/api/service-categories?all=1' })
+    expectLastCall(calls, { path: '/api/v1/service-categories?all=1' })
 
     await api.categories.create({ name: 'ناخن', active: true })
     expectLastCall(calls, {
-      path: '/api/service-categories',
+      path: '/api/v1/service-categories',
       method: 'POST',
       body: { name: 'ناخن', active: true },
     })
 
     await api.families.create({ categoryId: 'category-1', name: 'کاشت ناخن', active: true })
     expectLastCall(calls, {
-      path: '/api/service-families',
+      path: '/api/v1/service-families',
       method: 'POST',
       body: { categoryId: 'category-1', name: 'کاشت ناخن', active: true },
     })
 
     await api.importStarterTemplates()
     expectLastCall(calls, {
-      path: '/api/services/import-starter-templates',
+      path: '/api/v1/services/import-starter-templates',
       method: 'POST',
     })
   })
@@ -256,7 +256,7 @@ describe('api modules', () => {
     const api = createStaffApi(client)
 
     await api.list()
-    expectLastCall(calls, { path: '/api/staff' })
+    expectLastCall(calls, { path: '/api/v1/staff' })
 
     await api.create({
       name: 'Sara',
@@ -265,7 +265,7 @@ describe('api modules', () => {
       role: 'staff',
     })
     expectLastCall(calls, {
-      path: '/api/staff',
+      path: '/api/v1/staff',
       method: 'POST',
       body: {
         name: 'Sara',
@@ -277,13 +277,13 @@ describe('api modules', () => {
 
     await api.updateServices('staff-1', { serviceIds: ['service-1'] })
     expectLastCall(calls, {
-      path: '/api/staff/staff-1/services',
+      path: '/api/v1/staff/staff-1/services',
       method: 'PATCH',
       body: { serviceIds: ['service-1'] },
     })
 
     await api.getSchedule('staff-1')
-    expectLastCall(calls, { path: '/api/staff/staff-1/schedule' })
+    expectLastCall(calls, { path: '/api/v1/staff/staff-1/schedule' })
 
     await api.updateSchedule('staff-1', {
       schedule: [
@@ -296,7 +296,7 @@ describe('api modules', () => {
       ],
     })
     expectLastCall(calls, {
-      path: '/api/staff/staff-1/schedule',
+      path: '/api/v1/staff/staff-1/schedule',
       method: 'PUT',
       body: {
         schedule: [
@@ -316,7 +316,7 @@ describe('api modules', () => {
       endTime: '11:00',
     })
     expectLastCall(calls, {
-      path: '/api/staff/booking-availability?date=2026-05-12&startTime=10%3A00&endTime=11%3A00',
+      path: '/api/v1/staff/booking-availability?date=2026-05-12&startTime=10%3A00&endTime=11%3A00',
     })
   })
 
@@ -326,7 +326,7 @@ describe('api modules', () => {
 
     await api.listRange({ startDate: '2026-05-01', endDate: '2026-05-31' })
     expectLastCall(calls, {
-      path: '/api/appointments?startDate=2026-05-01&endDate=2026-05-31',
+      path: '/api/v1/appointments?startDate=2026-05-01&endDate=2026-05-31',
     })
 
     await api.create({
@@ -338,7 +338,7 @@ describe('api modules', () => {
       endTime: '11:00',
     })
     expectLastCall(calls, {
-      path: '/api/appointments',
+      path: '/api/v1/appointments',
       method: 'POST',
       body: {
         clientId: 'client-1',
@@ -351,25 +351,25 @@ describe('api modules', () => {
     })
 
     await api.get('appointment-1')
-    expectLastCall(calls, { path: '/api/appointments/appointment-1' })
+    expectLastCall(calls, { path: '/api/v1/appointments/appointment-1' })
 
     await api.update('appointment-1', { notes: 'Bring photo' })
     expectLastCall(calls, {
-      path: '/api/appointments/appointment-1',
+      path: '/api/v1/appointments/appointment-1',
       method: 'PATCH',
       body: { notes: 'Bring photo' },
     })
 
     await api.updateStatus('appointment-1', 'confirmed')
     expectLastCall(calls, {
-      path: '/api/appointments/appointment-1',
+      path: '/api/v1/appointments/appointment-1',
       method: 'PATCH',
       body: { status: 'confirmed' },
     })
 
     await api.delete('appointment-1')
     expectLastCall(calls, {
-      path: '/api/appointments/appointment-1',
+      path: '/api/v1/appointments/appointment-1',
       method: 'DELETE',
     })
 
@@ -380,7 +380,7 @@ describe('api modules', () => {
       staffId: 'staff-1',
     })
     expectLastCall(calls, {
-      path: '/api/appointments/availability?mode=nearest&serviceId=service-1&date=2026-05-12&staffId=staff-1',
+      path: '/api/v1/appointments/availability?mode=nearest&serviceId=service-1&date=2026-05-12&staffId=staff-1',
     })
 
     await api.completePlaceholderClient('appointment-1', {
@@ -389,7 +389,7 @@ describe('api modules', () => {
       notes: 'Prefers mornings',
     })
     expectLastCall(calls, {
-      path: '/api/appointments/appointment-1/complete-client',
+      path: '/api/v1/appointments/appointment-1/complete-client',
       method: 'POST',
       body: {
         name: 'Nika',
@@ -404,26 +404,26 @@ describe('api modules', () => {
     const api = createNotificationsApi(client)
 
     await api.list()
-    expectLastCall(calls, { path: '/api/notifications' })
+    expectLastCall(calls, { path: '/api/v1/notifications' })
 
     await api.list({ unreadOnly: true })
-    expectLastCall(calls, { path: '/api/notifications?unreadOnly=true' })
+    expectLastCall(calls, { path: '/api/v1/notifications?unreadOnly=true' })
 
     await api.markRead('notification-1')
     expectLastCall(calls, {
-      path: '/api/notifications/notification-1/read',
+      path: '/api/v1/notifications/notification-1/read',
       method: 'POST',
     })
 
     await api.markAllRead()
     expectLastCall(calls, {
-      path: '/api/notifications/read-all',
+      path: '/api/v1/notifications/read-all',
       method: 'POST',
     })
 
     await api.createTest()
     expectLastCall(calls, {
-      path: '/api/notifications/test',
+      path: '/api/v1/notifications/test',
       method: 'POST',
     })
   })
@@ -433,7 +433,7 @@ describe('api modules', () => {
     const api = createNotificationPreferencesApi(client)
 
     await api.get()
-    expectLastCall(calls, { path: '/api/notification-preferences' })
+    expectLastCall(calls, { path: '/api/v1/notification-preferences' })
 
     await api.update({
       appointmentAlertsEnabled: false,
@@ -441,7 +441,7 @@ describe('api modules', () => {
       smsAlertsEnabled: false,
     })
     expectLastCall(calls, {
-      path: '/api/notification-preferences',
+      path: '/api/v1/notification-preferences',
       method: 'PATCH',
       body: {
         appointmentAlertsEnabled: false,

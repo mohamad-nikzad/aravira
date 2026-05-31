@@ -6,17 +6,17 @@ vi.mock('@repo/database/appointment-requests', () => ({
   rejectAppointmentRequest: vi.fn(),
 }))
 
-vi.mock('@repo/auth/auth', () => ({
-  verifySession: vi.fn(),
+vi.mock('@repo/auth/server', () => ({
+  auth: { api: { getSession: vi.fn() } },
 }))
 
-vi.mock('@repo/database/auth-users', () => ({
-  getUserById: vi.fn(),
+vi.mock('@repo/database/members', () => ({
+  getMemberForUser: vi.fn(),
 }))
 
 import * as db from '@repo/database/appointment-requests'
-import { verifySession } from '@repo/auth/auth'
-import { getUserById } from '@repo/database/auth-users'
+import { auth as authServer } from '@repo/auth/server'
+import { getMemberForUser } from '@repo/database/members'
 
 process.env.NODE_ENV = 'test'
 process.env.DATABASE_URL = 'postgres://stub'
@@ -50,8 +50,8 @@ function authHeaders() {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(verifySession).mockResolvedValue('u1')
-  vi.mocked(getUserById).mockResolvedValue(managerUser as never)
+  vi.mocked(authServer.api.getSession).mockImplementation(async (args: any) => (args?.headers?.get?.('Authorization') ? { user: { id: 'u1' } } : null) as never)
+  vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u1', organizationId: 's1', role: 'owner', name: 'Manager', username: '09120000000' } as never)
 })
 
 describe('appointment-requests router', () => {
@@ -61,7 +61,7 @@ describe('appointment-requests router', () => {
   })
 
   it('returns 403 for staff role', async () => {
-    vi.mocked(getUserById).mockResolvedValue(staffUser as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
     const res = await app.request('/api/v1/appointment-requests', { headers: authHeaders() })
     expect(res.status).toBe(403)
   })

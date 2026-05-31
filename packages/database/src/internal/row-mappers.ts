@@ -12,6 +12,8 @@ import type {
   StaffSchedule,
   User,
 } from '@repo/salon-core/types'
+import { STAFF_COLORS } from '@repo/salon-core/types'
+import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import {
   appointments,
   appointmentAddonLines,
@@ -19,19 +21,49 @@ import {
   clientFollowUps,
   clientTags,
   clients,
+  member,
+  salonMember,
   services,
   staffSchedules,
-  users,
+  user,
 } from '../schema'
 
-export function rowToUser(row: typeof users.$inferSelect): User {
+const DEFAULT_STAFF_COLOR = normalizeCalendarColorId(STAFF_COLORS[0])
+
+/**
+ * Drizzle select shape that reconstructs the legacy `User` from the Better Auth
+ * model. Use it after joining `user` (the staff), `member` (role + org), and a
+ * LEFT join on `salonMember` (color sidecar). `salonId` comes off the `member`
+ * row, so this requires an inner join on `member`.
+ */
+export const staffUserSelect = {
+  id: user.id,
+  salonId: member.organizationId,
+  name: user.name,
+  phone: user.username,
+  role: member.role,
+  color: salonMember.color,
+  createdAt: user.createdAt,
+}
+
+export type StaffUserRow = {
+  id: string
+  salonId: string
+  name: string
+  phone: string | null
+  role: string
+  color: string | null
+  createdAt: Date
+}
+
+export function rowToUser(row: StaffUserRow): User {
   return {
     id: row.id,
     salonId: row.salonId,
     name: row.name,
-    phone: row.phone,
-    role: row.role,
-    color: row.color,
+    phone: row.phone ?? '',
+    role: row.role === 'owner' || row.role === 'admin' ? 'manager' : 'staff',
+    color: row.color ?? DEFAULT_STAFF_COLOR,
     createdAt: row.createdAt,
   }
 }
@@ -149,7 +181,7 @@ export function rowToBusinessHours(row: typeof businessSettings.$inferSelect): B
 export function attachAppointmentDetails(row: {
   appointment: typeof appointments.$inferSelect
   client: typeof clients.$inferSelect
-  staff: typeof users.$inferSelect
+  staff: StaffUserRow
   service: typeof services.$inferSelect
 }): AppointmentWithDetails {
   return {

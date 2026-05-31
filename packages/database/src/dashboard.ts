@@ -1,7 +1,11 @@
-import { and, count, eq, gte, lte, ne, sql } from 'drizzle-orm'
-import { appointments, clients, users } from './schema'
+import { and, count, eq, gte, lte, ne, or, isNull, sql } from 'drizzle-orm'
+import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
+import { STAFF_COLORS } from '@repo/salon-core/types'
+import { appointments, clients, member, salonMember, user } from './schema'
 import { getDb } from './client'
 import { getTodayData } from './internal/today-queries'
+
+const DEFAULT_STAFF_COLOR = normalizeCalendarColorId(STAFF_COLORS[0])
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10)
@@ -56,8 +60,17 @@ export async function getDashboardData(salonId: string) {
 
     db
       .select({ value: count() })
-      .from(users)
-      .where(and(eq(users.salonId, salonId), eq(users.active, true))),
+      .from(member)
+      .leftJoin(
+        salonMember,
+        and(eq(salonMember.userId, member.userId), eq(salonMember.organizationId, salonId))
+      )
+      .where(
+        and(
+          eq(member.organizationId, salonId),
+          or(isNull(salonMember.active), eq(salonMember.active, true))
+        )
+      ),
 
     db
       .select({ value: count() })
@@ -140,12 +153,16 @@ export async function getDashboardData(salonId: string) {
     db
       .select({
         staffId: appointments.staffId,
-        staffName: users.name,
-        staffColor: users.color,
+        staffName: user.name,
+        staffColor: salonMember.color,
         count: count(),
       })
       .from(appointments)
-      .innerJoin(users, and(eq(appointments.staffId, users.id), eq(users.salonId, salonId)))
+      .innerJoin(user, eq(appointments.staffId, user.id))
+      .leftJoin(
+        salonMember,
+        and(eq(salonMember.userId, user.id), eq(salonMember.organizationId, salonId))
+      )
       .where(
         and(
           eq(appointments.salonId, salonId),
@@ -154,7 +171,7 @@ export async function getDashboardData(salonId: string) {
           ne(appointments.status, 'cancelled')
         )
       )
-      .groupBy(appointments.staffId, users.name, users.color)
+      .groupBy(appointments.staffId, user.name, salonMember.color)
       .orderBy(sql`count(*) desc`),
 
     db
@@ -203,7 +220,7 @@ export async function getDashboardData(salonId: string) {
     })),
     staffLoad: staffLoad.map((row) => ({
       name: row.staffName,
-      color: row.staffColor,
+      color: row.staffColor ?? DEFAULT_STAFF_COLOR,
       count: row.count,
     })),
     monthRevenue: Number(monthRevenue[0]?.value ?? 0),

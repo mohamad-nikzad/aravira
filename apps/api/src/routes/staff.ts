@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import {
-  createUser,
   getAllStaff,
   getBusinessSettings,
   getStaffBookingAvailabilityForSlot,
@@ -12,6 +11,9 @@ import {
   setStaffServiceIds,
   validateActiveServiceIds,
 } from '@repo/database/staff'
+import { auth } from '@repo/auth/server'
+import { getDb } from '@repo/database/client'
+import { salonMember } from '@repo/database/schema'
 import { STAFF_COLORS } from '@repo/salon-core/types'
 import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { validateAppointmentWindow } from '@repo/salon-core/appointment-time'
@@ -34,8 +36,13 @@ const bookingAvailabilityQuerySchema = z.object({
 })
 
 function isDuplicatePhoneError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : ''
-  return msg.includes('unique') || msg.includes('duplicate')
+  const msg = err instanceof Error ? err.message.toLowerCase() : ''
+  return (
+    msg.includes('unique') ||
+    msg.includes('duplicate') ||
+    msg.includes('already') ||
+    msg.includes('exists')
+  )
 }
 
 export const staff = new Hono<AppEnv>()
@@ -50,28 +57,45 @@ export const staff = new Hono<AppEnv>()
     zValidator('json', staffCreateSchema),
     async (c) => {
       const { salonId } = c.var.tenant
-      const { password, name, role, phone } = c.req.valid('json')
+      const { password, name, phone } = c.req.valid('json')
 
       const existingStaff = await getAllStaff(salonId)
       const colorIndex = existingStaff.length % STAFF_COLORS.length
       const color = normalizeCalendarColorId(STAFF_COLORS[colorIndex])
 
+      let newUserId: string
       try {
-        const newUser = await createUser({
-          phone,
-          password,
-          name,
-          role: role || 'staff',
-          color,
-          salonId,
+        const signUpRes = await auth.api.signUpEmail({
+          body: {
+            email: `${phone}@aravira.local`,
+            password,
+            name,
+            username: phone,
+          },
         })
-        return ok(c, { user: newUser })
+        newUserId = signUpRes.user.id
       } catch (err) {
         if (isDuplicatePhoneError(err)) {
           return error(c, 'این شماره موبایل قبلاً ثبت شده است', 409)
         }
         throw err
       }
+
+      await auth.api.addMember({
+        body: { userId: newUserId, role: 'member', organizationId: salonId },
+      })
+
+      const db = getDb()
+      await db.insert(salonMember).values({
+        userId: newUserId,
+        organizationId: salonId,
+        displayName: name,
+        color,
+        active: true,
+      })
+
+      const newUser = await getUserById(newUserId)
+      return ok(c, { user: newUser })
     },
   )
   .get(

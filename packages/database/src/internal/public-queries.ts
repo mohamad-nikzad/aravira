@@ -26,8 +26,9 @@ import { normalizePhone } from '@repo/salon-core/phone'
 import { getDb } from '../client'
 import {
   appointmentRequests,
+  organization,
+  salonProfile,
   salonPublicSettings,
-  salons,
   servicePublicVisibility,
 } from '../schema'
 import { getAppointmentsByDateRange } from './appointment-queries'
@@ -65,9 +66,18 @@ export type PublicSalonLookupResult =
 export async function getPublicSalon(slug: string): Promise<PublicSalonLookupResult> {
   const db = getDb()
   const [salonRow] = await db
-    .select()
-    .from(salons)
-    .where(eq(salons.slug, slug))
+    .select({
+      id: organization.id,
+      slug: organization.slug,
+      name: organization.name,
+      phone: salonProfile.phone,
+      timezone: salonProfile.timezone,
+      locale: salonProfile.locale,
+      status: salonProfile.status,
+    })
+    .from(organization)
+    .leftJoin(salonProfile, eq(salonProfile.organizationId, organization.id))
+    .where(eq(organization.slug, slug))
     .limit(1)
 
   if (!salonRow || salonRow.status !== 'active') {
@@ -106,8 +116,8 @@ export async function getPublicSalon(slug: string): Promise<PublicSalonLookupRes
         slug: salonRow.slug,
         name: salonRow.name,
         phone: salonRow.phone,
-        timezone: salonRow.timezone,
-        locale: salonRow.locale,
+        timezone: salonRow.timezone ?? 'Asia/Tehran',
+        locale: salonRow.locale ?? 'fa-IR',
       },
       publicSettings: {
         enabled: settingsRow.enabled,
@@ -391,10 +401,14 @@ export async function getAppointmentRequestByToken(
   const rows = await db
     .select({
       request: appointmentRequests,
-      salon: salons,
+      salon: {
+        name: organization.name,
+        phone: salonProfile.phone,
+      },
     })
     .from(appointmentRequests)
-    .innerJoin(salons, eq(salons.id, appointmentRequests.salonId))
+    .innerJoin(organization, eq(organization.id, appointmentRequests.salonId))
+    .leftJoin(salonProfile, eq(salonProfile.organizationId, organization.id))
     .where(eq(appointmentRequests.confirmationToken, token))
     .limit(1)
   const row = rows[0]
@@ -408,7 +422,7 @@ export async function getAppointmentRequestByToken(
     requestedDate: row.request.requestedDate,
     requestedStartTime: row.request.requestedStartTime,
     requestedEndTime: row.request.requestedEndTime,
-    salon: { name: row.salon.name, phone: row.salon.phone },
+    salon: row.salon,
     createdAt: row.request.createdAt,
     reviewedAt: row.request.reviewedAt,
     rejectionReason: row.request.rejectionReason,

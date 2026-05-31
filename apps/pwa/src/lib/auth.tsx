@@ -93,8 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       /* ignore — clear local state regardless */
     }
     setUser(null)
-    await clearOfflineDatabase()
-    await queryClient.invalidateQueries()
+    // Wipe offline data in the background so the caller can navigate to
+    // /login immediately. Awaiting the IndexedDB clear here would keep the
+    // authed layout mounted with a now-empty page, flashing a blank screen
+    // behind the bottom nav before the redirect lands.
+    void clearOfflineDatabase().then(() => queryClient.invalidateQueries())
   }, [queryClient, setUser])
 
   const value = useMemo<AuthContextValue>(
