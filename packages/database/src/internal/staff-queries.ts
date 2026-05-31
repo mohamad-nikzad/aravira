@@ -57,6 +57,23 @@ export async function getAllStaff(salonId: string): Promise<User[]> {
   })
 }
 
+/**
+ * Returns the only staff user able to perform `serviceId` at `salonId`, or `null`
+ * when zero or multiple match. "Able" = restricted (linked) to this service, OR
+ * unrestricted (no entries in `staffServices` at all). Used by the Telegram
+ * approve-callback to auto-assign when the choice is unambiguous.
+ */
+export async function findSoleCapableStaffUserId(
+  salonId: string,
+  serviceId: string
+): Promise<string | null> {
+  const staff = await getAllStaff(salonId)
+  const capable = staff.filter(
+    (s) => s.serviceIds == null || s.serviceIds.includes(serviceId)
+  )
+  return capable.length === 1 ? capable[0]!.id : null
+}
+
 export async function staffMayPerformService(
   staffId: string,
   serviceId: string,

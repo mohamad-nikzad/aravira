@@ -22,9 +22,6 @@ export type AppointmentRequestTemplate = {
   buttons?: MessagingButton[][]
 }
 
-/**
- * Phase 1 v1: link + notify — deep-link button to the manager PWA; inline approve deferred.
- */
 export function renderAppointmentRequestPending(
   input: AppointmentRequestTemplateInput
 ): AppointmentRequestTemplate {
@@ -37,9 +34,14 @@ export function renderAppointmentRequestPending(
     `📅 ${date} ساعت ${input.startTime}`,
   ].join('\n')
 
-  const buttons: MessagingButton[][] | undefined = input.deepLinkUrl.startsWith('http')
-    ? [[{ label: 'مشاهده در برنامه', url: input.deepLinkUrl }]]
-    : undefined
+  const actionRow: MessagingButton[] = [
+    { label: '✅ تأیید', data: `approve:${input.requestId}` },
+    { label: '❌ رد', data: `reject:${input.requestId}` },
+  ]
+  const linkRow: MessagingButton[] | null = input.deepLinkUrl.startsWith('http')
+    ? [{ label: 'مشاهده در برنامه', url: input.deepLinkUrl }]
+    : null
+  const buttons: MessagingButton[][] = linkRow ? [actionRow, linkRow] : [actionRow]
 
   return {
     title,
@@ -48,6 +50,6 @@ export function renderAppointmentRequestPending(
       requestId: input.requestId,
       deepLinkUrl: input.deepLinkUrl,
     },
-    ...(buttons ? { buttons } : {}),
+    buttons,
   }
 }

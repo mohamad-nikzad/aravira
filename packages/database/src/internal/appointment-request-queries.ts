@@ -277,6 +277,51 @@ export async function getAppointmentRequestNotificationContext(
   }
 }
 
+export type AppointmentRequestCallbackContext = {
+  requestId: string
+  salonId: string
+  status: AppointmentRequestStatus
+  serviceId: string
+  customerName: string
+  requestedDate: string
+  requestedStartTime: string
+}
+
+/**
+ * Compact lookup for the messaging-callback dispatcher: enough to authorize the
+ * caller against the request's salon, decide on auto-staff-assignment, and short-
+ * circuit when the request is already non-pending.
+ */
+export async function getAppointmentRequestForCallback(
+  requestId: string
+): Promise<AppointmentRequestCallbackContext | undefined> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      id: appointmentRequests.id,
+      salonId: appointmentRequests.salonId,
+      status: appointmentRequests.status,
+      serviceId: appointmentRequests.serviceId,
+      customerName: appointmentRequests.customerName,
+      requestedDate: appointmentRequests.requestedDate,
+      requestedStartTime: appointmentRequests.requestedStartTime,
+    })
+    .from(appointmentRequests)
+    .where(eq(appointmentRequests.id, requestId))
+    .limit(1)
+  const row = rows[0]
+  if (!row) return undefined
+  return {
+    requestId: row.id,
+    salonId: row.salonId,
+    status: row.status,
+    serviceId: row.serviceId,
+    customerName: row.customerName,
+    requestedDate: row.requestedDate,
+    requestedStartTime: row.requestedStartTime,
+  }
+}
+
 /**
  * Cron entrypoint — moves stale `pending` requests
  * (`requestedDate < salonToday`) to `expired`. Returns the number of rows

@@ -78,6 +78,11 @@ export async function sendTelegramMessage(input: {
   try {
     const res = await postToTelegram(config, 'sendMessage', payload)
     if (!res.ok) {
+      console.error('[messaging.send.failed]', {
+        provider: 'telegram',
+        status: res.status,
+        body: res.text.slice(0, 1024),
+      })
       return {
         status: 'failed',
         error: res.text.slice(0, 1024) || `telegram_http_${res.status}`,
@@ -97,15 +102,30 @@ export async function editTelegramMessageText(input: {
   chatId: string
   messageId: number
   text: string
+  buttons?: MessagingButton[][] | null
 }): Promise<void> {
   const config = getTelegramConfig()
   if (!config) return
-  await postToTelegram(config, 'editMessageText', {
+  const payload: Record<string, unknown> = {
     chat_id: input.chatId,
     message_id: input.messageId,
     text: input.text,
     parse_mode: 'HTML',
-  }).catch(() => {})
+  }
+  if (input.buttons && input.buttons.length > 0) {
+    const keyboard = toInlineKeyboard(input.buttons)
+    if (keyboard) payload.reply_markup = keyboard
+  } else if (input.buttons === null) {
+    payload.reply_markup = { inline_keyboard: [] }
+  }
+  const res = await postToTelegram(config, 'editMessageText', payload).catch(() => null)
+  if (res && !res.ok) {
+    console.error('[messaging.edit.failed]', {
+      provider: 'telegram',
+      status: res.status,
+      body: res.text.slice(0, 1024),
+    })
+  }
 }
 
 export async function answerTelegramCallback(input: {
@@ -164,6 +184,11 @@ export function createTelegramProvider(
       try {
         const res = await postToTelegram(config, 'sendMessage', payload)
         if (!res.ok) {
+          console.error('[messaging.send.failed]', {
+            provider: 'telegram',
+            status: res.status,
+            body: res.text.slice(0, 1024),
+          })
           return {
             status: 'failed',
             error: res.text.slice(0, 1024) || `telegram_http_${res.status}`,

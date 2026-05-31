@@ -1,10 +1,12 @@
 import { Hono } from 'hono'
 import {
   answerTelegramCallback,
+  editTelegramMessageText,
   getTelegramConfig,
   sendTelegramMessage,
 } from '@repo/notifications'
 import { messagingCommands } from '@repo/notifications'
+import { getEnv } from '../env'
 import type { AppEnv } from '../factory'
 import { secureCompare } from '../lib/secure-compare'
 import { ok } from '../lib/responses'
@@ -104,12 +106,49 @@ export const messagingTelegramRoute = new Hono<AppEnv>()
     }
 
     if (update.callback_query) {
-      // Phase 1 v1 has no inline-button actions; ack so the button stops spinning.
-      await answerTelegramCallback({ callbackQueryId: update.callback_query.id })
+      const cq = update.callback_query
+      const parsed = parseCallbackData(cq.data)
+      if (!parsed || !cq.from || !cq.message) {
+        await answerTelegramCallback({ callbackQueryId: cq.id })
+        return ok(c, { ok: true })
+      }
+
+      const handler =
+        parsed.action === 'approve'
+          ? messagingCommands.handleApprovalCallback
+          : messagingCommands.handleRejectionCallback
+      const outcome = await handler({
+        provider: 'telegram',
+        externalId: String(cq.from.id),
+        requestId: parsed.requestId,
+        publicAppBaseUrl: getEnv().PUBLIC_APP_BASE_URL ?? null,
+      })
+
+      await answerTelegramCallback({
+        callbackQueryId: cq.id,
+        text: outcome.toast,
+      })
+      await editTelegramMessageText({
+        chatId: String(cq.message.chat.id),
+        messageId: cq.message.message_id,
+        text: outcome.messageHtml,
+        buttons: outcome.replacementKeyboard,
+      })
       return ok(c, { ok: true })
     }
 
     return ok(c, { ok: true })
   })
+
+const CALLBACK_DATA_RE = /^(approve|reject):([0-9a-f-]{8,})$/i
+
+function parseCallbackData(
+  data: string | undefined
+): { action: 'approve' | 'reject'; requestId: string } | null {
+  if (!data) return null
+  const m = data.match(CALLBACK_DATA_RE)
+  if (!m) return null
+  return { action: m[1] as 'approve' | 'reject', requestId: m[2]! }
+}
 
 export type MessagingTelegramRoute = typeof messagingTelegramRoute

@@ -5,6 +5,7 @@ export {
   rejectAppointmentRequest,
   expirePastDueAppointmentRequests,
   getAppointmentRequestNotificationContext,
+  getAppointmentRequestForCallback,
 } from './internal/appointment-request-queries'
 export type {
   AppointmentRequestRow,
@@ -16,4 +17,5 @@ export type {
   RejectAppointmentRequestInput,
   RejectAppointmentRequestResult,
   AppointmentRequestNotificationContext,
+  AppointmentRequestCallbackContext,
 } from './internal/appointment-request-queries'

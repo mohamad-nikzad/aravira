@@ -69,3 +69,10 @@ export async function handleUnlink(input: UnlinkInput): Promise<CommandResult> {
 }
 
 export { findAccountByUserAndProvider }
+
+export {
+  handleApprovalCallback,
+  handleRejectionCallback,
+  type CallbackInput,
+  type CallbackOutcome,
+} from './approval'

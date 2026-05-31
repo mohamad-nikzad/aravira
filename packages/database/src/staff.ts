@@ -8,6 +8,7 @@ export {
   setStaffSchedules,
   setStaffServiceIds,
   staffMayPerformService,
+  findSoleCapableStaffUserId,
 } from './internal/staff-queries'
 
 export { getUserById } from './internal/user-queries'

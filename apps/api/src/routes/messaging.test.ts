@@ -12,9 +12,12 @@ vi.mock('@repo/notifications', () => ({
   messagingCommands: {
     handleLinkStart: vi.fn(),
     handleUnlink: vi.fn(),
+    handleApprovalCallback: vi.fn(),
+    handleRejectionCallback: vi.fn(),
   },
   sendTelegramMessage: vi.fn(),
   answerTelegramCallback: vi.fn(),
+  editTelegramMessageText: vi.fn(),
 }))
 
 vi.mock('@repo/database/messaging', () => ({
@@ -270,5 +273,116 @@ describe('messaging telegram webhook', () => {
       chatId: '42',
       text: 'متصل شد',
     })
+  })
+
+  it('routes approve callback to handleApprovalCallback and edits the message', async () => {
+    vi.mocked(notif.getTelegramConfig).mockReturnValue({
+      botToken: 'token',
+      botUsername: 'TestBot',
+      webhookSecret: 'real-secret',
+    })
+    vi.mocked(notif.messagingCommands.handleApprovalCallback).mockResolvedValue({
+      messageHtml: '✅ تأیید شد',
+      replacementKeyboard: null,
+      toast: 'تأیید شد',
+    } as never)
+
+    const res = await app.request('/api/v1/messaging/telegram/webhook', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-telegram-bot-api-secret-token': 'real-secret',
+      },
+      body: JSON.stringify({
+        update_id: 2,
+        callback_query: {
+          id: 'cb-1',
+          from: { id: 42, username: 'mo', first_name: 'Mo' },
+          message: { message_id: 99, chat: { id: 42, type: 'private' } },
+          data: 'approve:11111111-1111-1111-1111-111111111111',
+        },
+      }),
+    })
+    expect(res.status).toBe(200)
+    expect(notif.messagingCommands.handleApprovalCallback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'telegram',
+        externalId: '42',
+        requestId: '11111111-1111-1111-1111-111111111111',
+      })
+    )
+    expect(notif.answerTelegramCallback).toHaveBeenCalledWith({
+      callbackQueryId: 'cb-1',
+      text: 'تأیید شد',
+    })
+    expect(notif.editTelegramMessageText).toHaveBeenCalledWith({
+      chatId: '42',
+      messageId: 99,
+      text: '✅ تأیید شد',
+      buttons: null,
+    })
+  })
+
+  it('routes reject callback to handleRejectionCallback', async () => {
+    vi.mocked(notif.getTelegramConfig).mockReturnValue({
+      botToken: 'token',
+      botUsername: 'TestBot',
+      webhookSecret: 'real-secret',
+    })
+    vi.mocked(notif.messagingCommands.handleRejectionCallback).mockResolvedValue({
+      messageHtml: '❌ رد شد',
+      replacementKeyboard: null,
+      toast: 'رد شد',
+    } as never)
+
+    const res = await app.request('/api/v1/messaging/telegram/webhook', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-telegram-bot-api-secret-token': 'real-secret',
+      },
+      body: JSON.stringify({
+        update_id: 3,
+        callback_query: {
+          id: 'cb-2',
+          from: { id: 42 },
+          message: { message_id: 100, chat: { id: 42 } },
+          data: 'reject:22222222-2222-2222-2222-222222222222',
+        },
+      }),
+    })
+    expect(res.status).toBe(200)
+    expect(notif.messagingCommands.handleRejectionCallback).toHaveBeenCalled()
+    expect(notif.messagingCommands.handleApprovalCallback).not.toHaveBeenCalled()
+  })
+
+  it('ignores unknown callback data with a silent ack', async () => {
+    vi.mocked(notif.getTelegramConfig).mockReturnValue({
+      botToken: 'token',
+      botUsername: 'TestBot',
+      webhookSecret: 'real-secret',
+    })
+
+    const res = await app.request('/api/v1/messaging/telegram/webhook', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-telegram-bot-api-secret-token': 'real-secret',
+      },
+      body: JSON.stringify({
+        update_id: 4,
+        callback_query: {
+          id: 'cb-3',
+          from: { id: 42 },
+          message: { message_id: 101, chat: { id: 42 } },
+          data: 'gibberish',
+        },
+      }),
+    })
+    expect(res.status).toBe(200)
+    expect(notif.messagingCommands.handleApprovalCallback).not.toHaveBeenCalled()
+    expect(notif.messagingCommands.handleRejectionCallback).not.toHaveBeenCalled()
+    expect(notif.answerTelegramCallback).toHaveBeenCalledWith({ callbackQueryId: 'cb-3' })
+    expect(notif.editTelegramMessageText).not.toHaveBeenCalled()
   })
 })
