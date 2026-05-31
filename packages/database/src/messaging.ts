@@ -1,17 +1,22 @@
+export type { MessagingProviderId } from './messaging-provider-id'
 export {
+  checkMessagingLinkRateLimit,
   consumeLinkToken,
+  consumeLinkTokenIfValid,
+  findValidLinkToken,
   createLinkToken,
   deleteAccount,
   findAccountByExternalId,
   findAccountByUserAndProvider,
+  linkMessagingAccountAndEnableProvider,
   listAccountsForUser,
   setAccountEnabled,
   upsertAccount,
 } from './internal/messaging-queries'
 export type {
   CreateLinkTokenInput,
+  MessagingLinkRateLimitResult,
   MessagingLinkToken,
-  MessagingProviderId,
   UpsertAccountInput,
   UserMessagingAccount,
 } from './internal/messaging-queries'

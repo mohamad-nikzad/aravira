@@ -1,10 +1,14 @@
-export type MessagingProviderId = 'telegram' | 'bale' | 'rubika' | 'whatsapp'
+import type { MessagingProviderId } from '@repo/database/messaging'
+
+export type { MessagingProviderId }
 
 export type MessagingButton = {
   /** Text shown in the chat. Keep under 30 chars (Telegram limit). */
   label: string
-  /** Opaque string the provider echoes back on tap. Format: `<action>:<entityId>`. */
-  data: string
+  /** Opaque string the provider echoes back on tap. Required when `url` is absent. */
+  data?: string
+  /** Opens in browser when set (Telegram URL button). Required when `data` is absent. */
+  url?: string
 }
 
 export type MessagingSendInput = {
@@ -30,5 +34,7 @@ export interface MessagingProvider {
   readonly supportsInlineButtons: boolean
   readonly supportsInbound: boolean
   isConfigured(): boolean
+  /** Provider-specific account link URL (e.g. t.me/bot?start=token). */
+  buildAccountLinkUrl(token: string): string | null
   send(input: MessagingSendInput): Promise<MessagingDeliveryResult>
 }

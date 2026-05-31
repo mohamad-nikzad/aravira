@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Banknote,
   Bell,
-  ChevronLeft,
   Globe,
   LayoutDashboard,
   ListChecks,
@@ -20,18 +19,14 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@repo/ui/button'
-import { Switch } from '@repo/ui/switch'
 import { Input } from '@repo/ui/input'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field'
 import { TimePicker } from '@repo/ui/time-picker'
 import { Badge } from '@repo/ui/badge'
-import type { badgeVariants } from '@repo/ui/badge'
 import { Card, CardContent, CardHeader } from '@repo/ui/card'
 import { Skeleton } from '@repo/ui/skeleton'
-import { Spinner } from '@repo/ui/spinner'
 import { SakuraMark } from '@repo/ui/sakura-mark'
 import { cn } from '@repo/ui/utils'
-import type { VariantProps } from 'class-variance-authority'
 import { displayPhone } from '@repo/salon-core/phone'
 import {
   parseLocalizedInt,
@@ -52,8 +47,8 @@ import {
   dashboardQueryKey,
   notificationPreferencesQueryKey,
 } from '#/lib/query-keys'
-
-type BadgeTone = NonNullable<VariantProps<typeof badgeVariants>['variant']>
+import { MessagingAccountsSection } from '#/components/settings/messaging-accounts-section'
+import { SettingsRow, ToggleRow } from '#/components/settings/settings-rows'
 
 type DashboardMetrics = {
   monthRevenue: number
@@ -103,133 +98,6 @@ function SettingsGroup({
       <div className="divide-y divide-line-soft overflow-hidden rounded-[18px] border border-line-soft bg-card">
         {children}
       </div>
-    </div>
-  )
-}
-
-type SettingsRowProps = {
-  icon: LucideIcon
-  label: string
-  hint?: string
-  to?: string
-  href?: string
-  onClick?: () => void
-  badge?: string
-  badgeTone?: BadgeTone
-  danger?: boolean
-  loading?: boolean
-  disabled?: boolean
-}
-
-function SettingsRow({
-  icon: Icon,
-  label,
-  hint,
-  to,
-  href,
-  onClick,
-  badge,
-  badgeTone = 'plum',
-  danger,
-  loading,
-  disabled,
-}: SettingsRowProps) {
-  const inner = (
-    <>
-      <div
-        className={cn(
-          'flex size-9 shrink-0 items-center justify-center rounded-xl',
-          danger
-            ? 'bg-destructive-soft text-destructive'
-            : 'bg-blush-soft text-plum-deep',
-        )}
-      >
-        {loading ? (
-          <Spinner className="size-[18px]" />
-        ) : (
-          <Icon className="size-[18px]" />
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div
-          className={cn(
-            'text-sm font-semibold',
-            danger ? 'text-destructive' : 'text-foreground',
-          )}
-        >
-          {label}
-        </div>
-        {hint ? (
-          <div className="mt-0.5 text-[11px] text-muted-foreground">{hint}</div>
-        ) : null}
-      </div>
-      {badge ? <Badge variant={badgeTone}>{badge}</Badge> : null}
-      {!danger ? (
-        <ChevronLeft className="size-4 shrink-0 text-muted-foreground" />
-      ) : null}
-    </>
-  )
-
-  const className =
-    'flex w-full touch-manipulation items-center gap-3.5 px-4 py-3.5 text-start transition-colors active:bg-accent/40 disabled:opacity-60'
-
-  if (to) {
-    return (
-      <Link to={to} className={className}>
-        {inner}
-      </Link>
-    )
-  }
-  if (href) {
-    return (
-      <a href={href} className={className}>
-        {inner}
-      </a>
-    )
-  }
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={className}
-    >
-      {inner}
-    </button>
-  )
-}
-
-function ToggleRow({
-  icon: Icon,
-  label,
-  hint,
-  checked,
-  disabled,
-  onChange,
-}: {
-  icon: LucideIcon
-  label: string
-  hint?: string
-  checked: boolean
-  disabled?: boolean
-  onChange: (next: boolean) => void
-}) {
-  return (
-    <div className="flex items-center gap-3.5 px-4 py-3">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-paper-deep text-sage-deep">
-        <Icon className="size-[18px]" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold text-foreground">{label}</div>
-        {hint ? (
-          <div className="mt-0.5 text-[11px] text-muted-foreground">{hint}</div>
-        ) : null}
-      </div>
-      <Switch
-        checked={checked}
-        disabled={disabled}
-        onCheckedChange={onChange}
-      />
     </div>
   )
 }
@@ -514,6 +382,7 @@ function SettingsPage() {
                 disabled={updateLocalAlerts.isPending}
                 onChange={(next) => void toggleLocalAlerts(next)}
               />
+              <MessagingAccountsSection />
             </SettingsGroup>
           ) : null}
 

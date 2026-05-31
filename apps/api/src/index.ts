@@ -1,6 +1,9 @@
 import { serve } from '@hono/node-server'
-import { getEnv } from './env'
 import { app } from './app'
+import { bootstrapMessagingProviders } from './bootstrap-messaging'
+import { getEnv } from './env'
+
+bootstrapMessagingProviders()
 
 const env = getEnv()
 

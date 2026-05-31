@@ -228,7 +228,6 @@ export default function SettingsPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [localAlerts, setLocalAlerts] = useState<boolean | null>(null)
   const [savingAlerts, setSavingAlerts] = useState(false)
-
   const {
     handleSubmit: handleBusinessHoursSubmit,
     reset: resetBusinessHours,

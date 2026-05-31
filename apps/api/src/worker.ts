@@ -22,6 +22,8 @@ function hydrateProcessEnv(env: Bindings) {
 async function getApp(env: Bindings) {
   if (!appPromise) {
     hydrateProcessEnv(env)
+    const { bootstrapMessagingProviders } = await import('./bootstrap-messaging')
+    bootstrapMessagingProviders()
     appPromise = import('./app').then((m) => m.app)
   }
   return appPromise

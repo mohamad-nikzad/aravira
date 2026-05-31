@@ -5,6 +5,7 @@ import { DEFAULT_PUBLIC_LAYOUT_ID } from '@repo/salon-core/public-layouts'
 import type { Service } from '@repo/salon-core/types'
 
 import { getDb } from '../client'
+import type { MessagingProviderId } from '../messaging-provider-id'
 import { organization, salonPublicSettings, servicePublicVisibility } from '../schema'
 import { getAllServices } from './service-queries'
 
@@ -34,6 +35,27 @@ const DEFAULTS: ManagerPublicSettingsView = {
   themeId: DEFAULT_PUBLIC_THEME_ID,
   layoutId: DEFAULT_PUBLIC_LAYOUT_ID,
   appointmentRequestsEnabled: true,
+}
+
+type SalonPublicSettingsRow = typeof salonPublicSettings.$inferSelect
+
+/** Builds the salon_public_settings row for manager upserts (unit-tested). */
+export function buildManagerPublicSettingsUpsertFields(
+  salonId: string,
+  payload: PublicSettingsPayload,
+  base?: SalonPublicSettingsRow
+) {
+  return {
+    salonId,
+    enabled: payload.enabled ?? base?.enabled ?? false,
+    bioText: payload.bioText ?? base?.bioText ?? null,
+    themeId: payload.themeId ?? base?.themeId ?? DEFAULT_PUBLIC_THEME_ID,
+    layoutId: payload.layoutId ?? base?.layoutId ?? DEFAULT_PUBLIC_LAYOUT_ID,
+    appointmentRequestsEnabled:
+      payload.appointmentRequestsEnabled ?? base?.appointmentRequestsEnabled ?? true,
+    enabledMessagingProviders: base?.enabledMessagingProviders ?? [],
+    updatedAt: new Date(),
+  }
 }
 
 export async function getManagerPublicSettings(
@@ -83,6 +105,56 @@ export async function getManagerPublicSettings(
   return { slug, salonName, settings, services: items }
 }
 
+/**
+ * Returns the set of messaging providers a salon has enabled. Used by the
+ * notifications dispatcher to skip providers a salon has disabled at the
+ * tenant level.
+ */
+export async function getEnabledMessagingProvidersForSalon(
+  salonId: string
+): Promise<MessagingProviderId[]> {
+  const db = getDb()
+  const [row] = await db
+    .select({ providers: salonPublicSettings.enabledMessagingProviders })
+    .from(salonPublicSettings)
+    .where(eq(salonPublicSettings.salonId, salonId))
+    .limit(1)
+  return row?.providers ?? []
+}
+
+export async function enableMessagingProviderForSalon(
+  salonId: string,
+  provider: MessagingProviderId
+): Promise<void> {
+  const db = getDb()
+  const current = await getEnabledMessagingProvidersForSalon(salonId)
+  if (current.includes(provider)) return
+
+  const next = [...current, provider]
+  const [existing] = await db
+    .select({ salonId: salonPublicSettings.salonId })
+    .from(salonPublicSettings)
+    .where(eq(salonPublicSettings.salonId, salonId))
+    .limit(1)
+
+  if (existing) {
+    await db
+      .update(salonPublicSettings)
+      .set({ enabledMessagingProviders: next, updatedAt: new Date() })
+      .where(eq(salonPublicSettings.salonId, salonId))
+    return
+  }
+
+  await db.insert(salonPublicSettings).values({
+    salonId,
+    enabled: false,
+    themeId: DEFAULT_PUBLIC_THEME_ID,
+    layoutId: DEFAULT_PUBLIC_LAYOUT_ID,
+    appointmentRequestsEnabled: true,
+    enabledMessagingProviders: next,
+  })
+}
+
 export async function updateManagerPublicSettings(
   salonId: string,
   payload: PublicSettingsPayload
@@ -97,18 +169,7 @@ export async function updateManagerPublicSettings(
       .limit(1)
 
     const base = existing[0]
-    const next = {
-      salonId,
-      enabled: payload.enabled ?? base?.enabled ?? false,
-      bioText: payload.bioText ?? base?.bioText ?? null,
-      themeId: payload.themeId ?? base?.themeId ?? DEFAULT_PUBLIC_THEME_ID,
-      layoutId: payload.layoutId ?? base?.layoutId ?? DEFAULT_PUBLIC_LAYOUT_ID,
-      appointmentRequestsEnabled:
-        payload.appointmentRequestsEnabled ??
-        base?.appointmentRequestsEnabled ??
-        true,
-      updatedAt: new Date(),
-    }
+    const next = buildManagerPublicSettingsUpsertFields(salonId, payload, base)
 
     if (base) {
       await tx

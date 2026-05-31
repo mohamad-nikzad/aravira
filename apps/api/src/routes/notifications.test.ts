@@ -6,6 +6,14 @@ vi.mock('@repo/notifications', () => ({
   markNotificationRead: vi.fn(),
   createNotificationForUser: vi.fn(),
   isWebPushConfigured: vi.fn(() => false),
+  getMessagingProvider: vi.fn(),
+  renderAppointmentRequestPending: vi.fn(),
+  messagingCommands: {
+    handleLinkStart: vi.fn(),
+    handleUnlink: vi.fn(),
+  },
+  sendTelegramMessage: vi.fn(),
+  answerTelegramCallback: vi.fn(),
 }))
 
 vi.mock('@repo/auth/server', () => ({

@@ -3,7 +3,7 @@ import { normalizePhone } from '@repo/salon-core/phone'
 import { salonTodayYmd } from '@repo/salon-core/salon-local-time'
 
 import { getDb } from '../client'
-import { appointmentRequests, clients } from '../schema'
+import { appointmentRequests, clients, organization } from '../schema'
 import { createAppointment } from './appointment-queries'
 import { validateCreateAppointmentIntake } from './appointment-intake'
 import { getClientByPhone, createClient } from './client-queries'
@@ -224,6 +224,57 @@ export async function rejectAppointmentRequest(
     return { ok: false, status: 409, error: 'این درخواست قابل رد نیست' }
   }
   return { ok: true }
+}
+
+export type AppointmentRequestNotificationContext = {
+  requestId: string
+  salonId: string
+  salonName: string
+  salonSlug: string
+  customerName: string
+  customerPhone: string
+  serviceName: string
+  requestedDate: string
+  requestedStartTime: string
+}
+
+/**
+ * Compact view used to render a "new appointment request" notification.
+ * Returns `undefined` if the request was deleted between submit and dispatch.
+ */
+export async function getAppointmentRequestNotificationContext(
+  requestId: string
+): Promise<AppointmentRequestNotificationContext | undefined> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      id: appointmentRequests.id,
+      salonId: appointmentRequests.salonId,
+      customerName: appointmentRequests.customerName,
+      customerPhone: appointmentRequests.customerPhone,
+      serviceName: appointmentRequests.bookedServiceName,
+      requestedDate: appointmentRequests.requestedDate,
+      requestedStartTime: appointmentRequests.requestedStartTime,
+      salonName: organization.name,
+      salonSlug: organization.slug,
+    })
+    .from(appointmentRequests)
+    .innerJoin(organization, eq(organization.id, appointmentRequests.salonId))
+    .where(eq(appointmentRequests.id, requestId))
+    .limit(1)
+  const row = rows[0]
+  if (!row) return undefined
+  return {
+    requestId: row.id,
+    salonId: row.salonId,
+    salonName: row.salonName,
+    salonSlug: row.salonSlug,
+    customerName: row.customerName,
+    customerPhone: row.customerPhone,
+    serviceName: row.serviceName,
+    requestedDate: row.requestedDate,
+    requestedStartTime: row.requestedStartTime,
+  }
 }
 
 /**

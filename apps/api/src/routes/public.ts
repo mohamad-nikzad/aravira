@@ -9,6 +9,8 @@ import {
 } from '@repo/database/public'
 import { checkAndRecordPublicSubmit } from '@repo/database/rate-limit'
 import { publicAppointmentRequestSchema } from '@repo/salon-core/forms/public'
+import { notifyManagersOfNewAppointmentRequest } from '@repo/notifications'
+import { getEnv } from '../env'
 import type { AppEnv } from '../factory'
 import { zValidator } from '../lib/validate'
 import { error, ok } from '../lib/responses'
@@ -88,6 +90,14 @@ export const publicRoutes = new Hono<AppEnv>()
         ...(body.notes ? { notes: body.notes } : {}),
       })
       if (!result.ok) return error(c, result.error, result.status as 400)
+      // Fire-and-forget manager notifications. Never block the public submit
+      // response on notification delivery; failures are logged + recorded in
+      // notification_deliveries by the dispatcher itself.
+      void notifyManagersOfNewAppointmentRequest(result.id, {
+        publicAppBaseUrl: getEnv().PUBLIC_APP_BASE_URL,
+      }).catch((err) => {
+        console.error('[public] failed to notify managers of new request', { requestId: result.id, err })
+      })
       return ok(c, { token: result.confirmationToken }, 201)
     },
   )

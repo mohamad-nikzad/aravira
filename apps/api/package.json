@@ -19,6 +19,7 @@
     "test:unit": "vitest run --config vitest.config.ts",
     "boundaries": "eslint . --max-warnings=0",
     "expire-requests": "ROOT_ENV_FILES=.env.database.dev node ../../scripts/with-root-env.mjs tsx src/cli/expire-requests.ts",
+    "cli:messaging-set-webhook": "ROOT_ENV_FILES=.env.database.dev node ../../scripts/with-root-env.mjs tsx src/cli/messaging-set-webhook.ts",
     "cf:dev": "wrangler dev",
     "cf:deploy": "wrangler deploy",
     "cf:tail": "wrangler tail"

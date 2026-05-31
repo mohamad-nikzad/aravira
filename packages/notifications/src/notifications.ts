@@ -6,52 +6,67 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   updateNotificationPreferences,
+  type AppNotification,
   type CreateNotificationInput,
+  type NotificationPreferences,
 } from '@repo/database/notifications'
 import {
   findAccountByUserAndProvider,
   type MessagingProviderId,
 } from '@repo/database/messaging'
+import { getEnabledMessagingProvidersForSalon } from '@repo/database/public'
 import { listConfiguredMessagingProviders } from './providers/registry'
+import type { MessagingButton } from './providers/types'
 import { sendSmsNotification } from './sms'
 
-/**
- * Optional hook so the dispatcher can consult per-salon enablement without
- * reaching into the public-settings query module from inside this package.
- * Phase 0 leaves this `undefined`; Phase 1 wires it.
- */
-type SalonProviderGate = (
-  salonId: string,
-  provider: MessagingProviderId
-) => Promise<boolean>
-
-let salonProviderGate: SalonProviderGate | undefined
-
-export function setSalonMessagingProviderGate(gate: SalonProviderGate | undefined): void {
-  salonProviderGate = gate
+export type CreateNotificationForUserInput = CreateNotificationInput & {
+  /** When set (e.g. in tests), skips loading salon messaging settings from the database. */
+  enabledProviders?: Set<MessagingProviderId>
+  messagingButtons?: MessagingButton[][]
 }
 
-export async function createNotificationForUser(input: CreateNotificationInput) {
-  const notification = await createNotificationRecordForUser(input)
-  await recordNotificationDelivery(notification.id, 'in_app')
+function isAppointmentRequestNotification(type: string): boolean {
+  return type === 'appointment_request_pending' || type.startsWith('appointment_request_')
+}
 
+async function deliverInApp(notification: AppNotification) {
+  await recordNotificationDelivery(notification.id, 'in_app')
+}
+
+async function deliverSms(notification: AppNotification) {
   const smsDelivery = await sendSmsNotification(notification)
   await recordNotificationDelivery(notification.id, 'sms', smsDelivery.status, {
     provider: smsDelivery.provider,
     providerMessageId: smsDelivery.providerMessageId,
     error: smsDelivery.error,
   })
+}
+
+async function deliverMessagingChannels(
+  notification: AppNotification,
+  preferences: NotificationPreferences,
+  salonEnabledProviders: Set<MessagingProviderId>,
+  messagingButtons?: MessagingButton[][]
+) {
+  const gateOnAppointmentAlerts = isAppointmentRequestNotification(notification.type)
 
   for (const provider of listConfiguredMessagingProviders()) {
-    if (salonProviderGate) {
-      const allowed = await salonProviderGate(notification.salonId, provider.id)
-      if (!allowed) {
-        await recordNotificationDelivery(notification.id, provider.id, 'skipped', {
-          provider: provider.id,
-          error: 'salon_disabled',
-        })
-        continue
-      }
+    // appointment_alerts_disabled applies only to appointment-request notifications;
+    // other types deliver when the user has a linked account.
+    if (gateOnAppointmentAlerts && !preferences.appointmentAlertsEnabled) {
+      await recordNotificationDelivery(notification.id, provider.id, 'skipped', {
+        provider: provider.id,
+        error: 'appointment_alerts_disabled',
+      })
+      continue
+    }
+
+    if (!salonEnabledProviders.has(provider.id)) {
+      await recordNotificationDelivery(notification.id, provider.id, 'skipped', {
+        provider: provider.id,
+        error: 'salon_disabled',
+      })
+      continue
     }
 
     const account = await findAccountByUserAndProvider(notification.userId, provider.id)
@@ -68,6 +83,7 @@ export async function createNotificationForUser(input: CreateNotificationInput) 
       externalId: account.externalId,
       title: notification.title,
       body: notification.body,
+      ...(messagingButtons ? { buttons: messagingButtons } : {}),
     })
     await recordNotificationDelivery(notification.id, provider.id, result.status, {
       provider: provider.id,
@@ -75,6 +91,29 @@ export async function createNotificationForUser(input: CreateNotificationInput) 
       error: result.error ?? null,
     })
   }
+}
+
+export async function createNotificationForUser(input: CreateNotificationForUserInput) {
+  const { enabledProviders: enabledProvidersOverride, messagingButtons, ...createInput } = input
+  const notification = await createNotificationRecordForUser(createInput)
+
+  await deliverInApp(notification)
+  await deliverSms(notification)
+
+  const preferences = await getNotificationPreferences(
+    notification.salonId,
+    notification.userId
+  )
+  const salonEnabledProviders =
+    enabledProvidersOverride ??
+    new Set(await getEnabledMessagingProvidersForSalon(notification.salonId))
+
+  await deliverMessagingChannels(
+    notification,
+    preferences,
+    salonEnabledProviders,
+    messagingButtons
+  )
 
   return notification
 }

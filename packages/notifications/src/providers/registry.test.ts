@@ -16,6 +16,7 @@ function fakeProvider(overrides: Partial<MessagingProvider> = {}): MessagingProv
     supportsInlineButtons: true,
     supportsInbound: true,
     isConfigured: () => true,
+    buildAccountLinkUrl: () => null,
     send: async () => ({ status: 'sent', providerMessageId: 'm1' }),
     ...overrides,
   }

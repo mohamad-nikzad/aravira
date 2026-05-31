@@ -3,6 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('@repo/notifications', () => ({
   getNotificationPreferences: vi.fn(),
   updateNotificationPreferences: vi.fn(),
+  getMessagingProvider: vi.fn(),
+  renderAppointmentRequestPending: vi.fn(),
+  createNotificationForUser: vi.fn(),
+  isWebPushConfigured: vi.fn(() => false),
+  messagingCommands: {
+    handleLinkStart: vi.fn(),
+    handleUnlink: vi.fn(),
+  },
+  sendTelegramMessage: vi.fn(),
+  answerTelegramCallback: vi.fn(),
 }))
 
 vi.mock('@repo/auth/server', () => ({

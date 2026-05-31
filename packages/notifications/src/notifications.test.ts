@@ -4,13 +4,15 @@ const mocks = vi.hoisted(() => ({
   createNotificationForUser: vi.fn(),
   dispatchNotification: vi.fn(),
   findAccountByUserAndProvider: vi.fn(),
+  getEnabledMessagingProvidersForSalon: vi.fn(),
   sendSmsNotification: vi.fn(),
+  getNotificationPreferences: vi.fn(),
 }))
 
 vi.mock('@repo/database/notifications', () => ({
   createNotificationForUser: mocks.createNotificationForUser,
   dispatchNotification: mocks.dispatchNotification,
-  getNotificationPreferences: vi.fn(),
+  getNotificationPreferences: mocks.getNotificationPreferences,
   listNotificationsForUser: vi.fn(),
   markAllNotificationsRead: vi.fn(),
   markNotificationRead: vi.fn(),
@@ -21,11 +23,15 @@ vi.mock('@repo/database/messaging', () => ({
   findAccountByUserAndProvider: mocks.findAccountByUserAndProvider,
 }))
 
+vi.mock('@repo/database/public', () => ({
+  getEnabledMessagingProvidersForSalon: mocks.getEnabledMessagingProvidersForSalon,
+}))
+
 vi.mock('./sms', () => ({
   sendSmsNotification: mocks.sendSmsNotification,
 }))
 
-import { createNotificationForUser, setSalonMessagingProviderGate } from './notifications'
+import { createNotificationForUser } from './notifications'
 import {
   _resetMessagingProviderRegistry,
   registerMessagingProvider,
@@ -48,6 +54,7 @@ const notification = {
 beforeEach(() => {
   mocks.createNotificationForUser.mockResolvedValue(notification)
   mocks.dispatchNotification.mockResolvedValue(undefined)
+  mocks.getEnabledMessagingProvidersForSalon.mockResolvedValue(['telegram'])
   mocks.sendSmsNotification.mockResolvedValue({
     status: 'skipped',
     provider: null,
@@ -55,12 +62,20 @@ beforeEach(() => {
     error: 'sms_provider_not_configured',
   })
   mocks.findAccountByUserAndProvider.mockResolvedValue(undefined)
+  mocks.getNotificationPreferences.mockResolvedValue({
+    salonId: 'salon-1',
+    userId: 'user-1',
+    appointmentAlertsEnabled: true,
+    localAlertsEnabled: true,
+    smsAlertsEnabled: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
 })
 
 afterEach(() => {
   vi.clearAllMocks()
   _resetMessagingProviderRegistry()
-  setSalonMessagingProviderGate(undefined)
 })
 
 describe('createNotificationForUser', () => {
@@ -90,6 +105,7 @@ describe('createNotificationForUser', () => {
       supportsInlineButtons: true,
       supportsInbound: true,
       isConfigured: () => true,
+      buildAccountLinkUrl: () => null,
       send,
     }
     registerMessagingProvider(provider)
@@ -136,6 +152,7 @@ describe('createNotificationForUser', () => {
       supportsInlineButtons: true,
       supportsInbound: true,
       isConfigured: () => true,
+      buildAccountLinkUrl: () => null,
       send,
     })
 
@@ -154,7 +171,41 @@ describe('createNotificationForUser', () => {
     expect(tgCall[3]).toMatchObject({ error: 'not_linked' })
   })
 
-  it('skips a provider when the salon gate denies it', async () => {
+  it('loads salon enabled providers once per notification', async () => {
+    registerMessagingProvider({
+      id: 'telegram',
+      displayName: 'Telegram',
+      supportsInlineButtons: true,
+      supportsInbound: true,
+      isConfigured: () => true,
+      buildAccountLinkUrl: () => null,
+      send: vi.fn().mockResolvedValue({ status: 'sent' }),
+    })
+    registerMessagingProvider({
+      id: 'whatsapp',
+      displayName: 'WhatsApp',
+      supportsInlineButtons: false,
+      supportsInbound: false,
+      isConfigured: () => true,
+      buildAccountLinkUrl: () => null,
+      send: vi.fn().mockResolvedValue({ status: 'sent' }),
+    })
+    mocks.getEnabledMessagingProvidersForSalon.mockResolvedValue(['telegram', 'whatsapp'])
+
+    await createNotificationForUser({
+      salonId: 'salon-1',
+      userId: 'user-1',
+      type: 'appointment_created',
+      title: 'T',
+      body: 'B',
+      route: '/x',
+    })
+
+    expect(mocks.getEnabledMessagingProvidersForSalon).toHaveBeenCalledTimes(1)
+    expect(mocks.getEnabledMessagingProvidersForSalon).toHaveBeenCalledWith('salon-1')
+  })
+
+  it('skips a provider when the salon has it disabled', async () => {
     const send = vi.fn()
     registerMessagingProvider({
       id: 'telegram',
@@ -162,6 +213,7 @@ describe('createNotificationForUser', () => {
       supportsInlineButtons: true,
       supportsInbound: true,
       isConfigured: () => true,
+      buildAccountLinkUrl: () => null,
       send,
     })
     mocks.findAccountByUserAndProvider.mockResolvedValue({
@@ -174,7 +226,7 @@ describe('createNotificationForUser', () => {
       linkedAt: new Date(),
       updatedAt: new Date(),
     })
-    setSalonMessagingProviderGate(async () => false)
+    mocks.getEnabledMessagingProvidersForSalon.mockResolvedValue([])
 
     await createNotificationForUser({
       salonId: 'salon-1',
@@ -189,5 +241,129 @@ describe('createNotificationForUser', () => {
     const tgCall = mocks.dispatchNotification.mock.calls.find((c) => c[1] === 'telegram')!
     expect(tgCall[2]).toBe('skipped')
     expect(tgCall[3]).toMatchObject({ error: 'salon_disabled' })
+  })
+
+  it('skips appointment-request messaging when appointment alerts are disabled', async () => {
+    const send = vi.fn()
+    registerMessagingProvider({
+      id: 'telegram',
+      displayName: 'Telegram',
+      supportsInlineButtons: true,
+      supportsInbound: true,
+      isConfigured: () => true,
+      buildAccountLinkUrl: () => null,
+      send,
+    })
+    mocks.createNotificationForUser.mockResolvedValue({
+      ...notification,
+      type: 'appointment_request_pending',
+    })
+    mocks.getNotificationPreferences.mockResolvedValue({
+      salonId: 'salon-1',
+      userId: 'user-1',
+      appointmentAlertsEnabled: false,
+      localAlertsEnabled: true,
+      smsAlertsEnabled: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+
+    await createNotificationForUser({
+      salonId: 'salon-1',
+      userId: 'user-1',
+      type: 'appointment_request_pending',
+      title: 'T',
+      body: 'B',
+      route: '/x',
+    })
+
+    expect(send).not.toHaveBeenCalled()
+    const tgCall = mocks.dispatchNotification.mock.calls.find((c) => c[1] === 'telegram')!
+    expect(tgCall[2]).toBe('skipped')
+    expect(tgCall[3]).toMatchObject({ error: 'appointment_alerts_disabled' })
+  })
+
+  it('delivers non-appointment-request messaging when appointment alerts are disabled', async () => {
+    const send = vi.fn().mockResolvedValue({ status: 'sent', providerMessageId: 'tg-1' })
+    registerMessagingProvider({
+      id: 'telegram',
+      displayName: 'Telegram',
+      supportsInlineButtons: true,
+      supportsInbound: true,
+      isConfigured: () => true,
+      buildAccountLinkUrl: () => null,
+      send,
+    })
+    mocks.getNotificationPreferences.mockResolvedValue({
+      salonId: 'salon-1',
+      userId: 'user-1',
+      appointmentAlertsEnabled: false,
+      localAlertsEnabled: true,
+      smsAlertsEnabled: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    mocks.findAccountByUserAndProvider.mockResolvedValue({
+      id: 'acc-1',
+      userId: 'user-1',
+      provider: 'telegram',
+      externalId: 'chat-9',
+      displayName: null,
+      enabled: true,
+      linkedAt: new Date(),
+      updatedAt: new Date(),
+    })
+
+    await createNotificationForUser({
+      salonId: 'salon-1',
+      userId: 'user-1',
+      type: 'appointment_created',
+      title: 'T',
+      body: 'B',
+      route: '/x',
+    })
+
+    expect(send).toHaveBeenCalled()
+    const tgCall = mocks.dispatchNotification.mock.calls.find((c) => c[1] === 'telegram')!
+    expect(tgCall[2]).toBe('sent')
+  })
+
+  it('passes messagingButtons from input to the provider', async () => {
+    const send = vi.fn().mockResolvedValue({ status: 'sent', providerMessageId: 'tg-1' })
+    registerMessagingProvider({
+      id: 'telegram',
+      displayName: 'Telegram',
+      supportsInlineButtons: true,
+      supportsInbound: true,
+      isConfigured: () => true,
+      buildAccountLinkUrl: () => null,
+      send,
+    })
+    mocks.findAccountByUserAndProvider.mockResolvedValue({
+      id: 'acc-1',
+      userId: 'user-1',
+      provider: 'telegram',
+      externalId: 'chat-9',
+      displayName: null,
+      enabled: true,
+      linkedAt: new Date(),
+      updatedAt: new Date(),
+    })
+
+    await createNotificationForUser({
+      salonId: 'salon-1',
+      userId: 'user-1',
+      type: 'appointment_request_pending',
+      title: 'T',
+      body: 'B',
+      route: '/x',
+      messagingButtons: [[{ label: 'Open', url: 'https://app.example/requests/1' }]],
+    })
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        buttons: [[{ label: 'Open', url: 'https://app.example/requests/1' }]],
+      })
+    )
   })
 })

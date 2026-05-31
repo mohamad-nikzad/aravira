@@ -2,6 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@repo/notifications', () => ({
   isWebPushConfigured: vi.fn(() => true),
+  getMessagingProvider: vi.fn(),
+  renderAppointmentRequestPending: vi.fn(),
+  createNotificationForUser: vi.fn(),
+  messagingCommands: {
+    handleLinkStart: vi.fn(),
+    handleUnlink: vi.fn(),
+  },
+  sendTelegramMessage: vi.fn(),
+  answerTelegramCallback: vi.fn(),
 }))
 
 vi.mock('@repo/database/push', () => ({

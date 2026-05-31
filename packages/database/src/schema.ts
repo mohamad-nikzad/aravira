@@ -14,6 +14,8 @@ import {
 
 import type { CatalogPresetTree } from '@repo/salon-core/forms/catalog-preset'
 
+import type { MessagingProviderId } from './messaging-provider-id'
+
 // ─────────────────────────────────────────────────────────────────────────
 // Better Auth tables (core + username + organization plugins).
 // Property keys match Better Auth field names; columns use snake_case.
@@ -712,7 +714,7 @@ export const salonPublicSettings = pgTable('salon_public_settings', {
     .array()
     .notNull()
     .default([])
-    .$type<Array<'telegram' | 'bale' | 'rubika' | 'whatsapp'>>(),
+    .$type<Array<MessagingProviderId>>(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
@@ -863,9 +865,7 @@ export const userMessagingAccounts = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    provider: text('provider')
-      .notNull()
-      .$type<'telegram' | 'bale' | 'rubika' | 'whatsapp'>(),
+    provider: text('provider').notNull().$type<MessagingProviderId>(),
     externalId: text('external_id').notNull(),
     displayName: text('display_name'),
     enabled: boolean('enabled').notNull().default(true),
@@ -892,9 +892,7 @@ export const messagingLinkTokens = pgTable(
     salonId: uuid('salon_id')
       .notNull()
       .references(() => organization.id, { onDelete: 'cascade' }),
-    provider: text('provider')
-      .notNull()
-      .$type<'telegram' | 'bale' | 'rubika' | 'whatsapp'>(),
+    provider: text('provider').notNull().$type<MessagingProviderId>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     consumedAt: timestamp('consumed_at', { withTimezone: true }),

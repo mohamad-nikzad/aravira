@@ -1,8 +1,14 @@
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, gte, isNull, sql } from 'drizzle-orm'
+import { DEFAULT_PUBLIC_LAYOUT_ID } from '@repo/salon-core/public-layouts'
+import { DEFAULT_PUBLIC_THEME_ID } from '@repo/salon-core/public-themes'
 import { getDb } from '../client'
-import { messagingLinkTokens, userMessagingAccounts } from '../schema'
+import type { MessagingProviderId } from '../messaging-provider-id'
+import { messagingLinkTokens, salonPublicSettings, userMessagingAccounts } from '../schema'
 
-export type MessagingProviderId = 'telegram' | 'bale' | 'rubika' | 'whatsapp'
+export type { MessagingProviderId }
+
+type DbClient = ReturnType<typeof getDb>
+type DbExecutor = DbClient | Parameters<Parameters<DbClient['transaction']>[0]>[0]
 
 export type UserMessagingAccount = {
   id: string
@@ -37,6 +43,54 @@ export type UpsertAccountInput = {
   provider: MessagingProviderId
   externalId: string
   displayName?: string | null
+}
+
+export const MESSAGING_LINK_WINDOW_MS = 15 * 60 * 1000
+export const MESSAGING_LINK_MAX_PER_WINDOW = 10
+
+export type MessagingLinkRateLimitResult =
+  | { allowed: true }
+  | { allowed: false; retryAfterMs: number }
+
+/** Limits how many link tokens a user can mint per rolling window. */
+export async function checkMessagingLinkRateLimit(
+  userId: string
+): Promise<MessagingLinkRateLimitResult> {
+  const db = getDb()
+  const now = new Date()
+  const windowStart = new Date(now.getTime() - MESSAGING_LINK_WINDOW_MS)
+
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(messagingLinkTokens)
+    .where(
+      and(
+        eq(messagingLinkTokens.userId, userId),
+        gte(messagingLinkTokens.createdAt, windowStart)
+      )
+    )
+
+  if (count < MESSAGING_LINK_MAX_PER_WINDOW) {
+    return { allowed: true }
+  }
+
+  const [oldest] = await db
+    .select({ createdAt: messagingLinkTokens.createdAt })
+    .from(messagingLinkTokens)
+    .where(
+      and(
+        eq(messagingLinkTokens.userId, userId),
+        gte(messagingLinkTokens.createdAt, windowStart)
+      )
+    )
+    .orderBy(messagingLinkTokens.createdAt)
+    .limit(1)
+
+  const retryAfterMs = oldest
+    ? Math.max(0, oldest.createdAt.getTime() + MESSAGING_LINK_WINDOW_MS - now.getTime())
+    : MESSAGING_LINK_WINDOW_MS
+
+  return { allowed: false, retryAfterMs }
 }
 
 function rowToAccount(row: typeof userMessagingAccounts.$inferSelect): UserMessagingAccount {
@@ -79,8 +133,31 @@ export async function createLinkToken(input: CreateLinkTokenInput): Promise<Mess
   return rowToToken(row)
 }
 
-/** Atomically marks a token consumed and returns it if it was valid (unconsumed, unexpired). */
-export async function consumeLinkToken(
+/** Reads a link token without consuming it. Returns undefined if missing, consumed, or expired. */
+export async function findValidLinkToken(
+  token: string,
+  provider: MessagingProviderId
+): Promise<MessagingLinkToken | undefined> {
+  const db = getDb()
+  const now = new Date()
+  const [row] = await db
+    .select()
+    .from(messagingLinkTokens)
+    .where(
+      and(
+        eq(messagingLinkTokens.token, token),
+        eq(messagingLinkTokens.provider, provider),
+        isNull(messagingLinkTokens.consumedAt)
+      )
+    )
+    .limit(1)
+  if (!row) return undefined
+  if (row.expiresAt.getTime() < now.getTime()) return undefined
+  return rowToToken(row)
+}
+
+/** Atomically consumes a link token when valid (unconsumed, unexpired). */
+export async function consumeLinkTokenIfValid(
   token: string,
   provider: MessagingProviderId
 ): Promise<MessagingLinkToken | undefined> {
@@ -93,13 +170,95 @@ export async function consumeLinkToken(
       and(
         eq(messagingLinkTokens.token, token),
         eq(messagingLinkTokens.provider, provider),
-        isNull(messagingLinkTokens.consumedAt)
+        isNull(messagingLinkTokens.consumedAt),
+        gte(messagingLinkTokens.expiresAt, now)
       )
     )
     .returning()
-  if (!row) return undefined
-  if (row.expiresAt.getTime() < now.getTime()) return undefined
-  return rowToToken(row)
+  return row ? rowToToken(row) : undefined
+}
+
+/** @deprecated Use {@link consumeLinkTokenIfValid}. */
+export const consumeLinkToken = consumeLinkTokenIfValid
+
+async function upsertAccountWithExecutor(
+  executor: DbExecutor,
+  input: UpsertAccountInput
+): Promise<UserMessagingAccount> {
+  const [row] = await executor
+    .insert(userMessagingAccounts)
+    .values({
+      userId: input.userId,
+      provider: input.provider,
+      externalId: input.externalId,
+      displayName: input.displayName ?? null,
+    })
+    .onConflictDoUpdate({
+      target: [userMessagingAccounts.userId, userMessagingAccounts.provider],
+      set: {
+        externalId: input.externalId,
+        displayName: input.displayName ?? null,
+        enabled: true,
+        updatedAt: new Date(),
+      },
+    })
+    .returning()
+  return rowToAccount(row)
+}
+
+async function enableMessagingProviderForSalonWithExecutor(
+  executor: DbExecutor,
+  salonId: string,
+  provider: MessagingProviderId
+): Promise<void> {
+  const [row] = await executor
+    .select({ providers: salonPublicSettings.enabledMessagingProviders })
+    .from(salonPublicSettings)
+    .where(eq(salonPublicSettings.salonId, salonId))
+    .limit(1)
+
+  const current = row?.providers ?? []
+  if (current.includes(provider)) return
+
+  const next = [...current, provider]
+  const [existing] = await executor
+    .select({ salonId: salonPublicSettings.salonId })
+    .from(salonPublicSettings)
+    .where(eq(salonPublicSettings.salonId, salonId))
+    .limit(1)
+
+  if (existing) {
+    await executor
+      .update(salonPublicSettings)
+      .set({ enabledMessagingProviders: next, updatedAt: new Date() })
+      .where(eq(salonPublicSettings.salonId, salonId))
+    return
+  }
+
+  await executor.insert(salonPublicSettings).values({
+    salonId,
+    enabled: false,
+    themeId: DEFAULT_PUBLIC_THEME_ID,
+    layoutId: DEFAULT_PUBLIC_LAYOUT_ID,
+    appointmentRequestsEnabled: true,
+    enabledMessagingProviders: next,
+  })
+}
+
+export type LinkMessagingAccountInput = UpsertAccountInput & {
+  salonId: string
+}
+
+/** Upserts the user messaging account and enables the provider for the salon atomically. */
+export async function linkMessagingAccountAndEnableProvider(
+  input: LinkMessagingAccountInput
+): Promise<UserMessagingAccount> {
+  const db = getDb()
+  return db.transaction(async (tx) => {
+    const account = await upsertAccountWithExecutor(tx, input)
+    await enableMessagingProviderForSalonWithExecutor(tx, input.salonId, input.provider)
+    return account
+  })
 }
 
 export async function findAccountByExternalId(
@@ -139,26 +298,7 @@ export async function findAccountByUserAndProvider(
 }
 
 export async function upsertAccount(input: UpsertAccountInput): Promise<UserMessagingAccount> {
-  const db = getDb()
-  const [row] = await db
-    .insert(userMessagingAccounts)
-    .values({
-      userId: input.userId,
-      provider: input.provider,
-      externalId: input.externalId,
-      displayName: input.displayName ?? null,
-    })
-    .onConflictDoUpdate({
-      target: [userMessagingAccounts.userId, userMessagingAccounts.provider],
-      set: {
-        externalId: input.externalId,
-        displayName: input.displayName ?? null,
-        enabled: true,
-        updatedAt: new Date(),
-      },
-    })
-    .returning()
-  return rowToAccount(row)
+  return upsertAccountWithExecutor(getDb(), input)
 }
 
 export async function setAccountEnabled(

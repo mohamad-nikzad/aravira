@@ -70,44 +70,44 @@ button-data encoding) to force into one shape.
 ```ts
 // packages/notifications/src/providers/types.ts
 
-export type MessagingProviderId = 'telegram' | 'whatsapp' | 'bale' | 'rubika'
+export type MessagingProviderId = "telegram" | "whatsapp" | "bale" | "rubika";
 
 export type MessagingButton = {
   /** Text shown in the chat. Keep under 30 chars (Telegram limit). */
-  label: string
+  label: string;
   /** Opaque string the provider echoes back on tap. Format: `<action>:<entityId>`. */
-  data: string
-}
+  data: string;
+};
 
 export type MessagingSendInput = {
-  notificationId: string
-  externalId: string  // chatId / phone / waId — provider-specific
-  title: string
-  body: string
+  notificationId: string;
+  externalId: string; // chatId / phone / waId — provider-specific
+  title: string;
+  body: string;
   /** Optional inline keyboard. Providers without inline buttons IGNORE this and fall back
    *  to plain text + a deep link in the body. Never an error. */
-  buttons?: MessagingButton[][]
+  buttons?: MessagingButton[][];
   /** Provider-agnostic locale hint. */
-  locale?: string
-}
+  locale?: string;
+};
 
 export type MessagingDeliveryResult = {
-  status: 'sent' | 'failed' | 'skipped'
-  providerMessageId?: string | null
-  error?: string | null
-}
+  status: "sent" | "failed" | "skipped";
+  providerMessageId?: string | null;
+  error?: string | null;
+};
 
 export interface MessagingProvider {
-  readonly id: MessagingProviderId
-  readonly displayName: string
+  readonly id: MessagingProviderId;
+  readonly displayName: string;
   /** True when env config is sufficient for this provider to send. */
-  isConfigured(): boolean
+  isConfigured(): boolean;
   /** True when this provider supports inline tap-to-act buttons. */
-  readonly supportsInlineButtons: boolean
+  readonly supportsInlineButtons: boolean;
   /** True when this provider needs a separately registered webhook to function. */
-  readonly supportsInbound: boolean
+  readonly supportsInbound: boolean;
 
-  send(input: MessagingSendInput): Promise<MessagingDeliveryResult>
+  send(input: MessagingSendInput): Promise<MessagingDeliveryResult>;
 }
 ```
 
@@ -118,12 +118,14 @@ provider-agnostic `MessagingInboundEvent`s for the shared command dispatcher.
 ```ts
 // packages/notifications/src/providers/registry.ts
 
-const providers = new Map<MessagingProviderId, MessagingProvider>()
+const providers = new Map<MessagingProviderId, MessagingProvider>();
 
-export function registerMessagingProvider(p: MessagingProvider): void
-export function getMessagingProvider(id: MessagingProviderId): MessagingProvider | undefined
-export function listMessagingProviders(): MessagingProvider[]
-export function listConfiguredMessagingProviders(): MessagingProvider[]
+export function registerMessagingProvider(p: MessagingProvider): void;
+export function getMessagingProvider(
+  id: MessagingProviderId,
+): MessagingProvider | undefined;
+export function listMessagingProviders(): MessagingProvider[];
+export function listConfiguredMessagingProviders(): MessagingProvider[];
 ```
 
 Registration is **static at module load** in `providers/index.ts`. No DI container, no
@@ -173,25 +175,25 @@ We also extend two existing enums (string unions in Drizzle `.$type<...>()`):
 ```ts
 // packages/database/src/schema.ts
 // notifications.type:
-type: text('type').notNull().$type<
-  | 'appointment_created'
-  | 'appointment_request_pending'   // NEW (Phase 1)
-  | 'appointment_request_approved'  // NEW (Phase 3)
-  | 'appointment_request_rejected'  // NEW (Phase 3)
-  | 'appointment_reminder'          // NEW (Phase 2/3, gated on job runner)
->()
+type: text("type").notNull().$type<
+  | "appointment_created"
+  | "appointment_request_pending" // NEW (Phase 1)
+  | "appointment_request_approved" // NEW (Phase 3)
+  | "appointment_request_rejected" // NEW (Phase 3)
+  | "appointment_reminder" // NEW (Phase 2/3, gated on job runner)
+>();
 
 // notificationDeliveries.channel:
-channel: text('channel').notNull().$type<
-  | 'in_app'
-  | 'local_sync'
-  | 'sms'
-  | 'android_regional_push'
-  | 'telegram'   // NEW (Phase 1)
-  | 'bale'       // NEW (Phase 4)
-  | 'rubika'     // NEW (Phase 4)
-  | 'whatsapp'   // NEW (Phase 5)
->()
+channel: text("channel").notNull().$type<
+  | "in_app"
+  | "local_sync"
+  | "sms"
+  | "android_regional_push"
+  | "telegram" // NEW (Phase 1)
+  | "bale" // NEW (Phase 4)
+  | "rubika" // NEW (Phase 4)
+  | "whatsapp" // NEW (Phase 5)
+>();
 ```
 
 #### Why this schema shape
@@ -344,10 +346,10 @@ any provider implementation**. SMS keeps working unchanged. Calling
 
 **Risks / mitigations**
 
-- *Drizzle enum widening could surprise downstream code.* Search for any `switch` on
+- _Drizzle enum widening could surprise downstream code._ Search for any `switch` on
   `NotificationChannel` and add `default` arms before widening
   (`grep -rn "in_app\|local_sync" --include='*.ts'`).
-- *Migration ordering*: Drizzle numbers migrations from the highest existing file.
+- _Migration ordering_: Drizzle numbers migrations from the highest existing file.
   Before generating, `ls packages/database/src/migrations/` to confirm what's already
   there; rebase your branch on the latest `main` to avoid a number collision with a
   concurrent migration PR.
@@ -413,7 +415,7 @@ for any salon they manage. Tapping a button executes the same DB action the PWA 
      **not** go through `requireTenant` or `cors` (or, if CORS is mounted globally,
      the route is fine — Telegram does not preflight). Confirm via curl test.
 
-5. Manager PWA changes (`apps/app`)
+5. Manager PWA changes (`apps/pwa`)
    - Settings page: a "Connect Telegram" panel.
      - State: not linked → big button opening `deepLink` returned from `POST /messaging/link`.
      - State: linked → shows `displayName`, toggle for `enabled`, "Unlink" button.
@@ -467,20 +469,209 @@ for any salon they manage. Tapping a button executes the same DB action the PWA 
 
 **Risks / mitigations**
 
-- *Webhook reachability*: Telegram requires public HTTPS. The API is already public on
+- _Webhook reachability_: Telegram requires public HTTPS. The API is already public on
   VPS; verify port 443 and a valid cert. Test with `curl` against the public URL before
   calling `setWebhook`.
-- *Secret token rotation*: rotating `TELEGRAM_WEBHOOK_SECRET` requires re-calling
+- _Secret token rotation_: rotating `TELEGRAM_WEBHOOK_SECRET` requires re-calling
   `setWebhook`. Document this in the ops section.
-- *Auto-staff-assignment on approve*: the existing API requires `staffId` in the body
+- _Auto-staff-assignment on approve_: the existing API requires `staffId` in the body
   (`appointment-requests.ts:44`). Phase 1 decision: **on Telegram approve, auto-assign
   using the same slot-availability logic the PWA uses to pre-fill**. If no
   unambiguous match, the callback edits the message to "👉 Open in app to pick staff"
   and does not approve. This keeps the bot honest and avoids surprise assignments.
-- *Telegram outage*: send failures record `failed` in `notificationDeliveries`; in-app
+- _Telegram outage_: send failures record `failed` in `notificationDeliveries`; in-app
   and SMS are unaffected because they ran first. We do not retry — Telegram delivers
   push within the chat, not the message; missing one approval DM is recoverable via the
   PWA.
+
+---
+
+### Phase 1.5 — Finish Phase 1 properly: inline approve/reject callbacks
+
+**Status (2026-06-01)**: Phase 1 actually shipped as "link + notify with deep-link only".
+The template renders a single `مشاهده در برنامه` URL button
+(`packages/notifications/src/templates/appointment-request.ts:40-42`) and the webhook
+stubs `callback_query` handling (`apps/api/src/routes/messaging-telegram.ts:106-109`).
+The original Phase 1 promise — one-tap approve/reject from inside Telegram — was deferred.
+Phase 1.5 closes it.
+
+**Goal**: managers can tap **تأیید** / **رد** on the DM and have the underlying
+`appointmentRequest` transition exactly as if they had used the PWA. The original message
+edits in place to reflect the new state.
+
+**Deliverables**
+
+1. Template change
+   - `packages/notifications/src/templates/appointment-request.ts` — add two
+     `callback_data` buttons above the existing URL button:
+     - `{ label: '✅ تأیید', data: 'approve:<requestId>' }`
+     - `{ label: '❌ رد', data: 'reject:<requestId>' }`
+     - Keep `مشاهده در برنامه` as a third URL button row (escape hatch when auto-assign
+       can't pick a staff).
+   - `MessagingButton` already supports `data` (callback) and `url` (deep link) — no
+     interface change.
+
+2. Command implementations
+   - `packages/notifications/src/commands/approval.ts` (new):
+     `handleApprovalCallback({ provider, externalId, requestId })` returns a
+     `CommandResult` with the message text the route should write back to the chat.
+     - Resolve account → user via `findAccountByExternalId`.
+     - Re-authorize: caller must be a manager (`'owner'|'admin'`) of the request's salon
+       via the existing `member` lookup. **Chat session is never trusted as tenant
+       context.** On failure: `{ status: 'error', code: 'forbidden', message: '...' }`.
+     - Look up the request. If not `pending` → `{ status: 'ok', message: '⚠️ این درخواست قبلاً رسیدگی شده است.' }` (race-safe; never throws, never duplicates state).
+     - Auto-staff-assign decision (Phase 1 open question #2 — confirmed): try the same
+       unambiguous-slot match the PWA uses to pre-fill staff. If exactly one staff matches,
+       call `approveAppointmentRequest({ requestId, staffId, approvedBy: userId })`. If
+       zero or multiple match, return `{ status: 'ok', message: '👉 لطفاً برای انتخاب آرایشگر در برنامه باز کنید.', code: 'needs_app' }` — the message edit keeps the URL button alive.
+     - On success: `{ status: 'ok', message: '✅ تأیید شد توسط <name> در <HH:MM>' }`.
+   - `packages/notifications/src/commands/rejection.ts` (new):
+     `handleRejectionCallback({ provider, externalId, requestId })` — same shape; calls
+     `rejectAppointmentRequest({ requestId, rejectedBy: userId, reason: 'rejected via Telegram' })`. On success: `'❌ رد شد توسط <name> در <HH:MM>'`.
+   - Both commands export from `packages/notifications/src/commands/index.ts`.
+
+3. Webhook wiring
+   - `apps/api/src/routes/messaging-telegram.ts`:
+     - Parse `update.callback_query.data` against the format `^(approve|reject):(.+)$`.
+     - Dispatch to `handleApprovalCallback` / `handleRejectionCallback`.
+     - Always call `answerTelegramCallback` first (stops the spinner) — pass the success
+       text as the toast.
+     - Call `editTelegramMessageText` with the new body. Keep the URL button when the
+       command returned `code: 'needs_app'`; drop the inline keyboard otherwise.
+     - Unknown `data` payload → `answerTelegramCallback` no-op, 200.
+
+4. Tests
+   - `packages/notifications/src/commands/approval.test.ts` — happy path, race
+     (already-non-pending), forbidden (caller not a manager), needs-app (ambiguous staff
+     match). Mock `approveAppointmentRequest`.
+   - `packages/notifications/src/commands/rejection.test.ts` — same shape.
+   - `apps/api/src/routes/messaging-telegram.test.ts` — extend with: approve callback
+     happy path edits the message; bad-signature path still 200; unknown `data` no-op.
+
+5. Diagnostic improvement (worth doing here)
+   - `packages/notifications/src/providers/telegram.ts` — on `!res.ok`, log
+     `{ event: 'messaging.send.failed', provider: 'telegram', status, body: res.text.slice(0, 1024) }` to stdout in addition to recording in `notification_deliveries.error`. Local-test pain point: Telegram's HTML-parse errors are explicit (`"can't parse entities: Unsupported start tag …"`) but currently invisible without querying the DB.
+
+**Acceptance criteria**
+
+- Tapping **تأیید** in Telegram writes the same DB rows as the PWA approve flow when
+  auto-assign matches; otherwise edits the message to "open in app" and keeps the URL
+  button.
+- Tapping **رد** writes the same DB rows as the PWA reject flow.
+- Race: if the request is already non-pending, the message edits to "Already handled"
+  and no state changes.
+- Forbidden case (manager unlinks from one salon but the message is from another) edits
+  to a friendly "you no longer manage this salon" — never throws.
+
+**Risks / mitigations**
+
+- _Auto-assign mis-pick_: the matcher must be the **same** function the PWA uses to
+  pre-fill staff. If we don't have one extractable, this phase extracts it from the PWA
+  approve dialog into `@repo/salon-core`.
+- _Callback data length_: Telegram limits `callback_data` to 64 bytes. `approve:<uuid>`
+  is 44 bytes — fine. If we ever encode more (e.g. salon id), use a short opaque token.
+
+---
+
+### Phase 1.6 — Telegram UX layer: grammY + commands menu + persistent keyboard + Mini-App
+
+**Goal**: tighten the Telegram-side UX. Replace hand-rolled fetch+types with **grammY**
+behind the existing provider abstraction (no PWA changes), add discoverable bot commands
+(blue `/` menu), a persistent reply keyboard, and a Telegram Mini-App menu button that
+opens the PWA inside Telegram.
+
+The provider interface (`MessagingProvider`) does **not** change. grammY lives entirely
+inside `telegram.ts` and the webhook route.
+
+**Deliverables**
+
+1. Dependency
+   - `apps/api`: add `grammy` (and `@grammyjs/types` if needed for inbound typing).
+   - No other workspaces touched.
+
+2. Provider refactor
+   - `packages/notifications/src/providers/telegram.ts` — replace `postToTelegram`,
+     `extractMessageId`, and ad-hoc fetch with a single `Api` instance constructed
+     lazily from the resolved config. `send()` calls `api.sendMessage(chatId, text, { parse_mode: 'HTML', reply_markup })`.
+   - `editTelegramMessageText`, `answerTelegramCallback`, `sendTelegramMessage` keep
+     their current signatures (Phase 1.5 callers depend on them) but delegate to the
+     grammY `Api`.
+   - Delete the hand-rolled `TelegramMessage` / `TelegramCallbackQuery` types in
+     `messaging-telegram.ts`; use grammY's typed `Update`.
+
+3. Webhook refactor
+   - `apps/api/src/routes/messaging-telegram.ts` — keep raw-secret verification via
+     `X-Telegram-Bot-Api-Secret-Token` (grammY's `webhookCallback` supports passing
+     the secret, but we already verify and have a route shape; keep our own
+     verification + manual `update` parsing for now). Switch the local `TelegramUpdate`
+     type to grammY's `Update` type. Net effect: types tighten, behavior unchanged.
+
+4. Discoverable commands (`setMyCommands`)
+   - Extend `apps/api/src/cli/messaging-set-webhook.ts` to also call `setMyCommands`
+     in a single startup script (or split into a sibling
+     `messaging-bootstrap.ts` — pick the simpler one). Commands:
+     - `/start` — اتصال یا راهنما
+     - `/pending` — درخواست‌های در انتظار
+     - `/today` — قرارهای امروز
+     - `/unlink` — قطع اتصال
+     - `/help` — راهنما
+   - Persian descriptions via `setMyCommands({ commands, language_code: 'fa' })`.
+   - Implement `/pending` and `/today` as text replies that list items with inline
+     approve buttons per row (`/pending` reuses Phase 1.5's callback dispatcher).
+     `/unlink` calls `handleUnlink`. `/help` is a static message.
+
+5. Persistent reply keyboard
+   - After successful `/start <token>` link, send a follow-up message with a persistent
+     `ReplyKeyboardMarkup`:
+     ```
+     [ 📋 درخواست‌های در انتظار ]  [ 📅 امروز ]
+     [ ⚙️ تنظیمات اعلان‌ها ]
+     ```
+     `is_persistent: true, resize_keyboard: true`. Each button is plain text that the
+     webhook routes to the corresponding command handler (text-equality match before
+     falling through to the `/command` parser). Tapping "تنظیمات اعلان‌ها" replies with
+     a deep link into the PWA settings.
+
+6. Mini-App menu button (`setChatMenuButton`)
+   - In the bootstrap script: set a per-bot default menu button of type `web_app`
+     pointing at the manager PWA URL (`MESSAGING_PWA_BASE_URL` env var, falls back to
+     the existing public app URL).
+   - In the PWA: read `window.Telegram.WebApp.initData` if present and exchange it for
+     a session at `POST /api/v1/auth/telegram/webapp` (verifies HMAC against
+     `TELEGRAM_BOT_TOKEN`, looks up the linked user, issues a Better Auth session).
+     This is **opt-in for v1** — works even if the PWA ignores `initData`; the Mini-App
+     just opens the normal login flow. The auth endpoint is a follow-up if we want
+     SSO; do **not** block 1.6 on it.
+
+7. Tests
+   - `packages/notifications/src/providers/telegram.test.ts` — adapt to grammY's `Api`.
+     Mock at the `fetch` level (grammY uses fetch under the hood) or via
+     `Bot.api.config.use` middleware. Keep assertions on outbound payloads identical to
+     today.
+   - `apps/api/src/routes/messaging-telegram.test.ts` — add cases: reply-keyboard text
+     ("📋 درخواست‌های در انتظار") routes to the pending handler; menu button setup is
+     covered by a bootstrap-script test, not the webhook route.
+
+**Acceptance criteria**
+
+- Existing approve/reject (Phase 1.5) keeps working with zero behavior change.
+- The blue `/` button shows the five Persian-labeled commands.
+- After link, the user sees a persistent 3-button keyboard.
+- The Telegram chat header shows a "Open Aravira" menu button that launches the PWA
+  inside Telegram.
+- `pnpm typecheck` clean; no hand-rolled Telegram type defs remain.
+
+**Risks / mitigations**
+
+- _grammY API surface drift across versions_: pin major. We touch a small subset
+  (`Api.sendMessage`, `Api.editMessageText`, `Api.answerCallbackQuery`,
+  `Api.setMyCommands`, `Api.setChatMenuButton`); regressions surface in unit tests.
+- _Mini-App on non-Telegram browsers_: `window.Telegram` is undefined → the PWA path
+  is a no-op fallback. Safe.
+- _Provider abstraction leak_: keep all grammY references inside `telegram.ts`.
+  Bale/WhatsApp providers do **not** depend on grammY. If a future Bale provider also
+  wants grammY-style ergonomics (it's API-compatible), copy — don't share — same rule
+  as Phase 4.
 
 ---
 
@@ -535,9 +726,9 @@ runner** — this is the gate.
 
 **Risks / mitigations**
 
-- *Cron drift / missed runs*: log every run start/end to stdout (captured by VPS
+- _Cron drift / missed runs_: log every run start/end to stdout (captured by VPS
   journald); a missed digest is recoverable next day.
-- *Quiet-hours / spam*: explicit out-of-scope. Document this. Salon owners can disable
+- _Quiet-hours / spam_: explicit out-of-scope. Document this. Salon owners can disable
   per-salon if they need.
 
 ---
@@ -585,7 +776,7 @@ and T-2h before the appointment. **Introduces `pg-boss`** for relative-time sche
 
 5. Trigger wiring
    - In `approveAppointmentRequest` (`packages/database/src/internal/
-     appointment-request-queries.ts:102-178`), **after** the conditional flip succeeds,
+appointment-request-queries.ts:102-178`), **after** the conditional flip succeeds,
      fire two side effects:
      - `createNotificationForUser` (or its `forClient` sibling) for the client.
      - Schedule the two reminder jobs.
@@ -602,9 +793,9 @@ and T-2h before the appointment. **Introduces `pg-boss`** for relative-time sche
 
 **Risks / mitigations**
 
-- *Job runner adds a new failure mode and a new process to monitor.* Mitigation: keep
+- _Job runner adds a new failure mode and a new process to monitor._ Mitigation: keep
   the worker stateless, restart-on-failure via systemd, basic stdout logs.
-- *Time-zone correctness*: appointments store local time and date strings, not
+- _Time-zone correctness_: appointments store local time and date strings, not
   timestamps (`schema.ts:726-728`). Reminder scheduling must combine
   `requested_date + requested_start_time + salonProfile.timezone` into UTC. Hide this
   behind a helper in `salon-core` to avoid scattered conversions.
@@ -646,7 +837,7 @@ route, and env config.
 
 **Risks / mitigations**
 
-- *Bale API drift from Telegram*: keep `bale.ts` independent; never inherit from
+- _Bale API drift from Telegram_: keep `bale.ts` independent; never inherit from
   `telegram.ts`. If we hit 3+ Telegram-style providers, **then** extract a
   `bot-api-style` shared helper — not earlier.
 
@@ -694,11 +885,11 @@ route, and env config.
 
 **Risks / mitigations**
 
-- *Template approval is a Meta process and can take days/weeks.* Start the approvals in
+- _Template approval is a Meta process and can take days/weeks._ Start the approvals in
   parallel with Phase 0 work if WhatsApp is on the roadmap.
-- *Cost*: Meta charges per conversation in some regions. Acceptable; document for
+- _Cost_: Meta charges per conversation in some regions. Acceptable; document for
   finance.
-- *Per-provider linking flow*: this is the corner that breaks the "uniform link flow"
+- _Per-provider linking flow_: this is the corner that breaks the "uniform link flow"
   fantasy. Solve by treating linking flow as **per-provider in code** while the PWA
   surface area is still uniform ("Connect WhatsApp" button → different next-step UI).
 
@@ -793,17 +984,17 @@ we commit to it.
 
 ## 6. What this brings (business value summary)
 
-| Capability | Phase | Benefit |
-|---|---|---|
-| One-tap approval from Telegram for managers | 1 | Drops approval latency from minutes to seconds. Higher conversion on incoming requests. |
-| Per-user, per-provider opt-in | 1 onward | Users keep control. SMS stays default, messaging is a free upgrade. |
-| Multi-channel delivery (in-app + SMS + Telegram + …) | 1 onward | Redundancy; survives carrier flakiness without changing app logic. |
-| Salon-level provider toggle | 1 onward | Salon owners can disable messaging entirely for their tenant — privacy concern absorbed cleanly. |
-| Staff shift reminders | 2 | Reduces no-show staff and late starts. |
-| Daily manager digest | 2 | Manager wakes up to "you have 3 pending requests" — pulls them into the app at the right moment. |
-| Client confirmations & reminders | 3 | Reduces client no-show rate (the single biggest revenue leak in salons). |
-| Bale support | 4 | Reaches Iranian users who use Bale over Telegram. |
-| WhatsApp support | 5 | Reaches diaspora and non-Iran clientele. |
+| Capability                                           | Phase    | Benefit                                                                                          |
+| ---------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
+| One-tap approval from Telegram for managers          | 1        | Drops approval latency from minutes to seconds. Higher conversion on incoming requests.          |
+| Per-user, per-provider opt-in                        | 1 onward | Users keep control. SMS stays default, messaging is a free upgrade.                              |
+| Multi-channel delivery (in-app + SMS + Telegram + …) | 1 onward | Redundancy; survives carrier flakiness without changing app logic.                               |
+| Salon-level provider toggle                          | 1 onward | Salon owners can disable messaging entirely for their tenant — privacy concern absorbed cleanly. |
+| Staff shift reminders                                | 2        | Reduces no-show staff and late starts.                                                           |
+| Daily manager digest                                 | 2        | Manager wakes up to "you have 3 pending requests" — pulls them into the app at the right moment. |
+| Client confirmations & reminders                     | 3        | Reduces client no-show rate (the single biggest revenue leak in salons).                         |
+| Bale support                                         | 4        | Reaches Iranian users who use Bale over Telegram.                                                |
+| WhatsApp support                                     | 5        | Reaches diaspora and non-Iran clientele.                                                         |
 
 The architectural payoff: **each new provider after Bale is a one-PR addition**, not a
 re-design. The hard work is in Phases 0–1.
@@ -829,42 +1020,42 @@ re-design. The hard work is in Phases 0–1.
 
 ### Phase 0
 
-| File | Change |
-|---|---|
-| `packages/database/src/schema.ts` | Add `userMessagingAccounts`, `messagingLinkTokens` tables. Widen `notificationDeliveries.channel` and `notifications.type` unions. Add `enabledMessagingProviders` column on `salonPublicSettings`. |
-| `packages/database/src/migrations/<auto-named>.sql` | Generated by `pnpm --filter @repo/database db:generate` after editing `schema.ts`. Contains the two `CREATE TABLE` statements and the `ALTER TABLE salon_public_settings` column add. The `.$type<>()` widenings are TypeScript-only and emit no SQL. |
-| `packages/database/src/internal/messaging-queries.ts` | New: CRUD per §3 Phase 0. |
-| `packages/database/src/messaging.ts` | New: re-exports for app code. |
-| `packages/database/package.json` exports | Add `./messaging` entry. |
-| `packages/notifications/src/providers/types.ts` | New: interface from §2.2. |
-| `packages/notifications/src/providers/registry.ts` | New: registry from §2.2. |
-| `packages/notifications/src/providers/index.ts` | New: empty registration (no providers yet). |
-| `packages/notifications/src/commands/index.ts` | New: stubs. |
-| `packages/notifications/src/notifications.ts` | Add `for...of listConfiguredMessagingProviders()` loop in `createNotificationForUser`. |
-| `packages/notifications/src/index.ts` | Export new types and registry functions. |
-| `apps/api/src/env.ts` | Add `MESSAGING_LINK_TOKEN_TTL_MINUTES`. |
-| Tests | Per Phase 0 §1.4. |
+| File                                                  | Change                                                                                                                                                                                                                                                |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/database/src/schema.ts`                     | Add `userMessagingAccounts`, `messagingLinkTokens` tables. Widen `notificationDeliveries.channel` and `notifications.type` unions. Add `enabledMessagingProviders` column on `salonPublicSettings`.                                                   |
+| `packages/database/src/migrations/<auto-named>.sql`   | Generated by `pnpm --filter @repo/database db:generate` after editing `schema.ts`. Contains the two `CREATE TABLE` statements and the `ALTER TABLE salon_public_settings` column add. The `.$type<>()` widenings are TypeScript-only and emit no SQL. |
+| `packages/database/src/internal/messaging-queries.ts` | New: CRUD per §3 Phase 0.                                                                                                                                                                                                                             |
+| `packages/database/src/messaging.ts`                  | New: re-exports for app code.                                                                                                                                                                                                                         |
+| `packages/database/package.json` exports              | Add `./messaging` entry.                                                                                                                                                                                                                              |
+| `packages/notifications/src/providers/types.ts`       | New: interface from §2.2.                                                                                                                                                                                                                             |
+| `packages/notifications/src/providers/registry.ts`    | New: registry from §2.2.                                                                                                                                                                                                                              |
+| `packages/notifications/src/providers/index.ts`       | New: empty registration (no providers yet).                                                                                                                                                                                                           |
+| `packages/notifications/src/commands/index.ts`        | New: stubs.                                                                                                                                                                                                                                           |
+| `packages/notifications/src/notifications.ts`         | Add `for...of listConfiguredMessagingProviders()` loop in `createNotificationForUser`.                                                                                                                                                                |
+| `packages/notifications/src/index.ts`                 | Export new types and registry functions.                                                                                                                                                                                                              |
+| `apps/api/src/env.ts`                                 | Add `MESSAGING_LINK_TOKEN_TTL_MINUTES`.                                                                                                                                                                                                               |
+| Tests                                                 | Per Phase 0 §1.4.                                                                                                                                                                                                                                     |
 
 ### Phase 1
 
-| File | Change |
-|---|---|
-| `packages/notifications/src/providers/telegram.ts` | New: provider impl. |
-| `packages/notifications/src/providers/index.ts` | Register Telegram if `isConfigured()`. |
-| `packages/notifications/src/commands/approval.ts` | New. |
-| `packages/notifications/src/commands/rejection.ts` | New. |
-| `packages/notifications/src/commands/link.ts` | New. |
-| `packages/notifications/src/templates/appointment-request.ts` | New: copy + buttons. |
-| `apps/api/src/routes/messaging.ts` | New: link/list/unlink endpoints. |
-| `apps/api/src/routes/messaging-telegram.ts` | New: webhook + set-webhook. |
-| `apps/api/src/cli/messaging-set-webhook.ts` | New CLI. |
-| `apps/api/src/app.ts` | Mount the two new routes. |
-| `apps/api/src/routes/public.ts` | After `createAppointmentRequest`, dispatch notifications to managers. |
-| `apps/api/src/env.ts` | Add Telegram env block. |
-| `apps/app` settings page | "Connect Telegram" panel + notification preferences toggle. |
-| Tests | Per Phase 1 §8. |
-| `CONTEXT.md` | Ops/runbook section for messaging providers. |
+| File                                                          | Change                                                                |
+| ------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `packages/notifications/src/providers/telegram.ts`            | New: provider impl.                                                   |
+| `packages/notifications/src/providers/index.ts`               | Register Telegram if `isConfigured()`.                                |
+| `packages/notifications/src/commands/approval.ts`             | New.                                                                  |
+| `packages/notifications/src/commands/rejection.ts`            | New.                                                                  |
+| `packages/notifications/src/commands/link.ts`                 | New.                                                                  |
+| `packages/notifications/src/templates/appointment-request.ts` | New: copy + buttons.                                                  |
+| `apps/api/src/routes/messaging.ts`                            | New: link/list/unlink endpoints.                                      |
+| `apps/api/src/routes/messaging-telegram.ts`                   | New: webhook + set-webhook.                                           |
+| `apps/api/src/cli/messaging-set-webhook.ts`                   | New CLI.                                                              |
+| `apps/api/src/app.ts`                                         | Mount the two new routes.                                             |
+| `apps/api/src/routes/public.ts`                               | After `createAppointmentRequest`, dispatch notifications to managers. |
+| `apps/api/src/env.ts`                                         | Add Telegram env block.                                               |
+| `apps/pwa` settings page                                      | "Connect Telegram" panel + notification preferences toggle.           |
+| Tests                                                         | Per Phase 1 §8.                                                       |
+| `CONTEXT.md`                                                  | Ops/runbook section for messaging providers.                          |
 
 ---
 
-*End of plan. Section 7 must be answered before Phase 1 code lands.*
+_End of plan. Section 7 must be answered before Phase 1 code lands._

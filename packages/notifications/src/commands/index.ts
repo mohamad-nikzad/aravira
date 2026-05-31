@@ -1,19 +1,15 @@
-import type { MessagingProviderId } from '../providers/types'
+import {
+  consumeLinkTokenIfValid,
+  deleteAccount as deleteMessagingAccount,
+  findAccountByExternalId,
+  findAccountByUserAndProvider,
+  linkMessagingAccountAndEnableProvider,
+  type MessagingProviderId,
+} from '@repo/database/messaging'
 
-export type CommandResult = { status: 'ok'; message: string } | { status: 'error'; message: string }
-
-export type ApprovalCallbackInput = {
-  provider: MessagingProviderId
-  externalId: string
-  requestId: string
-}
-
-export type RejectionCallbackInput = {
-  provider: MessagingProviderId
-  externalId: string
-  requestId: string
-  reason?: string | null
-}
+export type CommandResult =
+  | { status: 'ok'; message: string }
+  | { status: 'error'; message: string; code?: string }
 
 export type LinkStartInput = {
   provider: MessagingProviderId
@@ -27,18 +23,49 @@ export type UnlinkInput = {
   externalId: string
 }
 
-export async function handleApprovalCallback(_input: ApprovalCallbackInput): Promise<CommandResult> {
-  throw new Error('not_implemented')
+const INVALID_LINK_TOKEN_MESSAGE =
+  'این لینک نامعتبر یا منقضی شده است. لطفاً از داخل برنامه دوباره تلاش کنید.'
+
+export async function handleLinkStart(input: LinkStartInput): Promise<CommandResult> {
+  const token = await consumeLinkTokenIfValid(input.token, input.provider)
+  if (!token) {
+    return {
+      status: 'error',
+      code: 'invalid_token',
+      message: INVALID_LINK_TOKEN_MESSAGE,
+    }
+  }
+
+  const existing = await findAccountByExternalId(input.provider, input.externalId)
+  if (existing && existing.userId !== token.userId) {
+    return {
+      status: 'error',
+      code: 'external_id_taken',
+      message: 'این حساب پیام‌رسان قبلاً به کاربر دیگری متصل شده است.',
+    }
+  }
+
+  await linkMessagingAccountAndEnableProvider({
+    userId: token.userId,
+    salonId: token.salonId,
+    provider: input.provider,
+    externalId: input.externalId,
+    displayName: input.displayName ?? null,
+  })
+
+  return {
+    status: 'ok',
+    message: 'حساب شما با موفقیت متصل شد ✅\nاز این پس اعلان‌های آراویرا را در همین گفت‌وگو دریافت خواهید کرد.',
+  }
 }
 
-export async function handleRejectionCallback(_input: RejectionCallbackInput): Promise<CommandResult> {
-  throw new Error('not_implemented')
+export async function handleUnlink(input: UnlinkInput): Promise<CommandResult> {
+  const account = await findAccountByExternalId(input.provider, input.externalId)
+  if (!account) {
+    return { status: 'error', code: 'not_linked', message: 'حسابی برای قطع اتصال یافت نشد.' }
+  }
+  await deleteMessagingAccount(account.id, account.userId)
+  return { status: 'ok', message: 'اتصال حساب پیام‌رسان قطع شد.' }
 }
 
-export async function handleLinkStart(_input: LinkStartInput): Promise<CommandResult> {
-  throw new Error('not_implemented')
-}
-
-export async function handleUnlink(_input: UnlinkInput): Promise<CommandResult> {
-  throw new Error('not_implemented')
-}
+export { findAccountByUserAndProvider }

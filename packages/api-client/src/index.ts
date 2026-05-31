@@ -120,6 +120,15 @@ export type {
   NotificationType,
   UpdateNotificationPreferencesInput,
 } from './notifications'
+export { createMessagingApi } from './messaging'
+export type {
+  CreateMessagingLinkResponse,
+  ListMessagingAccountsResponse,
+  MessagingAccount,
+  MessagingAccountResponse,
+  MessagingApi,
+  MessagingProviderId,
+} from './messaging'
 export { createSalonPublicSettingsApi } from './salon-public-settings'
 export type {
   ManagerPublicSettingsResult,

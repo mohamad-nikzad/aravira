@@ -6,10 +6,23 @@ vi.mock('@repo/database/public', () => ({
   createAppointmentRequest: vi.fn(),
   getAppointmentRequestByToken: vi.fn(),
   cancelAppointmentRequestByToken: vi.fn(),
+  getEnabledMessagingProvidersForSalon: vi.fn(async () => []),
 }))
 
 vi.mock('@repo/database/rate-limit', () => ({
   checkAndRecordPublicSubmit: vi.fn(),
+}))
+
+vi.mock('@repo/notifications', () => ({
+  notifyManagersOfNewAppointmentRequest: vi.fn().mockResolvedValue(undefined),
+  getMessagingProvider: vi.fn(),
+  isWebPushConfigured: vi.fn(() => false),
+  messagingCommands: {
+    handleLinkStart: vi.fn(),
+    handleUnlink: vi.fn(),
+  },
+  sendTelegramMessage: vi.fn(),
+  answerTelegramCallback: vi.fn(),
 }))
 
 import * as publicDb from '@repo/database/public'
