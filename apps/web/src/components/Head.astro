@@ -1,0 +1,30 @@
+---
+interface Props {
+  title: string
+  description?: string
+  canonical?: string
+  ogImage?: string
+  jsonLd?: unknown | unknown[]
+}
+
+const { title, description, canonical, ogImage, jsonLd } = Astro.props
+const jsonLdBlocks = jsonLd == null ? [] : Array.isArray(jsonLd) ? jsonLd : [jsonLd]
+---
+
+<title>{title}</title>
+{description ? <meta name="description" content={description} /> : null}
+{canonical ? <link rel="canonical" href={canonical} /> : null}
+<meta property="og:type" content="website" />
+<meta property="og:title" content={title} />
+{description ? <meta property="og:description" content={description} /> : null}
+{canonical ? <meta property="og:url" content={canonical} /> : null}
+{ogImage ? <meta property="og:image" content={ogImage} /> : null}
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+{description ? <meta name="twitter:description" content={description} /> : null}
+{ogImage ? <meta name="twitter:image" content={ogImage} /> : null}
+{
+  jsonLdBlocks.map((block) => (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(block)} />
+  ))
+}

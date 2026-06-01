@@ -43,7 +43,10 @@ pnpm db:seed          # seed dev branch
 pnpm dev              # Next.js against both apps
 
 pnpm dev:app          # manager app on port 3000
-pnpm dev:web          # marketing site on port 3001
+pnpm dev:web          # marketing + booking (Astro) on port 3001
+pnpm dev:web-next     # legacy Next public site on port 3001
+pnpm dev:web-stack    # Astro + API with .env.database.local
+pnpm smoke:web        # smoke checks (set BASE_URL, optional SLUG)
 pnpm db:push:main     # schema -> production (use with care)
 ```
 

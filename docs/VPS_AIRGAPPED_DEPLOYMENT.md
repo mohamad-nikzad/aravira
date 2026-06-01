@@ -12,7 +12,9 @@ Fonts, Cloudflare, or any external service.
 
 - pnpm + turbo monorepo
 - `@repo/api` — Hono (Node server via `@hono/node-server`)
-- `@repo/web`, `@repo/pwa` — Next.js
+- `@repo/web` — Astro 6 SSR public site (`apps/web/Dockerfile`, port 3001)
+- `@repo/web-next` — Next.js (legacy public site; deprecated)
+- `@repo/pwa` — Next.js
 - Postgres 16 (`docker-compose.yml`)
 - Drizzle ORM migrations (`@repo/database`)
 
@@ -60,16 +62,19 @@ Three images to build + one to pull:
 1. **`api`** — multi-stage: `pnpm install` + bundle Hono (esbuild) → slim
    `node:20-alpine` runtime. Move off `tsx`-at-runtime to a real bundle so
    node_modules don't need resolving live.
-2. **`web`** and **`pwa`** — Next.js with `output: 'standalone'` in
-   `next.config`, so each ships a self-contained server + only the node_modules
-   it needs. **Self-host fonts** (`next/font/local`) — `next/font/google`
-   fetches at build time.
+2. **`web`** — Astro 6 + `@astrojs/node` standalone (`dist/server/entry.mjs`).
+   Self-hosted fonts under `apps/web/src/assets/fonts/` (no Google at runtime).
+   Build: `docker build -f apps/web/Dockerfile -t saloon-web:1.0 .`
+3. **`web-next`** (legacy Next) and **`pwa`** — Next.js `output: 'standalone'` where applicable.
+   **Self-host fonts** (`next/font/local`) — `next/font/google` fetches at build time.
 3. **postgres** — just pull the official image; no custom build.
 
 ```bash
 # build app images (with internet)
 docker build -t saloon-api:1.0  -f apps/api/Dockerfile .
-docker build -t saloon-web:1.0  -f apps/web/Dockerfile .
+docker build -t saloon-web:1.0 -f apps/web/Dockerfile .
+# legacy Next (deprecated):
+# docker build -t saloon-web-next:1.0  -f apps/web-next/Dockerfile .
 docker build -t saloon-pwa:1.0  -f apps/pwa/Dockerfile .
 docker pull postgres:16-alpine
 

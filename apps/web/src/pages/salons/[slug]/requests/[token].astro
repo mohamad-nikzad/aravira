@@ -1,0 +1,167 @@
+---
+export const prerender = false
+
+import { Phone } from 'lucide-react'
+import { formatJalaliFullDate } from '@repo/salon-core/jalali'
+import { toPersianDigits } from '@repo/salon-core/persian-digits'
+import { resolvePublicTheme } from '@repo/salon-core/public-themes'
+import {
+  fetchAppointmentRequest,
+  fetchPublicSalon,
+  PublicApiError,
+  type AppointmentRequestStatus,
+} from '@/lib/public-api'
+import { formatDuration, formatHm, formatPrice } from '@/lib/format'
+import { setNoStoreCache } from '@/lib/cache-headers'
+import Base from '@/layouts/Base.astro'
+import { CancelRequestButton } from '@/components/react/CancelRequestButton'
+
+const { slug, token } = Astro.params
+
+setNoStoreCache(Astro)
+
+let view
+try {
+  view = await fetchAppointmentRequest(slug!, token!)
+} catch (e) {
+  if (e instanceof PublicApiError && e.status === 404) {
+    return new Response(null, { status: 404 })
+  }
+  throw e
+}
+
+let accent = resolvePublicTheme(null).primary
+try {
+  const salon = await fetchPublicSalon(slug!)
+  accent = resolvePublicTheme(salon.publicSettings.themeId).primary
+} catch {
+  /* default accent */
+}
+
+function headlineFor(status: AppointmentRequestStatus) {
+  switch (status) {
+    case 'pending':
+      return {
+        title: 'درخواست شما ثبت شد.',
+        body: 'سالن درخواست شما را بررسی می‌کند و در صورت تأیید با شما تماس می‌گیرد.',
+        tone: 'border border-amber-200 bg-amber-50 text-amber-900',
+      }
+    case 'approved':
+      return {
+        title: 'درخواست شما تأیید شد.',
+        body: 'نوبت شما در تقویم سالن ثبت شده است. در زمان مقرر به سالن مراجعه کنید.',
+        tone: 'border border-emerald-200 bg-emerald-50 text-emerald-900',
+      }
+    case 'rejected':
+      return {
+        title: 'درخواست شما تأیید نشد.',
+        body: 'برای هماهنگی زمان دیگر می‌توانید مستقیماً با سالن تماس بگیرید.',
+        tone: 'border border-rose-200 bg-rose-50 text-rose-900',
+      }
+    case 'cancelled':
+      return {
+        title: 'درخواست شما لغو شد.',
+        body: 'این درخواست توسط شما یا سالن لغو شده است.',
+        tone: 'border border-slate-200 bg-slate-50 text-slate-800',
+      }
+    case 'expired':
+      return {
+        title: 'درخواست شما در زمان مقرر بررسی نشد.',
+        body: 'لطفاً برای رزرو با سالن تماس بگیرید.',
+        tone: 'border border-slate-200 bg-slate-50 text-slate-800',
+      }
+  }
+}
+
+const headline = headlineFor(view.status)
+const timeRange = `${formatHm(view.requestedStartTime)} تا ${formatHm(view.requestedEndTime)}`
+---
+
+<Base title="وضعیت درخواست رزرو | سالورا">
+  <main
+    dir="rtl"
+    class="min-h-dvh bg-[#fdf5f8] text-[#3f2730]"
+    style={`--salon-accent: ${accent}`}
+  >
+    <div class="mx-auto w-full max-w-2xl px-5 py-12 sm:px-8">
+      <a href={`/salons/${slug}`} class="text-sm text-[#7a2a40] hover:underline">
+        {view.salon.name}
+      </a>
+
+      <div class={`mt-4 rounded-2xl p-5 ${headline.tone}`}>
+        <p class="text-base font-extrabold leading-7 sm:text-lg">{headline.title}</p>
+        <p class="mt-2 text-sm leading-7 opacity-90">{headline.body}</p>
+      </div>
+
+      <div
+        class="mt-6 rounded-2xl border border-[#f3d5dd] bg-white/90 p-5 shadow-[0_18px_50px_rgba(155,51,72,0.08)]"
+      >
+        <dl class="space-y-3 text-sm">
+          <div
+            class="flex items-baseline justify-between gap-3 border-b border-[#f3d5dd] pb-2"
+          >
+            <dt class="text-xs text-[#8b6b73]">خدمت</dt>
+            <dd class="text-sm font-bold text-[#3f2730]">{view.bookedServiceName}</dd>
+          </div>
+          <div
+            class="flex items-baseline justify-between gap-3 border-b border-[#f3d5dd] pb-2"
+          >
+            <dt class="text-xs text-[#8b6b73]">مدت زمان</dt>
+            <dd class="text-sm font-bold text-[#3f2730]">
+              {formatDuration(view.bookedServiceDuration)}
+            </dd>
+          </div>
+          <div
+            class="flex items-baseline justify-between gap-3 border-b border-[#f3d5dd] pb-2"
+          >
+            <dt class="text-xs text-[#8b6b73]">مبلغ</dt>
+            <dd class="text-sm font-bold text-[#3f2730]">
+              {formatPrice(view.bookedServicePrice)}
+            </dd>
+          </div>
+          <div
+            class="flex items-baseline justify-between gap-3 border-b border-[#f3d5dd] pb-2"
+          >
+            <dt class="text-xs text-[#8b6b73]">تاریخ</dt>
+            <dd class="text-sm font-bold text-[#3f2730]">
+              {formatJalaliFullDate(view.requestedDate)}
+            </dd>
+          </div>
+          <div class="flex items-baseline justify-between gap-3 pb-2">
+            <dt class="text-xs text-[#8b6b73]">ساعت</dt>
+            <dd class="text-sm font-bold text-[#3f2730]" dir="ltr">{timeRange}</dd>
+          </div>
+        </dl>
+
+        {
+          view.status === 'rejected' && view.rejectionReason ? (
+            <p class="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-6 text-rose-800">
+              توضیح سالن: {view.rejectionReason}
+            </p>
+          ) : null
+        }
+
+        {
+          view.salon.phone ? (
+            <a
+              href={`tel:${view.salon.phone}`}
+              class="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-[#7a2a40] hover:underline"
+              dir="ltr"
+            >
+              <Phone className="h-4 w-4" aria-hidden="true" />
+              {toPersianDigits(view.salon.phone)}
+            </a>
+          ) : null
+        }
+      </div>
+
+      {
+        view.status === 'pending' ? (
+          <div class="mt-6">
+            <CancelRequestButton client:load slug={slug!} token={token!} accent={accent} />
+          </div>
+        ) : null
+      }
+    </div>
+  </main>
+</Base>

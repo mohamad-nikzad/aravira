@@ -1,0 +1,17 @@
+---
+import Base from './Base.astro'
+
+interface Props {
+  title: string
+  description?: string
+  canonical?: string
+  ogImage?: string
+  jsonLd?: unknown | unknown[]
+}
+
+const props = Astro.props
+---
+
+<Base {...props}>
+  <slot />
+</Base>

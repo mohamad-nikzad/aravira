@@ -1,6 +1,6 @@
 # packages/ui — agent guide
 
-Shared primitives consumed by `apps/app` and `apps/web`. Touch-first PWA. Read this before editing primitives or adding call-sites.
+Shared primitives consumed by `apps/app`, `apps/pwa`, and `apps/web`. Touch-first PWA. Read this before editing primitives or adding call-sites.
 
 ## Touch sizing — single canonical size per role
 

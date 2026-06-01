@@ -1,0 +1,48 @@
+---
+import { toPersianDigits } from '@repo/salon-core/persian-digits'
+import type { PublicSalonView } from '@/lib/public-api'
+import { formatDuration, formatPrice } from '@/lib/format'
+
+interface Props {
+  view: PublicSalonView
+}
+
+const { view } = Astro.props
+const { salon, services, publicSettings } = view
+const activeServices = services.filter((s) => s.active)
+---
+
+<!--
+  Crawler-visible shell (salon name, services, contact) stays in the HTML for SEO/JSON-LD
+  alignment, but is not shown to users — the React booking island renders the real UI.
+-->
+<div class="sr-only">
+  <header aria-label="اطلاعات سالن">
+    <h1>{salon.name}</h1>
+    {publicSettings.bioText ? <p>{publicSettings.bioText}</p> : null}
+    {
+      salon.phone ? (
+        <a href={`tel:${salon.phone}`} dir="ltr">
+          {toPersianDigits(salon.phone)}
+        </a>
+      ) : null
+    }
+  </header>
+
+  <section aria-label="خدمات سالن">
+    <h2>خدمات</h2>
+    <ul>
+      {
+        activeServices.map((service) => (
+          <li>
+            <h3>{service.name}</h3>
+            <p>
+              {formatDuration(service.duration)} · {formatPrice(service.price)}
+            </p>
+            {service.description ? <p>{service.description}</p> : null}
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</div>

@@ -8,6 +8,8 @@ const config = [
     ignores: [
       '.next/**',
       '**/.next/**',
+      'apps/web/dist/**',
+      'apps/web/.astro/**',
       '.turbo/**',
       '**/.turbo/**',
       '.vercel/**',

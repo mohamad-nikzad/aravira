@@ -1,0 +1,126 @@
+// @ts-check
+import fs from 'node:fs/promises'
+import { defineConfig, envField, fontProviders } from 'astro/config'
+import node from '@astrojs/node'
+import react from '@astrojs/react'
+import sitemap from '@astrojs/sitemap'
+
+/** @returns {Promise<string[]>} */
+async function loadSalonUrls() {
+  const base = process.env.PUBLIC_API_URL
+  const site = process.env.PUBLIC_APP_URL ?? 'http://localhost:3001'
+  if (!base) return []
+  try {
+    const res = await fetch(`${base}/api/v1/public/salons?limit=1000`)
+    if (!res.ok) return []
+    const list = await res.json()
+    if (!Array.isArray(list)) return []
+    return list.map((s) => `${site}/salons/${s.slug}`)
+  } catch {
+    return []
+  }
+}
+
+const salonCustomPages = await loadSalonUrls()
+
+const publicApiUrl =
+  process.env.PUBLIC_API_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  'http://localhost:3002'
+
+/** @type {string} */
+let apiConnectOrigin
+try {
+  apiConnectOrigin = new URL(publicApiUrl).origin
+} catch {
+  apiConnectOrigin = 'http://localhost:3002'
+}
+
+/** Writes robots.txt with the production sitemap URL after build. */
+function robotsSitemapIntegration() {
+  return {
+    name: 'robots-sitemap-url',
+    hooks: {
+      /** @param {{ dir: URL }} params */
+      'astro:build:done': async ({ dir }) => {
+        const site = (process.env.PUBLIC_APP_URL ?? 'http://localhost:3001').replace(
+          /\/$/,
+          '',
+        )
+        const robots = `User-agent: *
+Allow: /
+
+Sitemap: ${site}/sitemap-index.xml
+`
+        await fs.writeFile(new URL('robots.txt', dir), robots)
+      },
+    },
+  }
+}
+
+const vazirmatnVariants = [400, 500, 600, 700, 800].map((weight) => ({
+  weight,
+  style: 'normal',
+  src: [`./src/assets/fonts/vazirmatn-arabic-${weight}.woff2`],
+  display: 'swap',
+}))
+
+// https://astro.build/config
+export default defineConfig({
+  site: process.env.PUBLIC_APP_URL ?? 'http://localhost:3001',
+  output: 'server',
+  adapter: node({ mode: 'standalone' }),
+  integrations: [react(), sitemap(), robotsSitemapIntegration()],
+  image: {
+    service: { entrypoint: 'astro/assets/services/sharp' },
+    responsiveStyles: true,
+  },
+  prefetch: { prefetchAll: true, defaultStrategy: 'viewport' },
+  security: {
+    csp: {
+      directives: [`connect-src 'self' ${apiConnectOrigin}`],
+    },
+  },
+  fonts: [
+    {
+      provider: fontProviders.local(),
+      name: 'Vazirmatn',
+      cssVariable: '--font-vazirmatn',
+      options: { variants: vazirmatnVariants },
+      fallbacks: ['system-ui', 'sans-serif'],
+    },
+    {
+      provider: fontProviders.local(),
+      name: 'Lalezar',
+      cssVariable: '--font-lalezar',
+      options: {
+        variants: [
+          {
+            weight: 400,
+            style: 'normal',
+            src: ['./src/assets/fonts/lalezar-arabic-400.woff2'],
+            display: 'swap',
+          },
+        ],
+      },
+      fallbacks: ['system-ui', 'sans-serif'],
+    },
+  ],
+  env: {
+    schema: {
+      PUBLIC_APP_URL: envField.string({
+        context: 'client',
+        access: 'public',
+        url: true,
+        default: 'http://localhost:3001',
+      }),
+      PUBLIC_API_URL: envField.string({
+        context: 'client',
+        access: 'public',
+        url: true,
+        default: 'http://localhost:3000',
+      }),
+    },
+  },
+  vite: { ssr: { noExternal: ['@repo/salon-core'] } },
+})

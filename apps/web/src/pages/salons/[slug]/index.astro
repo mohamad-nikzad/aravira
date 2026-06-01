@@ -1,0 +1,69 @@
+---
+export const prerender = false
+
+import { addDaysYmd, salonTodayYmd } from '@repo/salon-core/salon-local-time'
+import { PUBLIC_REQUEST_WINDOW_DAYS } from '@repo/salon-core/forms/public'
+import { resolvePublicTheme } from '@repo/salon-core/public-themes'
+import { resolvePublicLayout } from '@repo/salon-core/public-layouts'
+import { fetchPublicSalon, PublicApiError } from '@/lib/public-api'
+import { setSalonShellCache } from '@/lib/cache-headers'
+import { buildSalonBreadcrumbJsonLd, buildSalonJsonLd } from '@/lib/seo'
+import SalonLayout from '@/layouts/SalonLayout.astro'
+import SalonShell from '@/components/SalonShell.astro'
+import { InlineLayout } from '@/components/react/InlineLayout'
+import { AgendaLayout } from '@/components/react/AgendaLayout'
+
+const { slug } = Astro.params
+
+let view
+try {
+  view = await fetchPublicSalon(slug!)
+} catch (e) {
+  if (e instanceof PublicApiError && e.status === 404) {
+    return new Response(null, { status: 404 })
+  }
+  throw e
+}
+
+setSalonShellCache(Astro)
+
+const theme = resolvePublicTheme(view.publicSettings.themeId)
+const layoutPick = resolvePublicLayout(view.publicSettings.layoutId)
+const today = salonTodayYmd()
+const dates = Array.from({ length: PUBLIC_REQUEST_WINDOW_DAYS + 1 }, (_, i) =>
+  addDaysYmd(today, i),
+)
+const pageUrl = Astro.url
+const jsonLd = [
+  buildSalonJsonLd(view, pageUrl),
+  buildSalonBreadcrumbJsonLd(view.salon.name, pageUrl),
+]
+const ogImage = new URL(`/og/${slug}.png`, Astro.site).toString()
+const islandProps = {
+  slug: view.salon.slug,
+  services: view.services,
+  dates,
+  theme,
+  bookingEnabled: view.publicSettings.appointmentRequestsEnabled,
+  salonName: view.salon.name,
+  phone: view.salon.phone,
+  bio: view.publicSettings.bioText,
+}
+---
+
+<SalonLayout
+  title={`${view.salon.name} | سالورا`}
+  description={view.publicSettings.bioText ?? undefined}
+  canonical={pageUrl.toString()}
+  ogImage={ogImage}
+  jsonLd={jsonLd}
+>
+  <SalonShell view={view} />
+  {
+    layoutPick.id === 'inline' ? (
+      <InlineLayout client:load {...islandProps} />
+    ) : (
+      <AgendaLayout client:load {...islandProps} />
+    )
+  }
+</SalonLayout>

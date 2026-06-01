@@ -1,0 +1,11 @@
+# Monorepo Docker build context (e.g. apps/web/Dockerfile)
+.git
+**/.turbo
+**/.DS_Store
+**/node_modules
+apps/web/dist
+apps/web/.astro
+apps/**/.next
+**/coverage
+**/playwright-report
+**/test-results

@@ -68,6 +68,18 @@ if (!command) {
 
 loadRootEnv()
 
+/** Astro 6 `astro:env` uses PUBLIC_*; map from Next during side-by-side migration. */
+function mapAstroPublicEnv() {
+  if (!process.env.PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL) {
+    process.env.PUBLIC_APP_URL = process.env.NEXT_PUBLIC_APP_URL
+  }
+  if (!process.env.PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL) {
+    process.env.PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL
+  }
+}
+
+mapAstroPublicEnv()
+
 const child = spawn(command, args, {
   cwd: process.cwd(),
   env: withWorkspaceBin(process.env),

@@ -2,11 +2,18 @@
   "name": "aravira-saloon",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "packageManager": "pnpm@9.15.9",
   "scripts": {
     "dev": "turbo run dev --filter=@repo/pwa --filter=@repo/web --filter=@repo/api",
+    "dev:web-stack": "turbo run dev:local --filter=@repo/web --filter=@repo/api",
     "dev:app": "pnpm --filter @repo/app dev",
     "dev:web": "pnpm --filter @repo/web dev",
+    "dev:web-next": "pnpm --filter @repo/web-next dev",
+    "smoke:web": "node scripts/smoke-web.mjs",
+    "fonts:web": "node scripts/fetch-web-fonts.mjs",
     "dev:api": "pnpm --filter @repo/api dev",
     "dev:hono": "turbo run dev:hono --filter=@repo/api --filter=@repo/app",
     "dev:native": "pnpm --filter @repo/native dev",
@@ -20,6 +27,8 @@
     "test:unit": "turbo run test:unit",
     "test:e2e": "turbo run test:e2e --filter=@repo/app",
     "boundaries": "turbo run boundaries",
+    "format": "prettier --write \"**/*.{astro,ts,tsx,js,mjs,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{astro,ts,tsx,js,mjs,json,md,css}\"",
     "tokens:generate": "pnpm --filter @repo/brand-tokens tokens:generate",
     "tokens:check": "pnpm --filter @repo/brand-tokens tokens:check",
     "db:generate": "DATABASE_ENV_FILE=.env.database.dev pnpm --filter @repo/database db:generate",
@@ -53,6 +62,8 @@
     "pwa-asset-generator": "^8.1.4",
     "sharp": "^0.34.5",
     "tsx": "^4.19.2",
+    "prettier": "^3.6.2",
+    "prettier-plugin-astro": "^0.14.1",
     "turbo": "^2.5.8",
     "typescript": "5.7.3",
     "vitest": "^3.0.5"
