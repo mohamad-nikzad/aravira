@@ -129,6 +129,13 @@ export type {
   MessagingApi,
   MessagingProviderId,
 } from './messaging'
+export { createSalonProfileApi } from './salon-profile'
+export type {
+  SalonPresenceResponse,
+  SalonPresenceView,
+  SalonProfileApi,
+  UpdateSalonPresenceInput,
+} from './salon-profile'
 export { createSalonPublicSettingsApi } from './salon-public-settings'
 export type {
   ManagerPublicSettingsResult,

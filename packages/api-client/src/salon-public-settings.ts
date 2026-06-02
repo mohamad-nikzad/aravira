@@ -1,5 +1,6 @@
 import type { Service } from '@repo/salon-core/types'
 import type { PublicSettingsInput } from '@repo/salon-core/forms/public'
+import type { SlugUpdateInput } from '@repo/salon-core/forms/slug'
 import type { ApiClient } from './client'
 import { endpoints } from './endpoints'
 
@@ -42,6 +43,16 @@ export function createSalonPublicSettingsApi(client: ApiClient) {
         endpoints.salonPublicSettings,
         {
           method: 'PUT',
+          body: input,
+          signal: opts.signal,
+        },
+      )
+    },
+    updateSlug(input: SlugUpdateInput, opts: { signal?: AbortSignal } = {}) {
+      return client.request<SalonPublicSettingsResponse>(
+        `${endpoints.salonPublicSettings}/slug`,
+        {
+          method: 'PATCH',
           body: input,
           signal: opts.signal,
         },

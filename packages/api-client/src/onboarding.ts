@@ -10,17 +10,23 @@ export type OnboardingStatus = {
     address: string | null
   } | null
   steps: {
-    profileConfirmed: boolean
     businessHoursSet: boolean
     servicesAdded: boolean
     staffAdded: boolean
-    firstAppointmentCreated: boolean
+    presenceSet: boolean
+    publicPageConfigured: boolean
+    notificationsConfigured: boolean
   }
   completedAt: Date | null
   skippedAt: Date | null
 }
 
-export type OnboardingAction = 'confirm-profile' | 'complete' | 'skip' | 'reopen'
+export type OnboardingAction =
+  | 'complete'
+  | 'skip'
+  | 'reopen'
+  | 'set-manager-staff'
+  | 'confirm-business-hours'
 
 export type OnboardingResponse = {
   onboarding: OnboardingStatus

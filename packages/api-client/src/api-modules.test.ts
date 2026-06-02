@@ -72,11 +72,11 @@ describe('api modules', () => {
     await api.get()
     expectLastCall(calls, { path: '/api/v1/onboarding' })
 
-    await api.update('confirm-profile')
+    await api.update('complete')
     expectLastCall(calls, {
       path: '/api/v1/onboarding',
       method: 'PATCH',
-      body: { action: 'confirm-profile' },
+      body: { action: 'complete' },
     })
   })
 
