@@ -7,9 +7,9 @@
     ".": "./src/app.ts"
   },
   "scripts": {
-    "dev": "ROOT_ENV_FILES=.env.database.dev node ../../scripts/with-root-env.mjs tsx watch src/index.ts",
-    "dev:local": "ROOT_ENV_FILES=.env.database.local node ../../scripts/with-root-env.mjs tsx watch src/index.ts",
-    "dev:hono": "ROOT_ENV_FILES=.env.database.dev node ../../scripts/with-root-env.mjs tsx watch src/index.ts",
+    "dev": "ROOT_ENV_FILES=.env.database.dev node ../../scripts/with-root-env.mjs tsx watch --include ../../packages/notifications/src src/index.ts",
+    "dev:local": "ROOT_ENV_FILES=.env.database.local node ../../scripts/with-root-env.mjs tsx watch --include ../../packages/notifications/src src/index.ts",
+    "dev:hono": "ROOT_ENV_FILES=.env.database.dev node ../../scripts/with-root-env.mjs tsx watch --include ../../packages/notifications/src src/index.ts",
     "build": "tsc --project tsconfig.json --noEmit",
     "start": "ROOT_ENV_FILES=.env.database.dev node ../../scripts/with-root-env.mjs tsx src/index.ts",
     "start:local": "NODE_ENV=production PORT=3002 ROOT_ENV_FILES=.env.database.local node ../../scripts/with-root-env.mjs tsx src/index.ts",

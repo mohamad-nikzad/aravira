@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createTelegramProvider, initTelegramMessaging } from './telegram'
+import {
+  createTelegramProvider,
+  initTelegramMessaging,
+  setTelegramFetchForTests,
+} from './telegram'
 
 const fetchMock = vi.fn()
 
@@ -12,12 +16,13 @@ const testConfig = {
 
 beforeEach(() => {
   initTelegramMessaging(() => testConfig)
-  global.fetch = fetchMock as unknown as typeof fetch
+  setTelegramFetchForTests(fetchMock as unknown as typeof globalThis.fetch)
   fetchMock.mockReset()
 })
 
 afterEach(() => {
   initTelegramMessaging(() => null)
+  setTelegramFetchForTests(undefined)
 })
 
 describe('createTelegramProvider().send', () => {

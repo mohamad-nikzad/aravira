@@ -15,7 +15,13 @@ export async function notifyManagersOfNewAppointmentRequest(
   const ctx = await getAppointmentRequestNotificationContext(requestId)
   if (!ctx) return
   const managerIds = await listManagerUserIdsForSalon(ctx.salonId)
-  if (managerIds.length === 0) return
+  if (managerIds.length === 0) {
+    console.warn('[notifications] no managers to notify for appointment request', {
+      requestId,
+      salonId: ctx.salonId,
+    })
+    return
+  }
 
   const deepLinkPath = `/appointment-requests?focus=${ctx.requestId}`
   const baseUrl = options.publicAppBaseUrl?.trim() ?? ''

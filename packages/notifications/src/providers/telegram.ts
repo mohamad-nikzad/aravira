@@ -19,11 +19,20 @@ export type TelegramConfig = {
   webhookSecret: string
 }
 
+type TelegramFetchFn = typeof globalThis.fetch
+
 let resolveConfig: () => TelegramConfig | null = () => null
 let cachedApi: { token: string; api: Api } | null = null
+let fetchOverride: TelegramFetchFn | undefined
 
 export function initTelegramMessaging(getConfig: () => TelegramConfig | null): void {
   resolveConfig = getConfig
+  cachedApi = null
+}
+
+/** @internal Vitest-only hook; production uses grammY's node-fetch client. */
+export function setTelegramFetchForTests(fetchFn: TelegramFetchFn | undefined): void {
+  fetchOverride = fetchFn
   cachedApi = null
 }
 
@@ -33,10 +42,11 @@ function getTelegramConfig(): TelegramConfig | null {
 
 function getApi(config: TelegramConfig): Api {
   if (cachedApi && cachedApi.token === config.botToken) return cachedApi.api
-  // Route through global fetch so tests can mock it and Node's modern fetch is preferred.
-  const api = new Api(config.botToken, {
-    fetch: ((url, init) => globalThis.fetch(url as RequestInfo, init)) as typeof fetch,
-  })
+  // Use grammY's default node-fetch + keep-alive agents. Do not pass
+  // globalThis.fetch in production — it breaks larger sendMessage payloads.
+  const api = fetchOverride
+    ? new Api(config.botToken, { fetch: fetchOverride })
+    : new Api(config.botToken)
   cachedApi = { token: config.botToken, api }
   return api
 }
@@ -58,9 +68,15 @@ function toInlineKeyboard(
 
 function describeError(err: unknown): string {
   if (err instanceof Error) {
-    const anyErr = err as Error & { description?: string; payload?: unknown }
+    const anyErr = err as Error & { description?: string; cause?: unknown }
     if (anyErr.description) return anyErr.description
-    return err.message
+    const cause =
+      anyErr.cause instanceof Error
+        ? anyErr.cause.message
+        : typeof anyErr.cause === 'string'
+          ? anyErr.cause
+          : null
+    return cause ? `${err.message} (${cause})` : err.message
   }
   return 'telegram_send_error'
 }

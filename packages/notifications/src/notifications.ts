@@ -54,26 +54,53 @@ async function deliverMessagingChannels(
     // appointment_alerts_disabled applies only to appointment-request notifications;
     // other types deliver when the user has a linked account.
     if (gateOnAppointmentAlerts && !preferences.appointmentAlertsEnabled) {
+      const error = 'appointment_alerts_disabled'
+      if (provider.id === 'telegram') {
+        console.warn('[notifications] telegram skipped', {
+          notificationId: notification.id,
+          userId: notification.userId,
+          salonId: notification.salonId,
+          error,
+        })
+      }
       await recordNotificationDelivery(notification.id, provider.id, 'skipped', {
         provider: provider.id,
-        error: 'appointment_alerts_disabled',
+        error,
       })
       continue
     }
 
     if (!salonEnabledProviders.has(provider.id)) {
+      const error = 'salon_disabled'
+      if (gateOnAppointmentAlerts && provider.id === 'telegram') {
+        console.warn('[notifications] telegram skipped', {
+          notificationId: notification.id,
+          userId: notification.userId,
+          salonId: notification.salonId,
+          error,
+        })
+      }
       await recordNotificationDelivery(notification.id, provider.id, 'skipped', {
         provider: provider.id,
-        error: 'salon_disabled',
+        error,
       })
       continue
     }
 
     const account = await findAccountByUserAndProvider(notification.userId, provider.id)
     if (!account || !account.enabled) {
+      const error = account ? 'user_disabled' : 'not_linked'
+      if (gateOnAppointmentAlerts && provider.id === 'telegram') {
+        console.warn('[notifications] telegram skipped', {
+          notificationId: notification.id,
+          userId: notification.userId,
+          salonId: notification.salonId,
+          error,
+        })
+      }
       await recordNotificationDelivery(notification.id, provider.id, 'skipped', {
         provider: provider.id,
-        error: account ? 'user_disabled' : 'not_linked',
+        error,
       })
       continue
     }
