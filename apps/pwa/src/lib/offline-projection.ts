@@ -5,12 +5,14 @@ import {
   useManagerDataClient,
   useManagerOfflineDataEpoch,
 } from '#/lib/manager-data-client'
+import { readSnapshot, writeSnapshot } from '#/lib/offline-snapshot'
 
 /**
- * Offline Projection (see CONTEXT.md): a route shows live server data when the
- * IndexedDB snapshot has not hydrated yet, falls back to nothing when offline,
- * and switches to the snapshot once it loads. The precedence rules live here so
- * every route shares one implementation instead of four copies.
+ * UI Offline Projection: what a route shows as network and local cache state
+ * change (live server data → empty while offline → persisted snapshot).
+ *
+ * Not to be confused with `@repo/data-client` list projection, which merges
+ * pending mutations into manager collection reads.
  */
 export type OfflineProjectionPhase = 'live' | 'empty' | 'snapshot'
 
@@ -28,6 +30,76 @@ export function selectOfflineProjectionPhase(input: {
   if (!enabled || !hasClient) return { phase: 'live', idbLoading: false }
   if (!loaded) return { phase: isOnline ? 'live' : 'empty', idbLoading: true }
   return { phase: 'snapshot', idbLoading: false }
+}
+
+/** Shared metadata every route adapter exposes to banners and empty states. */
+export type OfflineProjectionMeta = {
+  phase: OfflineProjectionPhase
+  idbLoading: boolean
+  snapshotUpdatedAt: string | null
+  hasSnapshot: boolean
+}
+
+export function offlineProjectionMeta(
+  proj: Pick<
+    OfflineProjectionResult<unknown>,
+    'phase' | 'idbLoading' | 'snapshotUpdatedAt'
+  >,
+  hasSnapshot: boolean,
+): OfflineProjectionMeta {
+  return {
+    phase: proj.phase,
+    idbLoading: proj.idbLoading,
+    snapshotUpdatedAt:
+      proj.phase === 'snapshot' ? proj.snapshotUpdatedAt : null,
+    hasSnapshot,
+  }
+}
+
+/** Resolved value for the current phase plus banner/empty-state metadata. */
+export type OfflineProjectionDisplay<T> = OfflineProjectionMeta & {
+  value: T | undefined
+}
+
+/**
+ * Maps a projection result and live/snapshot sources into one display contract.
+ * Routes may still overlay live query data on `value` when online (see today).
+ */
+export function toOfflineProjectionDisplay<T, TSnapshot>(
+  proj: Pick<
+    OfflineProjectionResult<TSnapshot>,
+    'phase' | 'idbLoading' | 'snapshotUpdatedAt' | 'snapshot'
+  >,
+  options: {
+    live: T | undefined
+    fromSnapshot: (snapshot: TSnapshot | null) => T | undefined
+    hasSnapshot?: (snapshot: TSnapshot | null) => boolean
+  },
+): OfflineProjectionDisplay<T> {
+  const { live, fromSnapshot, hasSnapshot } = options
+
+  switch (proj.phase) {
+    case 'live':
+      return {
+        ...offlineProjectionMeta(proj, false),
+        value: live,
+      }
+    case 'empty':
+      return {
+        ...offlineProjectionMeta(proj, false),
+        value: undefined,
+      }
+    case 'snapshot': {
+      const value = fromSnapshot(proj.snapshot)
+      const has =
+        hasSnapshot?.(proj.snapshot) ??
+        (value !== undefined && value !== null)
+      return {
+        ...offlineProjectionMeta(proj, has),
+        value,
+      }
+    }
+  }
 }
 
 export type OfflineProjectionConfig<TSnapshot> = {
@@ -55,6 +127,7 @@ export type OfflineProjectionResult<TSnapshot> = {
   idbLoading: boolean
 }
 
+/** Manager routes: hydrate/read via DataClient + IndexedDB. */
 export function useOfflineProjection<TSnapshot>(
   config: OfflineProjectionConfig<TSnapshot>,
 ): OfflineProjectionResult<TSnapshot> {
@@ -95,6 +168,67 @@ export function useOfflineProjection<TSnapshot>(
   const { phase, idbLoading } = selectOfflineProjectionPhase({
     enabled,
     hasClient: Boolean(client),
+    isOnline,
+    loaded: repo.loaded,
+  })
+
+  return {
+    phase,
+    snapshot: phase === 'snapshot' ? repo.snapshot : null,
+    snapshotUpdatedAt: phase === 'snapshot' ? repo.updatedAt : null,
+    idbLoading,
+  }
+}
+
+export type LocalStorageOfflineProjectionConfig<T> = {
+  enabled: boolean
+  isOnline: boolean
+  storageKey: string | null
+  liveData: T | undefined
+  deps?: DependencyList
+}
+
+/** Staff (and similar) routes: hydrate/read via localStorage snapshots. */
+export function useLocalStorageOfflineProjection<T>(
+  config: LocalStorageOfflineProjectionConfig<T>,
+): OfflineProjectionResult<T> {
+  const { enabled, isOnline, storageKey, liveData, deps = [] } = config
+  const hasClient = typeof window !== 'undefined'
+
+  const [repo, setRepo] = useState<{
+    loaded: boolean
+    snapshot: T | null
+    updatedAt: string | null
+  }>({ loaded: false, snapshot: null, updatedAt: null })
+
+  useEffect(() => {
+    if (!enabled || !storageKey) {
+      setRepo({ loaded: false, snapshot: null, updatedAt: null })
+      return
+    }
+    const stored = readSnapshot<T>(storageKey)
+    setRepo({
+      loaded: true,
+      snapshot: stored?.data ?? null,
+      updatedAt: stored?.updatedAt ?? null,
+    })
+  }, [enabled, storageKey, ...deps])
+
+  useEffect(() => {
+    if (!enabled || !storageKey || !isOnline || liveData === undefined) return
+    const written = writeSnapshot(storageKey, liveData)
+    if (written) {
+      setRepo({
+        loaded: true,
+        snapshot: written.data,
+        updatedAt: written.updatedAt,
+      })
+    }
+  }, [enabled, storageKey, isOnline, liveData, ...deps])
+
+  const { phase, idbLoading } = selectOfflineProjectionPhase({
+    enabled,
+    hasClient,
     isOnline,
     loaded: repo.loaded,
   })

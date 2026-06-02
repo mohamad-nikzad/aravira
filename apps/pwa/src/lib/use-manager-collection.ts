@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
 import {
   useQuery,
-  useQueryClient,
-  type QueryKey,
-  type UseQueryResult,
+  useQueryClient
+  
+  
 } from '@tanstack/react-query'
+import type {QueryKey, UseQueryResult} from '@tanstack/react-query';
 import type { DataClient } from '@repo/data-client'
 
 import { useManagerDataClient } from '#/lib/manager-data-client'
@@ -37,9 +38,12 @@ export function useManagerCollection<T>(
   useEffect(() => {
     if (!dc || !subscribe) return
     return subscribe(dc, (update) => {
-      queryClient.setQueryData(queryKey, (prev) =>
-        typeof update === 'function' ? update(prev) : update,
-      )
+      queryClient.setQueryData<T>(queryKey, (prev) => {
+        if (typeof update === 'function') {
+          return (update as (current: T | undefined) => T | undefined)(prev)
+        }
+        return update
+      })
     })
     // subscribe is stable per entity hook; omit from deps like the prior hooks.
   }, [dc, queryClient, queryKey])

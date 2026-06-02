@@ -28,6 +28,7 @@ import { authQueryKey, useAuth } from '#/lib/auth'
 import { homePathForRole } from '#/lib/navigation'
 import {
   managerBusinessSettingsQueryKey,
+  managerClientsQueryKey,
   managerServicesQueryKey,
   managerStaffQueryKey,
   onboardingQueryKey,
@@ -107,6 +108,7 @@ function SignupPage() {
       })
       await queryClient.removeQueries({ queryKey: managerServicesQueryKey })
       await queryClient.removeQueries({ queryKey: managerStaffQueryKey })
+      await queryClient.removeQueries({ queryKey: managerClientsQueryKey })
       await queryClient.removeQueries({ queryKey: salonPresenceQueryKey })
       await queryClient.removeQueries({ queryKey: salonPublicSettingsQueryKey })
       await navigate({ to: '/onboarding/welcome' })

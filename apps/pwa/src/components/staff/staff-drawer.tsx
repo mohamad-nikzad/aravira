@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -27,6 +26,7 @@ import { staffCreateSchema } from '@repo/salon-core/forms/staff'
 import type { StaffCreateFormInput } from '@repo/salon-core/forms/staff'
 import { DataClientHttpError } from '@repo/data-client'
 import { api } from '#/lib/api-client'
+import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
 
 interface StaffDrawerProps {
   open: boolean
@@ -79,8 +79,8 @@ export function StaffDrawer({
     requestClose(false)
   }
 
-  const createStaff = useMutation({
-    mutationFn: async (values: StaffCreateFormInput) => {
+  const createStaff = useManagerWriteMutation('staff.create', {
+    apiFn: async (values: StaffCreateFormInput) => {
       try {
         await api.staff.create({
           ...values,

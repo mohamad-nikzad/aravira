@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
 import type { Client, Service, TodayData, User } from '@repo/salon-core/types'
-import { useOfflineProjection } from '#/lib/offline-projection'
+import {
+  toOfflineProjectionDisplay,
+  useOfflineProjection,
+} from '#/lib/offline-projection'
 
 type TodaySnapshot = {
   data: TodayData | null
@@ -44,39 +47,35 @@ export function useManagerTodayIndexedDbSources(
   })
 
   return useMemo(() => {
-    switch (proj.phase) {
-      case 'live':
-        return {
-          todayData: liveToday,
-          staff: staffLive ?? [],
-          services: servicesLive ?? [],
-          clients: clientsLive ?? [],
-          snapshotUpdatedAt: null as string | null,
-          hasSnapshot: false,
-          idbLoading: proj.idbLoading,
-        }
-      case 'empty':
-        return {
-          todayData: undefined,
-          staff: [] as User[],
-          services: [] as Service[],
-          clients: [] as Client[],
-          snapshotUpdatedAt: null as string | null,
-          hasSnapshot: false,
-          idbLoading: proj.idbLoading,
-        }
-      case 'snapshot': {
-        const s = proj.snapshot as TodaySnapshot
-        return {
-          todayData: s.data ?? undefined,
-          staff: s.staff,
-          services: s.services,
-          clients: s.clients,
-          snapshotUpdatedAt: proj.snapshotUpdatedAt,
-          hasSnapshot: s.data != null,
-          idbLoading: proj.idbLoading,
-        }
+    const todayDisplay = toOfflineProjectionDisplay(proj, {
+      live: liveToday,
+      fromSnapshot: (s) => s?.data ?? undefined,
+      hasSnapshot: (s) => s?.data != null,
+    })
+
+    if (proj.phase === 'snapshot') {
+      const s = proj.snapshot as TodaySnapshot
+      return {
+        todayData: todayDisplay.value,
+        staff: s.staff,
+        services: s.services,
+        clients: s.clients,
+        phase: todayDisplay.phase,
+        idbLoading: todayDisplay.idbLoading,
+        snapshotUpdatedAt: todayDisplay.snapshotUpdatedAt,
+        hasSnapshot: todayDisplay.hasSnapshot,
       }
+    }
+
+    return {
+      todayData: todayDisplay.value,
+      staff: proj.phase === 'empty' ? [] : (staffLive ?? []),
+      services: proj.phase === 'empty' ? [] : (servicesLive ?? []),
+      clients: proj.phase === 'empty' ? [] : (clientsLive ?? []),
+      phase: todayDisplay.phase,
+      idbLoading: todayDisplay.idbLoading,
+      snapshotUpdatedAt: todayDisplay.snapshotUpdatedAt,
+      hasSnapshot: todayDisplay.hasSnapshot,
     }
   }, [proj, liveToday, staffLive, servicesLive, clientsLive])
 }

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -22,6 +21,7 @@ import { z } from 'zod'
 import { staffScheduleSchema } from '@repo/salon-core/forms/staff'
 import type { StaffScheduleFormInput } from '@repo/salon-core/forms/staff'
 import { useManagerDataClient } from '#/lib/manager-data-client'
+import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
 import { useStaffScheduleBundleQuery } from '#/lib/manager-data-queries'
 import { useDismissGuard } from '#/lib/use-dismiss-guard'
 
@@ -144,14 +144,17 @@ export function StaffScheduleDrawer({
     })
   }
 
-  const saveSchedule = useMutation({
-    mutationFn: ({
-      staffId,
-      rows,
-    }: {
-      staffId: string
-      rows: StaffScheduleFormInput
-    }) => dc!.staff.setSchedule(staffId, rows),
+  const saveSchedule = useManagerWriteMutation('staff.saveSchedule', {
+    dataClientFn: (
+      dataClient,
+      {
+        staffId,
+        rows,
+      }: {
+        staffId: string
+        rows: StaffScheduleFormInput
+      },
+    ) => dataClient.staff.setSchedule(staffId, rows),
   })
 
   const onSubmit = handleSubmit(async ({ rows }) => {

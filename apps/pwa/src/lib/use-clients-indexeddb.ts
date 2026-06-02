@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
 import type { Client, ClientSummary } from '@repo/salon-core/types'
-import { useOfflineProjection } from '#/lib/offline-projection'
+import {
+  toOfflineProjectionDisplay,
+  useOfflineProjection,
+} from '#/lib/offline-projection'
 
 export function useClientsListIndexedDbSources(
   enabled: boolean,
@@ -23,28 +26,16 @@ export function useClientsListIndexedDbSources(
   })
 
   return useMemo(() => {
-    switch (proj.phase) {
-      case 'live':
-        return {
-          data: live,
-          snapshotUpdatedAt: null as string | null,
-          hasSnapshot: false,
-          idbLoading: proj.idbLoading,
-        }
-      case 'empty':
-        return {
-          data: undefined,
-          snapshotUpdatedAt: null as string | null,
-          hasSnapshot: false,
-          idbLoading: proj.idbLoading,
-        }
-      case 'snapshot':
-        return {
-          data: proj.snapshot ?? undefined,
-          snapshotUpdatedAt: proj.snapshotUpdatedAt,
-          hasSnapshot: true,
-          idbLoading: proj.idbLoading,
-        }
+    const display = toOfflineProjectionDisplay(proj, {
+      live,
+      fromSnapshot: (s) => s ?? undefined,
+      hasSnapshot: () => true,
+    })
+    return {
+      data: display.value,
+      snapshotUpdatedAt: display.snapshotUpdatedAt,
+      hasSnapshot: display.hasSnapshot,
+      idbLoading: display.idbLoading,
     }
   }, [proj, live])
 }
@@ -69,28 +60,23 @@ export function useClientSummaryIndexedDbSources(
   })
 
   return useMemo(() => {
-    switch (proj.phase) {
-      case 'live':
-        return {
-          data: live,
-          snapshotUpdatedAt: null as string | null,
-          hasSnapshot: proj.idbLoading ? Boolean(live) : false,
-          idbLoading: proj.idbLoading,
-        }
-      case 'empty':
-        return {
-          data: undefined,
-          snapshotUpdatedAt: null as string | null,
-          hasSnapshot: false,
-          idbLoading: proj.idbLoading,
-        }
-      case 'snapshot':
-        return {
-          data: proj.snapshot ?? undefined,
-          snapshotUpdatedAt: proj.snapshotUpdatedAt,
-          hasSnapshot: proj.snapshot != null,
-          idbLoading: proj.idbLoading,
-        }
+    const display = toOfflineProjectionDisplay(proj, {
+      live,
+      fromSnapshot: (s) => s ?? undefined,
+      hasSnapshot: (s) => s != null,
+    })
+    const hasSnapshot =
+      proj.phase === 'live'
+        ? proj.idbLoading
+          ? Boolean(live)
+          : false
+        : display.hasSnapshot
+
+    return {
+      data: display.value,
+      snapshotUpdatedAt: display.snapshotUpdatedAt,
+      hasSnapshot,
+      idbLoading: display.idbLoading,
     }
   }, [proj, live])
 }

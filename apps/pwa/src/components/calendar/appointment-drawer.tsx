@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { useManagerMutation } from '#/lib/use-manager-mutation'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -29,21 +28,24 @@ import type {
   AppointmentWithDetails,
 } from '@repo/salon-core/types'
 import {
-  autoPickServiceForStaff,
-  eligibleServicesForStaff,
-  eligibleStaffForService,
-} from '@repo/salon-core/staff-service-autofill'
-import {
-  APPOINTMENT_DURATION_BOUNDS,
-  durationMinutesFromRange,
   endTimeFromDuration,
   formatTimeHm,
   parseTimeHm,
-  validateAppointmentWindow,
 } from '@repo/salon-core/appointment-time'
 import { ClientPicker } from '#/components/calendar/client-picker'
+import {
+  appointmentCreateFormDefaults,
+  buildAppointmentCreateViewModel,
+  clampAppointmentDuration,
+  durationFromEndTime,
+  resolveIntakeAddonToggle,
+  resolveIntakeServiceChange,
+  resolveIntakeStaffChange,
+  validateAppointmentIntakeSubmit,
+} from '#/lib/appointment-intake'
+import { tomansFormatter, useStaffBookingAvailability } from '#/lib/appointment-surface'
 import { useServiceAddons } from '#/lib/use-service-addons'
-import { useStaffBookingAvailability } from '#/lib/use-staff-booking-availability'
+import { useAppointmentIntakeMutations } from '#/lib/use-appointment-intake-mutations'
 import { ServicePicker } from '#/components/services/service-picker'
 import { useNetworkStatus } from '#/lib/network-status'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
@@ -56,7 +58,6 @@ import { appointmentFormSchema } from '@repo/salon-core/forms/appointment'
 import type { AppointmentFormInput } from '@repo/salon-core/forms/appointment'
 
 const DURATION_PRESETS = [30, 45, 60, 90, 120]
-const tomansFormatter = new Intl.NumberFormat('fa-IR')
 
 interface AppointmentDrawerProps {
   open: boolean
@@ -138,121 +139,58 @@ export function AppointmentDrawer({
   )
   const { data: availableAddons = [], isPending: addonsLoading } =
     useServiceAddons(serviceId ?? '', open && !!serviceId)
-  const activeServices = useMemo(
-    () => services.filter((service) => service.active),
-    [services],
-  )
-  const staffRoleOnly = useMemo(
-    () => staff.filter((m) => m.role === 'staff'),
-    [staff],
-  )
-  const selectedStaff = useMemo(
-    () => staffRoleOnly.find((member) => member.id === staffId),
-    [staffId, staffRoleOnly],
-  )
-  const selectedService = useMemo(
-    () => activeServices.find((service) => service.id === serviceId),
-    [activeServices, serviceId],
-  )
-  const selectedAddons = useMemo(
-    () => availableAddons.filter((addon) => addonIds.includes(addon.id)),
-    [addonIds, availableAddons],
-  )
-  const previewDuration =
-    (selectedService?.duration ?? durationMinutes) +
-    selectedAddons.reduce((sum, addon) => sum + addon.durationDelta, 0)
-  const previewPrice =
-    (selectedService?.price ?? 0) +
-    selectedAddons.reduce((sum, addon) => sum + addon.priceDelta, 0)
-  const serviceIdsWithStaff = useMemo(() => {
-    const ids = new Set<string>()
-    for (const service of activeServices) {
-      if (eligibleStaffForService(staffRoleOnly, service.id).length > 0) {
-        ids.add(service.id)
-      }
-    }
-    return ids
-  }, [activeServices, staffRoleOnly])
-  const selectedStaffEligibleServiceIds = useMemo(() => {
-    if (!selectedStaff) return new Set<string>()
-    return new Set(
-      eligibleServicesForStaff(selectedStaff, activeServices).map(
-        (service) => service.id,
-      ),
-    )
-  }, [activeServices, selectedStaff])
-  const staffServiceCounts = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const member of staffRoleOnly) {
-      counts.set(
-        member.id,
-        eligibleServicesForStaff(member, activeServices).length,
-      )
-    }
-    return counts
-  }, [activeServices, staffRoleOnly])
-  const serviceIdsWithAvailableStaff = useMemo(() => {
-    const ids = new Set<string>()
-    for (const service of activeServices) {
-      const eligible = eligibleStaffForService(staffRoleOnly, service.id)
-      if (eligible.some((member) => staffSlotOk[member.id] !== false)) {
-        ids.add(service.id)
-      }
-    }
-    return ids
-  }, [activeServices, staffRoleOnly, staffSlotOk])
-  const serviceDisabledReason = useCallback(
-    (service: Service) => {
-      if (!serviceIdsWithStaff.has(service.id)) return 'بدون پرسنل'
-      if (!serviceIdsWithAvailableStaff.has(service.id)) {
-        return 'پرسنل در دسترس نیست'
-      }
-      if (selectedStaff && !selectedStaffEligibleServiceIds.has(service.id)) {
-        return 'برای این پرسنل نیست'
-      }
-      return null
-    },
+  const createViewModel = useMemo(
+    () =>
+      buildAppointmentCreateViewModel({
+        staff,
+        services,
+        staffId: staffId ?? '',
+        serviceId: serviceId ?? '',
+        addonIds,
+        availableAddons,
+        durationMinutes,
+        staffSlotOk,
+      }),
     [
-      selectedStaff,
-      selectedStaffEligibleServiceIds,
-      serviceIdsWithAvailableStaff,
-      serviceIdsWithStaff,
+      staff,
+      services,
+      staffId,
+      serviceId,
+      addonIds,
+      availableAddons,
+      durationMinutes,
+      staffSlotOk,
     ],
   )
-  const selectedServiceHasStaff =
-    !selectedService || serviceIdsWithStaff.has(selectedService.id)
-  const selectedStaffHasServices =
-    !staffId || (staffServiceCounts.get(staffId) ?? 0) > 0
-  const selectedStaffCanPerformSelectedService =
-    !staffId ||
-    !serviceId ||
-    Boolean(selectedStaff && selectedStaffEligibleServiceIds.has(serviceId))
+  const {
+    staffRoleOnly,
+    activeServices,
+    selectedService,
+    previewDuration,
+    previewPrice,
+    serviceIdsWithStaff,
+    serviceDisabledReason,
+    staffPickerStatus,
+    selectedServiceHasStaff,
+    selectedStaffHasServices,
+    selectedStaffCanPerformSelectedService,
+  } = createViewModel
 
   useEffect(() => {
     setLocalClients(clients)
   }, [clients])
 
   const resetFormForInitialSlot = useCallback(() => {
-    const initialService = initialServiceId
-      ? services.find((service) => service.id === initialServiceId)
-      : undefined
-    const defaultDuration = initialService?.duration ?? 45
-    const st = formatTimeHm(parseTimeHm(initialTime))
-
-    reset({
-      useTemporaryClient: false,
-      clientId: initialClientId ?? '',
-      staffId: initialStaffId ?? '',
-      serviceId: initialServiceId ?? '',
-      date: initialDate,
-      startTime: st,
-      endTime: endTimeFromDuration(st, defaultDuration),
-      durationMinutes: defaultDuration,
-      notes: '',
-      temporaryClientName: '',
-      temporaryClientNotes: '',
-      addonIds: [],
-    })
+    reset(
+      appointmentCreateFormDefaults({
+        initialDate,
+        initialTime,
+        initialStaffId,
+        initialServiceId,
+        initialClientId,
+        services,
+      }),
+    )
     setLocalClients(clients)
   }, [
     clients,
@@ -266,10 +204,7 @@ export function AppointmentDrawer({
   ])
 
   const applyDuration = (mins: number) => {
-    const clamped = Math.min(
-      APPOINTMENT_DURATION_BOUNDS.max,
-      Math.max(APPOINTMENT_DURATION_BOUNDS.min, mins),
-    )
+    const clamped = clampAppointmentDuration(mins)
     setValue('durationMinutes', clamped, { shouldDirty: true })
     setValue('endTime', endTimeFromDuration(startTime, clamped), {
       shouldDirty: true,
@@ -278,22 +213,8 @@ export function AppointmentDrawer({
 
   const applyEndTime = (et: string) => {
     setValue('endTime', et, { shouldDirty: true })
-    try {
-      const d = durationMinutesFromRange(startTime, et)
-      if (d > 0) setValue('durationMinutes', d, { shouldDirty: true })
-    } catch {
-      /* invalid time */
-    }
-  }
-
-  const applyCatalogDuration = (
-    baseService: Service | undefined,
-    addons: ServiceAddon[],
-  ) => {
-    applyDuration(
-      (baseService?.duration ?? 45) +
-        addons.reduce((sum, addon) => sum + addon.durationDelta, 0),
-    )
+    const d = durationFromEndTime(startTime, et)
+    if (d != null) setValue('durationMinutes', d, { shouldDirty: true })
   }
 
   const { requestClose, confirmDialog } = useDismissGuard({
@@ -334,60 +255,58 @@ export function AppointmentDrawer({
   }, [open, setFocus, useTemporaryClient])
 
   const handleServiceChange = (id: string) => {
-    setValue('serviceId', id, { shouldDirty: true, shouldValidate: true })
-    setValue('addonIds', [], { shouldDirty: true, shouldValidate: true })
-    const svc = services.find((s) => s.id === id)
-    if (svc) applyDuration(svc.duration)
-
-    const eligibleStaffMembers = eligibleStaffForService(staffRoleOnly, id)
-    const currentStillEligible =
-      !!staffId && eligibleStaffMembers.some((m) => m.id === staffId)
-    if (currentStillEligible) return
-    if (eligibleStaffMembers.length > 0) {
-      setValue('staffId', eligibleStaffMembers[0].id, {
-        shouldDirty: true,
-        shouldValidate: true,
-      })
-    } else {
-      setValue('staffId', '', { shouldDirty: true, shouldValidate: true })
-    }
+    const next = resolveIntakeServiceChange({
+      serviceId: id,
+      staffId: staffId ?? '',
+      staffRoleOnly,
+      services,
+    })
+    setValue('serviceId', next.serviceId, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+    setValue('addonIds', next.addonIds, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+    setValue('staffId', next.staffId, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+    applyDuration(next.durationMinutes)
   }
 
   const toggleAddon = (addon: ServiceAddon) => {
-    const nextIds = addonIds.includes(addon.id)
-      ? addonIds.filter((id) => id !== addon.id)
-      : [...addonIds, addon.id]
-    const nextAddons = availableAddons.filter((item) =>
-      nextIds.includes(item.id),
-    )
-    setValue('addonIds', nextIds, { shouldDirty: true, shouldValidate: true })
-    applyCatalogDuration(selectedService, nextAddons)
+    const next = resolveIntakeAddonToggle({
+      addon,
+      addonIds,
+      availableAddons,
+      selectedService,
+      fallbackDuration: durationMinutes,
+    })
+    setValue('addonIds', next.addonIds, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+    applyDuration(next.durationMinutes)
   }
 
   const handleStaffChange = (id: string) => {
     setValue('staffId', id, { shouldDirty: true, shouldValidate: true })
-    const member = staff.find((s) => s.id === id)
-    if (!member) return
-
-    const eligible = eligibleServicesForStaff(member, services)
-    const current = services.find((s) => s.id === serviceId)
-    const serviceStillOk = !!current && eligible.some((s) => s.id === serviceId)
-
-    if (!serviceStillOk) {
-      const explicitList =
-        member.serviceIds != null && member.serviceIds.length > 0
-      const auto = autoPickServiceForStaff(eligible, {
-        staffHasExplicitServiceList: explicitList,
+    const next = resolveIntakeStaffChange({
+      staffId: id,
+      serviceId: serviceId ?? '',
+      staffRoleOnly,
+      services,
+    })
+    if (next.serviceId !== serviceId) {
+      setValue('serviceId', next.serviceId, {
+        shouldDirty: true,
+        shouldValidate: true,
       })
-      if (auto) {
-        setValue('serviceId', auto.id, {
-          shouldDirty: true,
-          shouldValidate: true,
-        })
-        applyDuration(auto.duration)
-      } else {
-        setValue('serviceId', '', { shouldDirty: true, shouldValidate: true })
-      }
+    }
+    if (next.durationMinutes != null) {
+      applyDuration(next.durationMinutes)
     }
   }
 
@@ -396,54 +315,17 @@ export function AppointmentDrawer({
     onClientsChanged?.()
   }
 
-  const createAppointment = useManagerMutation(
-    async (dc, values: AppointmentFormInput) => {
-      const payload = appointmentFormSchema.parse(values)
-      return dc.appointments.create(payload)
-    },
-  )
+  const { createAppointment } = useAppointmentIntakeMutations()
 
   const onSubmit = handleSubmit(async (values) => {
-    const currentService = activeServices.find(
-      (service) => service.id === values.serviceId,
-    )
-    const currentStaff = staffRoleOnly.find(
-      (member) => member.id === values.staffId,
-    )
-    if (currentService && !serviceIdsWithStaff.has(currentService.id)) {
-      setError('serviceId', {
-        message: 'برای این خدمت هنوز پرسنلی تعریف نشده است.',
-      })
-      return
-    }
-    if (
-      currentStaff &&
-      eligibleServicesForStaff(currentStaff, activeServices).length === 0
-    ) {
-      setError('staffId', {
-        message: 'برای این پرسنل هنوز خدمتی تعریف نشده است.',
-      })
-      return
-    }
-    if (
-      currentStaff &&
-      currentService &&
-      !eligibleServicesForStaff(currentStaff, activeServices).some(
-        (service) => service.id === currentService.id,
-      )
-    ) {
-      setError('staffId', {
-        message: 'این پرسنل نمی‌تواند خدمت انتخاب‌شده را انجام دهد.',
-      })
-      return
-    }
-
-    const localCheck = validateAppointmentWindow(
-      values.startTime,
-      values.endTime,
-    )
-    if (!localCheck.ok) {
-      setError('root', { message: localCheck.error })
+    const validationError = validateAppointmentIntakeSubmit({
+      values,
+      activeServices,
+      staffRoleOnly,
+      serviceIdsWithStaff,
+    })
+    if (validationError) {
+      setError(validationError.field, { message: validationError.message })
       return
     }
 
@@ -643,24 +525,7 @@ export function AppointmentDrawer({
                   staff={staffRoleOnly}
                   value={staffId || undefined}
                   onChange={handleStaffChange}
-                  getStatus={(member) => {
-                    const unavailable = staffSlotOk[member.id] === false
-                    const noServices =
-                      (staffServiceCounts.get(member.id) ?? 0) === 0
-                    const serviceMismatch =
-                      !!serviceId &&
-                      !eligibleStaffForService([member], serviceId).length
-                    if (unavailable)
-                      return { disabled: true, reason: 'خارج از برنامه' }
-                    if (noServices)
-                      return { disabled: true, reason: 'خدمتی ندارد' }
-                    if (serviceMismatch)
-                      return {
-                        disabled: true,
-                        reason: 'این خدمت را انجام نمی‌دهد',
-                      }
-                    return undefined
-                  }}
+                  getStatus={staffPickerStatus}
                 />
                 {errors.staffId && (
                   <FieldError>{errors.staffId.message}</FieldError>

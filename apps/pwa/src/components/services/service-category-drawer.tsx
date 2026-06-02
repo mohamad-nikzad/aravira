@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -18,8 +17,7 @@ import { useDismissGuard } from '#/lib/use-dismiss-guard'
 import { serviceCategoryFormSchema } from '@repo/salon-core/forms/service'
 import type { ServiceCategoryCreateInput } from '@repo/salon-core/forms/service'
 import type { ServiceCategory } from '@repo/salon-core/types'
-import { DataClientHttpError } from '@repo/data-client'
-import { useManagerDataClient } from '#/lib/manager-data-client'
+import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
 
 interface ServiceCategoryDrawerProps {
   open: boolean
@@ -38,7 +36,6 @@ export function ServiceCategoryDrawer({
   category,
   onSuccess,
 }: ServiceCategoryDrawerProps) {
-  const dc = useManagerDataClient()
   const isEditing = !!category
   const {
     register,
@@ -62,16 +59,13 @@ export function ServiceCategoryDrawer({
 
   const nameValue = useWatch({ control, name: 'name' })
 
-  const saveCategory = useMutation({
-    mutationFn: async (values: ServiceCategoryCreateInput) => {
-      if (!dc) {
-        throw new DataClientHttpError('اتصال داده برقرار نیست', 0, null)
-      }
+  const saveCategory = useManagerWriteMutation('serviceCategory.save', {
+    dataClientFn: async (dataClient, values: ServiceCategoryCreateInput) => {
       const payload = serviceCategoryFormSchema.parse(values)
-      if (isEditing) {
-        await dc.services.categories.update(category.id, payload)
+      if (category) {
+        await dataClient.services.categories.update(category.id, payload)
       } else {
-        await dc.services.categories.create(payload)
+        await dataClient.services.categories.create(payload)
       }
     },
     meta: { errorMessage: 'ذخیره بخش انجام نشد' },

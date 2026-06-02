@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Ban,
   Calendar,
@@ -46,9 +46,13 @@ import type {
   AppointmentRequestStatus,
   ListAppointmentRequestsResponse,
 } from '@repo/api-client'
-import { ApiError } from '@repo/api-client'
 
 import { api } from '#/lib/api-client'
+import {
+  useManagerServicesQuery,
+  useManagerStaffQuery,
+} from '#/lib/manager-data-queries'
+import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
 import { ClientAvatar } from '#/components/clients/client-visuals'
 
 type StatusTab = AppointmentRequestStatus
@@ -267,16 +271,8 @@ function RequestsList({
     queryFn: ({ signal }) => api.appointmentRequests.list({ status, signal }),
   })
 
-  const { data: staffData } = useQuery({
-    queryKey: ['staff'],
-    queryFn: ({ signal }) => api.staff.list({ signal }),
-    enabled: status === 'pending',
-  })
-  const { data: servicesData } = useQuery({
-    queryKey: ['services'],
-    queryFn: ({ signal }) => api.services.list({ signal }),
-    enabled: status === 'pending',
-  })
+  const { data: staffData } = useManagerStaffQuery(status === 'pending')
+  const { data: servicesData } = useManagerServicesQuery(status === 'pending')
 
   const requests = data?.requests
 
@@ -316,8 +312,8 @@ function RequestsList({
           <PendingCard
             key={req.id}
             request={req}
-            staff={staffData?.staff ?? []}
-            services={servicesData?.services ?? []}
+            staff={staffData ?? []}
+            services={servicesData ?? []}
             onChanged={onChanged}
           />
         ) : (
@@ -387,21 +383,22 @@ function PendingCard({
   const isReturning = request.existingClient != null
   const name = request.existingClient?.name ?? request.customerName
 
-  const approveMutation = useMutation({
-    mutationFn: () => api.appointmentRequests.approve(request.id, { staffId }),
+  const approveMutation = useManagerWriteMutation('appointmentRequest.approve', {
+    apiFn: () => api.appointmentRequests.approve(request.id, { staffId }),
     meta: { skipToast: true },
     onSuccess: () => {
       setErrMsg(null)
       onChanged()
     },
     onError: (e: unknown) => {
-      const msg = e instanceof ApiError ? e.message : 'تأیید درخواست انجام نشد'
-      setErrMsg(msg)
+      setErrMsg(
+        e instanceof Error ? e.message : 'تأیید درخواست انجام نشد',
+      )
     },
   })
 
-  const rejectMutation = useMutation({
-    mutationFn: () =>
+  const rejectMutation = useManagerWriteMutation('appointmentRequest.reject', {
+    apiFn: () =>
       api.appointmentRequests.reject(request.id, {
         ...(rejectReason.trim() ? { reason: rejectReason.trim() } : {}),
       }),
@@ -413,8 +410,7 @@ function PendingCard({
       onChanged()
     },
     onError: (e: unknown) => {
-      const msg = e instanceof ApiError ? e.message : 'رد درخواست انجام نشد'
-      setErrMsg(msg)
+      setErrMsg(e instanceof Error ? e.message : 'رد درخواست انجام نشد')
     },
   })
 

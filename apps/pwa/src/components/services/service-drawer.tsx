@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Clock3, PackageCheck, Trash2 } from 'lucide-react'
@@ -39,7 +38,7 @@ import {
 import { serviceFormSchema } from '@repo/salon-core/forms/service'
 import type { ServiceFormInput } from '@repo/salon-core/forms/service'
 import { DataClientHttpError } from '@repo/data-client'
-import { useManagerDataClient } from '#/lib/manager-data-client'
+import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
 import { useComboComponentsQuery } from '#/lib/manager-data-queries'
 import { ServicePicker } from './service-picker'
 
@@ -101,7 +100,6 @@ export function ServiceDrawer({
   defaultFamilyId,
   onSuccess,
 }: ServiceDrawerProps) {
-  const dc = useManagerDataClient()
   const isEditing = !!service
   const [componentIds, setComponentIds] = useState<string[]>([])
   const [initialComponentIds, setInitialComponentIds] = useState<string[]>([])
@@ -173,11 +171,8 @@ export function ServiceDrawer({
     setInitialComponentIds(ids)
   }, [comboQuery.data, isComboService, open])
 
-  const saveService = useMutation({
-    mutationFn: async (values: ServiceFormInput) => {
-      if (!dc) {
-        throw new DataClientHttpError('اتصال داده برقرار نیست', 0, null)
-      }
+  const saveService = useManagerWriteMutation('service.save', {
+    dataClientFn: async (dataClient, values: ServiceFormInput) => {
       const payload = serviceFormSchema.parse(values)
       if (!payload.categoryId) {
         throw new DataClientHttpError('بخش خدمات را انتخاب کنید', 0, null)
@@ -186,18 +181,18 @@ export function ServiceDrawer({
       if (isEditing) {
         const shouldStageComboActivation =
           payload.kind === 'combo' && payload.active && componentIds.length > 0
-        await dc.services.update(service.id, {
+        await dataClient.services.update(service.id, {
           ...payload,
           familyId,
           color: normalizeCalendarColorId(payload.color),
           active: shouldStageComboActivation ? false : payload.active,
         })
         if (payload.kind === 'combo') {
-          await dc.services.comboComponents.update(service.id, {
+          await dataClient.services.comboComponents.update(service.id, {
             componentServiceIds: componentIds,
           })
           if (shouldStageComboActivation) {
-            await dc.services.update(service.id, { active: true })
+            await dataClient.services.update(service.id, { active: true })
           }
         }
         return
@@ -205,18 +200,18 @@ export function ServiceDrawer({
 
       const shouldStageComboActivation =
         payload.kind === 'combo' && payload.active && componentIds.length > 0
-      const created = await dc.services.create({
+      const created = await dataClient.services.create({
         ...payload,
         familyId,
         color: normalizeCalendarColorId(payload.color),
         active: shouldStageComboActivation ? false : payload.active,
       })
       if (payload.kind === 'combo') {
-        await dc.services.comboComponents.update(created.id, {
+        await dataClient.services.comboComponents.update(created.id, {
           componentServiceIds: componentIds,
         })
         if (shouldStageComboActivation) {
-          await dc.services.update(created.id, { active: true })
+          await dataClient.services.update(created.id, { active: true })
         }
       }
     },

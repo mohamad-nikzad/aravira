@@ -11,10 +11,12 @@ import { cn } from '@repo/ui/utils'
 import { displayPhone } from '@repo/salon-core/phone'
 import { toPersianDigits } from '@repo/salon-core/persian-digits'
 import type { Client } from '@repo/salon-core/types'
-import type { ClientsResponse, RetentionQueueResponse } from '@repo/api-client'
+import type { RetentionQueueResponse } from '@repo/api-client'
 
 import { api } from '#/lib/api-client'
+import { useManagerClientsQuery } from '#/lib/manager-data-queries'
 import { useNetworkStatus } from '#/lib/network-status'
+import { managerClientsQueryKey } from '#/lib/query-keys'
 import { useClientsListIndexedDbSources } from '#/lib/use-clients-indexeddb'
 import { ClientDrawer } from '#/components/clients/client-drawer'
 import {
@@ -32,7 +34,6 @@ import {
 type FilterId = 'all' | 'vip' | 'followup'
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000
-const clientsQueryKey = ['clients'] as const
 const retentionQueryKey = ['retention'] as const
 
 export const Route = createFileRoute('/_authed/clients')({
@@ -41,11 +42,6 @@ export const Route = createFileRoute('/_authed/clients')({
       throw redirect({ to: '/today' })
     }
   },
-  loader: ({ context }) =>
-    context.queryClient.ensureQueryData<ClientsResponse>({
-      queryKey: clientsQueryKey,
-      queryFn: ({ signal }) => api.clients.list({ signal }),
-    }),
   component: ClientsPage,
   pendingComponent: ClientsSkeleton,
   errorComponent: ClientsError,
@@ -101,7 +97,6 @@ function InsightCard({
 function ClientsPage() {
   const queryClient = useQueryClient()
   const isOnline = useNetworkStatus()
-  const initial = Route.useLoaderData()
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterId>('all')
@@ -109,14 +104,16 @@ function ClientsPage() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
 
   const {
-    data: liveData,
+    data: clientsList,
     error,
     refetch,
-  } = useQuery({
-    queryKey: clientsQueryKey,
-    queryFn: ({ signal }) => api.clients.list({ signal }),
-    initialData: initial,
-  })
+  } = useManagerClientsQuery(true)
+
+  const liveData = useMemo(
+    () =>
+      clientsList !== undefined ? { clients: clientsList } : undefined,
+    [clientsList],
+  )
 
   const { data: retentionData } = useQuery({
     queryKey: retentionQueryKey,
@@ -126,7 +123,7 @@ function ClientsPage() {
 
   const idb = useClientsListIndexedDbSources(true, isOnline, liveData)
   const data = idb.data ?? liveData
-  const clients: Client[] = data.clients
+  const clients: Client[] = data?.clients ?? []
 
   const followUpIds = useMemo(
     () => new Set((retentionData?.items ?? []).map((item) => item.client.id)),
@@ -185,7 +182,7 @@ function ClientsPage() {
   const handleSuccess = () => {
     setShowDrawer(false)
     setSelectedClient(null)
-    void queryClient.invalidateQueries({ queryKey: clientsQueryKey })
+    void queryClient.invalidateQueries({ queryKey: managerClientsQueryKey })
   }
 
   if (idb.idbLoading && !idb.hasSnapshot && !isOnline) {

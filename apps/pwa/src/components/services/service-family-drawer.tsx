@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -25,8 +24,7 @@ import { useDismissGuard } from '#/lib/use-dismiss-guard'
 import { serviceFamilyFormSchema } from '@repo/salon-core/forms/service'
 import type { ServiceFamilyCreateInput } from '@repo/salon-core/forms/service'
 import type { ServiceCategory, ServiceFamily } from '@repo/salon-core/types'
-import { DataClientHttpError } from '@repo/data-client'
-import { useManagerDataClient } from '#/lib/manager-data-client'
+import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
 
 interface ServiceFamilyDrawerProps {
   open: boolean
@@ -51,7 +49,6 @@ export function ServiceFamilyDrawer({
   defaultCategoryId,
   onSuccess,
 }: ServiceFamilyDrawerProps) {
-  const dc = useManagerDataClient()
   const isEditing = !!family
   const {
     register,
@@ -80,16 +77,13 @@ export function ServiceFamilyDrawer({
   const nameValue = useWatch({ control, name: 'name' })
   const categoryValue = useWatch({ control, name: 'categoryId' })
 
-  const saveFamily = useMutation({
-    mutationFn: async (values: ServiceFamilyCreateInput) => {
-      if (!dc) {
-        throw new DataClientHttpError('اتصال داده برقرار نیست', 0, null)
-      }
+  const saveFamily = useManagerWriteMutation('serviceFamily.save', {
+    dataClientFn: async (dataClient, values: ServiceFamilyCreateInput) => {
       const payload = serviceFamilyFormSchema.parse(values)
-      if (isEditing) {
-        await dc.services.families.update(family.id, payload)
+      if (family) {
+        await dataClient.services.families.update(family.id, payload)
       } else {
-        await dc.services.families.create(payload)
+        await dataClient.services.families.create(payload)
       }
     },
     meta: { errorMessage: 'ذخیره گروه خدمات انجام نشد' },

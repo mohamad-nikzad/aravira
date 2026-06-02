@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useManagerMutation } from '#/lib/use-manager-mutation'
+import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@repo/ui/button'
@@ -94,16 +94,16 @@ export function ClientDrawer({
     requestClose(false)
   }
 
-  const saveClient = useManagerMutation(
-    async (dc, values: ClientFormInput) => {
+  const saveClient = useManagerWriteMutation('client.save', {
+    dataClientFn: async (dc, values: ClientFormInput) => {
       if (isEditing) {
         await dc.clients.update(client.id, values)
       } else {
         await dc.clients.create(values)
       }
     },
-    { meta: { errorMessage: 'ذخیره اطلاعات مشتری انجام نشد' } },
-  )
+    meta: { errorMessage: 'ذخیره اطلاعات مشتری انجام نشد' },
+  })
 
   const onSubmit = handleSubmit(async (values) => {
     try {

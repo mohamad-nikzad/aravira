@@ -1,15 +1,18 @@
 import { useQuery } from '@tanstack/react-query'
 import type {
+  Client,
   Service,
   ServiceAddon,
   ServiceCategory,
   ServiceFamily,
+  User,
 } from '@repo/salon-core/types'
 
 import {
   comboComponentsQueryKey,
   managerAddonsQueryKey,
   managerBusinessSettingsQueryKey,
+  managerClientsQueryKey,
   managerServiceCatalogQueryKey,
   managerServicesQueryKey,
   managerStaffQueryKey,
@@ -41,6 +44,19 @@ export function useManagerServicesQuery(enabled = true) {
     enabled,
   )
 }
+
+export function useManagerClientsQuery(enabled = true) {
+  return useManagerCollection(
+    managerClientsQueryKey,
+    (dc) => dc.clients.list(),
+    (dc, sync) => dc.clients.subscribe(sync),
+    enabled,
+  )
+}
+
+export type ManagerStaffList = User[]
+export type ManagerServicesList = Service[]
+export type ManagerClientsList = Client[]
 
 export function useManagerServiceCatalogQuery(enabled = true) {
   return useManagerCollection(

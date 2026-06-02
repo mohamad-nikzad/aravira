@@ -2,15 +2,16 @@ import { RefreshCw, Wifi, WifiOff } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Card, CardContent } from '@repo/ui/card'
 import { cn } from '@repo/ui/utils'
+import type { OfflineProjectionMeta } from '#/lib/offline-projection'
 
 type NetworkStatusBannerProps = {
   routeLabel: string
   isOnline: boolean
-  hasSnapshot: boolean
-  snapshotUpdatedAt?: string | null
   hasError?: boolean
   onRetry?: () => void
-}
+} & Pick<OfflineProjectionMeta, 'hasSnapshot'> & {
+    snapshotUpdatedAt?: OfflineProjectionMeta['snapshotUpdatedAt']
+  }
 
 export function NetworkStatusBanner({
   routeLabel,

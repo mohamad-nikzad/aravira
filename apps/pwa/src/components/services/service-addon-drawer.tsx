@@ -1,5 +1,4 @@
 import { useEffect, useMemo } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Check, Plus, X } from 'lucide-react'
@@ -40,8 +39,7 @@ import {
   parseLocalizedInt,
   toPersianDigits,
 } from '@repo/salon-core/persian-digits'
-import { DataClientHttpError } from '@repo/data-client'
-import { useManagerDataClient } from '#/lib/manager-data-client'
+import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
 import { useDismissGuard } from '#/lib/use-dismiss-guard'
 
 interface ServiceAddonDrawerProps {
@@ -136,7 +134,6 @@ export function ServiceAddonDrawer({
   nextSortOrder,
   onSuccess,
 }: ServiceAddonDrawerProps) {
-  const dc = useManagerDataClient()
   const isEditing = Boolean(addon)
   const {
     control,
@@ -179,15 +176,12 @@ export function ServiceAddonDrawer({
     )
   }
 
-  const saveAddon = useMutation({
-    mutationFn: async (values: ServiceAddonFormPayload) => {
-      if (!dc) {
-        throw new DataClientHttpError('اتصال داده برقرار نیست', 0, null)
-      }
+  const saveAddon = useManagerWriteMutation('serviceAddon.save', {
+    dataClientFn: async (dataClient, values: ServiceAddonFormPayload) => {
       if (isEditing && addon) {
-        await dc.services.addons.update(addon.id, values)
+        await dataClient.services.addons.update(addon.id, values)
       } else {
-        await dc.services.addons.create(values)
+        await dataClient.services.addons.create(values)
       }
     },
     meta: {

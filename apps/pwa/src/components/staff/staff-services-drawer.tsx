@@ -1,5 +1,4 @@
 import { useEffect, useMemo } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -20,7 +19,7 @@ import { staffServiceIdsSchema } from '@repo/salon-core/forms/staff'
 import type { StaffServiceIdsInput } from '@repo/salon-core/forms/staff'
 import { toPersianDigits } from '@repo/salon-core/persian-digits'
 import { cn } from '@repo/ui/utils'
-import { useManagerDataClient } from '#/lib/manager-data-client'
+import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
 import { groupServicesByCatalog } from '#/components/services/service-catalog-groups'
 import { useDismissGuard } from '#/lib/use-dismiss-guard'
 
@@ -39,7 +38,6 @@ export function StaffServicesDrawer({
   services,
   onSuccess,
 }: StaffServicesDrawerProps) {
-  const dc = useManagerDataClient()
   const {
     handleSubmit,
     reset,
@@ -95,14 +93,12 @@ export function StaffServicesDrawer({
     )
   }
 
-  const saveServices = useMutation({
-    mutationFn: ({
-      staffId,
-      serviceIds: nextServiceIds,
-    }: {
-      staffId: string
-      serviceIds: string[] | null
-    }) => dc!.staff.setServiceIds(staffId, nextServiceIds),
+  const saveServices = useManagerWriteMutation<
+    User,
+    { staffId: string; serviceIds: string[] | null }
+  >('staff.setServiceIds', {
+    dataClientFn: (dataClient, { staffId, serviceIds: nextServiceIds }) =>
+      dataClient.staff.setServiceIds(staffId, nextServiceIds),
   })
 
   const handleSave = handleSubmit(async (values) => {
@@ -112,11 +108,6 @@ export function StaffServicesDrawer({
         message:
           'حداقل یک خدمت انتخاب کنید، یا حالت «همه خدمات» را فعال بگذارید.',
       })
-      return
-    }
-
-    if (!dc) {
-      setError('root', { message: 'اتصال داده برقرار نیست' })
       return
     }
 

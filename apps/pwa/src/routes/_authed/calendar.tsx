@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO, subDays, addDays } from 'date-fns'
 import { Plus, Search } from 'lucide-react'
 import { z } from 'zod'
-import type { AvailabilitySlot } from '@repo/salon-core/availability'
 import { cn } from '@repo/ui/utils'
 import { WORKING_HOURS } from '@repo/salon-core/types'
 import { DEFAULT_WORKING_DAYS } from '@repo/salon-core/working-days'
@@ -12,14 +11,18 @@ import type {
   AppointmentWithDetails,
   BusinessHours,
   CalendarView,
-  Client,
-  Service,
-  User,
 } from '@repo/salon-core/types'
 
 import { api } from '#/lib/api-client'
 import { useAuth } from '#/lib/auth'
+import { useManagerDataClient } from '#/lib/manager-data-client'
+import {
+  useManagerClientsQuery,
+  useManagerServicesQuery,
+  useManagerStaffQuery,
+} from '#/lib/manager-data-queries'
 import { useNetworkStatus } from '#/lib/network-status'
+import { managerClientsQueryKey } from '#/lib/query-keys'
 import { useCalendarIndexedDbSources } from '#/lib/use-calendar-indexeddb-sources'
 import { CalendarHeader } from '#/components/calendar/calendar-header'
 import { SalonFullCalendar } from '#/components/calendar/salon-full-calendar'
@@ -29,10 +32,11 @@ import {
   buildConcurrencyClusters,
 } from '#/components/calendar/concurrent-appointments-sheet'
 import { CalendarSkeleton } from '#/components/calendar/calendar-skeleton'
-import { AppointmentDrawer } from '#/components/calendar/appointment-drawer'
-import { AvailabilityDrawer } from '#/components/calendar/availability-drawer'
-import { AppointmentDetailDrawer } from '#/components/calendar/appointment-detail-drawer'
-import type { AppointmentDetailChange } from '#/components/calendar/appointment-detail-drawer'
+import {
+  AppointmentFlowDrawers,
+  useAppointmentFlow,
+} from '#/components/appointments'
+import type { AppointmentDetailChange } from '#/lib/appointment-surface'
 import {
   NetworkStatusBanner,
   OfflineStateCard,
@@ -45,9 +49,6 @@ const searchSchema = z.object({
 })
 
 type AppointmentsResponse = { appointments: AppointmentWithDetails[] }
-type StaffResponse = { staff: User[] }
-type ServicesResponse = { services: Service[] }
-type ClientsResponse = { clients: Client[] }
 type BusinessResponse = { settings: BusinessHours | null }
 
 const VIEW_OPTIONS: { value: CalendarView; label: string }[] = [
@@ -84,6 +85,7 @@ function CalendarPage() {
   const navigate = useNavigate()
   const search = Route.useSearch()
   const { user } = useAuth()
+  const dc = useManagerDataClient()
   const isOnline = useNetworkStatus()
   const isManager = user?.role === 'manager'
   const queryClient = useQueryClient()
@@ -107,23 +109,6 @@ function CalendarPage() {
     AppointmentWithDetails[] | null
   >(null)
 
-  const [selectedAppointment, setSelectedAppointment] =
-    useState<AppointmentWithDetails | null>(null)
-
-  const [showAvailabilityDrawer, setShowAvailabilityDrawer] = useState(false)
-  const [showCreateDrawer, setShowCreateDrawer] = useState(false)
-  const [createDate, setCreateDate] = useState<string>('')
-  const [createTime, setCreateTime] = useState<string>('')
-  const [initialStaffIdForCreate, setInitialStaffIdForCreate] = useState<
-    string | undefined
-  >(undefined)
-  const [initialServiceIdForCreate, setInitialServiceIdForCreate] = useState<
-    string | undefined
-  >(undefined)
-  const [initialClientIdForCreate, setInitialClientIdForCreate] = useState<
-    string | undefined
-  >(undefined)
-
   const fallbackRange = useMemo(() => defaultRange(navDate), [navDate])
   const { start: startDate, end: endDate } = range ?? fallbackRange
 
@@ -134,21 +119,10 @@ function CalendarPage() {
     placeholderData: (prev) => prev,
   })
 
-  const staffQuery = useQuery<StaffResponse>({
-    queryKey: ['staff', 'list'],
-    queryFn: ({ signal }) => api.staff.list({ signal }),
-  })
+  const staffQuery = useManagerStaffQuery(!!dc)
+  const servicesQuery = useManagerServicesQuery(!!dc)
 
-  const servicesQuery = useQuery<ServicesResponse>({
-    queryKey: ['services', 'list'],
-    queryFn: ({ signal }) => api.services.list({ signal }),
-  })
-
-  const clientsQuery = useQuery<ClientsResponse>({
-    queryKey: ['clients'],
-    queryFn: ({ signal }) => api.clients.list({ signal }),
-    enabled: Boolean(user && isManager),
-  })
+  const clientsQuery = useManagerClientsQuery(Boolean(dc && isManager))
 
   const businessQuery = useQuery<BusinessResponse>({
     queryKey: ['settings', 'business'],
@@ -158,9 +132,9 @@ function CalendarPage() {
   const indexedDbLive = useMemo(
     () => ({
       appointmentsData: appointmentsQuery.data,
-      staffData: staffQuery.data,
-      servicesData: servicesQuery.data,
-      clientsData: clientsQuery.data,
+      staff: staffQuery.data,
+      services: servicesQuery.data,
+      clients: clientsQuery.data,
       businessData: businessQuery.data,
     }),
     [
@@ -182,21 +156,15 @@ function CalendarPage() {
   )
 
   const appointmentsSource = idb.appointments ?? appointmentsQuery.data
-  const staffSource = idb.staff ?? staffQuery.data
-  const servicesSource = idb.services ?? servicesQuery.data
-  const clientsSource = idb.clients ?? clientsQuery.data
   const businessSource = idb.business ?? businessQuery.data
 
   const appointments = useMemo<AppointmentWithDetails[]>(
     () => appointmentsSource?.appointments ?? [],
     [appointmentsSource],
   )
-  const staff: User[] = staffSource?.staff ?? []
-  const services: Service[] = servicesSource?.services ?? []
-  const clients: Client[] = useMemo(
-    () => clientsSource?.clients ?? [],
-    [clientsSource],
-  )
+  const staff = idb.staff
+  const services = idb.services
+  const clients = idb.clients
 
   const businessHours: BusinessHours = useMemo(() => {
     const s = businessSource?.settings
@@ -215,6 +183,12 @@ function CalendarPage() {
       workingDays: DEFAULT_WORKING_DAYS,
     }
   }, [businessSource])
+
+  const businessWorkingStart = businessHours.workingStart
+  const appointmentFlow = useAppointmentFlow({
+    defaultDate: format(navDate, 'yyyy-MM-dd'),
+    defaultTime: businessWorkingStart,
+  })
 
   const filteredAppointments = useMemo(() => {
     if (!isManager || selectedStaffIds.length === 0) return appointments
@@ -235,17 +209,14 @@ function CalendarPage() {
     setRange(null)
   }, [search.date])
 
-  const businessWorkingStart = businessHours.workingStart
-
   useEffect(() => {
     if (!isManager || !search.clientId || clients.length === 0) return
     if (!clients.some((c) => c.id === search.clientId)) return
-    setInitialClientIdForCreate(search.clientId)
-    setInitialStaffIdForCreate(undefined)
-    setInitialServiceIdForCreate(undefined)
-    setCreateDate(format(navDate, 'yyyy-MM-dd'))
-    setCreateTime(businessWorkingStart)
-    setShowCreateDrawer(true)
+    appointmentFlow.actions.openCreateIntent({
+      date: format(navDate, 'yyyy-MM-dd'),
+      time: businessWorkingStart,
+      clientId: search.clientId,
+    })
     navigate({
       to: '/calendar',
       search: ({ date }) => ({ date }),
@@ -258,19 +229,20 @@ function CalendarPage() {
     navDate,
     businessWorkingStart,
     navigate,
+    appointmentFlow.actions,
   ])
 
   useEffect(() => {
     if (!search.appointmentId) return
     const target = appointments.find((a) => a.id === search.appointmentId)
     if (!target) return
-    setSelectedAppointment(target)
+    appointmentFlow.actions.openDetail(target)
     navigate({
       to: '/calendar',
       search: ({ date }) => ({ date }),
       replace: true,
     })
-  }, [search.appointmentId, appointments, navigate])
+  }, [search.appointmentId, appointments, navigate, appointmentFlow.actions])
 
   const handleVisibleRangeChange = useCallback(
     (start: string, endInclusive: string, activeStart: Date) => {
@@ -300,25 +272,18 @@ function CalendarPage() {
 
   const handleAddAppointment = useCallback(() => {
     if (!isManager) return
-    setInitialClientIdForCreate(undefined)
-    setInitialStaffIdForCreate(undefined)
-    setInitialServiceIdForCreate(undefined)
-    setCreateDate(format(navDate, 'yyyy-MM-dd'))
-    setCreateTime(businessWorkingStart)
-    setShowCreateDrawer(true)
-  }, [isManager, navDate, businessWorkingStart])
+    appointmentFlow.actions.openCreate(
+      format(navDate, 'yyyy-MM-dd'),
+      businessWorkingStart,
+    )
+  }, [appointmentFlow.actions, businessWorkingStart, isManager, navDate])
 
   const handleSlotSelect = useCallback(
     (dateStr: string, timeStr: string) => {
       if (!isManager) return
-      setInitialClientIdForCreate(undefined)
-      setInitialStaffIdForCreate(undefined)
-      setInitialServiceIdForCreate(undefined)
-      setCreateDate(dateStr)
-      setCreateTime(timeStr)
-      setShowCreateDrawer(true)
+      appointmentFlow.actions.openCreate(dateStr, timeStr)
     },
-    [isManager],
+    [appointmentFlow.actions, isManager],
   )
 
   const upsertAppointmentInCache = useCallback(
@@ -343,43 +308,18 @@ function CalendarPage() {
   const handleAppointmentCreated = useCallback(
     (appointment: AppointmentWithDetails) => {
       upsertAppointmentInCache(appointment)
-      setShowCreateDrawer(false)
-      setInitialClientIdForCreate(undefined)
-      setInitialStaffIdForCreate(undefined)
-      setInitialServiceIdForCreate(undefined)
+      appointmentFlow.actions.closeCreateAfterSuccess()
       void queryClient.invalidateQueries({
         queryKey: ['appointments', 'range'],
       })
     },
-    [queryClient, upsertAppointmentInCache],
+    [appointmentFlow.actions, queryClient, upsertAppointmentInCache],
   )
-
-  const handleCreateDrawerOpenChange = useCallback((open: boolean) => {
-    setShowCreateDrawer(open)
-    if (!open) {
-      setInitialClientIdForCreate(undefined)
-      setInitialStaffIdForCreate(undefined)
-      setInitialServiceIdForCreate(undefined)
-    }
-  }, [])
 
   const handleOpenAvailability = useCallback(() => {
     if (!isManager) return
-    setShowAvailabilityDrawer(true)
-  }, [isManager])
-
-  const handleAvailabilitySlotSelect = useCallback(
-    (selection: { slot: AvailabilitySlot; serviceId: string }) => {
-      setShowAvailabilityDrawer(false)
-      setInitialClientIdForCreate(undefined)
-      setInitialStaffIdForCreate(selection.slot.staffId)
-      setInitialServiceIdForCreate(selection.serviceId)
-      setCreateDate(selection.slot.date)
-      setCreateTime(selection.slot.startTime)
-      requestAnimationFrame(() => setShowCreateDrawer(true))
-    },
-    [],
-  )
+    appointmentFlow.actions.setAvailabilityOpen(true)
+  }, [appointmentFlow.actions, isManager])
 
   const handleAppointmentClick = (appointment: AppointmentWithDetails) => {
     const supportsCluster = view === 'day' || view === 'week'
@@ -388,15 +328,15 @@ function CalendarPage() {
       setConcurrentCluster(cluster)
       return
     }
-    setSelectedAppointment(appointment)
+    appointmentFlow.actions.openDetail(appointment)
   }
 
   const handleConcurrentSelect = useCallback(
     (appointment: AppointmentWithDetails) => {
       setConcurrentCluster(null)
-      setSelectedAppointment(appointment)
+      appointmentFlow.actions.openDetail(appointment)
     },
-    [],
+    [appointmentFlow.actions],
   )
 
   const handleDetailChange = useCallback(
@@ -414,21 +354,23 @@ function CalendarPage() {
                 }
               : current,
         )
-        setSelectedAppointment(null)
+        appointmentFlow.actions.closeDetail()
       } else {
         upsertAppointmentInCache(change.appointment)
-        setSelectedAppointment(change.appointment)
+        appointmentFlow.actions.openDetail(change.appointment)
       }
       void queryClient.invalidateQueries({
         queryKey: ['appointments', 'range'],
       })
     },
-    [queryClient, startDate, endDate, upsertAppointmentInCache],
+    [
+      appointmentFlow.actions,
+      queryClient,
+      startDate,
+      endDate,
+      upsertAppointmentInCache,
+    ],
   )
-
-  const handleDetailDrawerOpenChange = useCallback((open: boolean) => {
-    if (!open) setSelectedAppointment(null)
-  }, [])
 
   const handleRetry = useCallback(() => {
     void appointmentsQuery.refetch()
@@ -464,8 +406,8 @@ function CalendarPage() {
         <NetworkStatusBanner
           routeLabel="تقویم"
           isOnline={isOnline}
-          hasSnapshot={!isOnline && idb.offlineMeta.loaded}
-          snapshotUpdatedAt={idb.offlineMeta.appointmentsUpdatedAt}
+          hasSnapshot={idb.hasSnapshot}
+          snapshotUpdatedAt={idb.snapshotUpdatedAt}
           hasError={Boolean(appointmentsQuery.error)}
           onRetry={handleRetry}
         />
@@ -495,8 +437,8 @@ function CalendarPage() {
       <NetworkStatusBanner
         routeLabel="تقویم"
         isOnline={isOnline}
-        hasSnapshot={!isOnline && idb.offlineMeta.loaded}
-        snapshotUpdatedAt={idb.offlineMeta.appointmentsUpdatedAt}
+        hasSnapshot={idb.hasSnapshot}
+        snapshotUpdatedAt={idb.snapshotUpdatedAt}
         hasError={Boolean(appointmentsQuery.error)}
         onRetry={handleRetry}
       />
@@ -577,48 +519,20 @@ function CalendarPage() {
         onSelectAppointment={handleConcurrentSelect}
       />
 
-      <AppointmentDetailDrawer
-        appointment={selectedAppointment}
-        onOpenChange={handleDetailDrawerOpenChange}
+      <AppointmentFlowDrawers
+        flow={appointmentFlow}
         staff={staff}
         services={services}
         clients={clients}
-        onSuccess={handleDetailChange}
+        availabilityInitialDate={format(navDate, 'yyyy-MM-dd')}
+        onAppointmentCreated={handleAppointmentCreated}
+        onDetailChange={handleDetailChange}
         onClientsChanged={() => {
-          void queryClient.invalidateQueries({ queryKey: ['clients'] })
+          void queryClient.invalidateQueries({ queryKey: managerClientsQueryKey })
         }}
-        readOnly={!isManager}
+        detailReadOnly={!isManager}
+        intakeEnabled={isManager}
       />
-
-      {isManager && (
-        <AvailabilityDrawer
-          open={showAvailabilityDrawer}
-          onOpenChange={setShowAvailabilityDrawer}
-          initialDate={format(navDate, 'yyyy-MM-dd')}
-          staff={staff}
-          services={services}
-          onSelectSlot={handleAvailabilitySlotSelect}
-        />
-      )}
-
-      {isManager && (
-        <AppointmentDrawer
-          open={showCreateDrawer}
-          onOpenChange={handleCreateDrawerOpenChange}
-          initialDate={createDate}
-          initialTime={createTime}
-          initialStaffId={initialStaffIdForCreate}
-          initialServiceId={initialServiceIdForCreate}
-          initialClientId={initialClientIdForCreate}
-          staff={staff}
-          services={services}
-          clients={clients}
-          onSuccess={handleAppointmentCreated}
-          onClientsChanged={() => {
-            void queryClient.invalidateQueries({ queryKey: ['clients'] })
-          }}
-        />
-      )}
     </div>
   )
 }

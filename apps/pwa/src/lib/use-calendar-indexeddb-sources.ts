@@ -6,13 +6,16 @@ import type {
   Service,
   User,
 } from '@repo/salon-core'
-import { useOfflineProjection } from '#/lib/offline-projection'
+import {
+  toOfflineProjectionDisplay,
+  useOfflineProjection,
+} from '#/lib/offline-projection'
 
-type LiveBundles = {
+type LiveInput = {
   appointmentsData?: { appointments: AppointmentWithDetails[] }
-  staffData?: { staff: User[] }
-  servicesData?: { services: Service[] }
-  clientsData?: { clients: Client[] }
+  staff?: User[]
+  services?: Service[]
+  clients?: Client[]
   businessData?: { settings: BusinessHours | null }
 }
 
@@ -30,7 +33,7 @@ export function useCalendarIndexedDbSources(
   isManager: boolean,
   startDate: string,
   endDate: string,
-  live: LiveBundles,
+  live: LiveInput,
 ) {
   const proj = useOfflineProjection<CalendarSnapshot>({
     enabled,
@@ -40,9 +43,9 @@ export function useCalendarIndexedDbSources(
       startDate,
       endDate,
       live.appointmentsData,
-      live.staffData,
-      live.servicesData,
-      live.clientsData,
+      live.staff,
+      live.services,
+      live.clients,
       live.businessData,
     ],
     hydrate: async (client) => {
@@ -56,14 +59,14 @@ export function useCalendarIndexedDbSources(
           ),
         )
       }
-      if (live.staffData) {
-        tasks.push(client.staff.hydrateFromServer(live.staffData.staff))
+      if (live.staff !== undefined) {
+        tasks.push(client.staff.hydrateFromServer(live.staff))
       }
-      if (live.servicesData) {
-        tasks.push(client.services.hydrateFromServer(live.servicesData.services))
+      if (live.services !== undefined) {
+        tasks.push(client.services.hydrateFromServer(live.services))
       }
-      if (isManager && live.clientsData) {
-        tasks.push(client.clients.hydrateListFromServer(live.clientsData.clients))
+      if (isManager && live.clients !== undefined) {
+        tasks.push(client.clients.hydrateListFromServer(live.clients))
       }
       if (live.businessData !== undefined) {
         tasks.push(
@@ -92,48 +95,38 @@ export function useCalendarIndexedDbSources(
   })
 
   return useMemo(() => {
-    switch (proj.phase) {
-      case 'live':
-        return {
-          appointments: live.appointmentsData,
-          staff: live.staffData,
-          services: live.servicesData,
-          clients: live.clientsData,
-          business: live.businessData,
-          offlineMeta: {
-            loaded: false,
-            idbLoading: proj.idbLoading,
-            appointmentsUpdatedAt: null as string | null,
-          },
-        }
-      case 'empty':
-        return {
-          appointments: undefined,
-          staff: undefined,
-          services: undefined,
-          clients: undefined,
-          business: undefined,
-          offlineMeta: {
-            loaded: false,
-            idbLoading: proj.idbLoading,
-            appointmentsUpdatedAt: null as string | null,
-          },
-        }
-      case 'snapshot': {
-        const s = proj.snapshot as CalendarSnapshot
-        return {
-          appointments: { appointments: s.appointments },
-          staff: { staff: s.staff },
-          services: { services: s.services },
-          clients: isManager ? { clients: s.clients } : live.clientsData,
-          business: { settings: s.businessSettings },
-          offlineMeta: {
-            loaded: true,
-            idbLoading: proj.idbLoading,
-            appointmentsUpdatedAt: proj.snapshotUpdatedAt,
-          },
-        }
+    const appointmentsDisplay = toOfflineProjectionDisplay(proj, {
+      live: live.appointmentsData,
+      fromSnapshot: (s) =>
+        s ? { appointments: s.appointments } : undefined,
+      hasSnapshot: () => true,
+    })
+
+    if (proj.phase === 'snapshot') {
+      const s = proj.snapshot as CalendarSnapshot
+      return {
+        appointments: appointmentsDisplay.value,
+        staff: s.staff,
+        services: s.services,
+        clients: isManager ? s.clients : (live.clients ?? []),
+        business: { settings: s.businessSettings },
+        phase: appointmentsDisplay.phase,
+        idbLoading: appointmentsDisplay.idbLoading,
+        snapshotUpdatedAt: appointmentsDisplay.snapshotUpdatedAt,
+        hasSnapshot: appointmentsDisplay.hasSnapshot,
       }
+    }
+
+    return {
+      appointments: appointmentsDisplay.value,
+      staff: proj.phase === 'empty' ? [] : (live.staff ?? []),
+      services: proj.phase === 'empty' ? [] : (live.services ?? []),
+      clients: proj.phase === 'empty' ? [] : (live.clients ?? []),
+      business: live.businessData,
+      phase: appointmentsDisplay.phase,
+      idbLoading: appointmentsDisplay.idbLoading,
+      snapshotUpdatedAt: appointmentsDisplay.snapshotUpdatedAt,
+      hasSnapshot: appointmentsDisplay.hasSnapshot,
     }
   }, [proj, isManager, live])
 }

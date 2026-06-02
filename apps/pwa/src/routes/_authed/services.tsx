@@ -13,7 +13,7 @@ import {
   useManagerDataClient,
 } from '#/lib/manager-data-client'
 import { useManagerServiceCatalogQuery } from '#/lib/manager-data-queries'
-import { managerServiceCatalogQueryKey } from '#/lib/query-keys'
+import { managerServiceCatalogQueryKey, managerServicesQueryKey } from '#/lib/query-keys'
 
 export const Route = createFileRoute('/_authed/services')({
   beforeLoad: ({ context }) => {
@@ -69,10 +69,14 @@ function ServicesPage() {
   const families = catalogQuery.data?.families ?? []
   const services = catalogQuery.data?.services ?? []
 
-  const refreshCatalog = () =>
+  const refreshCatalog = () => {
     void queryClient.invalidateQueries({
       queryKey: managerServiceCatalogQueryKey,
     })
+    void queryClient.invalidateQueries({
+      queryKey: managerServicesQueryKey,
+    })
+  }
 
   if (catalogQuery.isPending && !!dc) {
     return <ServicesSkeleton />

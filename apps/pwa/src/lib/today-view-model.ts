@@ -15,7 +15,8 @@ import type {
   User,
 } from '@repo/salon-core/types'
 
-import { getNextOpenSlot, type NextOpenSlot } from './next-open-slot'
+import { getNextOpenSlot } from './next-open-slot'
+import type { NextOpenSlot } from './next-open-slot'
 
 export const ACTIVE_STATUSES = new Set<AppointmentWithDetails['status']>([
   'scheduled',
@@ -212,9 +213,8 @@ export function buildManagerTodayViewModel({
     (sum, count) => sum + count,
     0,
   )
-  const doneCount = data.counts.completed ?? 0
-  const droppedCount =
-    (data.counts.cancelled ?? 0) + (data.counts['no-show'] ?? 0)
+  const doneCount = data.counts.completed
+  const droppedCount = data.counts.cancelled + data.counts['no-show']
   const defaultCreateTime =
     data.openSlots
       .flatMap((slot) => slot.ranges.map((range) => range.startTime))

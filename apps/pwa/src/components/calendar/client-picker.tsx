@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { useManagerMutation } from '#/lib/use-manager-mutation'
+import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
 import {
   Check,
   ChevronDown,
@@ -148,10 +148,10 @@ export function ClientPicker({
     reset({ name: '', phone: '', notes: '', tags: [] })
   }
 
-  const saveClient = useManagerMutation(
-    async (dc, values: ClientFormInput) => dc.clients.create(values),
-    { meta: { errorMessage: 'ذخیره مشتری انجام نشد' } },
-  )
+  const saveClient = useManagerWriteMutation('client.save', {
+    dataClientFn: async (dc, values: ClientFormInput) => dc.clients.create(values),
+    meta: { errorMessage: 'ذخیره مشتری انجام نشد' },
+  })
 
   const handleSaveNew = handleSubmit(async (values) => {
     try {

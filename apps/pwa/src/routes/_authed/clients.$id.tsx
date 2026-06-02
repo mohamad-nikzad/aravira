@@ -36,6 +36,7 @@ import {
 
 import { api } from '#/lib/api-client'
 import { useNetworkStatus } from '#/lib/network-status'
+import { managerClientsQueryKey } from '#/lib/query-keys'
 import { useClientSummaryIndexedDbSources } from '#/lib/use-clients-indexeddb'
 import { ClientDrawer } from '#/components/clients/client-drawer'
 import {
@@ -473,7 +474,7 @@ function ClientDetailPage() {
         onSuccess={() => {
           setEditOpen(false)
           void queryClient.invalidateQueries({ queryKey: clientSummaryKey(id) })
-          void queryClient.invalidateQueries({ queryKey: ['clients'] })
+          void queryClient.invalidateQueries({ queryKey: managerClientsQueryKey })
         }}
       />
     </div>
