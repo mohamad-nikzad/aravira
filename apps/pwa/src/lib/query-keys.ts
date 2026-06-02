@@ -3,6 +3,7 @@ export const notificationPreferencesQueryKey = [
   'notification-preferences',
 ] as const
 export const salonPublicSettingsQueryKey = ['salon-public-settings'] as const
+export const salonPresenceQueryKey = ['salon-profile', 'presence'] as const
 export const onboardingQueryKey = ['onboarding'] as const
 export const messagingAccountsQueryKey = ['messaging', 'accounts'] as const
 
@@ -28,4 +29,20 @@ export function staffScheduleBundleQueryKey(staffId: string) {
 
 export function comboComponentsQueryKey(serviceId: string) {
   return ['manager', 'combo-components', serviceId] as const
+}
+
+export const catalogPresetsQueryKey = ['catalog-presets'] as const
+
+export function staffBookingAvailabilityQueryKey(params: {
+  date: string
+  startTime: string
+  endTime: string
+}) {
+  return [
+    'staff',
+    'booking-availability',
+    params.date,
+    params.startTime,
+    params.endTime,
+  ] as const
 }

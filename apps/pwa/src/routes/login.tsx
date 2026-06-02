@@ -4,6 +4,7 @@ import {
   redirect,
   useNavigate,
 } from '@tanstack/react-router'
+import { useMutation } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -20,6 +21,7 @@ import type { LoginFormInput } from '@repo/salon-core/forms/auth'
 import type { User } from '@repo/salon-core/types'
 
 import { api } from '#/lib/api-client'
+import { getMutationErrorMessage } from '#/lib/query-client'
 import { authQueryKey, useAuth } from '#/lib/auth'
 import { homePathForRole } from '#/lib/navigation'
 
@@ -52,7 +54,7 @@ function LoginPage() {
     setError,
     watch,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginFormInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: { phone: '', password: '' },
@@ -60,21 +62,31 @@ function LoginPage() {
 
   const phoneValue = watch('phone')
 
-  const onSubmit = handleSubmit(async (values) => {
-    try {
-      const data = await api.auth.login(values)
+  const login = useMutation({
+    mutationFn: (values: LoginFormInput) => api.auth.login(values),
+    meta: { skipToast: true },
+    onSuccess: async (data) => {
       await clearOfflineDatabase()
       setUser(data.user)
       await navigate({ to: redirectTo ?? homePathForRole(data.user.role) })
-    } catch (err) {
-      const message =
-        err instanceof ApiError
-          ? err.status === 401
-            ? 'شماره موبایل یا رمز عبور اشتباه است'
-            : err.message || 'شماره موبایل یا رمز عبور اشتباه است'
-          : 'خطایی رخ داد. لطفا دوباره تلاش کنید.'
-      setError('root', { message })
-    }
+    },
+  })
+
+  const onSubmit = handleSubmit((values) => {
+    login.mutate(values, {
+      onError: (err) => {
+        const message =
+          err instanceof ApiError
+            ? err.status === 401
+              ? 'شماره موبایل یا رمز عبور اشتباه است'
+              : err.message || 'شماره موبایل یا رمز عبور اشتباه است'
+            : getMutationErrorMessage(
+                err,
+                'خطایی رخ داد. لطفا دوباره تلاش کنید.',
+              )
+        setError('root', { message })
+      },
+    })
   })
 
   const passwordField = register('password')
@@ -117,7 +129,7 @@ function LoginPage() {
                   placeholder="مثلاً ۰۹۱۲۰۰۰۰۰۰۰"
                   autoComplete="username"
                   inputMode="numeric"
-                  disabled={isSubmitting}
+                  disabled={login.isPending}
                   className="h-12 rounded-xl bg-muted/40 border-border/50 text-base text-left tabular-nums"
                   dir="ltr"
                 />
@@ -133,7 +145,7 @@ function LoginPage() {
                   type="password"
                   placeholder="رمز عبور را وارد کنید"
                   autoComplete="current-password"
-                  disabled={isSubmitting}
+                  disabled={login.isPending}
                   className="h-12 rounded-xl bg-muted/40 border-border/50"
                   {...passwordField}
                 />
@@ -147,10 +159,10 @@ function LoginPage() {
               <Button
                 type="submit"
                 className="w-full h-12 rounded-xl text-base font-semibold touch-manipulation shadow-sm"
-                disabled={isSubmitting}
+                disabled={login.isPending}
               >
-                {isSubmitting ? <Spinner className="ml-2" /> : null}
-                {isSubmitting ? 'در حال ورود…' : 'ورود'}
+                {login.isPending ? <Spinner className="ml-2" /> : null}
+                {login.isPending ? 'در حال ورود…' : 'ورود'}
               </Button>
             </FieldGroup>
           </form>

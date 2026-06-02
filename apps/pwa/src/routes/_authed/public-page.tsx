@@ -1,34 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
-import {
-  Check,
-  ChevronRight,
-  Copy,
-  Eye,
-  EyeOff,
-  Globe,
-  LayoutGrid,
-  Layers,
-  Link2,
-  List,
-  Search,
-  Sparkles,
-  X,
-} from 'lucide-react'
-import { Badge } from '@repo/ui/badge'
+import { ChevronRight, Globe, Layers, MapPin } from 'lucide-react'
 import { Button } from '@repo/ui/button'
-import { Input } from '@repo/ui/input'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@repo/ui/sheet'
 import { Spinner } from '@repo/ui/spinner'
 import { Switch } from '@repo/ui/switch'
-import { Textarea } from '@repo/ui/textarea'
 import { cn } from '@repo/ui/utils'
 import type {
   ManagerPublicSettingsResult,
@@ -36,21 +12,33 @@ import type {
 } from '@repo/api-client'
 import {
   DEFAULT_PUBLIC_THEME_ID,
-  PUBLIC_THEMES,
   resolvePublicTheme,
 } from '@repo/salon-core/public-themes'
-import type { PublicTheme } from '@repo/salon-core/public-themes'
 import {
   DEFAULT_PUBLIC_LAYOUT_ID,
   PUBLIC_LAYOUTS,
 } from '@repo/salon-core/public-layouts'
 import { PUBLIC_BIO_MAX_LENGTH } from '@repo/salon-core/forms/public'
+import { presenceToInput } from '@repo/salon-core/forms/presence'
 import { serviceCategoryName } from '@repo/salon-core/service-catalog'
 import { toPersianDigits } from '@repo/salon-core/persian-digits'
 
+import { BottomDrawer } from '#/components/public-page/bottom-drawer'
+import { PublicBioCard } from '#/components/public-page/public-page-basics'
+import { countFilledPresenceFields } from '#/components/public-page/presence-fields'
+import { PresenceEditor } from '#/components/public-page/presence-form'
+import { LayoutPicker } from '#/components/public-page/layout-picker'
+import { LivePreview } from '#/components/public-page/live-preview'
+import { monogramFor, publicUrlFor } from '#/components/public-page/public-url'
+import { ServicesPanel } from '#/components/public-page/services-panel'
+import { SlugEditor } from '#/components/public-page/slug-editor'
+import { ThemeStrip } from '#/components/public-page/theme-strip'
+import type { ServiceRow } from '#/components/public-page/types'
 import { api } from '#/lib/api-client'
-import { env } from '#/env'
-import { salonPublicSettingsQueryKey } from '#/lib/query-keys'
+import {
+  salonPresenceQueryKey,
+  salonPublicSettingsQueryKey,
+} from '#/lib/query-keys'
 
 export const Route = createFileRoute('/_authed/public-page')({
   beforeLoad: ({ context }) => {
@@ -61,32 +49,9 @@ export const Route = createFileRoute('/_authed/public-page')({
   component: PublicPageRoute,
 })
 
-type ServiceRow = {
-  serviceId: string
-  name: string
-  category: string
-  price: number
-  visible: boolean
-}
-
-const tomansFormatter = new Intl.NumberFormat('fa-IR')
-const formatPrice = (n: number) => `${tomansFormatter.format(n)} تومان`
-
-function monogramFor(name: string): string {
-  return Array.from(name.trim())[0] ?? '?'
-}
-
-function publicUrlFor(slug: string): string {
-  if (env.webUrl) {
-    return `${env.webUrl.replace(/\/+$/, '')}/salons/${slug}`
-  }
-  if (typeof window === 'undefined') return `/salons/${slug}`
-  const origin = window.location.origin.replace(/\/\/app\./, '//')
-  return `${origin}/salons/${slug}`
-}
-
 function PublicPageRoute() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [data, setData] = useState<ManagerPublicSettingsResult | null>(null)
   const initializedRef = useRef(false)
 
@@ -123,6 +88,17 @@ function PublicPageRoute() {
     queryKey: salonPublicSettingsQueryKey,
     queryFn: ({ signal }) => api.salonPublicSettings.get({ signal }),
   })
+
+  const presenceQuery = useQuery({
+    queryKey: salonPresenceQueryKey,
+    queryFn: ({ signal }) => api.salonProfile.getPresence({ signal }),
+  })
+
+  const presenceFilledCount = useMemo(() => {
+    const p = presenceQuery.data?.presence
+    if (!p) return 0
+    return countFilledPresenceFields(presenceToInput(p))
+  }, [presenceQuery.data])
 
   const savePublicSettings = useMutation({
     mutationFn: () =>
@@ -203,6 +179,7 @@ function PublicPageRoute() {
     <div className="flex h-full flex-col bg-background" dir="rtl">
       <header className="flex items-center gap-2 border-b bg-card/95 px-4 py-3 backdrop-blur">
         <button
+          type="button"
           onClick={() => router.history.back()}
           className="grid h-9 w-9 place-items-center rounded-full hover:bg-muted"
           aria-label="بازگشت"
@@ -256,7 +233,10 @@ function PublicPageRoute() {
           title="ویرایش هویت سالن"
           padded
           trigger={
-            <button className="flex w-full items-center gap-3 rounded-2xl bg-card p-3 text-right transition active:scale-[0.99]">
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 rounded-2xl bg-card p-3 text-right transition active:scale-[0.99]"
+            >
               <div
                 className="rounded-full p-[3px]"
                 style={{ background: theme.swatch }}
@@ -301,33 +281,18 @@ function PublicPageRoute() {
               نشان از نام سالن ساخته می‌شود. برای تغییر، نام سالن را در تنظیمات
               راه‌اندازی ویرایش کنید.
             </p>
-            <div>
-              <div className="mb-1 text-sm font-medium">لینک عمومی</div>
-              <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-2.5">
-                <Link2 className="h-4 w-4 text-muted-foreground" />
-                <span dir="ltr" className="flex-1 truncate text-xs">
-                  {url}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8"
-                  onClick={copyLink}
-                >
-                  {copied ? (
-                    <>
-                      <Check className="ml-1 h-3 w-3" />
-                      کپی شد
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="ml-1 h-3 w-3" />
-                      کپی
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
+            <SlugEditor
+              currentSlug={data.slug}
+              publicUrl={url}
+              copied={copied}
+              onCopy={copyLink}
+              onSaved={(result) => {
+                applyData(result)
+                void queryClient.invalidateQueries({
+                  queryKey: salonPublicSettingsQueryKey,
+                })
+              }}
+            />
             <div className="flex items-center justify-between rounded-xl border p-3">
               <div>
                 <div className="text-sm font-medium">پذیرش درخواست رزرو</div>
@@ -382,38 +347,60 @@ function PublicPageRoute() {
           />
         </div>
 
-        <div className="rounded-2xl bg-card p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="text-xs font-semibold text-muted-foreground">
-              درباره
-            </div>
-            <span
-              className={cn(
-                'text-[11px] tabular-nums',
-                bioOver ? 'text-destructive' : 'text-muted-foreground',
-              )}
+        <PublicBioCard
+          bio={bio}
+          onBioChange={(value) => {
+            setBio(value)
+            markDirty()
+          }}
+          maxLength={PUBLIC_BIO_MAX_LENGTH}
+        />
+
+        <BottomDrawer
+          title="آدرس و شبکه‌های اجتماعی"
+          padded
+          trigger={
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-3 rounded-2xl bg-card p-3 text-right transition active:scale-[0.99]"
             >
-              {toPersianDigits(bio.length)}/
-              {toPersianDigits(PUBLIC_BIO_MAX_LENGTH)}
-            </span>
-          </div>
-          <Textarea
-            rows={3}
-            value={bio}
-            maxLength={PUBLIC_BIO_MAX_LENGTH + 50}
-            onChange={(e) => {
-              setBio(e.target.value)
-              markDirty()
-            }}
-            placeholder="چند خط معرفی کوتاه از سالن…"
-            className="resize-none rounded-lg bg-muted/30 px-3 py-2.5 leading-relaxed"
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-muted">
+                  <MapPin className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold">
+                    آدرس و شبکه‌های اجتماعی
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-muted-foreground">
+                    {presenceFilledCount > 0
+                      ? `${toPersianDigits(presenceFilledCount)} مورد ثبت شده`
+                      : 'هنوز چیزی اضافه نشده'}
+                  </div>
+                </div>
+              </div>
+              <span className="rounded-full border px-3 py-1 text-[11px] font-medium text-muted-foreground">
+                ویرایش
+              </span>
+            </button>
+          }
+        >
+          <PresenceEditor
+            onSaved={() =>
+              void queryClient.invalidateQueries({
+                queryKey: salonPresenceQueryKey,
+              })
+            }
           />
-        </div>
+        </BottomDrawer>
 
         <BottomDrawer
           title="مدیریت خدمات"
           trigger={
-            <button className="flex w-full items-center justify-between gap-3 rounded-2xl bg-card p-3 text-right transition active:scale-[0.99]">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-3 rounded-2xl bg-card p-3 text-right transition active:scale-[0.99]"
+            >
               <div className="flex items-center gap-3">
                 <div className="grid h-10 w-10 place-items-center rounded-xl bg-muted">
                   <Layers className="h-4 w-4" />
@@ -479,339 +466,6 @@ function PublicPageRoute() {
           {savePublicSettings.isPending ? 'در حال ذخیره…' : 'ذخیره تغییرات'}
         </Button>
       </div>
-    </div>
-  )
-}
-
-function ThemeStrip({
-  value,
-  onChange,
-}: {
-  value: string
-  onChange: (id: string) => void
-}) {
-  return (
-    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-      {PUBLIC_THEMES.map((th) => {
-        const active = th.id === value
-        return (
-          <button
-            key={th.id}
-            onClick={() => onChange(th.id)}
-            className={cn(
-              'flex shrink-0 flex-col items-center gap-1.5 rounded-2xl border-2 p-2 transition',
-              active ? 'border-foreground' : 'border-transparent',
-            )}
-          >
-            <div
-              className="relative h-14 w-14 rounded-xl"
-              style={{ background: th.swatch }}
-            >
-              {active && (
-                <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-foreground text-background ring-2 ring-card">
-                  <Check className="h-3 w-3" />
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] font-medium">{th.name}</span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-function LayoutPicker({
-  value,
-  onChange,
-}: {
-  value: string
-  onChange: (id: string) => void
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {PUBLIC_LAYOUTS.map((lay) => {
-        const active = lay.id === value
-        const Icon = lay.id === 'agenda' ? LayoutGrid : List
-        return (
-          <button
-            key={lay.id}
-            onClick={() => onChange(lay.id)}
-            className={cn(
-              'flex flex-col gap-1.5 rounded-xl border-2 p-3 text-right transition',
-              active
-                ? 'border-foreground bg-muted/40'
-                : 'border-transparent bg-muted/20',
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <Icon className="h-4 w-4" />
-              {active ? (
-                <span className="grid h-4 w-4 place-items-center rounded-full bg-foreground text-background">
-                  <Check className="h-2.5 w-2.5" />
-                </span>
-              ) : null}
-            </div>
-            <span className="text-xs font-semibold">{lay.name}</span>
-            <span className="text-[10px] leading-4 text-muted-foreground">
-              {lay.description}
-            </span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-function ServicesPanel({
-  services,
-  onToggle,
-  onSetAllVisible,
-}: {
-  services: ServiceRow[]
-  onToggle: (id: string, visible: boolean) => void
-  onSetAllVisible: (visible: boolean, category?: string) => void
-}) {
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<'all' | 'visible' | 'hidden'>('all')
-
-  const grouped = useMemo(() => {
-    const q = query.trim()
-    const filtered = services.filter((s) => {
-      if (q && !s.name.includes(q)) return false
-      if (filter === 'visible' && !s.visible) return false
-      if (filter === 'hidden' && s.visible) return false
-      return true
-    })
-    const map = new Map<string, ServiceRow[]>()
-    for (const s of filtered) {
-      const arr = map.get(s.category) ?? []
-      arr.push(s)
-      map.set(s.category, arr)
-    }
-    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b, 'fa'))
-  }, [services, query, filter])
-
-  const visibleCount = services.filter((s) => s.visible).length
-
-  return (
-    <div className="pb-5">
-      <div className="sticky top-0 z-10 flex flex-col gap-2.5 bg-background/95 px-5 py-3 backdrop-blur">
-        <div className="relative">
-          <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="جستجوی خدمت…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pr-10"
-          />
-          {query && (
-            <button
-              onClick={() => setQuery('')}
-              className="absolute left-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-muted"
-              aria-label="پاک کردن"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex gap-2 rounded-lg bg-muted p-0.5 text-xs">
-            {(['all', 'visible', 'hidden'] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={cn(
-                  'rounded-md px-3 py-1.5 transition',
-                  filter === f && 'bg-card font-medium shadow-sm',
-                )}
-              >
-                {f === 'all' ? 'همه' : f === 'visible' ? 'فعال' : 'مخفی'}
-              </button>
-            ))}
-          </div>
-          <div className="text-[11px] text-muted-foreground tabular-nums">
-            {toPersianDigits(visibleCount)}/{toPersianDigits(services.length)}{' '}
-            فعال
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3 px-5 pt-3">
-        {grouped.map(([cat, items]) => {
-          const visibleInCat = items.filter((s) => s.visible).length
-          const allOn = visibleInCat === items.length
-          return (
-            <div
-              key={cat}
-              className="overflow-hidden rounded-xl border bg-card"
-            >
-              <div className="flex items-center justify-between border-b px-3 py-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold">{cat}</span>
-                  <Badge variant="secondary" className="text-[10px]">
-                    {toPersianDigits(visibleInCat)}/
-                    {toPersianDigits(items.length)}
-                  </Badge>
-                </div>
-                <button
-                  className="text-[11px] font-medium text-muted-foreground hover:text-foreground"
-                  onClick={() => onSetAllVisible(!allOn, cat)}
-                >
-                  {allOn ? 'مخفی کردن همه' : 'نمایش همه'}
-                </button>
-              </div>
-              <div className="flex flex-col gap-2 p-2">
-                {items.map((s) => (
-                  <button
-                    key={s.serviceId}
-                    onClick={() => onToggle(s.serviceId, !s.visible)}
-                    className={cn(
-                      'flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-right transition',
-                      s.visible
-                        ? 'border-foreground/15 bg-background'
-                        : 'border-dashed border-border bg-muted/30 opacity-60',
-                    )}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      {s.visible ? (
-                        <Eye className="h-4 w-4 shrink-0 text-foreground" />
-                      ) : (
-                        <EyeOff className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      )}
-                      <div className="text-right">
-                        <div className="text-sm font-medium">{s.name}</div>
-                        <div className="mt-0.5 text-[11px] text-muted-foreground">
-                          {formatPrice(s.price)}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-        {grouped.length === 0 && (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            هیچ خدمتی پیدا نشد.
-          </p>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function BottomDrawer({
-  trigger,
-  title,
-  padded = false,
-  children,
-}: {
-  trigger: React.ReactNode
-  title: string
-  padded?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <Sheet>
-      <SheetTrigger asChild>{trigger}</SheetTrigger>
-      <SheetContent
-        side="bottom"
-        className="flex max-h-[88dvh] flex-col gap-0 p-0"
-      >
-        <SheetHeader className="border-b py-4 pr-12 pl-5">
-          <SheetTitle className="text-right">{title}</SheetTitle>
-        </SheetHeader>
-        <div className={cn('flex-1 overflow-auto', padded && 'px-5 py-5')}>
-          {children}
-        </div>
-      </SheetContent>
-    </Sheet>
-  )
-}
-
-function LivePreview({
-  theme,
-  layoutId,
-  salonName,
-  bio,
-  services,
-}: {
-  theme: PublicTheme
-  layoutId: string
-  salonName: string
-  bio: string
-  services: ServiceRow[]
-}) {
-  const allVisible = services.filter((s) => s.visible)
-  const totalVisible = allVisible.length
-  const isAgenda = layoutId !== 'inline'
-  const limit = isAgenda ? 6 : 5
-  const visible = allVisible.slice(0, limit)
-
-  return (
-    <div
-      className="overflow-hidden rounded-2xl border shadow-sm"
-      style={{ background: theme.bg, color: theme.text }}
-      dir="rtl"
-    >
-      <div className="h-16" style={{ background: theme.swatch }} />
-      <div className="-mt-8 px-4">
-        <div
-          className="grid h-16 w-16 place-items-center rounded-2xl border-4 bg-white text-xl font-bold shadow"
-          style={{ borderColor: theme.bg, color: theme.primary }}
-        >
-          {monogramFor(salonName)}
-        </div>
-        <div className="mt-2 text-sm font-bold">{salonName}</div>
-        <p className="mt-1 line-clamp-2 text-[11px] opacity-70">
-          {bio || 'بدون توضیحات'}
-        </p>
-      </div>
-
-      {visible.length === 0 ? (
-        <p className="px-4 py-4 text-xs opacity-60">خدمتی نمایش داده نشده</p>
-      ) : isAgenda ? (
-        <div className="mt-3 grid grid-cols-2 gap-1.5 px-4 pb-4">
-          {visible.map((s) => (
-            <div
-              key={s.serviceId}
-              className="flex items-center gap-2 rounded-lg bg-white/70 p-2 text-[11px]"
-            >
-              <span
-                className="grid h-6 w-6 shrink-0 place-items-center rounded-md"
-                style={{
-                  background: `${theme.primary}1a`,
-                  color: theme.primary,
-                }}
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-              </span>
-              <span className="truncate font-medium">{s.name}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="mt-3 space-y-1.5 px-4 pb-4">
-          {visible.map((s) => (
-            <div
-              key={s.serviceId}
-              className="flex items-center justify-between rounded-lg bg-white/70 px-2.5 py-1.5 text-[11px]"
-            >
-              <span>{s.name}</span>
-              <span style={{ color: theme.primary }} className="font-medium">
-                {formatPrice(s.price)}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-      {totalVisible > limit && (
-        <div className="px-4 pb-4 text-center text-[11px] opacity-60">
-          + {toPersianDigits(totalVisible - limit)} خدمت دیگر
-        </div>
-      )}
     </div>
   )
 }

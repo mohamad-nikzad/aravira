@@ -44,6 +44,7 @@ import {
 import { ClientPicker } from '#/components/calendar/client-picker'
 import { useManagerDataClient } from '#/lib/manager-data-client'
 import { useServiceAddons } from '#/lib/use-service-addons'
+import { useStaffBookingAvailability } from '#/lib/use-staff-booking-availability'
 import { ServicePicker } from '#/components/services/service-picker'
 import { useNetworkStatus } from '#/lib/network-status'
 import { JalaliDatePicker } from '@repo/ui/jalali-date-picker'
@@ -91,7 +92,6 @@ export function AppointmentDrawer({
   const dataClient = useManagerDataClient()
   const isOnline = useNetworkStatus()
   const [localClients, setLocalClients] = useState<Client[]>(clients)
-  const [staffSlotOk, setStaffSlotOk] = useState<Record<string, boolean>>({})
   const form = useForm<AppointmentFormInput>({
     resolver: zodResolver(appointmentFormSchema, undefined, { raw: true }),
     defaultValues: {
@@ -132,6 +132,13 @@ export function AppointmentDrawer({
   const useTemporaryClient = Boolean(watch('useTemporaryClient'))
   const temporaryClientName = watch('temporaryClientName')
   const addonIds = watch('addonIds') ?? []
+  const staffSlotOk = useStaffBookingAvailability(
+    open,
+    date ?? '',
+    startTime ?? '',
+    endTime ?? '',
+    isOnline,
+  )
   const { data: availableAddons = [], isPending: addonsLoading } =
     useServiceAddons(serviceId ?? '', open && !!serviceId)
   const activeServices = useMemo(
@@ -457,37 +464,6 @@ export function AppointmentDrawer({
       // Toast handled by mutation cache.
     }
   })
-
-  useEffect(() => {
-    if (!open || !date || !startTime || !endTime || !isOnline) return
-    const wc = validateAppointmentWindow(startTime, endTime)
-    if (!wc.ok) {
-      setStaffSlotOk({})
-      return
-    }
-    const ctrl = new AbortController()
-    const t = window.setTimeout(async () => {
-      try {
-        const res = (await api.staff.bookingAvailability(
-          { date, startTime, endTime },
-          { signal: ctrl.signal },
-        )) as unknown as {
-          staff?: Array<{ staffId: string; available: boolean }>
-        }
-        const next: Record<string, boolean> = {}
-        for (const row of res.staff ?? []) {
-          next[row.staffId] = row.available
-        }
-        setStaffSlotOk(next)
-      } catch {
-        /* aborted */
-      }
-    }, 280)
-    return () => {
-      window.clearTimeout(t)
-      ctrl.abort()
-    }
-  }, [open, date, startTime, endTime, isOnline])
 
   useEffect(() => {
     if (staffId && staffSlotOk[staffId] === false) {

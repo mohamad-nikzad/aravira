@@ -1,16 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Send, Unlink } from 'lucide-react'
 
 import { useAuth } from '#/lib/auth'
 import { api } from '#/lib/api-client'
 import { messagingAccountsQueryKey } from '#/lib/query-keys'
+import { useTelegramConnect } from '#/components/messaging/use-telegram-connect'
 
 import { SettingsRow, ToggleRow } from '#/components/settings/settings-rows'
 
 export function MessagingAccountsSection() {
   const { user } = useAuth()
   const isManager = user?.role === 'manager'
-  const queryClient = useQueryClient()
 
   const messagingAccountsQuery = useQuery({
     queryKey: messagingAccountsQueryKey,
@@ -21,19 +21,12 @@ export function MessagingAccountsSection() {
     messagingAccountsQuery.data?.accounts.find((a) => a.provider === 'telegram') ??
     null
 
-  const connectTelegram = useMutation({
-    mutationFn: () => api.messaging.createLink({ provider: 'telegram' }),
-    meta: {
-      skipSuccessToast: true,
+  const { connect: connectTelegram, isPending: isConnectingTelegram } =
+    useTelegramConnect({
       errorMessage: 'اتصال تلگرام انجام نشد',
-    },
-    onSuccess: (data) => {
-      window.open(data.deepLink, '_blank', 'noopener,noreferrer')
-      window.setTimeout(() => {
-        void queryClient.invalidateQueries({ queryKey: messagingAccountsQueryKey })
-      }, 4000)
-    },
-  })
+      invalidateQueries: [messagingAccountsQueryKey],
+      invalidateDelayMs: 4000,
+    })
 
   const toggleTelegram = useMutation({
     mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
@@ -94,9 +87,9 @@ export function MessagingAccountsSection() {
       icon={Send}
       label="اتصال تلگرام"
       hint="دریافت اعلان درخواست نوبت در تلگرام"
-      onClick={() => connectTelegram.mutate()}
-      loading={connectTelegram.isPending}
-      disabled={connectTelegram.isPending || messagingAccountsQuery.isPending}
+      onClick={connectTelegram}
+      loading={isConnectingTelegram}
+      disabled={isConnectingTelegram || messagingAccountsQuery.isPending}
     />
   )
 }

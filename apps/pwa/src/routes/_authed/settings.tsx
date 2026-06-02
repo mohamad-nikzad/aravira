@@ -19,19 +19,14 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@repo/ui/button'
-import { Input } from '@repo/ui/input'
-import { Field, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field'
-import { TimePicker } from '@repo/ui/time-picker'
 import { Badge } from '@repo/ui/badge'
 import { Card, CardContent, CardHeader } from '@repo/ui/card'
 import { Skeleton } from '@repo/ui/skeleton'
 import { SakuraMark } from '@repo/ui/sakura-mark'
 import { cn } from '@repo/ui/utils'
 import { displayPhone } from '@repo/salon-core/phone'
-import {
-  parseLocalizedInt,
-  toPersianDigits,
-} from '@repo/salon-core/persian-digits'
+import { toPersianDigits } from '@repo/salon-core/persian-digits'
+import { DEFAULT_WORKING_DAYS } from '@repo/salon-core/working-days'
 import { businessSettingsSchema } from '@repo/salon-core/forms/settings'
 import type { BusinessSettingsPayload } from '@repo/salon-core/forms/settings'
 
@@ -47,6 +42,7 @@ import {
   dashboardQueryKey,
   notificationPreferencesQueryKey,
 } from '#/lib/query-keys'
+import { BusinessHoursFields } from '#/components/business-hours/business-hours-fields'
 import { MessagingAccountsSection } from '#/components/settings/messaging-accounts-section'
 import { SettingsRow, ToggleRow } from '#/components/settings/settings-rows'
 
@@ -206,11 +202,13 @@ function SettingsPage() {
       workingStart: '09:00',
       workingEnd: '19:00',
       slotDurationMinutes: 30,
+      workingDays: DEFAULT_WORKING_DAYS,
     },
   })
   const workingStart = watchBusinessHours('workingStart') ?? '09:00'
   const workingEnd = watchBusinessHours('workingEnd') ?? '19:00'
   const slotMin = watchBusinessHours('slotDurationMinutes') ?? 30
+  const workingDays = watchBusinessHours('workingDays') ?? DEFAULT_WORKING_DAYS
 
   useEffect(() => {
     const settings = businessSettingsQuery.data
@@ -390,64 +388,26 @@ function SettingsPage() {
             <div>
               <GroupLabel>ساعات کاری</GroupLabel>
               <div className="space-y-4 rounded-[18px] border border-line-soft bg-card p-4">
-                <FieldGroup className="gap-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field>
-                      <FieldLabel>شروع</FieldLabel>
-                      <TimePicker
-                        value={workingStart}
-                        onChange={(value) =>
-                          setBusinessHoursValue('workingStart', value)
-                        }
-                        label="ساعت شروع"
-                      />
-                      {businessHoursErrors.workingStart && (
-                        <FieldError>
-                          {businessHoursErrors.workingStart.message}
-                        </FieldError>
-                      )}
-                    </Field>
-                    <Field>
-                      <FieldLabel>پایان</FieldLabel>
-                      <TimePicker
-                        value={workingEnd}
-                        onChange={(value) =>
-                          setBusinessHoursValue('workingEnd', value)
-                        }
-                        label="ساعت پایان"
-                      />
-                      {businessHoursErrors.workingEnd && (
-                        <FieldError>
-                          {businessHoursErrors.workingEnd.message}
-                        </FieldError>
-                      )}
-                    </Field>
-                  </div>
-                  <Field>
-                    <FieldLabel>فاصله اسلات (دقیقه)</FieldLabel>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      value={toPersianDigits(slotMin)}
-                      onChange={(e) =>
-                        setBusinessHoursValue(
-                          'slotDurationMinutes',
-                          Math.max(
-                            5,
-                            parseLocalizedInt(e.target.value, slotMin),
-                          ),
-                        )
-                      }
-                      dir="rtl"
-                      className="h-10 text-right tabular-nums"
-                    />
-                    {businessHoursErrors.slotDurationMinutes && (
-                      <FieldError>
-                        {businessHoursErrors.slotDurationMinutes.message}
-                      </FieldError>
-                    )}
-                  </Field>
-                </FieldGroup>
+                <BusinessHoursFields
+                  variant="settings"
+                  workingStart={workingStart}
+                  workingEnd={workingEnd}
+                  slotDurationMinutes={slotMin}
+                  workingDays={workingDays}
+                  onWorkingStartChange={(value) =>
+                    setBusinessHoursValue('workingStart', value)
+                  }
+                  onWorkingEndChange={(value) =>
+                    setBusinessHoursValue('workingEnd', value)
+                  }
+                  onSlotDurationChange={(value) =>
+                    setBusinessHoursValue('slotDurationMinutes', value)
+                  }
+                  onWorkingDaysChange={(value) =>
+                    setBusinessHoursValue('workingDays', value)
+                  }
+                  errors={businessHoursErrors}
+                />
                 <Button
                   size="sm"
                   className="w-full touch-manipulation"
