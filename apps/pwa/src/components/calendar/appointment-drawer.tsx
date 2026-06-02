@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useManagerMutation } from '#/lib/use-manager-mutation'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -42,7 +42,6 @@ import {
   validateAppointmentWindow,
 } from '@repo/salon-core/appointment-time'
 import { ClientPicker } from '#/components/calendar/client-picker'
-import { useManagerDataClient } from '#/lib/manager-data-client'
 import { useServiceAddons } from '#/lib/use-service-addons'
 import { useStaffBookingAvailability } from '#/lib/use-staff-booking-availability'
 import { ServicePicker } from '#/components/services/service-picker'
@@ -55,7 +54,6 @@ import {
 } from '@repo/salon-core/persian-digits'
 import { appointmentFormSchema } from '@repo/salon-core/forms/appointment'
 import type { AppointmentFormInput } from '@repo/salon-core/forms/appointment'
-import { api } from '#/lib/api-client'
 
 const DURATION_PRESETS = [30, 45, 60, 90, 120]
 const tomansFormatter = new Intl.NumberFormat('fa-IR')
@@ -89,7 +87,6 @@ export function AppointmentDrawer({
   onSuccess,
   onClientsChanged,
 }: AppointmentDrawerProps) {
-  const dataClient = useManagerDataClient()
   const isOnline = useNetworkStatus()
   const [localClients, setLocalClients] = useState<Client[]>(clients)
   const form = useForm<AppointmentFormInput>({
@@ -399,19 +396,12 @@ export function AppointmentDrawer({
     onClientsChanged?.()
   }
 
-  const createAppointment = useMutation({
-    mutationFn: async (values: AppointmentFormInput) => {
+  const createAppointment = useManagerMutation(
+    async (dc, values: AppointmentFormInput) => {
       const payload = appointmentFormSchema.parse(values)
-      if (dataClient) {
-        const created = await dataClient.appointments.create(payload)
-        void dataClient.sync.processPending()
-        return created
-      }
-
-      const res = await api.appointments.create(payload)
-      return res.appointment
+      return dc.appointments.create(payload)
     },
-  })
+  )
 
   const onSubmit = handleSubmit(async (values) => {
     const currentService = activeServices.find(

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useManagerMutation } from '#/lib/use-manager-mutation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -84,8 +84,6 @@ import {
   parseLocalizedInt,
   toPersianDigits,
 } from '@repo/salon-core/persian-digits'
-import { api } from '#/lib/api-client'
-import { ApiError } from '@repo/api-client'
 
 type StatusActionState = {
   status: AppointmentWithDetails['status']
@@ -440,125 +438,77 @@ export function AppointmentDetailDrawer({
     }
   }
 
-  const updateAppointment = useMutation({
-    mutationFn: async ({
-      appointmentId,
-      values,
-      nextStatus,
-    }: {
-      appointmentId: string
-      values: AppointmentFormInput
-      nextStatus: AppointmentWithDetails['status']
-    }): Promise<AppointmentDetailChange> => {
+  const updateAppointment = useManagerMutation(
+    async (
+      dc,
+      {
+        appointmentId,
+        values,
+        nextStatus,
+      }: {
+        appointmentId: string
+        values: AppointmentFormInput
+        nextStatus: AppointmentWithDetails['status']
+      },
+    ): Promise<AppointmentDetailChange> => {
       const payload = appointmentFormSchema.parse(values)
-      if (dataClient) {
-        const r = await dataClient.appointments.update(appointmentId, {
-          ...payload,
-          status: nextStatus,
-        })
-        void dataClient.sync.processPending()
-        return r.type === 'deleted'
-          ? { type: 'deleted', id: r.id }
-          : { type: 'updated', appointment: r.appointment }
-      }
-
-      try {
-        const data = await api.appointments.update(appointmentId, {
-          ...payload,
-          status: nextStatus,
-        })
-        if (typeof data.removedAppointmentId === 'string') {
-          return { type: 'deleted', id: data.removedAppointmentId }
-        }
-        return { type: 'updated', appointment: data.appointment }
-      } catch (err) {
-        if (err instanceof ApiError) {
-          throw new DataClientHttpError(err.message, err.status, err.payload)
-        }
-        throw err
-      }
+      const r = await dc.appointments.update(appointmentId, {
+        ...payload,
+        status: nextStatus,
+      })
+      return r.type === 'deleted'
+        ? { type: 'deleted', id: r.id }
+        : { type: 'updated', appointment: r.appointment }
     },
-  })
+  )
 
-  const deleteAppointment = useMutation({
-    mutationFn: async (appointmentId: string) => {
-      if (dataClient) {
-        await dataClient.appointments.remove(appointmentId)
-        void dataClient.sync.processPending()
-        return
-      }
-
-      try {
-        await api.appointments.delete(appointmentId)
-      } catch (err) {
-        if (err instanceof ApiError) {
-          throw new DataClientHttpError(err.message, err.status, err.payload)
-        }
-        throw err
-      }
+  const deleteAppointment = useManagerMutation(
+    async (dc, appointmentId: string) => {
+      await dc.appointments.remove(appointmentId)
     },
-  })
+  )
 
-  const completePlaceholderClientMutation = useMutation({
-    mutationFn: async (values: CompletePlaceholderClientInput) => {
+  const completePlaceholderClientMutation = useManagerMutation(
+    async (dc, values: CompletePlaceholderClientInput) => {
       if (!appointment) {
         throw new DataClientHttpError('نوبت یافت نشد', 0, null)
       }
       const payload = { ...values, notes: values.notes ?? undefined }
-      if (dataClient) {
-        const updated = await dataClient.appointments.completePlaceholderClient(
-          appointment.id,
-          payload,
-        )
-        void dataClient.sync.processPending()
-        return updated
-      }
-      const data = await api.appointments.completePlaceholderClient(
-        appointment.id,
-        payload,
-      )
-      return data.appointment
+      return dc.appointments.completePlaceholderClient(appointment.id, payload)
     },
-    meta: {
-      skipErrorToast: true,
-      errorMessage: 'ثبت اطلاعات مشتری انجام نشد',
+    {
+      meta: {
+        skipErrorToast: true,
+        errorMessage: 'ثبت اطلاعات مشتری انجام نشد',
+      },
     },
-  })
+  )
 
   type StatusChangeResult =
     | { type: 'deleted'; id: string }
     | { type: 'updated'; appointment: AppointmentWithDetails }
 
-  const updateAppointmentStatus = useMutation({
-    mutationFn: async ({
-      appointmentId,
-      nextStatus,
-    }: {
-      appointmentId: string
-      nextStatus: AppointmentWithDetails['status']
-    }): Promise<StatusChangeResult> => {
-      if (dataClient) {
-        const result = await dataClient.appointments.updateStatus(
-          appointmentId,
-          nextStatus,
-        )
-        void dataClient.sync.processPending()
-        return result.type === 'deleted'
-          ? { type: 'deleted', id: result.id }
-          : { type: 'updated', appointment: result.appointment }
-      }
-
-      const data = await api.appointments.updateStatus(
+  const updateAppointmentStatus = useManagerMutation(
+    async (
+      dc,
+      {
+        appointmentId,
+        nextStatus,
+      }: {
+        appointmentId: string
+        nextStatus: AppointmentWithDetails['status']
+      },
+    ): Promise<StatusChangeResult> => {
+      const result = await dc.appointments.updateStatus(
         appointmentId,
         nextStatus,
       )
-      if (typeof data.removedAppointmentId === 'string') {
-        return { type: 'deleted', id: data.removedAppointmentId }
-      }
-      return { type: 'updated', appointment: data.appointment }
+      return result.type === 'deleted'
+        ? { type: 'deleted', id: result.id }
+        : { type: 'updated', appointment: result.appointment }
     },
-    meta: { skipSuccessToast: true },
-  })
+    { meta: { skipSuccessToast: true } },
+  )
 
   const isMutating =
     updateAppointment.isPending ||
@@ -583,10 +533,6 @@ export function AppointmentDetailDrawer({
         setCompleteFormError('root', { message: err.message })
         const body = err.body as { existingClient?: Client } | null
         setDuplicateClient(body?.existingClient ?? null)
-      } else if (err instanceof ApiError) {
-        setCompleteFormError('root', { message: err.message })
-        const payload = err.payload as { existingClient?: Client } | null
-        setDuplicateClient(payload?.existingClient ?? null)
       } else {
         setCompleteFormError('root', {
           message: 'خطایی رخ داد. لطفاً دوباره تلاش کنید.',

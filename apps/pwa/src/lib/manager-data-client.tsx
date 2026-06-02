@@ -80,6 +80,16 @@ export function useManagerDataClient(): DataClient | null {
   return useContext(ManagerDataClientContext)?.client ?? null
 }
 
+export function useRequiredManagerDataClient(): DataClient {
+  const client = useContext(ManagerDataClientContext)?.client ?? null
+  if (!client) {
+    throw new Error(
+      'Manager data client unavailable — useRequiredManagerDataClient must be used inside ManagerDataClientProvider',
+    )
+  }
+  return client
+}
+
 export function useManagerOfflineDataEpoch(): number {
   return useContext(ManagerDataClientContext)?.offlineDataEpoch ?? 0
 }

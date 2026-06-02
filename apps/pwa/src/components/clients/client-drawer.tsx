@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useManagerMutation } from '#/lib/use-manager-mutation'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@repo/ui/button'
@@ -11,7 +11,6 @@ import type { Client } from '@repo/salon-core/types'
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
 import { clientFormSchema } from '@repo/salon-core/forms/client'
 import type { ClientFormInput } from '@repo/salon-core/forms/client'
-import { DataClientHttpError } from '@repo/data-client'
 
 import {
   FormSheet,
@@ -22,8 +21,6 @@ import {
   FormSheetTitle,
 } from '#/components/form-sheet'
 import { useDismissGuard } from '#/lib/use-dismiss-guard'
-import { useManagerDataClient } from '#/lib/manager-data-client'
-import { api } from '#/lib/api-client'
 
 const tagOptions = [
   'VIP',
@@ -62,7 +59,6 @@ export function ClientDrawer({
   client,
   onSuccess,
 }: ClientDrawerProps) {
-  const dataClient = useManagerDataClient()
   const isEditing = !!client
 
   const {
@@ -98,38 +94,16 @@ export function ClientDrawer({
     requestClose(false)
   }
 
-  const saveClient = useMutation({
-    mutationFn: async (values: ClientFormInput) => {
-      if (dataClient) {
-        if (isEditing) {
-          await dataClient.clients.update(client.id, values)
-        } else {
-          await dataClient.clients.create(values)
-        }
-        void dataClient.sync.processPending()
-        return
-      }
-
-      const payload = { ...values, tags: values.tags ?? [] }
-      try {
-        if (isEditing) {
-          await api.clients.update(client.id, payload)
-        } else {
-          await api.clients.create(payload)
-        }
-      } catch (error) {
-        if (error instanceof Error) {
-          throw new DataClientHttpError(
-            error.message || 'ذخیره اطلاعات مشتری انجام نشد',
-            0,
-            null,
-          )
-        }
-        throw error
+  const saveClient = useManagerMutation(
+    async (dc, values: ClientFormInput) => {
+      if (isEditing) {
+        await dc.clients.update(client.id, values)
+      } else {
+        await dc.clients.create(values)
       }
     },
-    meta: { errorMessage: 'ذخیره اطلاعات مشتری انجام نشد' },
-  })
+    { meta: { errorMessage: 'ذخیره اطلاعات مشتری انجام نشد' } },
+  )
 
   const onSubmit = handleSubmit(async (values) => {
     try {

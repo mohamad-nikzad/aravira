@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useManagerMutation } from '#/lib/use-manager-mutation'
 import {
   Check,
   ChevronDown,
@@ -27,9 +27,7 @@ import type { Client } from '@repo/salon-core/types'
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
 import { clientFormSchema } from '@repo/salon-core/forms/client'
 import type { ClientFormInput } from '@repo/salon-core/forms/client'
-import { useManagerDataClient } from '#/lib/manager-data-client'
 import { useKeyboardInset } from '#/lib/use-keyboard-inset'
-import { api } from '#/lib/api-client'
 
 interface ClientPickerProps {
   clients: Client[]
@@ -46,7 +44,6 @@ export function ClientPicker({
   onChange,
   onClientCreated,
 }: ClientPickerProps) {
-  const dataClient = useManagerDataClient()
   const isTouch = useIsTouch()
   const [mode, setMode] = useState<PickerMode>('closed')
   const [query, setQuery] = useState('')
@@ -151,22 +148,10 @@ export function ClientPicker({
     reset({ name: '', phone: '', notes: '', tags: [] })
   }
 
-  const saveClient = useMutation({
-    mutationFn: async (values: ClientFormInput) => {
-      if (dataClient) {
-        const created = await dataClient.clients.create(values)
-        void dataClient.sync.processPending()
-        return created
-      }
-
-      const res = await api.clients.create({
-        ...values,
-        tags: values.tags ?? [],
-      })
-      return res.client
-    },
-    meta: { errorMessage: 'ذخیره مشتری انجام نشد' },
-  })
+  const saveClient = useManagerMutation(
+    async (dc, values: ClientFormInput) => dc.clients.create(values),
+    { meta: { errorMessage: 'ذخیره مشتری انجام نشد' } },
+  )
 
   const handleSaveNew = handleSubmit(async (values) => {
     try {
