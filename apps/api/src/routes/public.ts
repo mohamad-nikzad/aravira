@@ -10,7 +10,7 @@ import {
 import { checkAndRecordPublicSubmit } from '@repo/database/rate-limit'
 import { publicAppointmentRequestSchema } from '@repo/salon-core/forms/public'
 import { notifyManagersOfNewAppointmentRequest } from '@repo/notifications'
-import { getEnv } from '../env'
+import { getMessagingAppBaseUrl } from '../env'
 import type { AppEnv } from '../factory'
 import { zValidator } from '../lib/validate'
 import { error, ok } from '../lib/responses'
@@ -94,7 +94,7 @@ export const publicRoutes = new Hono<AppEnv>()
       // response on notification delivery; failures are logged + recorded in
       // notification_deliveries by the dispatcher itself.
       void notifyManagersOfNewAppointmentRequest(result.id, {
-        publicAppBaseUrl: getEnv().PUBLIC_APP_BASE_URL,
+        publicAppBaseUrl: getMessagingAppBaseUrl(),
       }).catch((err) => {
         console.error('[public] failed to notify managers of new request', { requestId: result.id, err })
       })

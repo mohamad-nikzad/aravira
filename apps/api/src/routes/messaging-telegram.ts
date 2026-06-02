@@ -3,13 +3,14 @@ import type { Update, User } from 'grammy/types'
 import {
   REPLY_KEYBOARD_LABELS,
   answerTelegramCallback,
+  editTelegramMessageReplyMarkup,
   editTelegramMessageText,
   getTelegramConfig,
   messagingCommands,
   persistentReplyKeyboard,
   sendTelegramMessage,
 } from '@repo/notifications'
-import { getEnv } from '../env'
+import { getEnv, getMessagingAppBaseUrl } from '../env'
 import type { AppEnv } from '../factory'
 import { secureCompare } from '../lib/secure-compare'
 import { ok } from '../lib/responses'
@@ -138,6 +139,7 @@ export const messagingTelegramRoute = new Hono<AppEnv>()
             const result = await messagingCommands.handlePendingCommand({
               provider: 'telegram',
               externalId,
+              publicAppBaseUrl: getMessagingAppBaseUrl(),
             })
             await sendBotTextResult(chatId, result)
             return ok(c, { ok: true })
@@ -174,42 +176,65 @@ export const messagingTelegramRoute = new Hono<AppEnv>()
         return ok(c, { ok: true })
       }
 
-      const handler =
-        parsed.action === 'approve'
-          ? messagingCommands.handleApprovalCallback
-          : messagingCommands.handleRejectionCallback
-      const outcome = await handler({
-        provider: 'telegram',
+      const publicAppBaseUrl = getMessagingAppBaseUrl()
+      const base = {
+        provider: 'telegram' as const,
         externalId: String(cq.from.id),
         requestId: parsed.requestId,
-        publicAppBaseUrl: getEnv().PUBLIC_APP_BASE_URL ?? null,
-      })
+        publicAppBaseUrl,
+      }
+      const outcome =
+        parsed.action === 'asg'
+          ? await messagingCommands.handleAssignCallback({
+              ...base,
+              staffIndex: parsed.staffIndex,
+            })
+          : parsed.action === 'reject'
+            ? await messagingCommands.handleRejectionCallback(base)
+            : parsed.action === 'back'
+              ? await messagingCommands.handleBackCallback(base)
+              : await messagingCommands.handleApprovalCallback(base)
 
       await answerTelegramCallback({
         callbackQueryId: cq.id,
         text: outcome.toast,
       })
-      await editTelegramMessageText({
-        chatId: String(message.chat.id),
-        messageId: message.message_id,
-        text: outcome.messageHtml,
-        buttons: outcome.replacementKeyboard,
-      })
+      if (outcome.mode === 'markup') {
+        await editTelegramMessageReplyMarkup({
+          chatId: String(message.chat.id),
+          messageId: message.message_id,
+          buttons: outcome.replacementKeyboard,
+        })
+      } else {
+        await editTelegramMessageText({
+          chatId: String(message.chat.id),
+          messageId: message.message_id,
+          text: outcome.messageHtml,
+          buttons: outcome.replacementKeyboard,
+        })
+      }
       return ok(c, { ok: true })
     }
 
     return ok(c, { ok: true })
   })
 
-const CALLBACK_DATA_RE = /^(approve|reject):([0-9a-f-]{8,})$/i
+const CALLBACK_DATA_RE = /^(approve|reject|back):([0-9a-f-]{8,})$/i
+const ASSIGN_DATA_RE = /^asg:([0-9a-f-]{8,}):(\d+)$/i
 
-function parseCallbackData(
-  data: string | undefined
-): { action: 'approve' | 'reject'; requestId: string } | null {
+type ParsedCallback =
+  | { action: 'approve' | 'reject' | 'back'; requestId: string }
+  | { action: 'asg'; requestId: string; staffIndex: number }
+
+function parseCallbackData(data: string | undefined): ParsedCallback | null {
   if (!data) return null
+  const assign = data.match(ASSIGN_DATA_RE)
+  if (assign) {
+    return { action: 'asg', requestId: assign[1]!, staffIndex: Number(assign[2]!) }
+  }
   const m = data.match(CALLBACK_DATA_RE)
   if (!m) return null
-  return { action: m[1] as 'approve' | 'reject', requestId: m[2]! }
+  return { action: m[1]!.toLowerCase() as 'approve' | 'reject' | 'back', requestId: m[2]! }
 }
 
 export type MessagingTelegramRoute = typeof messagingTelegramRoute

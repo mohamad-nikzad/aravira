@@ -82,6 +82,12 @@ export type TelegramConfig = {
 }
 
 /** Telegram bot credentials derived from validated env (null when disabled or incomplete). */
+/** HTTPS PWA origin for Telegram deep links / Web App menu (tunnel URL in local dev). */
+export function getMessagingAppBaseUrl(env: Env = getEnv()): string | null {
+  const url = (env.MESSAGING_PWA_BASE_URL ?? env.PUBLIC_APP_BASE_URL)?.trim()
+  return url || null
+}
+
 export function readTelegramConfigFromEnv(env: Env = getEnv()): TelegramConfig | null {
   if (!env.TELEGRAM_ENABLED) return null
   const botToken = env.TELEGRAM_BOT_TOKEN?.trim()

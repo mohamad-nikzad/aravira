@@ -9,6 +9,7 @@ export * from './types'
 export {
   answerTelegramCallback,
   createTelegramProvider,
+  editTelegramMessageReplyMarkup,
   editTelegramMessageText,
   escapeHtml,
   getTelegramConfig,

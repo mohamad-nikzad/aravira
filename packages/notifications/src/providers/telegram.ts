@@ -6,6 +6,7 @@ import type {
   ReplyKeyboardRemove,
 } from 'grammy/types'
 
+import { isTelegramInlineButtonUrl } from '../format'
 import type {
   MessagingButton,
   MessagingDeliveryResult,
@@ -55,15 +56,19 @@ function toInlineKeyboard(
   rows: MessagingButton[][] | undefined
 ): InlineKeyboardMarkup | undefined {
   if (!rows || rows.length === 0) return undefined
-  return {
-    inline_keyboard: rows.map((row) =>
-      row.map((b): InlineKeyboardButton =>
-        b.url
-          ? { text: b.label, url: b.url }
-          : { text: b.label, callback_data: b.data ?? '' }
-      )
-    ),
-  }
+  const inline_keyboard = rows
+    .map((row) =>
+      row.flatMap((b): InlineKeyboardButton[] => {
+        if (b.url) {
+          if (!isTelegramInlineButtonUrl(b.url)) return []
+          return [{ text: b.label, url: b.url }]
+        }
+        return [{ text: b.label, callback_data: b.data ?? '' }]
+      })
+    )
+    .filter((row) => row.length > 0)
+  if (inline_keyboard.length === 0) return undefined
+  return { inline_keyboard }
 }
 
 function describeError(err: unknown): string {
@@ -126,6 +131,30 @@ export async function editTelegramMessageText(input: {
   try {
     await api.editMessageText(input.chatId, input.messageId, input.text, {
       parse_mode: 'HTML',
+      ...(reply_markup ? { reply_markup } : {}),
+    })
+  } catch (err) {
+    console.error('[messaging.edit.failed]', {
+      provider: 'telegram',
+      error: describeError(err).slice(0, 1024),
+    })
+  }
+}
+
+export async function editTelegramMessageReplyMarkup(input: {
+  chatId: string
+  messageId: number
+  buttons: MessagingButton[][] | null
+}): Promise<void> {
+  const config = getTelegramConfig()
+  if (!config) return
+  const api = getApi(config)
+  const reply_markup =
+    input.buttons && input.buttons.length > 0
+      ? toInlineKeyboard(input.buttons)
+      : { inline_keyboard: [] as InlineKeyboardButton[][] }
+  try {
+    await api.editMessageReplyMarkup(input.chatId, input.messageId, {
       ...(reply_markup ? { reply_markup } : {}),
     })
   } catch (err) {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { z } from 'zod'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Ban,
@@ -122,7 +123,12 @@ const pendingKey = ['appointment-requests', 'pending'] as const
 const statusKey = (status: StatusTab) =>
   ['appointment-requests', status] as const
 
+const searchSchema = z.object({
+  focus: z.string().optional(),
+})
+
 export const Route = createFileRoute('/_authed/requests')({
+  validateSearch: searchSchema,
   beforeLoad: ({ context }) => {
     if (context.user.role !== 'manager') {
       throw redirect({ to: '/today' })
@@ -157,9 +163,13 @@ function RequestsError({ error }: { error: Error }) {
 }
 
 function RequestsPage() {
+  const { focus } = Route.useSearch()
   const [tab, setTab] = useState<StatusTab>('pending')
   const [counts, setCounts] = useState<Partial<Record<StatusTab, number>>>({})
   const initial = Route.useLoaderData()
+
+  // A focused request is only meaningful while pending.
+  const activeTab: StatusTab = focus ? 'pending' : tab
 
   const { data: pendingData } = useQuery({
     queryKey: pendingKey,
@@ -170,9 +180,20 @@ function RequestsPage() {
   })
   const pendingCount = pendingData.requests.length
 
+  const navigate = useNavigate()
+
   const reportCount = useCallback((status: StatusTab, n: number) => {
     setCounts((prev) => (prev[status] === n ? prev : { ...prev, [status]: n }))
   }, [])
+
+  const selectTab = useCallback(
+    (id: StatusTab) => {
+      setTab(id)
+      // Changing tabs is an explicit action that clears any focused request.
+      if (focus) void navigate({ to: '/requests' })
+    },
+    [focus, navigate],
+  )
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -199,13 +220,13 @@ function RequestsPage() {
 
         <div className="-mx-5 mt-3.5 flex gap-2 overflow-x-auto px-5 scrollbar-hide">
           {TABS.map(({ id, label }) => {
-            const active = tab === id
+            const active = activeTab === id
             const count = id === 'pending' ? pendingCount : counts[id]
             return (
               <button
                 key={id}
                 type="button"
-                onClick={() => setTab(id)}
+                onClick={() => selectTab(id)}
                 className={cn(
                   'inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-[13px] whitespace-nowrap transition-colors',
                   active
@@ -232,7 +253,7 @@ function RequestsPage() {
         </div>
       </header>
 
-      {tab === 'pending' && pendingCount > 0 && (
+      {!focus && activeTab === 'pending' && pendingCount > 0 && (
         <div className="px-5 pt-3.5">
           <div className="flex items-center gap-2.5 rounded-2xl border border-line-soft bg-blush-soft px-3.5 py-2.5 text-plum-deep">
             <Sparkles className="size-4 shrink-0" />
@@ -251,7 +272,7 @@ function RequestsPage() {
       )}
 
       <div className="flex-1 overflow-auto px-5 pb-24 pt-4">
-        <RequestsList status={tab} onCount={reportCount} />
+        <RequestsList status={activeTab} focus={focus} onCount={reportCount} />
       </div>
     </div>
   )
@@ -259,12 +280,15 @@ function RequestsPage() {
 
 function RequestsList({
   status,
+  focus,
   onCount,
 }: {
   status: StatusTab
+  focus?: string
   onCount: (status: StatusTab, n: number) => void
 }) {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const { data, error, isLoading } = useQuery({
     queryKey: statusKey(status),
@@ -285,6 +309,16 @@ function RequestsList({
     void queryClient.invalidateQueries({ queryKey: pendingKey })
   }, [queryClient, status])
 
+  const clearFocus = useCallback(
+    () => navigate({ to: '/requests' }),
+    [navigate],
+  )
+
+  // Focus only applies to the pending tab (enforced in RequestsPage).
+  const focused = focus
+    ? requests?.find((req) => req.id === focus)
+    : undefined
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-10">
@@ -297,6 +331,37 @@ function RequestsList({
     return (
       <div className="py-10 text-center text-sm text-destructive">
         خطا در بارگذاری درخواست‌ها
+      </div>
+    )
+  }
+
+  if (focus) {
+    if (!focused) {
+      return (
+        <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
+          <p className="text-[14px] font-bold text-foreground">
+            این درخواست دیگر در انتظار نیست
+          </p>
+          <Button
+            variant="outline"
+            className="rounded-xl"
+            onClick={() => void clearFocus()}
+          >
+            نمایش همه درخواست‌ها
+          </Button>
+        </div>
+      )
+    }
+
+    return (
+      <div className="flex flex-col gap-3">
+        <FocusBanner onClear={() => void clearFocus()} />
+        <PendingCard
+          request={focused}
+          staff={staffData ?? []}
+          services={servicesData ?? []}
+          onChanged={onChanged}
+        />
       </div>
     )
   }
@@ -320,6 +385,23 @@ function RequestsList({
           <DecidedCard key={req.id} request={req} status={status} />
         ),
       )}
+    </div>
+  )
+}
+
+function FocusBanner({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-2xl border border-line-soft bg-blush-soft px-3.5 py-2.5 text-plum-deep">
+      <Sparkles className="size-4 shrink-0" />
+      <p className="flex-1 text-[12px] font-semibold">نمایش یک درخواست</p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-bold text-primary"
+      >
+        نمایش همه
+        <ChevronLeft className="size-3.5" />
+      </button>
     </div>
   )
 }

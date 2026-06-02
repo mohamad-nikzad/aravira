@@ -72,7 +72,10 @@ export { findAccountByUserAndProvider }
 
 export {
   handleApprovalCallback,
+  handleAssignCallback,
+  handleBackCallback,
   handleRejectionCallback,
+  type AssignCallbackInput,
   type CallbackInput,
   type CallbackOutcome,
 } from './approval'

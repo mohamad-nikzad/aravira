@@ -6,8 +6,10 @@ import {
   type MessagingProviderId,
 } from '@repo/database/messaging'
 import { formatJalaliFullDate } from '@repo/salon-core/jalali'
+import { displayPhone } from '@repo/salon-core/phone'
 import { salonTodayYmd } from '@repo/salon-core/salon-local-time'
 
+import { buildRequestDeepLink, faDigits, isolate, isTelegramInlineButtonUrl, rtl } from '../format'
 import { escapeHtml } from '../providers/telegram'
 import type { MessagingButton } from '../providers/types'
 
@@ -17,6 +19,8 @@ const MAX_LIST_ITEMS = 10
 export type BotTextInput = {
   provider: MessagingProviderId
   externalId: string
+  /** Absolute base URL of the manager PWA, used for "open in app" buttons. */
+  publicAppBaseUrl?: string | null
 }
 
 export type BotTextMessage = {
@@ -77,27 +81,33 @@ export async function handlePendingCommand(input: BotTextInput): Promise<BotText
   const shown = requests.slice(0, MAX_LIST_ITEMS)
   const header =
     requests.length > shown.length
-      ? `📋 ${shown.length} درخواست از مجموع ${requests.length} درخواست در انتظار:`
-      : `📋 ${requests.length} درخواست در انتظار:`
+      ? `📋 ${faDigits(shown.length)} درخواست از مجموع ${faDigits(requests.length)} درخواست در انتظار:`
+      : `📋 ${faDigits(requests.length)} درخواست در انتظار:`
 
+  const base = input.publicAppBaseUrl?.trim()
   const messages: BotTextMessage[] = [{ messageHtml: header }]
   for (const r of shown) {
     const date = formatJalaliFullDate(r.requestedDate)
     const name = r.existingClient?.name ?? r.customerName
     const body = [
-      escapeHtml(name),
-      `📞 ${escapeHtml(r.customerPhone)}`,
-      `📅 ${escapeHtml(date)} ساعت ${escapeHtml(r.requestedStartTime)}`,
-    ].join('\n')
-    messages.push({
-      messageHtml: body,
-      buttons: [
-        [
-          { label: '✅ تأیید', data: `approve:${r.id}` },
-          { label: '❌ رد', data: `reject:${r.id}` },
-        ],
+      rtl(escapeHtml(name)),
+      rtl(`✂️ ${escapeHtml(r.bookedServiceName)}`),
+      rtl(`📞 ${isolate(faDigits(displayPhone(r.customerPhone)))}`),
+      rtl(`📅 ${escapeHtml(date)} ساعت ${isolate(faDigits(r.requestedStartTime))}`),
+    ].join('\n\n')
+    const buttons: MessagingButton[][] = [
+      [
+        { label: '✅ تأیید', data: `approve:${r.id}` },
+        { label: '❌ رد', data: `reject:${r.id}` },
       ],
-    })
+    ]
+    if (base) {
+      const url = buildRequestDeepLink(base, r.id)
+      if (isTelegramInlineButtonUrl(url)) {
+        buttons.push([{ label: 'مشاهده در برنامه', url }])
+      }
+    }
+    messages.push({ messageHtml: body, buttons })
   }
   return { messages }
 }

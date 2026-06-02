@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   approveAppointmentRequest: vi.fn(),
   rejectAppointmentRequest: vi.fn(),
   getMemberForUser: vi.fn(),
-  findSoleCapableStaffUserId: vi.fn(),
+  listCapableStaffForService: vi.fn(),
   salonCurrentHm: vi.fn(() => '14:32'),
 }))
 
@@ -25,14 +25,19 @@ vi.mock('@repo/database/members', () => ({
 }))
 
 vi.mock('@repo/database/staff', () => ({
-  findSoleCapableStaffUserId: mocks.findSoleCapableStaffUserId,
+  listCapableStaffForService: mocks.listCapableStaffForService,
 }))
 
 vi.mock('@repo/salon-core/salon-local-time', () => ({
   salonCurrentHm: mocks.salonCurrentHm,
 }))
 
-import { handleApprovalCallback, handleRejectionCallback } from './approval'
+import {
+  handleApprovalCallback,
+  handleAssignCallback,
+  handleBackCallback,
+  handleRejectionCallback,
+} from './approval'
 
 const linkedAccount = {
   id: 'acc-1',
@@ -75,7 +80,7 @@ describe('handleApprovalCallback', () => {
     mocks.findAccountByExternalId.mockResolvedValue(linkedAccount)
     mocks.getAppointmentRequestForCallback.mockResolvedValue(pendingRequest)
     mocks.getMemberForUser.mockResolvedValue(managerMember)
-    mocks.findSoleCapableStaffUserId.mockResolvedValue('staff-99')
+    mocks.listCapableStaffForService.mockResolvedValue([{ id: 'staff-99', name: 'سارا' }])
     mocks.approveAppointmentRequest.mockResolvedValue({
       ok: true,
       appointmentId: 'apt-1',
@@ -101,11 +106,11 @@ describe('handleApprovalCallback', () => {
     expect(outcome.toast).toBe('تأیید شد')
   })
 
-  it('returns needs_app when multiple staff are capable', async () => {
+  it('returns needs_app when no staff are capable', async () => {
     mocks.findAccountByExternalId.mockResolvedValue(linkedAccount)
     mocks.getAppointmentRequestForCallback.mockResolvedValue(pendingRequest)
     mocks.getMemberForUser.mockResolvedValue(managerMember)
-    mocks.findSoleCapableStaffUserId.mockResolvedValue(null)
+    mocks.listCapableStaffForService.mockResolvedValue([])
 
     const outcome = await handleApprovalCallback({
       provider: 'telegram',
@@ -117,7 +122,36 @@ describe('handleApprovalCallback', () => {
     expect(mocks.approveAppointmentRequest).not.toHaveBeenCalled()
     expect(outcome.messageHtml).toContain('برنامه')
     expect(outcome.replacementKeyboard).toEqual([
-      [{ label: 'مشاهده در برنامه', url: 'https://app.example/appointment-requests?focus=req-1' }],
+      [{ label: 'مشاهده در برنامه', url: 'https://app.example/requests?focus=req-1' }],
+    ])
+  })
+
+  it('expands to a staff picker (markup-only) when multiple staff are capable', async () => {
+    mocks.findAccountByExternalId.mockResolvedValue(linkedAccount)
+    mocks.getAppointmentRequestForCallback.mockResolvedValue(pendingRequest)
+    mocks.getMemberForUser.mockResolvedValue(managerMember)
+    mocks.listCapableStaffForService.mockResolvedValue([
+      { id: 'staff-1', name: 'سارا' },
+      { id: 'staff-2', name: 'نگار' },
+    ])
+
+    const outcome = await handleApprovalCallback({
+      provider: 'telegram',
+      externalId: '42',
+      requestId: 'req-1',
+      publicAppBaseUrl: 'https://app.example',
+    })
+
+    expect(mocks.approveAppointmentRequest).not.toHaveBeenCalled()
+    expect(outcome.mode).toBe('markup')
+    // N staff rows + 1 back/open-in-app row
+    expect(outcome.replacementKeyboard).toEqual([
+      [{ label: 'سارا', data: 'asg:req-1:0' }],
+      [{ label: 'نگار', data: 'asg:req-1:1' }],
+      [
+        { label: '↩️ بازگشت', data: 'back:req-1' },
+        { label: 'مشاهده در برنامه', url: 'https://app.example/requests?focus=req-1' },
+      ],
     ])
   })
 
@@ -172,7 +206,7 @@ describe('handleApprovalCallback', () => {
     mocks.findAccountByExternalId.mockResolvedValue(linkedAccount)
     mocks.getAppointmentRequestForCallback.mockResolvedValue(pendingRequest)
     mocks.getMemberForUser.mockResolvedValue(managerMember)
-    mocks.findSoleCapableStaffUserId.mockResolvedValue('staff-99')
+    mocks.listCapableStaffForService.mockResolvedValue([{ id: 'staff-99', name: 'سارا' }])
     mocks.approveAppointmentRequest.mockResolvedValue({
       ok: false,
       status: 409,
@@ -232,5 +266,82 @@ describe('handleRejectionCallback', () => {
     })
 
     expect(outcome.toast).toBe('رد ممکن نیست')
+  })
+})
+
+describe('handleAssignCallback', () => {
+  it('approves with the staff at the given index', async () => {
+    mocks.findAccountByExternalId.mockResolvedValue(linkedAccount)
+    mocks.getAppointmentRequestForCallback.mockResolvedValue(pendingRequest)
+    mocks.getMemberForUser.mockResolvedValue(managerMember)
+    mocks.listCapableStaffForService.mockResolvedValue([
+      { id: 'staff-1', name: 'سارا' },
+      { id: 'staff-2', name: 'نگار' },
+    ])
+    mocks.approveAppointmentRequest.mockResolvedValue({ ok: true, appointmentId: 'apt-1' })
+
+    const outcome = await handleAssignCallback({
+      provider: 'telegram',
+      externalId: '42',
+      requestId: 'req-1',
+      staffIndex: 1,
+    })
+
+    expect(mocks.approveAppointmentRequest).toHaveBeenCalledWith({
+      id: 'req-1',
+      salonId: 'salon-1',
+      staffId: 'staff-2',
+      reviewedByUserId: 'mgr-1',
+    })
+    expect(outcome.messageHtml).toContain('✅')
+    expect(outcome.replacementKeyboard).toBeNull()
+    expect(outcome.mode).toBeUndefined()
+    expect(outcome.toast).toBe('تأیید شد')
+  })
+
+  it('falls back to open-in-app when the index is out of range', async () => {
+    mocks.findAccountByExternalId.mockResolvedValue(linkedAccount)
+    mocks.getAppointmentRequestForCallback.mockResolvedValue(pendingRequest)
+    mocks.getMemberForUser.mockResolvedValue(managerMember)
+    mocks.listCapableStaffForService.mockResolvedValue([{ id: 'staff-1', name: 'سارا' }])
+
+    const outcome = await handleAssignCallback({
+      provider: 'telegram',
+      externalId: '42',
+      requestId: 'req-1',
+      staffIndex: 5,
+      publicAppBaseUrl: 'https://app.example',
+    })
+
+    expect(mocks.approveAppointmentRequest).not.toHaveBeenCalled()
+    expect(outcome.toast).toBe('انتخاب پرسنل نامعتبر است')
+    expect(outcome.replacementKeyboard).toEqual([
+      [{ label: 'مشاهده در برنامه', url: 'https://app.example/requests?focus=req-1' }],
+    ])
+  })
+})
+
+describe('handleBackCallback', () => {
+  it('restores the original approve/reject/open-in-app keyboard (markup-only)', async () => {
+    mocks.findAccountByExternalId.mockResolvedValue(linkedAccount)
+    mocks.getAppointmentRequestForCallback.mockResolvedValue(pendingRequest)
+    mocks.getMemberForUser.mockResolvedValue(managerMember)
+
+    const outcome = await handleBackCallback({
+      provider: 'telegram',
+      externalId: '42',
+      requestId: 'req-1',
+      publicAppBaseUrl: 'https://app.example',
+    })
+
+    expect(mocks.approveAppointmentRequest).not.toHaveBeenCalled()
+    expect(outcome.mode).toBe('markup')
+    expect(outcome.replacementKeyboard).toEqual([
+      [
+        { label: '✅ تأیید', data: 'approve:req-1' },
+        { label: '❌ رد', data: 'reject:req-1' },
+      ],
+      [{ label: 'مشاهده در برنامه', url: 'https://app.example/requests?focus=req-1' }],
+    ])
   })
 })

@@ -1,4 +1,6 @@
 import { formatJalaliFullDate } from '@repo/salon-core/jalali'
+import { displayPhone } from '@repo/salon-core/phone'
+import { faDigits, isolate, isTelegramInlineButtonUrl, rtl } from '../format'
 import type { MessagingButton } from '../providers/types'
 
 export type AppointmentRequestTemplateInput = {
@@ -28,17 +30,17 @@ export function renderAppointmentRequestPending(
   const date = formatJalaliFullDate(input.date)
   const title = `درخواست رزرو جدید — ${input.salonName}`
   const body = [
-    input.customerName,
-    `📞 ${input.customerPhone}`,
-    `✂️ ${input.serviceName}`,
-    `📅 ${date} ساعت ${input.startTime}`,
+    rtl(input.customerName),
+    rtl(`📞 ${isolate(faDigits(displayPhone(input.customerPhone)))}`),
+    rtl(`✂️ ${input.serviceName}`),
+    rtl(`📅 ${date} ساعت ${isolate(faDigits(input.startTime))}`),
   ].join('\n')
 
   const actionRow: MessagingButton[] = [
     { label: '✅ تأیید', data: `approve:${input.requestId}` },
     { label: '❌ رد', data: `reject:${input.requestId}` },
   ]
-  const linkRow: MessagingButton[] | null = input.deepLinkUrl.startsWith('http')
+  const linkRow: MessagingButton[] | null = isTelegramInlineButtonUrl(input.deepLinkUrl)
     ? [{ label: 'مشاهده در برنامه', url: input.deepLinkUrl }]
     : null
   const buttons: MessagingButton[][] = linkRow ? [actionRow, linkRow] : [actionRow]

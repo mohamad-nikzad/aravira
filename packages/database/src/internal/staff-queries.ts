@@ -74,6 +74,16 @@ export async function findSoleCapableStaffUserId(
   return capable.length === 1 ? capable[0]!.id : null
 }
 
+export async function listCapableStaffForService(
+  salonId: string,
+  serviceId: string
+): Promise<{ id: string; name: string }[]> {
+  const staff = await getAllStaff(salonId)
+  return staff
+    .filter((s) => s.serviceIds == null || s.serviceIds.includes(serviceId))
+    .map((s) => ({ id: s.id, name: s.name }))
+}
+
 export async function staffMayPerformService(
   staffId: string,
   serviceId: string,

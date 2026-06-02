@@ -29,6 +29,11 @@ const searchSchema = z.object({
   redirect: z.string().optional(),
 })
 
+/** Only honor internal relative paths to avoid open-redirect. */
+function safeInternalRedirect(value: string | undefined): string | null {
+  return value && value.startsWith('/') ? value : null
+}
+
 export const Route = createFileRoute('/login')({
   validateSearch: searchSchema,
   beforeLoad: async ({ context, search }) => {
@@ -36,7 +41,9 @@ export const Route = createFileRoute('/login')({
       queryKey: authQueryKey,
     })
     if (user) {
-      throw redirect({ to: search.redirect ?? homePathForRole(user.role) })
+      const safe = safeInternalRedirect(search.redirect)
+      if (safe) throw redirect({ href: safe })
+      throw redirect({ to: homePathForRole(user.role) })
     }
   },
   component: LoginPage,
@@ -68,7 +75,9 @@ function LoginPage() {
     onSuccess: async (data) => {
       await clearOfflineDatabase()
       setUser(data.user)
-      await navigate({ to: redirectTo ?? homePathForRole(data.user.role) })
+      const safe = safeInternalRedirect(redirectTo)
+      if (safe) await navigate({ href: safe })
+      else await navigate({ to: homePathForRole(data.user.role) })
     },
   })
 

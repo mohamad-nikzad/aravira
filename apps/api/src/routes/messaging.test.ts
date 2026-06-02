@@ -14,6 +14,8 @@ vi.mock('@repo/notifications', () => ({
     handleUnlink: vi.fn(),
     handleApprovalCallback: vi.fn(),
     handleRejectionCallback: vi.fn(),
+    handleAssignCallback: vi.fn(),
+    handleBackCallback: vi.fn(),
     handlePendingCommand: vi.fn(),
     handleTodayCommand: vi.fn(),
     handleHelpCommand: vi.fn(),
@@ -21,6 +23,7 @@ vi.mock('@repo/notifications', () => ({
   sendTelegramMessage: vi.fn(),
   answerTelegramCallback: vi.fn(),
   editTelegramMessageText: vi.fn(),
+  editTelegramMessageReplyMarkup: vi.fn(),
   persistentReplyKeyboard: vi.fn(() => ({
     keyboard: [[{ text: '📋' }]],
     is_persistent: true,
@@ -432,10 +435,12 @@ describe('messaging telegram webhook', () => {
     } as never)
     const res = await postMessage('/pending')
     expect(res.status).toBe(200)
-    expect(notif.messagingCommands.handlePendingCommand).toHaveBeenCalledWith({
-      provider: 'telegram',
-      externalId: '42',
-    })
+    expect(notif.messagingCommands.handlePendingCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'telegram',
+        externalId: '42',
+      })
+    )
     expect(notif.sendTelegramMessage).toHaveBeenCalledWith(
       expect.objectContaining({ chatId: '42', text: '✅ ندارد' })
     )

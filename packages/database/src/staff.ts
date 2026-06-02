@@ -9,6 +9,7 @@ export {
   setStaffServiceIds,
   staffMayPerformService,
   findSoleCapableStaffUserId,
+  listCapableStaffForService,
 } from './internal/staff-queries'
 
 export { getUserById } from './internal/user-queries'

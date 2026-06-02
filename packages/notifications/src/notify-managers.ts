@@ -23,7 +23,7 @@ export async function notifyManagersOfNewAppointmentRequest(
     return
   }
 
-  const deepLinkPath = `/appointment-requests?focus=${ctx.requestId}`
+  const deepLinkPath = `/requests?focus=${ctx.requestId}`
   const baseUrl = options.publicAppBaseUrl?.trim() ?? ''
   const deepLinkUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}${deepLinkPath}` : deepLinkPath
   const template = renderAppointmentRequestPending({

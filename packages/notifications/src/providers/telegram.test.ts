@@ -96,6 +96,31 @@ describe('createTelegramProvider().send', () => {
     })
   })
 
+  it('omits non-https url buttons from the inline keyboard', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 })
+    )
+    const provider = createTelegramProvider(() => testConfig)
+    await provider.send({
+      notificationId: 'n1',
+      externalId: '42',
+      title: 'T',
+      body: 'B',
+      buttons: [
+        [
+          { label: 'Approve', data: 'approve:r1' },
+          { label: 'Open app', url: 'http://localhost:3000/requests/1' },
+        ],
+      ],
+    })
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0]![1] as RequestInit).body as string
+    )
+    expect(body.reply_markup).toEqual({
+      inline_keyboard: [[{ text: 'Approve', callback_data: 'approve:r1' }]],
+    })
+  })
+
   it('serializes inline keyboard with url when url buttons are provided', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 })
