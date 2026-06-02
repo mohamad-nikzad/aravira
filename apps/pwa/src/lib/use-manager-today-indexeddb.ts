@@ -1,28 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { Client, Service, TodayData, User } from '@repo/salon-core/types'
-import {
-  useManagerDataClient,
-  useManagerOfflineDataEpoch,
-} from '#/lib/manager-data-client'
+import { useOfflineProjection } from '#/lib/offline-projection'
 
-type RepoState = {
-  loaded: boolean
+type TodaySnapshot = {
   data: TodayData | null
   staff: User[]
   services: Service[]
   clients: Client[]
-  todayUpdatedAt: string | null
-}
-
-function emptyRepo(): RepoState {
-  return {
-    loaded: false,
-    data: null,
-    staff: [],
-    services: [],
-    clients: [],
-    todayUpdatedAt: null,
-  }
 }
 
 export function useManagerTodayIndexedDbSources(
@@ -34,91 +18,34 @@ export function useManagerTodayIndexedDbSources(
   servicesLive: Service[] | undefined,
   clientsLive: Client[] | undefined,
 ) {
-  const client = useManagerDataClient()
-  const offlineDataEpoch = useManagerOfflineDataEpoch()
-  const [repo, setRepo] = useState<RepoState>(emptyRepo)
-
-  useEffect(() => {
-    if (!enabled || !client) {
-      setRepo(emptyRepo())
-      return
-    }
-
-    const ac = new AbortController()
-
-    void (async () => {
-      if (isOnline) {
-        if (liveToday)
-          await client.today.hydrateFromServer(managerDate, liveToday)
-        if (staffLive !== undefined)
-          await client.staff.hydrateFromServer(staffLive)
-        if (servicesLive !== undefined)
-          await client.services.hydrateFromServer(servicesLive)
-        if (clientsLive !== undefined)
-          await client.clients.hydrateListFromServer(clientsLive)
-      }
-
-      const [data, st, se, cl, ts] = await Promise.all([
+  const proj = useOfflineProjection<TodaySnapshot>({
+    enabled,
+    isOnline,
+    deps: [managerDate, liveToday, staffLive, servicesLive, clientsLive],
+    hydrate: async (client) => {
+      if (liveToday) await client.today.hydrateFromServer(managerDate, liveToday)
+      if (staffLive !== undefined)
+        await client.staff.hydrateFromServer(staffLive)
+      if (servicesLive !== undefined)
+        await client.services.hydrateFromServer(servicesLive)
+      if (clientsLive !== undefined)
+        await client.clients.hydrateListFromServer(clientsLive)
+    },
+    read: async (client) => {
+      const [data, staff, services, clients, updatedAt] = await Promise.all([
         client.today.getForDate(managerDate),
         client.staff.list(),
         client.services.list(),
         client.clients.list(),
         client.today.dayLastSyncedAt(managerDate),
       ])
-
-      if (ac.signal.aborted) return
-      setRepo({
-        loaded: true,
-        data,
-        staff: st,
-        services: se,
-        clients: cl,
-        todayUpdatedAt: ts,
-      })
-    })()
-
-    return () => {
-      ac.abort()
-    }
-  }, [
-    enabled,
-    client,
-    isOnline,
-    managerDate,
-    liveToday,
-    staffLive,
-    servicesLive,
-    clientsLive,
-    offlineDataEpoch,
-  ])
+      return { snapshot: { data, staff, services, clients }, updatedAt }
+    },
+  })
 
   return useMemo(() => {
-    if (!enabled) {
-      return {
-        todayData: liveToday,
-        staff: staffLive ?? [],
-        services: servicesLive ?? [],
-        clients: clientsLive ?? [],
-        snapshotUpdatedAt: null as string | null,
-        hasSnapshot: false,
-        idbLoading: false,
-      }
-    }
-
-    if (!client) {
-      return {
-        todayData: liveToday,
-        staff: staffLive ?? [],
-        services: servicesLive ?? [],
-        clients: clientsLive ?? [],
-        snapshotUpdatedAt: null as string | null,
-        hasSnapshot: false,
-        idbLoading: false,
-      }
-    }
-
-    if (!repo.loaded) {
-      if (isOnline) {
+    switch (proj.phase) {
+      case 'live':
         return {
           todayData: liveToday,
           staff: staffLive ?? [],
@@ -126,38 +53,30 @@ export function useManagerTodayIndexedDbSources(
           clients: clientsLive ?? [],
           snapshotUpdatedAt: null as string | null,
           hasSnapshot: false,
-          idbLoading: true,
+          idbLoading: proj.idbLoading,
+        }
+      case 'empty':
+        return {
+          todayData: undefined,
+          staff: [] as User[],
+          services: [] as Service[],
+          clients: [] as Client[],
+          snapshotUpdatedAt: null as string | null,
+          hasSnapshot: false,
+          idbLoading: proj.idbLoading,
+        }
+      case 'snapshot': {
+        const s = proj.snapshot as TodaySnapshot
+        return {
+          todayData: s.data ?? undefined,
+          staff: s.staff,
+          services: s.services,
+          clients: s.clients,
+          snapshotUpdatedAt: proj.snapshotUpdatedAt,
+          hasSnapshot: s.data != null,
+          idbLoading: proj.idbLoading,
         }
       }
-
-      return {
-        todayData: undefined,
-        staff: [] as User[],
-        services: [] as Service[],
-        clients: [] as Client[],
-        snapshotUpdatedAt: null as string | null,
-        hasSnapshot: false,
-        idbLoading: true,
-      }
     }
-
-    return {
-      todayData: repo.data ?? undefined,
-      staff: repo.staff,
-      services: repo.services,
-      clients: repo.clients,
-      snapshotUpdatedAt: repo.todayUpdatedAt,
-      hasSnapshot: repo.data != null,
-      idbLoading: false,
-    }
-  }, [
-    enabled,
-    client,
-    isOnline,
-    liveToday,
-    staffLive,
-    servicesLive,
-    clientsLive,
-    repo,
-  ])
+  }, [proj, liveToday, staffLive, servicesLive, clientsLive])
 }

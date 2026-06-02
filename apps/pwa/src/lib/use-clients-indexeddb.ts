@@ -1,81 +1,52 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { Client, ClientSummary } from '@repo/salon-core/types'
-import {
-  useManagerDataClient,
-  useManagerOfflineDataEpoch,
-} from '#/lib/manager-data-client'
+import { useOfflineProjection } from '#/lib/offline-projection'
 
 export function useClientsListIndexedDbSources(
   enabled: boolean,
   isOnline: boolean,
   live: { clients: Client[] } | undefined,
 ) {
-  const client = useManagerDataClient()
-  const offlineDataEpoch = useManagerOfflineDataEpoch()
-  const [repo, setRepo] = useState<{
-    loaded: boolean
-    clients: Client[]
-    listUpdatedAt: string | null
-  }>({ loaded: false, clients: [], listUpdatedAt: null })
-
-  useEffect(() => {
-    if (!enabled || !client) {
-      setRepo({ loaded: false, clients: [], listUpdatedAt: null })
-      return
-    }
-
-    const ac = new AbortController()
-    void (async () => {
-      if (isOnline && live?.clients !== undefined) {
+  const proj = useOfflineProjection<{ clients: Client[] }>({
+    enabled,
+    isOnline,
+    deps: [live],
+    hydrate: async (client) => {
+      if (live?.clients !== undefined) {
         await client.clients.hydrateListFromServer(live.clients)
       }
-      const [rows, ts] = await Promise.all([
-        client.clients.list(),
-        client.clients.listLastSyncedAt(),
-      ])
-      if (ac.signal.aborted) return
-      setRepo({ loaded: true, clients: rows, listUpdatedAt: ts })
-    })()
-
-    return () => {
-      ac.abort()
-    }
-  }, [enabled, client, isOnline, live, offlineDataEpoch])
+    },
+    read: async (client) => ({
+      snapshot: { clients: await client.clients.list() },
+      updatedAt: await client.clients.listLastSyncedAt(),
+    }),
+  })
 
   return useMemo(() => {
-    if (!enabled || !client) {
-      return {
-        data: live,
-        snapshotUpdatedAt: null as string | null,
-        hasSnapshot: false,
-        idbLoading: false,
-      }
-    }
-
-    if (!repo.loaded) {
-      if (isOnline) {
+    switch (proj.phase) {
+      case 'live':
         return {
           data: live,
           snapshotUpdatedAt: null as string | null,
           hasSnapshot: false,
-          idbLoading: true,
+          idbLoading: proj.idbLoading,
         }
-      }
-      return {
-        data: undefined,
-        snapshotUpdatedAt: null as string | null,
-        hasSnapshot: false,
-        idbLoading: true,
-      }
+      case 'empty':
+        return {
+          data: undefined,
+          snapshotUpdatedAt: null as string | null,
+          hasSnapshot: false,
+          idbLoading: proj.idbLoading,
+        }
+      case 'snapshot':
+        return {
+          data: proj.snapshot ?? undefined,
+          snapshotUpdatedAt: proj.snapshotUpdatedAt,
+          hasSnapshot: true,
+          idbLoading: proj.idbLoading,
+        }
     }
-
-    return {
-      data: { clients: repo.clients },
-      snapshotUpdatedAt: repo.listUpdatedAt,
-      hasSnapshot: true,
-      idbLoading: false,
-    }
-  }, [enabled, client, isOnline, live, repo])
+  }, [proj, live])
 }
 
 export function useClientSummaryIndexedDbSources(
@@ -84,70 +55,42 @@ export function useClientSummaryIndexedDbSources(
   clientId: string,
   live: ClientSummary | undefined,
 ) {
-  const client = useManagerDataClient()
-  const offlineDataEpoch = useManagerOfflineDataEpoch()
-  const [repo, setRepo] = useState<{
-    loaded: boolean
-    summary: ClientSummary | null
-    updatedAt: string | null
-  }>({ loaded: false, summary: null, updatedAt: null })
-
-  useEffect(() => {
-    if (!enabled || !client || !clientId) {
-      setRepo({ loaded: false, summary: null, updatedAt: null })
-      return
-    }
-
-    const ac = new AbortController()
-    void (async () => {
-      if (isOnline && live) {
-        await client.clients.hydrateSummaryFromServer(clientId, live)
-      }
-      const [summary, ts] = await Promise.all([
-        client.clients.getSummary(clientId),
-        client.clients.summaryLastSyncedAt(clientId),
-      ])
-      if (ac.signal.aborted) return
-      setRepo({ loaded: true, summary, updatedAt: ts })
-    })()
-
-    return () => {
-      ac.abort()
-    }
-  }, [enabled, client, isOnline, clientId, live, offlineDataEpoch])
+  const proj = useOfflineProjection<ClientSummary | null>({
+    enabled: enabled && Boolean(clientId),
+    isOnline,
+    deps: [clientId, live],
+    hydrate: async (client) => {
+      if (live) await client.clients.hydrateSummaryFromServer(clientId, live)
+    },
+    read: async (client) => ({
+      snapshot: await client.clients.getSummary(clientId),
+      updatedAt: await client.clients.summaryLastSyncedAt(clientId),
+    }),
+  })
 
   return useMemo(() => {
-    if (!enabled || !client) {
-      return {
-        data: live,
-        snapshotUpdatedAt: null as string | null,
-        hasSnapshot: false,
-        idbLoading: false,
-      }
-    }
-
-    if (!repo.loaded) {
-      if (isOnline) {
+    switch (proj.phase) {
+      case 'live':
         return {
           data: live,
           snapshotUpdatedAt: null as string | null,
-          hasSnapshot: Boolean(live),
-          idbLoading: true,
+          hasSnapshot: proj.idbLoading ? Boolean(live) : false,
+          idbLoading: proj.idbLoading,
         }
-      }
-      return {
-        data: undefined,
-        snapshotUpdatedAt: null as string | null,
-        hasSnapshot: false,
-        idbLoading: true,
-      }
+      case 'empty':
+        return {
+          data: undefined,
+          snapshotUpdatedAt: null as string | null,
+          hasSnapshot: false,
+          idbLoading: proj.idbLoading,
+        }
+      case 'snapshot':
+        return {
+          data: proj.snapshot ?? undefined,
+          snapshotUpdatedAt: proj.snapshotUpdatedAt,
+          hasSnapshot: proj.snapshot != null,
+          idbLoading: proj.idbLoading,
+        }
     }
-
-    return {
-      data: repo.summary ?? undefined,
-      snapshotUpdatedAt: repo.updatedAt,
-      hasSnapshot: repo.summary != null,
-      idbLoading: false,
-    }
-  }, [enabled, client, isOnline, live, repo])
+  }, [proj, live])
 }

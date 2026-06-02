@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type {
   AppointmentWithDetails,
   BusinessHours,
@@ -6,10 +6,7 @@ import type {
   Service,
   User,
 } from '@repo/salon-core'
-import {
-  useManagerDataClient,
-  useManagerOfflineDataEpoch,
-} from '#/lib/manager-data-client'
+import { useOfflineProjection } from '#/lib/offline-projection'
 
 type LiveBundles = {
   appointmentsData?: { appointments: AppointmentWithDetails[] }
@@ -19,25 +16,13 @@ type LiveBundles = {
   businessData?: { settings: BusinessHours | null }
 }
 
-type RepoState = {
-  loaded: boolean
+type CalendarSnapshot = {
   appointments: AppointmentWithDetails[]
   staff: User[]
   services: Service[]
   clients: Client[]
   businessSettings: BusinessHours | null
-  appointmentsUpdatedAt: string | null
 }
-
-const emptyRepo = (): RepoState => ({
-  loaded: false,
-  appointments: [],
-  staff: [],
-  services: [],
-  clients: [],
-  businessSettings: null,
-  appointmentsUpdatedAt: null,
-})
 
 export function useCalendarIndexedDbSources(
   enabled: boolean,
@@ -47,53 +32,49 @@ export function useCalendarIndexedDbSources(
   endDate: string,
   live: LiveBundles,
 ) {
-  const client = useManagerDataClient()
-  const offlineDataEpoch = useManagerOfflineDataEpoch()
-  const [repo, setRepo] = useState<RepoState>(emptyRepo)
-
-  useEffect(() => {
-    if (!enabled || !client) {
-      setRepo(emptyRepo())
-      return
-    }
-
-    const ac = new AbortController()
-
-    void (async () => {
-      if (isOnline) {
-        const tasks: Promise<void>[] = []
-        if (live.appointmentsData) {
-          tasks.push(
-            client.appointments.hydrateRangeFromServer(
-              startDate,
-              endDate,
-              live.appointmentsData.appointments,
-            ),
-          )
-        }
-        if (live.staffData) {
-          tasks.push(client.staff.hydrateFromServer(live.staffData.staff))
-        }
-        if (live.servicesData) {
-          tasks.push(
-            client.services.hydrateFromServer(live.servicesData.services),
-          )
-        }
-        if (isManager && live.clientsData) {
-          tasks.push(
-            client.clients.hydrateListFromServer(live.clientsData.clients),
-          )
-        }
-        if (live.businessData !== undefined) {
-          tasks.push(
-            client.businessSettings.hydrateFromServer(
-              live.businessData.settings ?? null,
-            ),
-          )
-        }
-        await Promise.all(tasks)
+  const proj = useOfflineProjection<CalendarSnapshot>({
+    enabled,
+    isOnline,
+    deps: [
+      isManager,
+      startDate,
+      endDate,
+      live.appointmentsData,
+      live.staffData,
+      live.servicesData,
+      live.clientsData,
+      live.businessData,
+    ],
+    hydrate: async (client) => {
+      const tasks: Promise<void>[] = []
+      if (live.appointmentsData) {
+        tasks.push(
+          client.appointments.hydrateRangeFromServer(
+            startDate,
+            endDate,
+            live.appointmentsData.appointments,
+          ),
+        )
       }
-
+      if (live.staffData) {
+        tasks.push(client.staff.hydrateFromServer(live.staffData.staff))
+      }
+      if (live.servicesData) {
+        tasks.push(client.services.hydrateFromServer(live.servicesData.services))
+      }
+      if (isManager && live.clientsData) {
+        tasks.push(client.clients.hydrateListFromServer(live.clientsData.clients))
+      }
+      if (live.businessData !== undefined) {
+        tasks.push(
+          client.businessSettings.hydrateFromServer(
+            live.businessData.settings ?? null,
+          ),
+        )
+      }
+      await Promise.all(tasks)
+    },
+    read: async (client) => {
       const [appointments, staff, services, clients, businessSettings, ts] =
         await Promise.all([
           client.appointments.list(startDate, endDate),
@@ -103,70 +84,16 @@ export function useCalendarIndexedDbSources(
           client.businessSettings.get(),
           client.appointments.rangeLastSyncedAt(startDate, endDate),
         ])
-
-      if (ac.signal.aborted) return
-      setRepo({
-        loaded: true,
-        appointments,
-        staff,
-        services,
-        clients,
-        businessSettings,
-        appointmentsUpdatedAt: ts,
-      })
-    })()
-
-    return () => {
-      ac.abort()
-    }
-  }, [
-    enabled,
-    client,
-    isOnline,
-    isManager,
-    startDate,
-    endDate,
-    live.appointmentsData,
-    live.staffData,
-    live.servicesData,
-    live.clientsData,
-    live.businessData,
-    offlineDataEpoch,
-  ])
+      return {
+        snapshot: { appointments, staff, services, clients, businessSettings },
+        updatedAt: ts,
+      }
+    },
+  })
 
   return useMemo(() => {
-    if (!enabled) {
-      return {
-        appointments: live.appointmentsData,
-        staff: live.staffData,
-        services: live.servicesData,
-        clients: live.clientsData,
-        business: live.businessData,
-        offlineMeta: {
-          loaded: false,
-          idbLoading: false,
-          appointmentsUpdatedAt: null as string | null,
-        },
-      }
-    }
-
-    if (!client) {
-      return {
-        appointments: live.appointmentsData,
-        staff: live.staffData,
-        services: live.servicesData,
-        clients: live.clientsData,
-        business: live.businessData,
-        offlineMeta: {
-          loaded: false,
-          idbLoading: false,
-          appointmentsUpdatedAt: null as string | null,
-        },
-      }
-    }
-
-    if (!repo.loaded) {
-      if (isOnline) {
+    switch (proj.phase) {
+      case 'live':
         return {
           appointments: live.appointmentsData,
           staff: live.staffData,
@@ -175,37 +102,38 @@ export function useCalendarIndexedDbSources(
           business: live.businessData,
           offlineMeta: {
             loaded: false,
-            idbLoading: true,
+            idbLoading: proj.idbLoading,
             appointmentsUpdatedAt: null as string | null,
           },
         }
-      }
-
-      return {
-        appointments: undefined,
-        staff: undefined,
-        services: undefined,
-        clients: undefined,
-        business: undefined,
-        offlineMeta: {
-          loaded: false,
-          idbLoading: true,
-          appointmentsUpdatedAt: null as string | null,
-        },
+      case 'empty':
+        return {
+          appointments: undefined,
+          staff: undefined,
+          services: undefined,
+          clients: undefined,
+          business: undefined,
+          offlineMeta: {
+            loaded: false,
+            idbLoading: proj.idbLoading,
+            appointmentsUpdatedAt: null as string | null,
+          },
+        }
+      case 'snapshot': {
+        const s = proj.snapshot as CalendarSnapshot
+        return {
+          appointments: { appointments: s.appointments },
+          staff: { staff: s.staff },
+          services: { services: s.services },
+          clients: isManager ? { clients: s.clients } : live.clientsData,
+          business: { settings: s.businessSettings },
+          offlineMeta: {
+            loaded: true,
+            idbLoading: proj.idbLoading,
+            appointmentsUpdatedAt: proj.snapshotUpdatedAt,
+          },
+        }
       }
     }
-
-    return {
-      appointments: { appointments: repo.appointments },
-      staff: { staff: repo.staff },
-      services: { services: repo.services },
-      clients: isManager ? { clients: repo.clients } : live.clientsData,
-      business: { settings: repo.businessSettings },
-      offlineMeta: {
-        loaded: true,
-        idbLoading: false,
-        appointmentsUpdatedAt: repo.appointmentsUpdatedAt,
-      },
-    }
-  }, [enabled, client, isOnline, isManager, live, repo])
+  }, [proj, isManager, live])
 }

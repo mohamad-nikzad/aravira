@@ -9,22 +9,30 @@ where the architecture fights us. Four findings, in priority order.
 
 ---
 
-## 1 — Unify the Offline Projection into one deep module · **Strong**
+## 1 — Unify the Offline Projection into one deep module · **Strong** · ✅ DONE
 
-**Files:** `lib/use-calendar-indexeddb-sources.ts`, `lib/use-manager-today-indexeddb.ts`,
-`lib/use-clients-indexeddb.ts` (2 hooks).
+**Files:** `src/lib/use-calendar-indexeddb-sources.ts`, `src/lib/use-manager-today-indexeddb.ts`,
+`src/lib/use-clients-indexeddb.ts` (2 hooks).
 
-**Problem:** the Offline Projection merge logic is copied four times. Each hook re-implements
+**Problem:** the Offline Projection merge logic was copied four times. Each hook re-implemented
 the same hydrate → read → merge state machine, including identical precedence rules:
 online-but-not-loaded → show live; offline-not-loaded → show undefined; loaded → show
-snapshot. A fix in one is a latent bug in the other three. CONTEXT.md already names the
-concept "Offline Projection," but no single module owns it.
+snapshot. A fix in one was a latent bug in the other three. CONTEXT.md already names the
+concept "Offline Projection," but no single module owned it.
 
-**Solution:** deepen one generic `useOfflineProjection<T>` parameterised by hydrate-fn,
-read-fn, and entity shape. Each route declares only its sources.
+**What shipped:**
+- `src/lib/offline-projection.ts` — new `useOfflineProjection<TSnapshot>` deep module owning the
+  client/epoch access, the hydrate → read → setRepo effect (AbortController + online guard), and
+  the phase selection. Routes pass only `{ enabled, isOnline, deps, hydrate, read }`.
+- `selectOfflineProjectionPhase(...)` — the precedence rules extracted as a pure, side-effect-free
+  function (`live` / `empty` / `snapshot` + `idbLoading`), so they are unit-testable without React.
+- `src/lib/offline-projection.test.ts` — covers the full precedence matrix (disabled, no client,
+  hydrating online, hydrating offline, loaded on/offline).
+- The four hooks became thin `useMemo` wrappers that map the phase to their existing public return
+  shapes — **no call-site changes** in calendar/today/clients/clients.$id routes.
 
-**Wins:** locality (merge bugs in one module); the interface becomes the first test surface;
-leverage (one interface, four call sites); deletion test passes (complexity reappears 4×).
+**Wins realized:** merge bugs now live in one module; the precedence rule is the test surface;
+one interface backs four call sites; the duplicated state machine is gone.
 
 ---
 
@@ -95,7 +103,7 @@ subscribe lifecycle fixed in one place.
 
 ## Suggested sequencing
 
-1. **#1 Offline Projection** — foundation; lands the first unit tests; unblocks #3.
+1. **#1 Offline Projection** — ✅ done; foundation; unblocks #3.
 2. **#2 Single write seam** — `useManagerMutation` adapter; collapse 66 sites. _← starting here._
 3. **#3 Today view-model** — consumes #1.
 4. **#4 Query glue** — `useManagerCollection`.
