@@ -60,9 +60,12 @@ function jsonHeaders() {
   return { 'Content-Type': 'application/json' }
 }
 
-function mockSignUpResponse(opts: { ok: boolean; userId?: string; status?: number; setCookie?: string }) {
+function mockSignUpResponse(opts: { ok: boolean; userId?: string; status?: number; setCookie?: string | string[] }) {
   const headers = new Headers()
-  if (opts.setCookie) headers.set('set-cookie', opts.setCookie)
+  if (opts.setCookie) {
+    const cookies = Array.isArray(opts.setCookie) ? opts.setCookie : [opts.setCookie]
+    for (const cookie of cookies) headers.append('set-cookie', cookie)
+  }
   const body = opts.ok ? { user: { id: opts.userId ?? 'u1' } } : { error: 'fail' }
   return new Response(JSON.stringify(body), { status: opts.status ?? (opts.ok ? 200 : 400), headers })
 }
@@ -142,6 +145,37 @@ describe('auth signup route', () => {
     expect(body.user.id).toBe('u1')
     expect(body.redirectTo).toBe('/onboarding')
     expect(res.headers.get('set-cookie') ?? '').toContain('better-auth.session_token=tok')
+  })
+
+  it('forwards every Set-Cookie header (session token + cache cookie) separately', async () => {
+    vi.mocked(authServer.api.signUpEmail).mockResolvedValue(
+      mockSignUpResponse({
+        ok: true,
+        userId: 'u1',
+        setCookie: [
+          'better-auth.session_token=tok; HttpOnly; Path=/',
+          'better-auth.session_data=cache; Max-Age=60; HttpOnly; Path=/',
+        ],
+      }) as never
+    )
+    vi.mocked(authServer.api.createOrganization).mockResolvedValue({
+      id: 's1',
+      name: 'My Salon',
+      slug: 'my-salon',
+    } as never)
+    const res = await app.request('/api/v1/auth/signup', {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify(validBody),
+    })
+    expect(res.status).toBe(200)
+    const cookies = res.headers.getSetCookie()
+    expect(cookies).toContainEqual(
+      expect.stringContaining('better-auth.session_token=tok'),
+    )
+    expect(cookies).toContainEqual(
+      expect.stringContaining('better-auth.session_data=cache'),
+    )
   })
 })
 

@@ -9,10 +9,11 @@ import { requireTenant } from '../middleware/auth'
 import { error, ok } from '../lib/responses'
 
 const actions = new Set<OnboardingAction>([
-  'confirm-profile',
   'complete',
   'skip',
   'reopen',
+  'set-manager-staff',
+  'confirm-business-hours',
 ])
 
 export const onboarding = new Hono<AppEnv>()
@@ -29,6 +30,15 @@ export const onboarding = new Hono<AppEnv>()
       return error(c, 'درخواست نامعتبر است', 400)
     }
     const { salonId } = c.var.tenant
+
+    if (action === 'skip') {
+      // Top-level skip only allowed once required steps are done.
+      const current = await getOnboardingStatus(salonId)
+      if (!current.steps.servicesAdded || !current.steps.staffAdded) {
+        return error(c, 'ابتدا خدمات و کارکنان را اضافه کنید', 400)
+      }
+    }
+
     const onboarding = await updateOnboardingState(salonId, action)
     return ok(c, { onboarding })
   })

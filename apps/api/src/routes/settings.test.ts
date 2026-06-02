@@ -80,6 +80,28 @@ describe('settings router', () => {
     })
   })
 
+  it('manager PATCH persists workingDays', async () => {
+    vi.mocked(db.updateBusinessSettings).mockResolvedValue({ workingDays: 62 } as never)
+    const res = await app.request('/api/v1/settings/business', {
+      method: 'PATCH',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workingDays: 62 }),
+    })
+    expect(res.status).toBe(200)
+    expect(db.updateBusinessSettings).toHaveBeenCalledWith('s1', {
+      workingDays: 62,
+    })
+  })
+
+  it('400 when workingDays out of range', async () => {
+    const res = await app.request('/api/v1/settings/business', {
+      method: 'PATCH',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workingDays: 999 }),
+    })
+    expect(res.status).toBe(400)
+  })
+
   it('400 when workingEnd <= workingStart', async () => {
     const res = await app.request('/api/v1/settings/business', {
       method: 'PATCH',

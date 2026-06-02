@@ -18,11 +18,13 @@ export const settings = new Hono<AppEnv>()
     zValidator('json', businessSettingsSchema),
     async (c) => {
       const { salonId } = c.var.tenant
-      const { workingStart, workingEnd, slotDurationMinutes } = c.req.valid('json')
+      const { workingStart, workingEnd, slotDurationMinutes, workingDays } =
+        c.req.valid('json')
       const next = await updateBusinessSettings(salonId, {
         ...(workingStart !== undefined ? { workingStart } : {}),
         ...(workingEnd !== undefined ? { workingEnd } : {}),
         ...(slotDurationMinutes !== undefined ? { slotDurationMinutes } : {}),
+        ...(workingDays !== undefined ? { workingDays } : {}),
       })
       return ok(c, { settings: next })
     },

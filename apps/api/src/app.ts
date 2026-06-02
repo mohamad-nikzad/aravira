@@ -17,6 +17,7 @@ import { serviceAddons } from './routes/service-addons'
 import { services } from './routes/services'
 import { staff } from './routes/staff'
 import { settings } from './routes/settings'
+import { salonProfile } from './routes/salon-profile'
 import { salonPublicSettings } from './routes/salon-public-settings'
 import { notificationPreferences } from './routes/notification-preferences'
 import { onboarding } from './routes/onboarding'
@@ -74,6 +75,7 @@ const app = new Hono<AppEnv>()
   .route('/api/v1/services', services)
   .route('/api/v1/staff', staff)
   .route('/api/v1/settings', settings)
+  .route('/api/v1/salon-profile', salonProfile)
   .route('/api/v1/salon-public-settings', salonPublicSettings)
   .route('/api/v1/notification-preferences', notificationPreferences)
   .route('/api/v1/onboarding', onboarding)

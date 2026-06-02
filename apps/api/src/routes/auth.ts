@@ -24,8 +24,35 @@ function phoneToEmail(phone: string): string {
 }
 
 function forwardSetCookie(c: Parameters<typeof ok>[0], headers: Headers) {
-  const setCookie = headers.get('set-cookie')
-  if (setCookie) c.header('Set-Cookie', setCookie, { append: true })
+  // Better Auth sets multiple cookies on signup (the 7-day `session_token` and,
+  // with cookieCache enabled, a short-lived `session_data` cache cookie). A
+  // plain `headers.get('set-cookie')` collapses them into one comma-joined
+  // string the browser can't parse, dropping the real session token — so the
+  // session silently dies once the 60s cache cookie expires. Forward each
+  // Set-Cookie header individually instead.
+  for (const cookie of headers.getSetCookie()) {
+    c.header('Set-Cookie', cookie, { append: true })
+  }
+}
+
+/**
+ * Salon names are entered in Persian, which can't form a Latin URL slug, so we
+ * mint a unique placeholder at signup. The owner picks a friendly booking link
+ * later in onboarding.
+ */
+async function generateUniqueSlug(
+  db: ReturnType<typeof getDb>,
+): Promise<string> {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const slug = `salon-${Math.random().toString(36).slice(2, 8)}`
+    const taken = await db
+      .select({ id: organization.id })
+      .from(organization)
+      .where(eq(organization.slug, slug))
+      .limit(1)
+    if (!taken[0]) return slug
+  }
+  throw new Error('could not generate a unique salon slug')
 }
 
 function isConflict(err: unknown): boolean {
@@ -61,19 +88,30 @@ export const authRoute = new Hono<AppEnv>()
   '/signup',
   zValidator('json', signupSchema),
   async (c) => {
-    const { salonName, slug, managerName, managerPhone, password } =
-      c.req.valid('json')
+    const {
+      salonName,
+      slug: requestedSlug,
+      managerName,
+      managerPhone,
+      password,
+    } = c.req.valid('json')
     const db = getDb()
 
-    // Reject a taken slug before creating the user, so a slug clash can't leave
-    // an orphaned user with no organization behind.
-    const existingSlug = await db
-      .select({ id: organization.id })
-      .from(organization)
-      .where(eq(organization.slug, slug))
-      .limit(1)
-    if (existingSlug[0]) {
-      return error(c, 'این آدرس سالن قبلاً ثبت شده است', 409)
+    let slug: string
+    if (requestedSlug) {
+      // A client-chosen slug must be free before we create the user, so a clash
+      // can't leave an orphaned user with no organization behind.
+      const existingSlug = await db
+        .select({ id: organization.id })
+        .from(organization)
+        .where(eq(organization.slug, requestedSlug))
+        .limit(1)
+      if (existingSlug[0]) {
+        return error(c, 'این آدرس سالن قبلاً ثبت شده است', 409)
+      }
+      slug = requestedSlug
+    } else {
+      slug = await generateUniqueSlug(db)
     }
 
     let signUpRes: Response

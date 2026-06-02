@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('@repo/database/public', () => ({
   getManagerPublicSettings: vi.fn(),
   updateManagerPublicSettings: vi.fn(),
+  updateSalonSlug: vi.fn(),
   getPublicSalon: vi.fn(),
   getPublicAvailability: vi.fn(),
   createAppointmentRequest: vi.fn(),
@@ -122,11 +123,83 @@ describe('salon-public-settings router', () => {
     )
   })
 
+  it('manager PUT accepts the onboarding { enabled, bioText } partial', async () => {
+    vi.mocked(pub.updateManagerPublicSettings).mockResolvedValue(
+      sampleResult as never,
+    )
+    const res = await app.request('/api/v1/salon-public-settings', {
+      method: 'PUT',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: true, bioText: 'درباره ما' }),
+    })
+    expect(res.status).toBe(200)
+    expect(pub.updateManagerPublicSettings).toHaveBeenCalledWith(
+      's1',
+      expect.objectContaining({ enabled: true, bioText: 'درباره ما' }),
+    )
+  })
+
   it('400 when bioText too long', async () => {
     const res = await app.request('/api/v1/salon-public-settings', {
       method: 'PUT',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ bioText: 'x'.repeat(500) }),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('403 on PATCH /slug for staff', async () => {
+    vi.mocked(getMemberForUser).mockResolvedValue({
+      userId: 'u2',
+      organizationId: 's1',
+      role: 'member',
+      name: 'Staff',
+      username: '09120000001',
+    } as never)
+    const res = await app.request('/api/v1/salon-public-settings/slug', {
+      method: 'PATCH',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'new-salon' }),
+    })
+    expect(res.status).toBe(403)
+  })
+
+  it('manager PATCH /slug updates slug and returns refreshed settings', async () => {
+    const updated = { ...sampleResult, slug: 'new-salon' }
+    vi.mocked(pub.updateSalonSlug).mockResolvedValue({
+      ok: true,
+      result: updated as never,
+    })
+    const res = await app.request('/api/v1/salon-public-settings/slug', {
+      method: 'PATCH',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'new-salon' }),
+    })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual(updated)
+    expect(pub.updateSalonSlug).toHaveBeenCalledWith('s1', 'new-salon')
+  })
+
+  it('manager PATCH /slug returns 409 on conflict', async () => {
+    vi.mocked(pub.updateSalonSlug).mockResolvedValue({
+      ok: false,
+      reason: 'conflict',
+    })
+    const res = await app.request('/api/v1/salon-public-settings/slug', {
+      method: 'PATCH',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'taken-slug' }),
+    })
+    expect(res.status).toBe(409)
+    const body = (await res.json()) as { error: string }
+    expect(body.error).toBe('این آدرس سالن قبلاً ثبت شده است')
+  })
+
+  it('400 when slug format is invalid', async () => {
+    const res = await app.request('/api/v1/salon-public-settings/slug', {
+      method: 'PATCH',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'Bad Slug!' }),
     })
     expect(res.status).toBe(400)
   })
