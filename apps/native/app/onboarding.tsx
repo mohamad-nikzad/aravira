@@ -4,12 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   ArrowRight,
-  CalendarPlus,
+  Bell,
   Check,
   Clock3,
+  Globe,
+  MapPin,
   RotateCcw,
   Scissors,
-  Store,
   Users,
 } from 'lucide-react-native';
 import { ApiError, NetworkError } from '@repo/api-client';
@@ -36,13 +37,6 @@ type StepDef = {
 
 const STEPS: StepDef[] = [
   {
-    key: 'profileConfirmed',
-    title: 'پروفایل سالن',
-    description: 'اطلاعات اصلی فضای کاری را تایید کنید.',
-    icon: Store,
-    required: false,
-  },
-  {
     key: 'businessHoursSet',
     title: 'ساعات کاری',
     description: 'ساعت شروع، پایان و بازه نوبت‌ها را مشخص کنید.',
@@ -67,12 +61,28 @@ const STEPS: StepDef[] = [
     cta: { label: 'مدیریت پرسنل', route: '/staff' },
   },
   {
-    key: 'firstAppointmentCreated',
-    title: 'اولین نوبت',
-    description: 'بعد از آماده‌سازی، یک نوبت آزمایشی بسازید.',
-    icon: CalendarPlus,
+    key: 'presenceSet',
+    title: 'آدرس و شبکه‌های اجتماعی',
+    description: 'آدرس، نقشه و راه‌های تماس را وارد کنید تا مشتری‌ها سالن را پیدا کنند.',
+    icon: MapPin,
     required: false,
-    cta: { label: 'باز کردن تقویم', route: '/(tabs)/calendar' },
+    cta: { label: 'تنظیم حضور سالن', route: '/(tabs)/settings' },
+  },
+  {
+    key: 'publicPageConfigured',
+    title: 'صفحه عمومی',
+    description: 'صفحه رزرو آنلاین سالن را فعال کنید.',
+    icon: Globe,
+    required: false,
+    cta: { label: 'تنظیم صفحه عمومی', route: '/(tabs)/settings' },
+  },
+  {
+    key: 'notificationsConfigured',
+    title: 'اعلان‌ها',
+    description: 'کانال دریافت اعلان نوبت‌ها را تنظیم کنید.',
+    icon: Bell,
+    required: false,
+    cta: { label: 'تنظیم اعلان‌ها', route: '/(tabs)/settings' },
   },
 ];
 
@@ -291,19 +301,7 @@ export default function OnboardingScreen() {
                     </View>
                   </View>
 
-                  {step.key === 'profileConfirmed' ? (
-                    <Button
-                      onPress={() => runAction('confirm-profile')}
-                      disabled={done || pending !== null}>
-                      {pending === 'confirm-profile' ? (
-                        <Spinner color={theme.colors.primaryForeground} />
-                      ) : (
-                        <Text style={styles.btnText}>
-                          {done ? 'پروفایل تایید شده' : 'تایید پروفایل'}
-                        </Text>
-                      )}
-                    </Button>
-                  ) : step.cta ? (
+                  {step.cta ? (
                     <Button variant="outline" onPress={() => router.push(step.cta!.route as never)}>
                       <Text style={styles.btnTextOutline}>{step.cta.label}</Text>
                     </Button>

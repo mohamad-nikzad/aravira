@@ -164,6 +164,7 @@ export function defaultBusinessHours(input: BusinessHours | null | undefined): B
     workingStart: WORKING_HOURS.start,
     workingEnd: WORKING_HOURS.end,
     slotDurationMinutes: WORKING_HOURS.slotDuration,
+    workingDays: 126,
   };
 }
 
