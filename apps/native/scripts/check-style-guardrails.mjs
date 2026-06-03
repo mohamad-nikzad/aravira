@@ -43,9 +43,9 @@ const rules = [
     isAllowed: (file) => allowedRawStyleFiles.has(file) || file.startsWith('theme/'),
   },
   {
-    id: 'direct-saloora',
-    description: 'direct saloora.* imports/usages in native components',
-    pattern: /\bsaloora\./,
+    id: 'direct-saluna',
+    description: 'direct saluna.* imports/usages in native components',
+    pattern: /\bsaluna\./,
     isAllowed: (file) => file === 'lib/utils.ts' || file.startsWith('theme/'),
   },
   {

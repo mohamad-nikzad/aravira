@@ -20,6 +20,7 @@ import { loginSchema } from '@repo/salon-core/forms/auth'
 import type { LoginFormInput } from '@repo/salon-core/forms/auth'
 import type { User } from '@repo/salon-core/types'
 
+import { brand } from '@repo/brand'
 import { api } from '#/lib/api-client'
 import { getMutationErrorMessage } from '#/lib/query-client'
 import { authQueryKey, useAuth } from '#/lib/auth'
@@ -105,7 +106,7 @@ function LoginPage() {
       <div className="relative w-full max-w-sm">
         <div className="mb-10 text-center">
           <h1 className="text-3xl font-black text-foreground tracking-tight">
-            سالورا
+            {brand.name.fa}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             مدیریت هوشمند سالن زیبایی

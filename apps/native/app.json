@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Saloora",
-    "slug": "saloora",
-    "scheme": "saloora",
+    "name": "Saluna",
+    "slug": "saluna",
+    "scheme": "saluna",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -24,16 +24,16 @@
       "eas": {
         "projectId": "9b8bb93b-1e87-4d75-8b28-4d678c273ca0"
       },
-      "apiBaseUrl": "https://aravira-saloon.vercel.app",
-      "webBaseUrl": "https://aravira-saloon.vercel.app"
+      "apiBaseUrl": "https://saluna.vercel.app",
+      "webBaseUrl": "https://saluna.vercel.app"
     },
     "plugins": ["expo-router", "expo-secure-store", "expo-notifications"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.saloora.app"
+      "bundleIdentifier": "com.saluna.ir"
     },
     "android": {
-      "package": "com.saloora.app",
+      "package": "com.saluna.ir",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F8EFF0"

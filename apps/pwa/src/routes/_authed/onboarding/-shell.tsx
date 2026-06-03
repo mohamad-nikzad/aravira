@@ -10,8 +10,8 @@ import type { OnboardingStepId } from './-steps'
 
 // Visual language ported from the prototype `OnbShell` (onboarding-kit.jsx):
 // thin progress bar, eyebrow tag, big question, pill CTA. Rebuilt on the live
-// Aravira semantic tokens (`primary` = plum, `muted-foreground` = sage,
-// `ring`/blush = rose accent) — no Saloora raw vars copied.
+// Saluna semantic tokens (`primary` = plum, `muted-foreground` = sage,
+// `ring`/blush = rose accent) — no Saluna raw vars copied.
 
 /** Thin top progress line + Persian fraction counter. */
 export function ThinProgress({ current }: { current: OnboardingStepId }) {

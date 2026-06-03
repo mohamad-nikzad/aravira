@@ -13,6 +13,7 @@ import {
 import { formatDuration, formatHm, formatPrice } from '@/lib/format'
 import { headlineFor } from '@/lib/request-status'
 import { setNoStoreCache } from '@/lib/cache-headers'
+import { pageTitle } from '@repo/brand'
 import Base from '@/layouts/Base.astro'
 import { CancelRequestButton } from '@/components/react/CancelRequestButton'
 
@@ -43,7 +44,7 @@ const headline = headlineFor(view.status)
 const timeRange = `${formatHm(view.requestedStartTime)} تا ${formatHm(view.requestedEndTime)}`
 ---
 
-<Base title="وضعیت درخواست رزرو | سالورا">
+<Base title={pageTitle('وضعیت درخواست رزرو')}>
   <main
     dir="rtl"
     class="min-h-dvh bg-[#fdf5f8] text-[#3f2730]"

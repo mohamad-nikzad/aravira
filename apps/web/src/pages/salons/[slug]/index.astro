@@ -7,6 +7,7 @@ import { resolvePublicTheme } from '@repo/salon-core/public-themes'
 import { resolvePublicLayout } from '@repo/salon-core/public-layouts'
 import { fetchPublicSalon, PublicApiError } from '@/lib/public-api'
 import { setSalonShellCache } from '@/lib/cache-headers'
+import { titleWithBrand } from '@repo/brand'
 import { buildSalonBreadcrumbJsonLd, buildSalonJsonLd } from '@/lib/seo'
 import SalonLayout from '@/layouts/SalonLayout.astro'
 import SalonShell from '@/components/SalonShell.astro'
@@ -53,7 +54,7 @@ const islandProps = {
 ---
 
 <SalonLayout
-  title={`${view.salon.name} | سالورا`}
+  title={titleWithBrand(view.salon.name)}
   description={view.publicSettings.bioText ?? undefined}
   canonical={pageUrl.toString()}
   ogImage={ogImage}

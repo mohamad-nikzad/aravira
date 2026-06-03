@@ -1,5 +1,5 @@
 {
-  "name": "aravira-saloon",
+  "name": "saluna",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -49,8 +49,10 @@
     "db:studio:local": "DATABASE_ENV_FILE=.env.database.local pnpm --filter @repo/database db:studio",
     "db:seed:local": "DATABASE_ENV_FILE=.env.database.local pnpm --filter @repo/database db:seed",
     "brand:icons": "node scripts/generate-saloora-icons.mjs",
+    "brand:wordmarks": "node scripts/refresh-brand-wordmarks.mjs",
+    "brand:sync": "tsx scripts/sync-brand-static.mjs",
     "bench:local": "BASE_URL=http://localhost:3000 ./benchmarks/run.sh",
-    "bench:prod": "BASE_URL=https://aravira-saloon.vercel.app ./benchmarks/run.sh",
+    "bench:prod": "BASE_URL=https://saluna.vercel.app ./benchmarks/run.sh",
     "bench:local:compare": "./benchmarks/run-compare.sh",
     "bench:summary": "node benchmarks/summarize.mjs",
     "bench:compare": "node benchmarks/compare.mjs"

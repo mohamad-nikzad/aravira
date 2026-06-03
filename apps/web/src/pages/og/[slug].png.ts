@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro'
+import { brand } from '@repo/brand'
 import satori from 'satori'
 import { Resvg } from '@resvg/resvg-js'
 import { fetchPublicSalon, PublicApiError } from '@/lib/public-api'
@@ -95,7 +96,7 @@ export const GET: APIRoute = async ({ params }) => {
                 color: '#6b4955',
                 marginTop: 16,
               },
-              children: 'سالورا',
+              children: brand.name.fa,
             },
           },
         ],

@@ -2,32 +2,32 @@
   "description": "Known native style guardrail findings. Run pnpm --filter @repo/native style:check -- --update-baseline only when intentionally accepting existing debt.",
   "findings": [
     {
-      "rule": "direct-saloora",
-      "description": "direct saloora.* imports/usages in native components",
+      "rule": "direct-saluna",
+      "description": "direct saluna.* imports/usages in native components",
       "file": "app.json",
       "line": 33,
-      "text": "\"bundleIdentifier\": \"com.saloora.app\""
+      "text": "\"bundleIdentifier\": \"com.saluna.ir\""
     },
     {
-      "rule": "direct-saloora",
-      "description": "direct saloora.* imports/usages in native components",
+      "rule": "direct-saluna",
+      "description": "direct saluna.* imports/usages in native components",
       "file": "app.json",
       "line": 36,
-      "text": "\"package\": \"com.saloora.app\","
+      "text": "\"package\": \"com.saluna.ir\","
     },
     {
-      "rule": "direct-saloora",
-      "description": "direct saloora.* imports/usages in native components",
+      "rule": "direct-saluna",
+      "description": "direct saluna.* imports/usages in native components",
       "file": "components/calendar/helpers.ts",
       "line": 50,
-      "text": "if (!color) return saloora.sage.hex;"
+      "text": "if (!color) return palette.sage.hex;"
     },
     {
-      "rule": "direct-saloora",
-      "description": "direct saloora.* imports/usages in native components",
+      "rule": "direct-saluna",
+      "description": "direct saluna.* imports/usages in native components",
       "file": "lib/secure-storage.ts",
       "line": 4,
-      "text": "const TOKEN_KEY = 'saloora.session.token';"
+      "text": "const TOKEN_KEY = 'saluna.session.token';"
     },
     {
       "rule": "raw-color",

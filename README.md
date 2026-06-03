@@ -1,4 +1,4 @@
-# Aravira Saloon
+# Saluna
 
 ## Database setup
 

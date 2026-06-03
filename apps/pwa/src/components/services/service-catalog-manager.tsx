@@ -41,6 +41,7 @@ import { ServiceDrawer } from './service-drawer'
 import { ServiceFamilyDrawer } from './service-family-drawer'
 import { buildCatalog } from './catalog-tree'
 import type { CategoryNode } from './catalog-tree'
+import { brand } from '@repo/brand'
 import { ServiceRow } from './service-row'
 
 interface ServiceCatalogManagerProps {
@@ -51,7 +52,7 @@ interface ServiceCatalogManagerProps {
   onChanged: () => void
 }
 
-const STARTER_SERVICES_USED_KEY = 'saloora:starter-services-used'
+const STARTER_SERVICES_USED_KEY = brand.storage.starterServicesUsedBase
 
 export function ServiceCatalogManager({
   services,

@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-const TOKEN_KEY = 'saloora.session.token';
+const TOKEN_KEY = 'saluna.session.token';
 
 const isWeb = Platform.OS === 'web';
 

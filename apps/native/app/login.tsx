@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { brand } from '@repo/brand';
 import { ApiError, NetworkError } from '@repo/api-client';
 import { loginSchema, type LoginFormInput } from '@repo/salon-core/forms/auth';
 import { Button } from '../components/ui/button';
@@ -117,7 +118,7 @@ export default function LoginScreen() {
           style={styles.logo}
           contentFit="contain"
         />
-        <Text style={styles.brandTitle}>سالورا</Text>
+        <Text style={styles.brandTitle}>{brand.name.fa}</Text>
         <Text style={styles.brandSubtitle}>مدیریت هوشمند سالن زیبایی</Text>
       </View>
 

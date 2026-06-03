@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { brand, brandCopy } from '@repo/brand';
 import { ApiError, NetworkError } from '@repo/api-client';
 import { signupSchema, type SignupFormInput } from '@repo/salon-core/forms/auth';
 import { Button } from '../components/ui/button';
@@ -142,7 +143,7 @@ export default function SignupScreen() {
           contentFit="contain"
         />
         <Text style={styles.brandTitle}>ساخت سالن جدید</Text>
-        <Text style={styles.brandSubtitle}>سالن خود را در سالورا بسازید</Text>
+        <Text style={styles.brandSubtitle}>{brandCopy.signupSubtitle}</Text>
       </View>
 
       <View style={styles.card}>
@@ -164,7 +165,7 @@ export default function SignupScreen() {
           control={control}
           name="slug"
           label="آدرس سالن"
-          description={`aravira.app/${slug || 'salon'}`}
+          description={`${brand.domains.public}/${slug || 'salon'}`}
           placeholder="rose-salon"
           autoCapitalize="none"
           autoCorrect={false}

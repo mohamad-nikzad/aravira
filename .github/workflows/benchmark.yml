@@ -18,7 +18,7 @@ jobs:
   bench:
     runs-on: ubuntu-latest
     env:
-      BASE_URL: https://aravira-saloon.vercel.app
+      BASE_URL: https://saluna.vercel.app
       STACK: ${{ inputs.stack }}
       BENCH_PHONE: ${{ secrets.BENCH_PHONE || '09120000000' }}
       BENCH_PASSWORD: ${{ secrets.BENCH_PASSWORD || 'admin123' }}

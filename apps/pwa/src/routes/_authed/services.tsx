@@ -5,6 +5,7 @@ import { Button } from '@repo/ui/button'
 import { Card, CardContent, CardHeader } from '@repo/ui/card'
 import { Skeleton } from '@repo/ui/skeleton'
 
+import { brand } from '@repo/brand'
 import { ServiceAddonManager } from '#/components/services/service-addon-manager'
 import { ServiceCatalogManager } from '#/components/services/service-catalog-manager'
 import { useAuth } from '#/lib/auth'
@@ -117,7 +118,7 @@ function ServicesPage() {
           services={services}
           categories={categories}
           families={families}
-          starterImportKey={`saloora:starter-services-used:${user.salonId}`}
+          starterImportKey={brand.storage.starterServicesUsed(user.salonId)}
           onChanged={() => {
             refreshCatalog()
             bumpOfflineData()

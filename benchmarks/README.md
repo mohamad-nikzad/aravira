@@ -45,7 +45,7 @@ pnpm bench:local
 pnpm bench:prod
 
 # After Hono migration on Node — tag it
-STACK=hono-node BASE_URL=https://aravira-saloon.vercel.app ./benchmarks/run.sh
+STACK=hono-node BASE_URL=https://saluna.vercel.app ./benchmarks/run.sh
 
 # After moving Hono to Bun
 STACK=hono-bun BASE_URL=https://your-bun-host ./benchmarks/run.sh

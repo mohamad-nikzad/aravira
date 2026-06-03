@@ -24,6 +24,7 @@
     "@astrojs/node": "^10.1.2",
     "@astrojs/react": "^5.0.6",
     "@astrojs/sitemap": "^3.7.0",
+    "@repo/brand": "workspace:*",
     "@repo/salon-core": "workspace:*",
     "@resvg/resvg-js": "^2.6.2",
     "astro": "^6.4.2",

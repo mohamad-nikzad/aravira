@@ -18,10 +18,10 @@ import {
   loginHref,
   signupHref,
 } from '@/content/landing'
+import { brandCopy } from '@repo/brand'
 
-const title = 'سالورا | مدیریت هوشمند سالن زیبایی'
-const description =
-  'سالورا نرم‌افزار مدیریت نوبت‌ها، مشتریان، خدمات و پرسنل برای سالن‌های زیبایی است.'
+const title = brandCopy.landingTitle
+const description = brandCopy.landingDescription
 const canonical = new URL('/', Astro.site ?? Astro.url.origin).toString()
 ---
 

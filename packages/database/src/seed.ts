@@ -73,7 +73,7 @@ async function ensureUser({
 
   const res = await auth.api.signUpEmail({
     body: {
-      email: `${phone}@aravira.local`,
+      email: `${phone}@saluna.local`,
       password: SEED_PASSWORD,
       name,
       username: phone,
@@ -1359,7 +1359,7 @@ async function main() {
   const primarySalon = {
     id: await ensureOrg({
       name: 'سالن آراویرا',
-      slug: 'aravira',
+      slug: 'saluna',
       ownerUserId: primaryOwnerId,
       profile: { phone: '02100000000', address: 'تهران' },
     }),

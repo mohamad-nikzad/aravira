@@ -22,6 +22,7 @@ import { Button } from '@repo/ui/button'
 import { Badge } from '@repo/ui/badge'
 import { Card, CardContent, CardHeader } from '@repo/ui/card'
 import { Skeleton } from '@repo/ui/skeleton'
+import { brand } from '@repo/brand'
 import { SakuraMark } from '@repo/ui/sakura-mark'
 import { cn } from '@repo/ui/utils'
 import { displayPhone } from '@repo/salon-core/phone'
@@ -446,7 +447,7 @@ function SettingsPage() {
 
           <div className="pb-2 pt-2 text-center">
             <div className="text-[13px] font-bold tracking-wide text-muted-foreground/60">
-              سالورا
+              {brand.name.fa}
             </div>
             <div className="mt-0.5 text-[10px] text-muted-foreground/40">
               نسخه ۱.۰.۰

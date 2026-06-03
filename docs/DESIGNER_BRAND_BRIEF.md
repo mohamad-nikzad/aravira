@@ -15,9 +15,9 @@ It summarizes:
 
 ## Brand note
 
-The final product name is `Saloora`.
+The final product name is `Saluna`.
 
-The designer should treat `Saloora` as the official brand for:
+The designer should treat `Saluna` as the official brand for:
 
 - logo exploration
 - color system

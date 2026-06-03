@@ -25,6 +25,7 @@ import {
 import type { AppEnv } from '../factory'
 import { requireTenant } from '../middleware/auth'
 import { zValidator } from '../lib/validate'
+import { brand } from '@repo/brand'
 import { error, ok } from '../lib/responses'
 
 const idParamSchema = z.object({ id: z.string().min(1) })
@@ -67,7 +68,7 @@ export const staff = new Hono<AppEnv>()
       try {
         const signUpRes = await auth.api.signUpEmail({
           body: {
-            email: `${phone}@aravira.local`,
+            email: `${phone}@${brand.emailLocalDomain}`,
             password,
             name,
             username: phone,

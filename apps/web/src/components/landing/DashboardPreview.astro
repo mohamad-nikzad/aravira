@@ -1,9 +1,12 @@
 ---
+import { brand } from '@repo/brand'
 import {
   displayClass,
   toneClass,
   type MetricTone,
 } from '@/content/landing'
+
+const brandFa = brand.name.fa
 import Icon from './Icon.astro'
 
 type DashboardMetric = {
@@ -58,7 +61,7 @@ const { dashboardMetrics, upcomingAppointments, popularServices, stats } = Astro
 
   <div class="mx-auto max-w-7xl">
     <div class="mx-auto max-w-2xl text-center">
-      <p class="text-sm font-extrabold text-[#9b3348]">داشبورد سالورا</p>
+      <p class="text-sm font-extrabold text-[#9b3348]">داشبورد {brandFa}</p>
       <h2 class={`${displayClass} mt-3 text-3xl leading-tight text-[#3f2730] sm:text-5xl`}>
         همه آنچه نیاز دارید در یک نگاه
       </h2>

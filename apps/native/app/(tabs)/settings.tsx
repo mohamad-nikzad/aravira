@@ -15,6 +15,7 @@ import {
   UserRoundSearch,
   Users,
 } from 'lucide-react-native';
+import { brand } from '@repo/brand';
 import { displayPhone } from '@repo/salon-core/phone';
 import { Avatar, AvatarFallback } from '../../components/ui/avatar';
 import { Badge } from '../../components/ui/badge';
@@ -387,7 +388,7 @@ export default function SettingsScreen() {
         </Card>
 
         <View style={styles.footer}>
-          <Text style={styles.footerLabel}>سالورا</Text>
+          <Text style={styles.footerLabel}>{brand.name.fa}</Text>
           <Text style={styles.footerVersion}>نسخه ۱.۰.۰</Text>
         </View>
       </ScrollView>

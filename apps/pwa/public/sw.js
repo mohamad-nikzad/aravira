@@ -92,7 +92,7 @@ function getRouteLabel(pathname) {
   if (pathname.startsWith('/requests')) return 'درخواست‌ها'
   if (pathname.startsWith('/login')) return 'ورود'
   if (pathname.startsWith('/signup')) return 'ثبت‌نام'
-  return 'سالورا'
+  return 'سالونا'
 }
 
 function createOfflineDocument(pathname) {
@@ -212,7 +212,7 @@ self.addEventListener('activate', (event) => {
 })
 
 self.addEventListener('push', (event) => {
-  let payload = { title: 'سالورا', body: '', url: '/calendar', tag: 'general' }
+  let payload = { title: 'سالونا', body: '', url: '/calendar', tag: 'general' }
   try {
     if (event.data) {
       const parsed = event.data.json()

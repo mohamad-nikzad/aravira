@@ -22,7 +22,7 @@ function resolveBaseUrl(): string {
   const fromConfig = (Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined)
     ?.apiBaseUrl;
   if (fromConfig && fromConfig.length > 0) return fromConfig;
-  return 'https://aravira-saloon.vercel.app';
+  return 'https://saluna.vercel.app';
 }
 
 export const apiClient = createApiClient({

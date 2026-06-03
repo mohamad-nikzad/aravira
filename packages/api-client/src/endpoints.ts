@@ -1,6 +1,6 @@
 // Single source of truth for endpoint paths.
 // All paths point at Hono (`/api/v1/*`). The client's `baseUrl` is the
-// origin (e.g. `https://api.saloora.beauty`), and these paths are appended.
+// origin (e.g. `https://api.saluna.ir`), and these paths are appended.
 export const endpoints = {
   auth: {
     signIn: '/api/v1/auth/sign-in/username',

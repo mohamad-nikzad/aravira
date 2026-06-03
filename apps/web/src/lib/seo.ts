@@ -1,3 +1,4 @@
+import { brand } from '@repo/brand'
 import type { Service } from '@repo/salon-core/types'
 import type { PublicSalonView } from './public-api'
 
@@ -86,7 +87,7 @@ export function buildSalonBreadcrumbJsonLd(
       {
         '@type': 'ListItem',
         position: 1,
-        name: 'سالورا',
+        name: brand.name.fa,
         item: new URL('/', pageUrl.origin).toString(),
       },
       {

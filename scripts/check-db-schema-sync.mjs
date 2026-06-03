@@ -8,7 +8,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(scriptDir, '..')
 const metaDir = path.join(repoRoot, 'packages/database/src/migrations/meta')
 
-const tempDir = mkdtempSync(path.join(os.tmpdir(), 'aravira-drizzle-check-'))
+const tempDir = mkdtempSync(path.join(os.tmpdir(), 'saluna-drizzle-check-'))
 
 try {
   cpSync(metaDir, path.join(tempDir, 'meta'), { recursive: true })

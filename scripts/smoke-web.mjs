@@ -44,7 +44,7 @@ async function main() {
     else pass(`GET / → ${res.status}`)
     if (!text.includes('lang="fa"')) fail('landing lang=fa')
     else pass('landing has lang="fa"')
-    if (!text.includes('سالورا')) fail('landing title copy')
+    if (!text.includes('سالونا')) fail('landing title copy')
     else pass('landing Persian copy present')
     if (header(res, 'content-security-policy')) pass('landing has CSP header')
     else fail('landing missing CSP header')

@@ -12,10 +12,12 @@ import {
   DrawerTitle,
 } from '@repo/ui/drawer'
 
-const FIRST_VISIT_KEY = 'aravira-pwa-first-visit'
-const DISMISSED_KEY = 'aravira-pwa-install-dismissed-v2'
-const VALUE_MOMENT_KEY = 'aravira-pwa-install-qualified-v1'
-const AUTO_OPENED_KEY = 'aravira-pwa-install-auto-opened-v1'
+import { brand, brandCopy } from '@repo/brand'
+
+const FIRST_VISIT_KEY = brand.storage.pwaFirstVisit
+const DISMISSED_KEY = brand.storage.pwaInstallDismissed
+const VALUE_MOMENT_KEY = brand.storage.pwaInstallQualified
+const AUTO_OPENED_KEY = brand.storage.pwaInstallAutoOpened
 
 const VALUE_MOMENT_PATHS = [
   '/calendar',
@@ -208,7 +210,7 @@ export function InstallPrompt() {
             </div>
             <div className="space-y-1">
               <DrawerTitle className="text-lg">
-                نصب سالورا روی موبایل
+                {brandCopy.installPromptTitle}
               </DrawerTitle>
               <DrawerDescription className="text-sm leading-6">
                 بعد از استفاده روزانه، نصبش کنيد تا سريع تر و تمام صفحه در دسترس
@@ -227,7 +229,9 @@ export function InstallPrompt() {
               <ol className="space-y-2 text-sm leading-6 text-muted-foreground">
                 <li>در Safari پايين صفحه روي دکمه اشتراک گذاري بزنيد.</li>
                 <li>گزينه Add to Home Screen را انتخاب کنيد.</li>
-                <li>در مرحله آخر روي Add بزنيد تا سالورا مثل يک اپ باز شود.</li>
+                <li>
+                  در مرحله آخر روي Add بزنيد تا {brand.name.fa} مثل يک اپ باز شود.
+                </li>
               </ol>
             ) : (
               <ul className="space-y-2 text-sm leading-6 text-muted-foreground">

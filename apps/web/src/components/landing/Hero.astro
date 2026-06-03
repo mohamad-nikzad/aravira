@@ -1,6 +1,9 @@
 ---
+import { brand } from '@repo/brand'
 import { displayClass } from '@/content/landing'
 import Icon from './Icon.astro'
+
+const brandFa = brand.name.fa
 
 interface Props {
   loginHref: string
@@ -70,7 +73,7 @@ const { loginHref, signupHref } = Astro.props
   <header
     class="relative mx-auto flex w-full max-w-7xl box-border items-center justify-between px-5 py-5 sm:px-8"
   >
-    <a href="#top" class="flex items-center gap-2.5" aria-label="سالورا">
+    <a href="#top" class="flex items-center gap-2.5" aria-label={brandFa}>
       <img
         src="/landing/saloora-mark.png"
         alt=""
@@ -81,7 +84,7 @@ const { loginHref, signupHref } = Astro.props
         class="h-10 w-10 sm:h-11 sm:w-11"
       />
       <span class={`${displayClass} text-2xl leading-none text-[#7a2a40] sm:text-3xl`}>
-        سالورا
+        {brandFa}
       </span>
     </a>
 
@@ -114,11 +117,11 @@ const { loginHref, signupHref } = Astro.props
     >
       ساده، حرفه‌ای،
       <br />
-      <span class="text-[#9b2f4a]">سالورا</span>
+      <span class="text-[#9b2f4a]">{brandFa}</span>
     </h1>
 
     <p class="mt-6 max-w-2xl text-base leading-8 text-[#6b4955] sm:mt-8 sm:text-lg">
-      با سالورا تقویم نوبت‌ها، مشتریان، پرسنل و خدمات سالن را در یک مسیر مرتب نگه
+      با {brandFa} تقویم نوبت‌ها، مشتریان، پرسنل و خدمات سالن را در یک مسیر مرتب نگه
       می‌دارید و روز کاری را با تمرکز بیشتری جلو می‌برید.
     </p>
 

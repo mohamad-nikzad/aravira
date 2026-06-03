@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 
-export const DEFAULT_OFFLINE_DB_NAME = 'aravira-manager-offline'
+export const DEFAULT_OFFLINE_DB_NAME = 'saluna-manager-offline'
 
 export type KvRow = {
   compoundKey: string

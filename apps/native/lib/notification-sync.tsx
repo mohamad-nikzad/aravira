@@ -3,12 +3,13 @@ import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
+import { brand } from '@repo/brand';
 import type { AppNotification } from '@repo/api-client';
 import type { NotificationResponse } from 'expo-notifications';
 import { useAuth } from '../components/auth-provider';
 import { notificationPreferencesApi, notificationsApi } from './api';
 
-const ANDROID_CHANNEL_ID = 'saloora-local-sync';
+const ANDROID_CHANNEL_ID = 'saluna-local-sync';
 const SEEN_STORAGE_PREFIX = 'native:local-alerted-notification-ids:';
 
 type NotificationsModule = typeof import('expo-notifications');
@@ -118,7 +119,7 @@ async function ensureNotificationPermissions(notifications: NotificationsModule)
 
   if (Platform.OS === 'android') {
     await notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
-      name: 'Saloora local alerts',
+      name: `${brand.name.en} local alerts`,
       importance: notifications.AndroidImportance.DEFAULT,
       sound: undefined,
       vibrationPattern: [0, 250, 250, 250],

@@ -117,16 +117,16 @@ describe('salon-profile router', () => {
     vi.mocked(db.updateSalonPresence).mockResolvedValue({
       ...emptyPresence,
       address: 'خیابان ولیعصر',
-      socialInstagram: '@aravira',
+      socialInstagram: '@saluna',
       socialWhatsapp: '09121234567',
-      website: 'https://aravira.app',
+      website: 'https://saluna.ir',
     } as never)
     const payload = {
       address: 'خیابان ولیعصر',
       mapGoogle: 'https://maps.app.goo.gl/abc',
-      socialInstagram: '@aravira',
+      socialInstagram: '@saluna',
       socialWhatsapp: '09121234567',
-      website: 'https://aravira.app',
+      website: 'https://saluna.ir',
     }
     const res = await app.request('/api/v1/salon-profile/presence', {
       method: 'PATCH',
@@ -139,9 +139,9 @@ describe('salon-profile router', () => {
       expect.objectContaining({
         address: 'خیابان ولیعصر',
         mapGoogle: 'https://maps.app.goo.gl/abc',
-        socialInstagram: '@aravira',
+        socialInstagram: '@saluna',
         socialWhatsapp: '09121234567',
-        website: 'https://aravira.app',
+        website: 'https://saluna.ir',
       }),
     )
   })
@@ -159,7 +159,7 @@ describe('salon-profile router', () => {
     const res = await app.request('/api/v1/salon-profile/presence', {
       method: 'PATCH',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ website: 'http://aravira.app' }),
+      body: JSON.stringify({ website: 'http://saluna.ir' }),
     })
     expect(res.status).toBe(400)
   })

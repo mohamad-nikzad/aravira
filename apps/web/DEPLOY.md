@@ -59,7 +59,7 @@ Adjust paths and `User=` for your VPS:
 
 ```ini
 [Unit]
-Description=Saloora public web (Astro)
+Description=Saluna public web (Astro)
 After=network.target
 
 [Service]

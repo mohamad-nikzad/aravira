@@ -15,12 +15,13 @@ import { getUserWithServiceIds } from '@repo/database/staff'
 import type { AppEnv } from '../factory'
 import { requireTenant } from '../middleware/auth'
 import { zValidator } from '../lib/validate'
+import { brand } from '@repo/brand'
 import { error, ok } from '../lib/responses'
 
 const OWNER_COLOR = normalizeCalendarColorId(STAFF_COLORS[0])
 
 function phoneToEmail(phone: string): string {
-  return `${phone}@aravira.local`
+  return `${phone}@${brand.emailLocalDomain}`
 }
 
 function forwardSetCookie(c: Parameters<typeof ok>[0], headers: Headers) {

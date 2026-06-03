@@ -1,3 +1,4 @@
+import { brand } from '@repo/brand'
 import { Skeleton } from '@repo/ui/skeleton'
 
 export function CalendarSkeleton() {
@@ -7,7 +8,7 @@ export function CalendarSkeleton() {
         <div className="flex items-center gap-1.5 shrink-0">
           <Skeleton className="size-8 rounded-xl" />
           <span className="hidden text-base font-bold text-primary tracking-tight ml-1 min-[430px]:inline">
-            سالورا
+            {brand.name.fa}
           </span>
         </div>
         <div className="flex-1 min-w-0 text-center">

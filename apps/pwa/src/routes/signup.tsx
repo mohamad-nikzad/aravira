@@ -21,6 +21,7 @@ import { signupSchema } from '@repo/salon-core/forms/auth'
 import { formMessages } from '@repo/salon-core/forms/messages'
 import type { User } from '@repo/salon-core/types'
 
+import { brand } from '@repo/brand'
 import { SalooraMark } from '#/components/brand/saloora-mark'
 import { api } from '#/lib/api-client'
 import { getMutationErrorMessage } from '#/lib/query-client'
@@ -138,13 +139,13 @@ function SignupPage() {
   return (
     <main className="flex min-h-dvh justify-center bg-gradient-to-b from-blush-soft/60 to-background p-4">
       <div className="flex w-full max-w-md flex-col">
-        {/* Brand mark — Saloora */}
+        {/* Brand mark — Saluna */}
         <div className="flex items-center gap-2 px-1 pt-2">
           <span className="inline-flex size-9 items-center justify-center rounded-xl bg-primary/10">
             <SalooraMark className="size-[22px]" />
           </span>
           <span className="text-sm font-extrabold tracking-tight text-primary">
-            سالورا
+            {brand.name.fa}
           </span>
         </div>
 

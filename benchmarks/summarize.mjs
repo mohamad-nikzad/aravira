@@ -70,7 +70,7 @@ function gitInfo() {
 }
 
 function render(env, stack, byScenario) {
-  const baseUrl = env === 'prod' ? 'https://aravira-saloon.vercel.app' : 'http://localhost:3000'
+  const baseUrl = env === 'prod' ? 'https://saluna.vercel.app' : 'http://localhost:3000'
   const { commit, branch } = gitInfo()
   const date = new Date().toISOString().split('T')[0]
   const rows = Object.keys(SCENARIO_LABELS).map((key) => {

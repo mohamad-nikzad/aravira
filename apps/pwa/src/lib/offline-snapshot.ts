@@ -1,4 +1,6 @@
-const PREFIX = 'aravira-offline-v1'
+import { brand } from '@repo/brand'
+
+const PREFIX = brand.storage.offlineSnapshotPrefix
 
 export const SESSION_USER_CACHE_KEY = 'session-user'
 

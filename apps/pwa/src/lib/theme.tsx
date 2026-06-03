@@ -18,7 +18,9 @@ type ThemeContextValue = {
   setTheme: (theme: Theme) => void
 }
 
-const STORAGE_KEY = 'saloora-theme'
+import { brand } from '@repo/brand'
+
+const STORAGE_KEY = brand.storage.theme
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 

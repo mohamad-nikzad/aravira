@@ -14,7 +14,7 @@ import { onboardingQueryKey } from '#/lib/query-keys'
 import { HeroPillCTA, HeroShell } from './-shell'
 import { guardStep } from './-steps'
 
-const PUBLIC_DOMAIN = 'saloora.app'
+import { brand } from '@repo/brand'
 
 // Done is not a tracked step. The CTA completes onboarding and routes to the
 // calendar.
@@ -39,7 +39,7 @@ function DoneScreen() {
     onboardingQuery.data?.onboarding.steps.publicPageConfigured ?? false
   const salonName = salon?.name ?? 'سالن شما'
   const slug = salon?.slug ?? ''
-  const publicUrl = `${PUBLIC_DOMAIN}/${slug}`
+  const publicUrl = `${brand.domains.public}/${slug}`
 
   const onCopy = async () => {
     try {

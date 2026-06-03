@@ -104,7 +104,7 @@ Current behavior:
 - `/api/auth/signup` creates salon workspace, sets `session` cookie, returns `redirectTo: '/onboarding'`.
 - `/api/auth/me` returns `{ user }`.
 - `/api/auth/logout` clears session cookie.
-- `AuthProvider` caches the session user in localStorage under `aravira-offline-v1:session-user`.
+- `AuthProvider` caches the session user in localStorage under `saluna-offline-v1:session-user`.
 - If `/me` fails while offline, cached user is used.
 - Current redirects use `next/navigation` effects and `router.refresh()`.
 
@@ -130,7 +130,7 @@ Current data access is mixed:
 Important data-client behavior:
 
 - `createDataClient({ persistence: 'indexeddb' })` is created in browser only.
-- IndexedDB database name defaults to `aravira-manager-offline`.
+- IndexedDB database name defaults to `saluna-manager-offline`.
 - Reads hydrate from server and can fall back to local projections.
 - Mutations can queue offline and replay through `sync.processPending()`.
 - Sync runs on online, focus, and visibility changes.
@@ -224,14 +224,14 @@ Hono API:
 PWA target:
 
 - Introduce Vite-prefixed public values:
-  - `VITE_API_BASE_URL` — e.g. `https://api.saloora.beauty` in prod, `http://localhost:<honoPort>` in dev. Client appends `/api/v1/...`.
-  - `VITE_APP_URL` — e.g. `https://app.saloora.beauty`.
+  - `VITE_API_BASE_URL` — e.g. `https://api.saluna.ir` in prod, `http://localhost:<honoPort>` in dev. Client appends `/api/v1/...`.
+  - `VITE_APP_URL` — e.g. `https://app.saluna.ir`.
   - `VITE_WEB_URL`
   - `VITE_VAPID_PUBLIC_KEY` if the client reads it directly, though current push config can come from Hono.
   - `VITE_PWA_ASSET_VERSION`
 - Hono env additions to match:
-  - `CORS_ORIGINS` must include `https://app.saloora.beauty` and `http://localhost:5173`, with `credentials: true`.
-  - Session cookie set with `SameSite=None; Secure; HttpOnly`, and `Domain=.saloora.beauty` if cookie sharing across `app`/`api` subdomains is desired.
+  - `CORS_ORIGINS` must include `https://app.saluna.ir` and `http://localhost:5173`, with `credentials: true`.
+  - Session cookie set with `SameSite=None; Secure; HttpOnly`, and `Domain=.saluna.ir` if cookie sharing across `app`/`api` subdomains is desired.
 - Server-only secrets remain in `apps/api`/runtime env, never in `apps/pwa`.
 
 ### Shared Dependencies
@@ -322,11 +322,11 @@ Destination setup TODOs:
 **Resolved (2026-05-26):**
 
 - **Production topology:** separate origins.
-  - PWA: `https://app.saloora.beauty`
-  - Hono API: `https://api.saloora.beauty`
+  - PWA: `https://app.saluna.ir`
+  - Hono API: `https://api.saluna.ir`
 - **API URL strategy:** Direct Hono. PWA calls `${VITE_API_BASE_URL}/api/v1/*` directly. No reverse-proxy rewrite of `/api/*` in front of the PWA.
-- **Cookies:** session cookie is set with `SameSite=None; Secure; HttpOnly`, no `Domain` attribute (host-only on `api.saloora.beauty`). Implemented in `apps/api/src/routes/auth.ts` — `Secure` works on `http://localhost` because browsers treat localhost as a secure context.
-- **CORS:** Hono `CORS_ORIGINS` must include `https://app.saloora.beauty` (prod) and `http://localhost:5173` (dev) with `credentials: true`. Preflight must allow `Content-Type` and any auth headers actually sent.
+- **Cookies:** session cookie is set with `SameSite=None; Secure; HttpOnly`, no `Domain` attribute (host-only on `api.saluna.ir`). Implemented in `apps/api/src/routes/auth.ts` — `Secure` works on `http://localhost` because browsers treat localhost as a secure context.
+- **CORS:** Hono `CORS_ORIGINS` must include `https://app.saluna.ir` (prod) and `http://localhost:5173` (dev) with `credentials: true`. Preflight must allow `Content-Type` and any auth headers actually sent.
 - **Dev environment:** mirror prod cross-origin topology rather than using a Vite same-origin proxy. Set `VITE_API_BASE_URL=http://localhost:<honoPort>` and run Hono with dev CORS allowing `http://localhost:5173`. Rationale: catches cookie/CORS regressions in dev instead of in production. A same-origin Vite proxy would hide `SameSite=None`/`Secure` cookie issues until deploy.
 - **Data-client base path:** `@repo/data-client` gets a configurable base URL (default `${VITE_API_BASE_URL}/api/v1`) so `/api/*` hardcoding is removed without depending on Next rewrites.
 - **`@repo/api-client` endpoints:** point at Hono `/api/v1/*` directly (no logical `/api/*` indirection).
@@ -335,7 +335,7 @@ Acceptance criteria:
 
 - `@repo/api-client` can call Hono from `apps/pwa` cross-origin with credentials.
 - `@repo/data-client` calls Hono without Next rewrites.
-- Cookie auth works in local dev (cross-origin localhost) and prod topology (`app` ↔ `api` on `.saloora.beauty`).
+- Cookie auth works in local dev (cross-origin localhost) and prod topology (`app` ↔ `api` on `.saluna.ir`).
 - Hono remains the only backend boundary.
 
 ### Phase 1: PWA Foundation and Auth
@@ -520,7 +520,7 @@ Also decide whether `endpoints` should represent Hono `/api/v1/*` directly or lo
 - Make request base URL configurable (default `${VITE_API_BASE_URL}/api/v1`).
 - Avoid hardcoded Next `/api/*` dependency in replay and module methods.
 - Preserve credentials include behavior for cookie sessions.
-- **Keep IndexedDB DB name `aravira-manager-offline` and the `aravira-offline-v1:session-user` localStorage key unchanged**, so existing installed users keep their offline queue and cached session when the new PWA replaces the Next app. If a schema-incompatible change is required later, add a versioned migration; do not silently rename.
+- **Keep IndexedDB DB name `saluna-manager-offline` and the `saluna-offline-v1:session-user` localStorage key unchanged**, so existing installed users keep their offline queue and cached session when the new PWA replaces the Next app. If a schema-incompatible change is required later, add a versioned migration; do not silently rename.
 
 ## Things That Cannot Migrate 1:1
 
@@ -563,10 +563,10 @@ Update `apps/pwa/AGENTS.md` or add a root migration note after the first impleme
 
 ## Resolved Decisions (2026-05-26)
 
-- **Origins:** separate. `app.saloora.beauty` (PWA) and `api.saloora.beauty` (Hono). Direct cross-origin calls with credentialed cookies.
+- **Origins:** separate. `app.saluna.ir` (PWA) and `api.saluna.ir` (Hono). Direct cross-origin calls with credentialed cookies.
 - **Dev environment:** mirror prod cross-origin via `VITE_API_BASE_URL=http://localhost:<honoPort>` + Hono CORS for `http://localhost:5173`. No Vite same-origin proxy (would hide `SameSite=None`/`Secure` issues).
 - **Read pattern:** TanStack Query + TanStack Router loaders, used together. No SWR in the new PWA.
-- **IndexedDB / localStorage keys:** reuse existing keys (`aravira-manager-offline`, `aravira-offline-v1:session-user`) so installed users keep offline state.
+- **IndexedDB / localStorage keys:** reuse existing keys (`saluna-manager-offline`, `saluna-offline-v1:session-user`) so installed users keep offline state.
 - **`/public-page`:** deferred. Run a full Next↔Hono parity audit first; resolve all gaps in `apps/api`, then schedule.
 - **Hosting / SPA fallback:** out of scope for this plan (revisit in Phase 7 when deploying).
 
@@ -586,7 +586,7 @@ Foundation slice landed and verified end-to-end against Hono on localhost.
 - `index.html` — `lang="fa" dir="rtl"`, Persian title, viewport-fit=cover.
 - `src/env.ts` — `VITE_API_BASE_URL` parser (default `http://localhost:3002`).
 - `src/lib/api-client.ts` — `createApiClient({ baseUrl: VITE_API_BASE_URL, credentials: 'include' })`.
-- `src/lib/offline-snapshot.ts` — ported localStorage helpers; **DB/key names preserved** (`aravira-offline-v1:session-user`).
+- `src/lib/offline-snapshot.ts` — ported localStorage helpers; **DB/key names preserved** (`saluna-offline-v1:session-user`).
 - `src/lib/auth.tsx` — `AuthProvider` over TanStack Query. Hydrates from cache, falls back to cache on network error, clears on 401. `registerAuthQueryDefaults` makes `ensureQueryData` usable in `beforeLoad` outside React.
 - `src/router.tsx` — single `getRouter({ queryClient })` factory with router context type. Removed duplicate router creation from `main.tsx`.
 - Routes: `__root` (createRootRouteWithContext), `/` (redirect), `/login`, `/signup`, `/_authed` (pathless auth guard), `/_authed/today` (placeholder), `/_authed/dashboard` (manager-only, Router loader + Query refetch), `/_authed/settings` (logout).
@@ -624,7 +624,7 @@ Foundation slice landed and verified end-to-end against Hono on localhost.
 
 **PWA (`apps/pwa`):**
 - Deps: added `@repo/data-client` workspace dep.
-- `src/lib/manager-data-client.tsx` — ported `ManagerDataClientProvider` + hooks (`useManagerDataClient`, `useManagerOfflineDataEpoch`, `useBumpOfflineData`). `createDataClient({ persistence: 'indexeddb', basePath: env.apiBaseUrl, apiPrefix: '/api/v1' })`. **IndexedDB DB name `aravira-manager-offline` preserved** (data-client default) so installed users keep their offline queue.
+- `src/lib/manager-data-client.tsx` — ported `ManagerDataClientProvider` + hooks (`useManagerDataClient`, `useManagerOfflineDataEpoch`, `useBumpOfflineData`). `createDataClient({ persistence: 'indexeddb', basePath: env.apiBaseUrl, apiPrefix: '/api/v1' })`. **IndexedDB DB name `saluna-manager-offline` preserved** (data-client default) so installed users keep their offline queue.
 - `src/components/manager-sync-bar.tsx` — ported `ManagerSyncBar`. Replaces `next/link` with TanStack `Link to=...`. Uses PWA `useAuth` from `#/lib/auth`.
 - `src/routes/_authed.tsx` — wraps the authenticated shell in `ManagerDataClientProvider` and renders `ManagerSyncBar` above `<main>` (between sync bar and `BottomNav`).
 
@@ -633,7 +633,7 @@ Foundation slice landed and verified end-to-end against Hono on localhost.
 - `pnpm exec tsc --noEmit` in `apps/pwa` → only the pre-existing `appointments-module.ts` TS6133 warning (unchanged from main)
 - `pnpm build` in `apps/pwa` → succeeds; sync UI lives in the `_authed` chunk
 
-**Note on existing offline state:** Installed legacy users hit `apps/app` at `aravira-manager-offline`. Both apps now write to the same DB. When a user moves to the PWA, queued mutations replay against Hono via the `/api/v1` rewrite — same endpoints, just a different prefix. No migration needed.
+**Note on existing offline state:** Installed legacy users hit `apps/app` at `saluna-manager-offline`. Both apps now write to the same DB. When a user moves to the PWA, queued mutations replay against Hono via the `/api/v1` rewrite — same endpoints, just a different prefix. No migration needed.
 
 ## Phase 4 — Shipped (2026-05-26)
 
@@ -712,7 +712,7 @@ Manager-only catalog page: addon manager (list + drawer with category/family/ser
 - `src/routes/_authed/services.tsx` — manager guard via `beforeLoad`; ports legacy refresh-on-mount + subscribe pattern verbatim.
 
 **Parity notes:**
-- Starter import `localStorage` key (`saloora:starter-services-used:${salonId}`) preserved verbatim so first-time-import UX migrates cleanly.
+- Starter import `localStorage` key (`saluna:starter-services-used:${salonId}`) preserved verbatim so first-time-import UX migrates cleanly.
 
 ### `/staff` — Shipped (2026-05-26)
 
@@ -732,7 +732,7 @@ Dual-mode (manager "بیشتر" / staff "تنظیمات"): profile card, dashboa
 
 **PWA additions:**
 - `api-client.ts` — added `businessSettings`, `notifications`, `notificationPreferences`.
-- `src/lib/theme.tsx` — small Vite-safe theme provider replacing `next-themes`. Stores `light|dark|system` under `saloora-theme` localStorage key; applies `light`/`dark` class to `<html>` and tracks `prefers-color-scheme`. Wired into `src/main.tsx` between `QueryClientProvider` and `AuthProvider`.
+- `src/lib/theme.tsx` — small Vite-safe theme provider replacing `next-themes`. Stores `light|dark|system` under `saluna-theme` localStorage key; applies `light`/`dark` class to `<html>` and tracks `prefers-color-scheme`. Wired into `src/main.tsx` between `QueryClientProvider` and `AuthProvider`.
 - `src/routes/_authed/settings.tsx` — full UI port; metrics via `api.dashboard.get`, prefs via `api.notificationPreferences.{get,update}`, business hours via `dc.businessSettings`.
 
 **Deferred:**
@@ -756,7 +756,7 @@ Read-only `/calendar` route lands with FullCalendar grid, view toggle (روز/ه
 - Deps: `@fullcalendar/{core,daygrid,timegrid,list,interaction,react}@^6.1.20`.
 - `package.json` + `pnpm install` performed.
 - `api-client.ts` — added `appointments: createAppointmentsApi(apiClient)`.
-- `src/components/brand/saloora-mark.tsx` — minimal Vite-safe port (no asset versioning yet; Phase 7).
+- `src/components/brand/brand-mark.tsx` — minimal Vite-safe port (no asset versioning yet; Phase 7).
 - `public/brand/*` — brand assets copied from `apps/app/public/brand`.
 - `src/components/calendar/` — ported `calendar-header`, `staff-filter`, `concurrent-appointments-sheet` (verbatim minus `'use client'`), `salon-full-calendar` (verbatim + import path fix `@/` → `#/`), `calendar-skeleton`.
 - `src/lib/use-calendar-indexeddb-sources.ts` — ported, retargeted at `#/lib/manager-data-client`, dropped unused `idbLoading`.
@@ -846,7 +846,7 @@ Availability ("بررسی زمان خالی") drawer lands on `/calendar`. The s
 - `api-client.ts` — added `today: createTodayApi(apiClient)`.
 - `src/lib/next-open-slot.ts` — ported verbatim from legacy `apps/app/app/(app)/today/next-open-slot.ts`.
 - `src/lib/use-manager-today-indexeddb.ts` — ported; retargeted at `#/lib/manager-data-client`. Hydrates today/staff/services/clients into IDB when online, falls back to IDB-only when offline.
-- `src/lib/offline-snapshot.ts` — added `useOfflineSnapshot(key, liveData)` hook (read on mount, write on every fresh `liveData`). Reuses the existing `aravira-offline-v1:` prefix and key shape — staff snapshots still land at `today:staff:<ymd>`, matching legacy.
+- `src/lib/offline-snapshot.ts` — added `useOfflineSnapshot(key, liveData)` hook (read on mount, write on every fresh `liveData`). Reuses the existing `saluna-offline-v1:` prefix and key shape — staff snapshots still land at `today:staff:<ymd>`, matching legacy.
 - `src/components/status-pill.tsx` — ported.
 - `src/components/today-skeleton.tsx` — ported (`ManagerTodaySkeleton`, `StaffTodaySkeleton`).
 - `src/routes/_authed/today.tsx` — full port. `useSWR` → TanStack `useQuery` (separate manager/staff query trees gated by role). Raw `fetch('/api/appointments/:id', PATCH {status})` replaced with `api.appointments.updateStatus(id, status)`; `removedAppointmentId` branch preserved off the typed union. `next/link` → TanStack `Link to=...`, `useRouter().push` → `useNavigate()` (only used for the manager cross-day create redirect to `/calendar?date=…`). Both views consume `useNetworkStatus` from `#/lib/network-status`; the staff view uses the new `useOfflineSnapshot`. Manager view consumes `useManagerTodayIndexedDbSources` + `useManagerDataClient`/`useBumpOfflineData` for offline-first behavior, identical to legacy.
@@ -901,7 +901,7 @@ PWA hardening lands: real manifest + icons/screenshots, service worker with Vite
 - `src/lib/pwa-assets.ts` — Vite port of `apps/app/lib/pwa-assets.ts`. Reads `import.meta.env.VITE_PWA_ASSET_VERSION` with the same `2026-05-26-v1` default.
 - `src/env.ts` — added `pwaAssetVersion` field for completeness alongside other VITE-prefixed values.
 - `src/components/pwa/service-worker-register.tsx` — Vite port of `apps/app/components/pwa/service-worker-register.tsx`. Same dev cleanup (unregister + purge caches), same update toast UX, same controllerchange/visibility/focus/10-minute interval re-check pattern. **Build-id replacement:** instead of `extractNextBuildId`, we extract the Vite hashed entry script path (`/assets/index-XXXXX.js`) from `document.scripts` at boot, then on each re-check fetch `/` (no-store) and compare against the script referenced in the fresh index.html. Mismatch → prompt for reload.
-- `src/components/pwa/install-prompt.tsx` — Vite port of `apps/app/components/pwa/install-prompt.tsx`. `usePathname` → `useRouterState({ select: s => s.location.pathname })`. All localStorage keys preserved verbatim (`aravira-pwa-first-visit`, `aravira-pwa-install-dismissed-v2`, `aravira-pwa-install-qualified-v1`, `aravira-pwa-install-auto-opened-v1`) so existing installed-user state migrates cleanly. Same value-moment paths, iOS Safari detection, and `beforeinstallprompt`/`appinstalled` handling.
+- `src/components/pwa/install-prompt.tsx` — Vite port of `apps/app/components/pwa/install-prompt.tsx`. `usePathname` → `useRouterState({ select: s => s.location.pathname })`. All localStorage keys preserved verbatim (`saluna-pwa-first-visit`, `saluna-pwa-install-dismissed-v2`, `saluna-pwa-install-qualified-v1`, `saluna-pwa-install-auto-opened-v1`) so existing installed-user state migrates cleanly. Same value-moment paths, iOS Safari detection, and `beforeinstallprompt`/`appinstalled` handling.
 - `src/routes/__root.tsx` — mounts `<ServiceWorkerRegister />` and `<InstallPrompt />` alongside `<Toaster />`.
 - `index.html` — added theme-color (light/dark via media), color-scheme, `application-name`, apple-web-app metas, `format-detection`, description, `<link rel="manifest" href="/manifest.webmanifest">`, full favicon/apple-touch-icon link set.
 
