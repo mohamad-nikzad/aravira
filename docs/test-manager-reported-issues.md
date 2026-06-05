@@ -6,17 +6,23 @@ This tracker normalizes the reported QA/UX issues into implementation-ready task
 
 ## Summary Groups
 
-| Group | Theme | Priority | Tasks |
-| --- | --- | --- | --- |
-| A | Validation visibility and form recovery | P1 | A1 |
-| B | Numeric and time input editing | P1 | B1 |
-| C | Calendar UX and navigation | P1 | C1, C2, C3, C4 |
-| D | Appointment edit drawer mutations | P1 | D1, D2 |
-| E | Appointment Intake service/staff availability dead-ends | P1 | E1 |
+| Group | Theme | Priority | Tasks | Status |
+| --- | --- | --- | --- | --- |
+| A | Validation visibility and form recovery | P1 | A1 | **Done** |
+| B | Numeric and time input editing | P1 | B1 | **Done** |
+| C | Calendar UX and navigation | P1 | C1, C2, C3, C4 | **Done** |
+| D | Appointment edit drawer mutations | P1 | D1, D2 | Open |
+| E | Appointment Intake service/staff availability dead-ends | P1 | E1 | Partial |
+
+**Done (6):** A1, B1, C1, C2, C3, C4  
+**Partial (1):** E1 — capability vs availability split and form recovery started; not all acceptance criteria met  
+**Open (2):** D1, D2
 
 ## A. Validation Visibility and Form Recovery
 
 ### A1. Surface hidden invalid Salon Presence fields during onboarding
+
+**Status:** Done — auto-open first invalid row, collapsed error state, scroll/focus on submit, `presence-validation` tests
 
 **Report**
 
@@ -49,6 +55,8 @@ Make validation failures visible and actionable in the Salon Presence form.
 ## B. Numeric and Time Input Editing
 
 ### B1. Make numeric inputs editable when users clear existing values
+
+**Status:** Done (`86b9363` — `LocalizedNumberInput`, appointment/service drawers, regression tests)
 
 **Report**
 
@@ -83,6 +91,8 @@ Introduce a reusable localized numeric text-input pattern that permits intermedi
 
 ### C1. Make month-view day interaction deterministic and appointment-safe
 
+**Status:** Done (`0a1beff` — `DaySummarySheet`, month day/event clicks open summary first)
+
 **Report**
 
 In month view, when a manager clicks a day that already has appointments, sometimes appointment detail opens and sometimes the new appointment drawer opens. The report suggests appointment detail should not open directly from this interaction and asks for a better UX.
@@ -114,6 +124,8 @@ Use month view as a navigation/overview surface:
 
 ### C2. Extend agenda/list view to show upcoming appointments through next month
 
+**Status:** Done (`0a1beff` — `listUpcomingMonth` view, one-month `visibleRange`, updated empty copy)
+
 **Report**
 
 Agenda view should show appointments up to next month. Right now it appears to show only the current week.
@@ -136,6 +148,8 @@ Change agenda/list view to show today through approximately one month ahead.
 
 ### C3. Improve staff-filter feedback when filtered appointments are outside the current view
 
+**Status:** Done (`0a1beff` — filtered empty state, clear filter, jump to nearest appointment)
+
 **Report**
 
 Filtering by staff feels broken in day/week view because the selected staff member's appointments may not be in the current visible date/time view.
@@ -157,6 +171,8 @@ Add contextual empty/filter feedback and navigation for staff-filtered calendar 
 - Works in day, week, month, and agenda/list views.
 
 ### C4. Improve mobile calendar usability for long working-hour ranges
+
+**Status:** Done (`0a1beff` — mobile scroll-to-first-appointment/current time, coarser slot height)
 
 **Report**
 
@@ -181,6 +197,8 @@ Reduce mobile friction for long working-hour calendar views.
 ## D. Appointment Edit Drawer Mutations
 
 ### D1. Close appointment edit/detail drawer after successful edit
+
+**Status:** Open — `/calendar` still calls `openDetail` after a successful full edit (`handleDetailChange`)
 
 **Report**
 
@@ -209,6 +227,8 @@ Close the appointment detail/edit drawer after successful full edit-form save, w
 - Offline/queued updates show the right queued/saved feedback before or during close.
 
 ### D2. Persist appointment edit start/end time changes
+
+**Status:** Open — intake/query layers support explicit `endTime` when service/addons are unchanged, but no regression tests; custom end time still loses when service/addons change together
 
 **Report**
 
@@ -249,6 +269,8 @@ Fix appointment edit persistence so saved start/end time changes survive drawer 
 ## E. Appointment Intake Service/Staff Availability Dead-Ends
 
 ### E1. Prevent appointment create/edit forms from getting stuck when selected service duration exceeds salon/staff bounds
+
+**Status:** Partial (`12840ca` — `serviceDisabledReason` vs `serviceStatusReason`, clear service/staff, intake tests; staff outside schedule still disabled; nearest-slot / auto-adjust end time not implemented)
 
 **Report**
 

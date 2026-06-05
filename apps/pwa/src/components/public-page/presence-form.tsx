@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import type { QueryKey } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { useForm, type FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   EMPTY_PRESENCE_INPUT,
@@ -22,6 +22,10 @@ import { getMutationErrorMessage } from '#/lib/query-client'
 import { salonPresenceQueryKey } from '#/lib/query-keys'
 
 import { PresenceFields } from './presence-fields'
+import {
+  getFirstInvalidPresenceField,
+  revealInvalidPresenceField,
+} from './presence-validation'
 
 export type UsePresenceFormOptions = {
   onSuccess?: () => void
@@ -41,6 +45,7 @@ export function usePresenceForm(options: UsePresenceFormOptions = {}) {
     handleSubmit,
     reset,
     setError,
+    setFocus,
     watch,
     formState: { errors },
   } = useForm<PresenceInput, any, PresencePayload>({
@@ -67,15 +72,24 @@ export function usePresenceForm(options: UsePresenceFormOptions = {}) {
     onSuccess: () => options.onSuccess?.(),
   })
 
-  const onSubmit = handleSubmit((formValues) => {
-    savePresence.mutate(formValues, {
-      onError: (err) => {
-        setError('root', {
-          message: getMutationErrorMessage(err, 'ذخیره اطلاعات انجام نشد'),
-        })
-      },
-    })
-  })
+  const onInvalid = (fieldErrors: FieldErrors<PresenceInput>) => {
+    const firstInvalidField = getFirstInvalidPresenceField(fieldErrors)
+    if (!firstInvalidField) return
+    revealInvalidPresenceField(firstInvalidField, { setOpen, setFocus })
+  }
+
+  const onSubmit = handleSubmit(
+    (formValues) => {
+      savePresence.mutate(formValues, {
+        onError: (err) => {
+          setError('root', {
+            message: getMutationErrorMessage(err, 'ذخیره اطلاعات انجام نشد'),
+          })
+        },
+      })
+    },
+    onInvalid,
+  )
 
   return {
     open,

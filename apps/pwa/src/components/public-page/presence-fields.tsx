@@ -1,4 +1,5 @@
 import {
+  AlertCircle,
   Camera,
   Check,
   ChevronLeft,
@@ -18,7 +19,12 @@ import { FieldError } from '@repo/ui/field'
 import { cn } from '@repo/ui/utils'
 import type { PresenceInput } from '@repo/salon-core/forms/presence'
 
-export type PresenceField = keyof PresenceInput
+import {
+  presenceFieldInputId,
+  type PresenceField,
+} from './presence-validation'
+
+export type { PresenceField }
 
 type RowConfig = {
   field: PresenceField
@@ -119,14 +125,23 @@ export function PresenceFields({
     const isOpen = open === config.field
     const Icon = config.icon
     const fieldError = errors[config.field]
+    const hasError = Boolean(fieldError?.message)
 
     return (
       <div
         key={config.field}
-        className="overflow-hidden rounded-2xl border border-line-soft bg-card"
+        data-presence-field={config.field}
+        className={cn(
+          'overflow-hidden rounded-2xl border bg-card',
+          hasError ? 'border-destructive' : 'border-line-soft',
+        )}
       >
         <button
           type="button"
+          aria-invalid={hasError || undefined}
+          aria-describedby={
+            hasError ? `${presenceFieldInputId(config.field)}-error` : undefined
+          }
           onClick={() => setOpen(isOpen ? null : config.field)}
           className="flex w-full items-center gap-3 p-2.5 text-right"
         >
@@ -146,14 +161,25 @@ export function PresenceFields({
             <span
               dir={config.dir}
               className={cn(
-                'block truncate text-xs text-muted-foreground',
+                'block truncate text-xs',
+                hasError
+                  ? 'text-destructive'
+                  : 'text-muted-foreground',
                 config.dir === 'ltr' && 'text-left',
               )}
             >
-              {filled ? value : 'افزودن'}
+              {hasError
+                ? fieldError?.message
+                : filled
+                  ? value
+                  : 'افزودن'}
             </span>
           </span>
-          {filled ? (
+          {hasError ? (
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-destructive-soft text-destructive">
+              <AlertCircle className="size-3.5" />
+            </span>
+          ) : filled ? (
             <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
               <Check className="size-3" />
             </span>
@@ -167,20 +193,28 @@ export function PresenceFields({
           <div className="border-t border-line-soft p-3">
             {config.textarea ? (
               <Textarea
+                id={presenceFieldInputId(config.field)}
                 dir={config.dir}
                 placeholder={config.placeholder}
                 className="min-h-20 text-right"
+                aria-invalid={hasError || undefined}
                 {...register(config.field)}
               />
             ) : (
               <Input
+                id={presenceFieldInputId(config.field)}
                 dir={config.dir}
                 placeholder={config.placeholder}
                 className={cn('h-11', config.dir === 'ltr' && 'text-left')}
+                aria-invalid={hasError || undefined}
                 {...register(config.field)}
               />
             )}
-            {fieldError && <FieldError>{fieldError.message}</FieldError>}
+            {fieldError && (
+              <FieldError id={`${presenceFieldInputId(config.field)}-error`}>
+                {fieldError.message}
+              </FieldError>
+            )}
           </div>
         )}
       </div>
