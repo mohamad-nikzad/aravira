@@ -122,6 +122,12 @@ function subtractMinutes(time: string, minutes: number): string {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}:00`
 }
 
+function addMinutesToTime(time: string, minutes: number): string {
+  const [h, m] = time.split(':').map(Number)
+  const total = Math.min(24 * 60, h * 60 + m + minutes)
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}:00`
+}
+
 function parseYmdToLocalDate(ymd: string): Date {
   const [y, m, d] = ymd.split('-').map(Number)
   return new Date(y, m - 1, d, 12, 0, 0, 0)
@@ -192,6 +198,7 @@ export function SalonFullCalendar({
     : bh.slotDurationMinutes
   const slotIso = minutesToSlotDuration(displaySlotMinutes)
   const snapIso = minutesToSlotDuration(bh.slotDurationMinutes)
+  const slotMaxIso = addMinutesToTime(bh.workingEnd, displaySlotMinutes)
   const mobileScrollTime = useMemo(() => {
     if (view !== 'day' && view !== 'week') return `${bh.workingStart}:00`
     const todayYmd = salonTodayYmd()
@@ -458,7 +465,7 @@ export function SalonFullCalendar({
         scrollTime={scrollTime}
         scrollTimeReset
         slotMinTime={`${bh.workingStart}:00`}
-        slotMaxTime={`${bh.workingEnd}:00`}
+        slotMaxTime={slotMaxIso}
         allDaySlot={false}
         nowIndicator
         selectable={!readOnly}
