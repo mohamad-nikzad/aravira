@@ -25,6 +25,7 @@
     "./client": "./src/client.ts",
     "./config": "./src/config.ts",
     "./keys": "./src/keys.ts",
+    "./seed/catalog-presets": "./src/seed/catalog-presets.ts",
     "./schema": "./src/schema.ts"
   },
   "scripts": {
@@ -36,6 +37,7 @@
     "db:push": "drizzle-kit push --config=drizzle.config.ts",
     "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
     "db:seed": "tsx src/seed.ts",
+    "db:seed:catalog-presets": "tsx src/seed/catalog-presets-only.ts",
     "test": "vitest run",
     "test:unit": "vitest run"
   },

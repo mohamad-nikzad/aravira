@@ -1,0 +1,201 @@
+map $http_upgrade $connection_upgrade {
+  default upgrade;
+  '' close;
+}
+
+map $http_x_forwarded_proto $saluna_forwarded_proto {
+  default $http_x_forwarded_proto;
+  '' $scheme;
+}
+
+server {
+  listen 80 default_server;
+  server_name _;
+
+  location = /healthz {
+    access_log off;
+    add_header Content-Type text/plain;
+    return 200 "ok\n";
+  }
+
+  location / {
+    return 404;
+  }
+}
+
+server {
+  listen 443 ssl default_server;
+  server_name _;
+
+  ssl_certificate /etc/nginx/certs/saluna-origin.crt;
+  ssl_certificate_key /etc/nginx/certs/saluna-origin.key;
+  ssl_protocols TLSv1.2 TLSv1.3;
+
+  location = /healthz {
+    access_log off;
+    add_header Content-Type text/plain;
+    return 200 "ok\n";
+  }
+
+  location / {
+    return 404;
+  }
+}
+
+server {
+  listen 80;
+  server_name ${PUBLIC_DOMAIN} www.${PUBLIC_DOMAIN};
+
+  client_max_body_size 5m;
+
+  location = /healthz {
+    access_log off;
+    add_header Content-Type text/plain;
+    return 200 "ok\n";
+  }
+
+  location / {
+    proxy_pass http://web:3001;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto $saluna_forwarded_proto;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+  }
+}
+
+server {
+  listen 443 ssl;
+  server_name ${PUBLIC_DOMAIN} www.${PUBLIC_DOMAIN};
+
+  ssl_certificate /etc/nginx/certs/saluna-origin.crt;
+  ssl_certificate_key /etc/nginx/certs/saluna-origin.key;
+  ssl_protocols TLSv1.2 TLSv1.3;
+
+  client_max_body_size 5m;
+
+  location = /healthz {
+    access_log off;
+    add_header Content-Type text/plain;
+    return 200 "ok\n";
+  }
+
+  location / {
+    proxy_pass http://web:3001;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto $saluna_forwarded_proto;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+  }
+}
+
+server {
+  listen 80;
+  server_name ${APP_DOMAIN};
+
+  client_max_body_size 5m;
+
+  location = /healthz {
+    access_log off;
+    add_header Content-Type text/plain;
+    return 200 "ok\n";
+  }
+
+  location / {
+    proxy_pass http://pwa:80;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto $saluna_forwarded_proto;
+  }
+}
+
+server {
+  listen 443 ssl;
+  server_name ${APP_DOMAIN};
+
+  ssl_certificate /etc/nginx/certs/saluna-origin.crt;
+  ssl_certificate_key /etc/nginx/certs/saluna-origin.key;
+  ssl_protocols TLSv1.2 TLSv1.3;
+
+  client_max_body_size 5m;
+
+  location = /healthz {
+    access_log off;
+    add_header Content-Type text/plain;
+    return 200 "ok\n";
+  }
+
+  location / {
+    proxy_pass http://pwa:80;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto $saluna_forwarded_proto;
+  }
+}
+
+server {
+  listen 80;
+  server_name ${API_DOMAIN};
+
+  client_max_body_size 5m;
+
+  location = /healthz {
+    access_log off;
+    add_header Content-Type text/plain;
+    return 200 "ok\n";
+  }
+
+  location / {
+    proxy_pass http://api:3002;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto $saluna_forwarded_proto;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+  }
+}
+
+server {
+  listen 443 ssl;
+  server_name ${API_DOMAIN};
+
+  ssl_certificate /etc/nginx/certs/saluna-origin.crt;
+  ssl_certificate_key /etc/nginx/certs/saluna-origin.key;
+  ssl_protocols TLSv1.2 TLSv1.3;
+
+  client_max_body_size 5m;
+
+  location = /healthz {
+    access_log off;
+    add_header Content-Type text/plain;
+    return 200 "ok\n";
+  }
+
+  location / {
+    proxy_pass http://api:3002;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto $saluna_forwarded_proto;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+  }
+}

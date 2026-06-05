@@ -3,6 +3,9 @@
 **/.turbo
 **/.DS_Store
 **/node_modules
+**/*.tsbuildinfo
+apps/api/dist
+apps/pwa/dist
 apps/web/dist
 apps/web/.astro
 apps/**/.next

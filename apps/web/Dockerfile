@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-#
 # Astro 6 SSR (@astrojs/node standalone) for air-gapped VPS deploy.
 # Build from the monorepo root (see docs/VPS_AIRGAPPED_DEPLOYMENT.md):
 #
@@ -40,8 +38,13 @@ FROM deps AS build
 
 COPY scripts/with-root-env.mjs ./scripts/
 COPY packages/typescript-config ./packages/typescript-config
+COPY packages/brand ./packages/brand
 COPY packages/salon-core ./packages/salon-core
 COPY apps/web ./apps/web
+
+RUN mkdir -p node_modules/@repo \
+  && ln -sfn ../../packages/brand node_modules/@repo/brand \
+  && ln -sfn ../../packages/typescript-config node_modules/@repo/typescript-config
 
 ARG PUBLIC_APP_URL=http://localhost:3001
 ARG PUBLIC_API_URL=http://localhost:3000
@@ -54,15 +57,6 @@ ENV PUBLIC_APP_URL=${PUBLIC_APP_URL} \
 # with-root-env.mjs loads ROOT_ENV_FILES from repo root when present
 RUN pnpm --filter @repo/web build
 
-# --- Stage 2: production runtime dependencies (Alpine-native sharp, etc.) ---
-FROM base AS runner-deps
-
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-COPY apps/web/package.json ./apps/web/
-COPY packages/salon-core ./packages/salon-core/
-
-RUN pnpm install --frozen-lockfile --prod --filter @repo/web...
-
 # --- Stage 2: slim runtime image ---
 FROM base AS runner
 
@@ -73,8 +67,10 @@ ENV NODE_ENV=production \
   PORT=3001
 
 # Hoisted node_modules at repo root; Node resolves from apps/web upward
-COPY --from=runner-deps /app/node_modules /app/node_modules
-COPY --from=runner-deps /app/packages/salon-core /app/packages/salon-core
+COPY --from=build /app/node_modules /app/node_modules
+COPY --from=build /app/packages/brand /app/packages/brand
+COPY --from=build /app/packages/salon-core /app/packages/salon-core
+COPY --from=build /app/packages/typescript-config /app/packages/typescript-config
 COPY --from=build /app/apps/web/dist ./dist
 
 USER node
