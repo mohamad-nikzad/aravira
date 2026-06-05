@@ -11,6 +11,7 @@ import {
   ListChecks,
   LogOut,
   Moon,
+  Pencil,
   Scissors,
   Sun,
   UserPlus,
@@ -50,6 +51,7 @@ import {
 import { BusinessHoursFields } from '#/components/business-hours/business-hours-fields'
 import { MessagingAccountsSection } from '#/components/settings/messaging-accounts-section'
 import { SettingsRow, ToggleRow } from '#/components/settings/settings-rows'
+import { StaffDrawer } from '#/components/staff/staff-drawer'
 
 type DashboardMetrics = {
   monthRevenue: number
@@ -157,13 +159,14 @@ function SettingsSkeleton() {
 }
 
 function SettingsPage() {
-  const { user, logout } = useAuth()
+  const { user, logout, refresh: refreshAuth } = useAuth()
   const navigate = useNavigate()
   const { theme, setTheme } = useTheme()
   const dc = useManagerDataClient()
   const bumpOfflineData = useBumpOfflineData()
   const [loggingOut, setLoggingOut] = useState(false)
   const [localAlerts, setLocalAlerts] = useState<boolean | null>(null)
+  const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
   const isManager = user?.role === 'manager'
 
   const businessSettingsQuery = useManagerBusinessSettingsQuery(
@@ -275,6 +278,12 @@ function SettingsPage() {
       : null
   const darkMode = theme === 'dark'
 
+  const handleProfileSaved = () => {
+    setProfileDrawerOpen(false)
+    void refreshAuth()
+    void dc?.staff.refresh()
+  }
+
   return (
     <div className="flex h-full flex-col bg-background">
       <header className="border-b border-line-soft bg-card px-5 pt-3.5 pb-4">
@@ -310,6 +319,18 @@ function SettingsPage() {
                 <Badge variant="plum">{isManager ? 'مدیر' : 'پرسنل'}</Badge>
               </div>
             </div>
+            {isManager ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="relative shrink-0 rounded-2xl bg-card/80"
+                aria-label="ویرایش اطلاعات حساب"
+                onClick={() => setProfileDrawerOpen(true)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            ) : null}
           </div>
 
           {isManager && metrics ? (
@@ -457,6 +478,16 @@ function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {isManager ? (
+        <StaffDrawer
+          open={profileDrawerOpen}
+          onOpenChange={setProfileDrawerOpen}
+          onSuccess={handleProfileSaved}
+          staff={user}
+          roleLocked="manager"
+        />
+      ) : null}
     </div>
   )
 }

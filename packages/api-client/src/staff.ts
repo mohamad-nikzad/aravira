@@ -3,6 +3,7 @@ import type {
   StaffCreateFormPayload,
   StaffScheduleRequestPayload,
   StaffServiceIdsPayload,
+  StaffUpdateFormPayload,
 } from '@repo/salon-core/forms/staff'
 import type { ApiClient } from './client'
 import { endpoints } from './endpoints'
@@ -18,6 +19,7 @@ export type CreateStaffResponse = {
 }
 
 export type UpdateStaffServicesInput = StaffServiceIdsPayload
+export type UpdateStaffInput = StaffUpdateFormPayload
 
 export type StaffMemberResponse = {
   staff: User
@@ -38,6 +40,13 @@ export function createStaffApi(client: ApiClient) {
     create(input: CreateStaffInput, opts: { signal?: AbortSignal } = {}) {
       return client.request<CreateStaffResponse>(endpoints.staff, {
         method: 'POST',
+        body: input,
+        signal: opts.signal,
+      })
+    },
+    update(id: string, input: UpdateStaffInput, opts: { signal?: AbortSignal } = {}) {
+      return client.request<StaffMemberResponse>(`${endpoints.staff}/${id}`, {
+        method: 'PATCH',
         body: input,
         signal: opts.signal,
       })

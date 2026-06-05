@@ -3,12 +3,14 @@ import { z } from 'zod'
 import {
   getAllStaff,
   getBusinessSettings,
+  countManagers,
   getStaffBookingAvailabilityForSlot,
   getStaffSchedules,
   getUserById,
   getUserWithServiceIds,
   setStaffSchedules,
   setStaffServiceIds,
+  updateStaffMember,
   validateActiveServiceIds,
 } from '@repo/database/staff'
 import { auth } from '@repo/auth/server'
@@ -21,6 +23,7 @@ import {
   staffCreateSchema,
   staffScheduleRequestSchema,
   staffServiceIdsSchema,
+  staffUpdateSchema,
 } from '@repo/salon-core/forms/staff'
 import { formMessages } from '@repo/salon-core/forms/messages'
 import type { AppEnv } from '../factory'
@@ -123,6 +126,41 @@ export const staff = new Hono<AppEnv>()
 
       const newUser = await getUserById(newUserId)
       return ok(c, { user: newUser })
+    },
+  )
+  .patch(
+    '/:id',
+    requireTenant('manage_settings'),
+    zValidator('param', idParamSchema),
+    zValidator('json', staffUpdateSchema),
+    async (c) => {
+      const { salonId, userId } = c.var.tenant
+      const { id } = c.req.valid('param')
+      const values = c.req.valid('json')
+      const target = await getUserById(id)
+      if (!target || target.salonId !== salonId) {
+        return error(c, 'کاربر یافت نشد', 404)
+      }
+      if (id === userId && values.role === 'staff') {
+        return error(c, 'نقش حساب فعلی خودتان را نمی‌توانید به پرسنل تغییر دهید.', 400)
+      }
+      if (target.role === 'manager' && values.role === 'staff') {
+        const managerCount = await countManagers(salonId)
+        if (managerCount <= 1) {
+          return error(c, 'حداقل یک مدیر باید در سالن باقی بماند.', 400)
+        }
+      }
+      let updated: Awaited<ReturnType<typeof updateStaffMember>>
+      try {
+        updated = await updateStaffMember(salonId, id, values)
+      } catch (err) {
+        if (isDuplicatePhoneError(err)) {
+          return error(c, 'این شماره موبایل قبلاً ثبت شده است', 409)
+        }
+        throw err
+      }
+      if (!updated) return error(c, 'کاربر یافت نشد', 404)
+      return ok(c, { staff: updated })
     },
   )
   .get(

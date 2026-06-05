@@ -1,5 +1,6 @@
 export {
   getAllStaff,
+  countManagers,
   getStaffBookingAvailabilityForSlot,
   getStaffScheduleForDay,
   getStaffScheduleForDayAnyStatus,
@@ -10,6 +11,7 @@ export {
   staffMayPerformService,
   findSoleCapableStaffUserId,
   listCapableStaffForService,
+  updateStaffMember,
 } from './internal/staff-queries'
 
 export { getUserById } from './internal/user-queries'

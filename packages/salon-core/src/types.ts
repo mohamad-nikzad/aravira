@@ -5,7 +5,12 @@ export type UserRole = 'manager' | 'staff'
 export interface User {
   id: string
   salonId: string
+  /** Compact salon-facing label. Uses nickname when one exists, otherwise fullName. */
   name: string
+  /** Legal/account name used in edit forms and authentication records. */
+  fullName?: string
+  /** Optional salon nickname shown in dense operational UI. */
+  nickname?: string | null
   role: UserRole
   color: string
   phone: string

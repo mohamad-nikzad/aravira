@@ -1,5 +1,6 @@
-import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm'
-import type { BusinessHours, StaffSchedule, User } from '@repo/salon-core/types'
+import { and, asc, count, eq, inArray, isNull, ne, or } from 'drizzle-orm'
+import type { BusinessHours, StaffSchedule, User, UserRole } from '@repo/salon-core/types'
+import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import {
   dayOfWeekFromDate,
   validateStaffAvailability,
@@ -10,6 +11,14 @@ import { member, salonMember, staffSchedules, staffServices, user } from '../sch
 import { rowToStaffSchedule, rowToUser, staffUserSelect } from './row-mappers'
 import { getUserById } from './user-queries'
 import { getBusinessSettings } from './settings-queries'
+
+export type UpdateStaffInput = {
+  name: string
+  nickname: string | null
+  phone: string
+  role: UserRole
+  color: string
+}
 
 export async function getAllStaff(salonId: string): Promise<User[]> {
   const db = getDb()
@@ -55,6 +64,94 @@ export async function getAllStaff(salonId: string): Promise<User[]> {
     const unique = [...new Set(assigned)].sort()
     return { ...base, serviceIds: unique }
   })
+}
+
+function emailForUpdatedPhone(currentEmail: string, phone: string): string {
+  const domain = currentEmail.split('@')[1]?.trim()
+  return domain ? `${phone}@${domain}` : currentEmail
+}
+
+export async function updateStaffMember(
+  salonId: string,
+  staffUserId: string,
+  input: UpdateStaffInput
+): Promise<User | undefined> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      userId: user.id,
+      email: user.email,
+      memberRole: member.role,
+    })
+    .from(member)
+    .innerJoin(user, eq(member.userId, user.id))
+    .where(and(eq(member.organizationId, salonId), eq(member.userId, staffUserId)))
+    .limit(1)
+
+  const existing = rows[0]
+  if (!existing) return undefined
+
+  const nextRole =
+    input.role === 'manager'
+      ? existing.memberRole === 'owner'
+        ? 'owner'
+        : 'admin'
+      : 'member'
+  const displayName = input.nickname
+  const color = normalizeCalendarColorId(input.color)
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(user)
+      .set({
+        name: input.name,
+        username: input.phone,
+        displayUsername: input.phone,
+        email: emailForUpdatedPhone(existing.email, input.phone),
+        updatedAt: new Date(),
+      })
+      .where(eq(user.id, staffUserId))
+
+    await tx
+      .update(member)
+      .set({ role: nextRole })
+      .where(and(eq(member.organizationId, salonId), eq(member.userId, staffUserId)))
+
+    await tx
+      .insert(salonMember)
+      .values({
+        userId: staffUserId,
+        organizationId: salonId,
+        displayName,
+        color,
+        active: true,
+      })
+      .onConflictDoUpdate({
+        target: [salonMember.userId, salonMember.organizationId],
+        set: { displayName, color, active: true },
+      })
+  })
+
+  return getUserWithServiceIds(staffUserId, salonId)
+}
+
+export async function countManagers(salonId: string): Promise<number> {
+  const db = getDb()
+  const rows = await db
+    .select({ value: count() })
+    .from(member)
+    .leftJoin(
+      salonMember,
+      and(eq(salonMember.userId, member.userId), eq(salonMember.organizationId, salonId))
+    )
+    .where(
+      and(
+        eq(member.organizationId, salonId),
+        inArray(member.role, ['owner', 'admin']),
+        or(isNull(salonMember.active), ne(salonMember.active, false))
+      )
+    )
+  return Number(rows[0]?.value ?? 0)
 }
 
 /**

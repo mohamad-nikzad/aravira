@@ -39,7 +39,8 @@ const DEFAULT_STAFF_COLOR = normalizeCalendarColorId(STAFF_COLORS[0])
 export const staffUserSelect = {
   id: user.id,
   salonId: member.organizationId,
-  name: user.name,
+  fullName: user.name,
+  displayName: salonMember.displayName,
   phone: user.username,
   role: member.role,
   color: salonMember.color,
@@ -49,7 +50,8 @@ export const staffUserSelect = {
 export type StaffUserRow = {
   id: string
   salonId: string
-  name: string
+  fullName: string
+  displayName: string | null
   phone: string | null
   role: string
   color: string | null
@@ -57,10 +59,15 @@ export type StaffUserRow = {
 }
 
 export function rowToUser(row: StaffUserRow): User {
+  const fullName = row.fullName.trim()
+  const displayName = row.displayName?.trim() || null
+  const nickname = displayName && displayName !== fullName ? displayName : null
   return {
     id: row.id,
     salonId: row.salonId,
-    name: row.name,
+    name: nickname ?? fullName,
+    fullName,
+    nickname,
     phone: row.phone ?? '',
     role: row.role === 'owner' || row.role === 'admin' ? 'manager' : 'staff',
     color: row.color ?? DEFAULT_STAFF_COLOR,

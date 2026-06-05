@@ -4,6 +4,8 @@
  */
 import { z } from 'zod'
 
+import { normalizeCalendarColorId } from '../calendar-colors'
+import { STAFF_COLORS } from '../types'
 import { formMessages } from './messages'
 import {
   phoneSchema,
@@ -28,6 +30,31 @@ export const staffCreateSchema = z.object({
 
 export type StaffCreateFormInput = z.input<typeof staffCreateSchema>
 export type StaffCreateFormPayload = z.output<typeof staffCreateSchema>
+
+export const staffUpdateSchema = z.object({
+  name: requiredTextSchema,
+  nickname: z
+    .string()
+    .trim()
+    .max(40, 'نام نمایشی حداکثر ۴۰ کاراکتر است')
+    .optional()
+    .nullable()
+    .transform((value) => {
+      const normalized = value?.trim()
+      return normalized ? normalized : null
+    }),
+  phone: phoneSchema,
+  role: staffRoleSchema,
+  color: z
+    .string()
+    .trim()
+    .optional()
+    .nullable()
+    .transform((value) => normalizeCalendarColorId(value ?? STAFF_COLORS[0])),
+})
+
+export type StaffUpdateFormInput = z.input<typeof staffUpdateSchema>
+export type StaffUpdateFormPayload = z.output<typeof staffUpdateSchema>
 
 export const staffScheduleDaySchema = z
   .object({

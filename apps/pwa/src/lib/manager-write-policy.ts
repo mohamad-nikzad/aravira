@@ -19,6 +19,7 @@ export const MANAGER_WRITE_OPERATIONS = [
   'serviceFamily.save',
   'serviceAddon.save',
   'staff.create',
+  'staff.update',
   'staff.setServiceIds',
   'staff.saveSchedule',
   'staffToday.appointment.updateStatus',
@@ -45,6 +46,8 @@ export const MANAGER_WRITE_POLICIES: Record<
   'serviceAddon.save': 'queue-offline',
   /** Staff account creation — server-side auth; no offline queue. */
   'staff.create': 'require-online',
+  /** Staff/account profile editing — server-side auth identity; no offline queue. */
+  'staff.update': 'require-online',
   'staff.setServiceIds': 'queue-offline',
   'staff.saveSchedule': 'queue-offline',
   /** Staff /today status changes — online API only (no offline queue). */

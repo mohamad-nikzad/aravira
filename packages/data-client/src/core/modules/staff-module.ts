@@ -22,6 +22,14 @@ type StaffResponse = { staff: User[] }
 type StaffScheduleResponse = { schedule: StaffSchedule[]; businessHours: BusinessHours }
 type StaffOneServicesResponse = { staff: User }
 
+export type StaffUpdateDraft = {
+  name: string
+  nickname: string | null
+  phone: string
+  role: 'manager' | 'staff'
+  color: string
+}
+
 export type StaffScheduleDayDraft = {
   dayOfWeek: number
   active: boolean
@@ -47,6 +55,7 @@ export interface StaffModule {
   hydrateFromServer(staff: User[]): Promise<void>
   listLastSyncedAt(): Promise<string | null>
   subscribe(fn: (staff: User[]) => void): () => void
+  update(staffId: string, input: StaffUpdateDraft): Promise<User>
   getScheduleBundle(staffId: string): Promise<StaffScheduleBundle | null>
   refreshScheduleBundle(staffId: string): Promise<StaffScheduleBundle | null>
   setServiceIds(staffId: string, serviceIds: string[] | null): Promise<User>
@@ -190,6 +199,16 @@ export function createStaffModule(
 
     subscribe(fn) {
       return listeners.subscribe(fn)
+    },
+
+    async update(staffId, input) {
+      const data = await transport.json<StaffOneServicesResponse>('PATCH', `/api/staff/${staffId}`, {
+        body: input,
+      })
+      const updated = data.staff
+      const rows = await list()
+      await persistList(rows.map((u) => (u.id === staffId ? updated : u)))
+      return updated
     },
 
     async getScheduleBundle(staffId: string) {

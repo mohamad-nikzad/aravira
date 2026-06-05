@@ -14,6 +14,7 @@ import {
   User as UserIcon,
   ListChecks,
   Clock3,
+  Pencil,
 } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
@@ -48,6 +49,7 @@ function StaffPage() {
   const dc = useManagerDataClient()
   const [search, setSearch] = useState('')
   const [showDrawer, setShowDrawer] = useState(false)
+  const [editingStaff, setEditingStaff] = useState<User | null>(null)
   const [servicesStaff, setServicesStaff] = useState<User | null>(null)
   const [scheduleStaff, setScheduleStaff] = useState<User | null>(null)
 
@@ -63,18 +65,23 @@ function StaffPage() {
     }
   }, [user, navigate])
 
-  const filteredStaff = staff.filter(
-    (member) =>
-      member.name.toLowerCase().includes(search.toLowerCase()) ||
-      member.phone.includes(search),
-  )
+  const filteredStaff = staff.filter((member) => {
+    const query = search.toLowerCase()
+    return (
+      member.name.toLowerCase().includes(query) ||
+      (member.fullName ?? '').toLowerCase().includes(query) ||
+      member.phone.includes(search)
+    )
+  })
 
   const handleAddStaff = () => {
+    setEditingStaff(null)
     setShowDrawer(true)
   }
 
   const handleSuccess = () => {
     setShowDrawer(false)
+    setEditingStaff(null)
     void dc?.staff.refresh()
   }
 
@@ -197,34 +204,55 @@ function StaffPage() {
                     <Phone className="h-3 w-3" />
                     {displayPhone(member.phone)}
                   </p>
+                  {member.fullName && member.fullName !== member.name ? (
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {member.fullName}
+                    </p>
+                  ) : null}
                 </div>
 
-                {member.role === 'staff' && (
-                  <div className="flex shrink-0 gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="touch-manipulation gap-1"
-                      aria-label={`تنظیم ساعت کاری ${member.name}`}
-                      onClick={() => setScheduleStaff(member)}
-                    >
-                      <Clock3 className="h-4 w-4" />
-                      <span className="hidden sm:inline">ساعت</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="touch-manipulation gap-1"
-                      aria-label={`تنظیم خدمات ${member.name}`}
-                      onClick={() => setServicesStaff(member)}
-                    >
-                      <ListChecks className="h-4 w-4" />
-                      <span className="hidden sm:inline">خدمات</span>
-                    </Button>
-                  </div>
-                )}
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="touch-manipulation gap-1"
+                    aria-label={`ویرایش ${member.name}`}
+                    onClick={() => {
+                      setEditingStaff(member)
+                      setShowDrawer(true)
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    <span className="hidden sm:inline">ویرایش</span>
+                  </Button>
+                  {member.role === 'staff' ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="touch-manipulation gap-1"
+                        aria-label={`تنظیم ساعت کاری ${member.name}`}
+                        onClick={() => setScheduleStaff(member)}
+                      >
+                        <Clock3 className="h-4 w-4" />
+                        <span className="hidden sm:inline">ساعت</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="touch-manipulation gap-1"
+                        aria-label={`تنظیم خدمات ${member.name}`}
+                        onClick={() => setServicesStaff(member)}
+                      >
+                        <ListChecks className="h-4 w-4" />
+                        <span className="hidden sm:inline">خدمات</span>
+                      </Button>
+                    </>
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>
@@ -233,8 +261,12 @@ function StaffPage() {
 
       <StaffDrawer
         open={showDrawer}
-        onOpenChange={setShowDrawer}
+        onOpenChange={(open) => {
+          setShowDrawer(open)
+          if (!open) setEditingStaff(null)
+        }}
         onSuccess={handleSuccess}
+        staff={editingStaff}
       />
 
       <StaffServicesDrawer
