@@ -7,7 +7,7 @@ export const formMessages = {
   phoneInvalid: 'شماره تلفن معتبر نیست',
   phoneTooShort: 'شماره تلفن باید حداقل ۱۰ رقم باشد',
   emailInvalid: 'ایمیل معتبر نیست',
-  passwordTooShort: 'رمز عبور باید حداقل ۶ کاراکتر باشد',
+  passwordTooShort: 'رمز عبور باید حداقل ۸ کاراکتر باشد',
   passwordMismatch: 'رمز عبور و تکرار آن یکسان نیستند',
   jalaliDateInvalid: 'تاریخ معتبر نیست',
   hexColorInvalid: 'رنگ معتبر نیست (مثلاً ‎#A1B2C3)',

@@ -263,7 +263,7 @@ describe('api modules', () => {
     await api.create({
       name: 'Sara',
       phone: '09123456789',
-      password: 'secret1',
+      password: 'secret12',
       role: 'staff',
     })
     expectLastCall(calls, {
@@ -272,7 +272,7 @@ describe('api modules', () => {
       body: {
         name: 'Sara',
         phone: '09123456789',
-        password: 'secret1',
+        password: 'secret12',
         role: 'staff',
       },
     })

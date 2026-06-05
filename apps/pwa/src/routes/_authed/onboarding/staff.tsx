@@ -183,7 +183,7 @@ function StaffScreen() {
             <Input
               id="onboarding-staff-password"
               type="password"
-              placeholder="حداقل ۶ کاراکتر"
+              placeholder="حداقل ۸ کاراکتر"
               disabled={pending}
               className="h-11"
               {...register('password')}

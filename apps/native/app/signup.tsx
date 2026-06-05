@@ -211,7 +211,7 @@ export default function SignupScreen() {
           control={control}
           name="password"
           label="رمز عبور"
-          placeholder="حداقل ۶ کاراکتر"
+          placeholder="حداقل ۸ کاراکتر"
           secureTextEntry
           autoComplete="new-password"
           textContentType="newPassword"

@@ -12,7 +12,7 @@ import {
   timeToMinutes,
 } from './primitives'
 
-const MIN_PASSWORD_LENGTH = 6
+const MIN_PASSWORD_LENGTH = 8
 
 export const staffRoleSchema = z.enum(['staff', 'manager'])
 export type StaffRole = z.infer<typeof staffRoleSchema>

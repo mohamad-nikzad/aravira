@@ -8,7 +8,7 @@ import { formMessages } from './messages'
 import { phoneSchema, requiredTextSchema } from './primitives'
 import { slugSchema } from './slug'
 
-const MIN_PASSWORD_LENGTH = 6
+const MIN_PASSWORD_LENGTH = 8
 
 export const loginSchema = z.object({
   phone: phoneSchema,

@@ -230,7 +230,7 @@ function SignupPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="حداقل ۶ کاراکتر"
+                placeholder="حداقل ۸ کاراکتر"
                 autoComplete="new-password"
                 disabled={signup.isPending}
                 className="h-12 rounded-2xl bg-card"

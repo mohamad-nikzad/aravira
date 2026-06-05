@@ -130,6 +130,25 @@ describe('staff router', () => {
     })
   })
 
+  it('400 when Better Auth rejects create input', async () => {
+    vi.mocked(db.getAllStaff).mockResolvedValue([] as never)
+    vi.mocked(authServer.api.signUpEmail).mockRejectedValue({
+      status: 'BAD_REQUEST',
+      statusCode: 400,
+      body: { message: 'Password too short', code: 'PASSWORD_TOO_SHORT' },
+    })
+    const res = await app.request('/api/v1/staff', {
+      method: 'POST',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify(validCreate),
+    })
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({
+      error: 'رمز عبور باید حداقل ۸ کاراکتر باشد',
+      code: 'PASSWORD_TOO_SHORT',
+    })
+  })
+
   it('400 on booking-availability missing params', async () => {
     const res = await app.request('/api/v1/staff/booking-availability', {
       headers: authHeaders,

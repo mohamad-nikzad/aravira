@@ -13,7 +13,7 @@ describe('staffCreateSchema', () => {
     const result = staffCreateSchema.parse({
       name: '  نرگس کاظمی  ',
       phone: '۰۹۱۲۳۴۵۶۷۸۹',
-      password: 'secret1',
+      password: 'secret12',
     })
     expect(result.name).toBe('نرگس کاظمی')
     expect(result.phone).toBe('09123456789')
@@ -24,7 +24,7 @@ describe('staffCreateSchema', () => {
     const result = staffCreateSchema.parse({
       name: 'م',
       phone: '09123456789',
-      password: 'secret1',
+      password: 'secret12',
       role: 'manager',
     })
     expect(result.role).toBe('manager')
@@ -43,7 +43,7 @@ describe('staffCreateSchema', () => {
     const result = staffCreateSchema.safeParse({
       name: 'x',
       phone: '12',
-      password: 'secret1',
+      password: 'secret12',
     })
     expect(result.success).toBe(false)
   })
@@ -52,7 +52,7 @@ describe('staffCreateSchema', () => {
     const result = staffCreateSchema.safeParse({
       name: '   ',
       phone: '09123456789',
-      password: 'secret1',
+      password: 'secret12',
     })
     expect(result.success).toBe(false)
   })

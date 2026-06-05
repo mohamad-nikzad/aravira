@@ -22,6 +22,7 @@ import {
   staffScheduleRequestSchema,
   staffServiceIdsSchema,
 } from '@repo/salon-core/forms/staff'
+import { formMessages } from '@repo/salon-core/forms/messages'
 import type { AppEnv } from '../factory'
 import { requireTenant } from '../middleware/auth'
 import { zValidator } from '../lib/validate'
@@ -43,6 +44,18 @@ function isDuplicatePhoneError(err: unknown): boolean {
     msg.includes('duplicate') ||
     msg.includes('already') ||
     msg.includes('exists')
+  )
+}
+
+function isBetterAuthBadRequest(
+  err: unknown,
+): err is { body?: { message?: string; code?: string } } {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    ('statusCode' in err || 'status' in err) &&
+    ((err as { statusCode?: unknown }).statusCode === 400 ||
+      (err as { status?: unknown }).status === 'BAD_REQUEST')
   )
 }
 
@@ -78,6 +91,19 @@ export const staff = new Hono<AppEnv>()
       } catch (err) {
         if (isDuplicatePhoneError(err)) {
           return error(c, 'این شماره موبایل قبلاً ثبت شده است', 409)
+        }
+        if (isBetterAuthBadRequest(err)) {
+          const code = err.body?.code
+          const message =
+            code === 'PASSWORD_TOO_SHORT'
+              ? formMessages.passwordTooShort
+              : (err.body?.message ?? 'اطلاعات پرسنل معتبر نیست')
+          return error(
+            c,
+            message,
+            400,
+            typeof code === 'string' ? code : undefined,
+          )
         }
         throw err
       }
