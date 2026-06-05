@@ -101,7 +101,9 @@ export function AppointmentDetailDrawer({
             onStatusChange={drawer.setStatus}
             onTemporaryClientModeChange={drawer.handleTemporaryClientModeChange}
             onEditStaffChange={drawer.handleEditStaffChange}
+            onClearEditStaff={drawer.clearEditStaff}
             onEditServiceChange={drawer.handleEditServiceChange}
+            onClearEditService={drawer.clearEditService}
             onToggleAddon={drawer.toggleEditAddon}
             applyDurationInput={drawer.applyDurationInput}
             triggerEdit={drawer.triggerEdit}

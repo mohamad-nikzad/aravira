@@ -176,6 +176,7 @@ export function AppointmentDrawer({
     previewPrice,
     serviceIdsWithStaff,
     serviceDisabledReason,
+    serviceStatusReason,
     staffPickerStatus,
     selectedServiceHasStaff,
     selectedStaffHasServices,
@@ -294,6 +295,11 @@ export function AppointmentDrawer({
     applyDuration(next.durationMinutes)
   }
 
+  const clearService = () => {
+    setValue('serviceId', '', { shouldDirty: true, shouldValidate: true })
+    setValue('addonIds', [], { shouldDirty: true, shouldValidate: true })
+  }
+
   const toggleAddon = (addon: ServiceAddon) => {
     const next = resolveIntakeAddonToggle({
       addon,
@@ -326,6 +332,10 @@ export function AppointmentDrawer({
     if (next.durationMinutes != null) {
       applyDuration(next.durationMinutes)
     }
+  }
+
+  const clearStaff = () => {
+    setValue('staffId', '', { shouldDirty: true, shouldValidate: true })
   }
 
   const handleClientCreated = (newClient: Client) => {
@@ -483,7 +493,9 @@ export function AppointmentDrawer({
                       services={activeServices}
                       value={field.value || undefined}
                       onChange={handleServiceChange}
+                      onClear={clearService}
                       getDisabledReason={serviceDisabledReason}
+                      getStatusReason={serviceStatusReason}
                     />
                   )}
                 />
@@ -543,6 +555,7 @@ export function AppointmentDrawer({
                   staff={staffRoleOnly}
                   value={staffId || undefined}
                   onChange={handleStaffChange}
+                  onClear={clearStaff}
                   getStatus={staffPickerStatus}
                 />
                 {errors.staffId && (

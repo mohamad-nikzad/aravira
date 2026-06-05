@@ -95,6 +95,38 @@ describe('buildAppointmentCreateViewModel', () => {
       reason: 'خارج از برنامه',
     })
   })
+
+  it('keeps services selectable when only the current time is unavailable', () => {
+    const vm = buildAppointmentCreateViewModel({
+      staff: [staffMember],
+      services: [service],
+      staffId: '',
+      serviceId: '',
+      addonIds: [],
+      availableAddons: [],
+      durationMinutes: 45,
+      staffSlotOk: { s1: false },
+    })
+
+    expect(vm.serviceDisabledReason(service)).toBeNull()
+    expect(vm.serviceStatusReason(service)).toBe('برای این ساعت در دسترس نیست')
+  })
+
+  it('still disables services that no staff can perform', () => {
+    const vm = buildAppointmentCreateViewModel({
+      staff: [{ ...staffMember, serviceIds: ['other'] }],
+      services: [service],
+      staffId: '',
+      serviceId: '',
+      addonIds: [],
+      availableAddons: [],
+      durationMinutes: 45,
+      staffSlotOk: { s1: true },
+    })
+
+    expect(vm.serviceDisabledReason(service)).toBe('بدون پرسنل')
+    expect(vm.serviceStatusReason(service)).toBeNull()
+  })
 })
 
 describe('resolveIntakeServiceChange', () => {

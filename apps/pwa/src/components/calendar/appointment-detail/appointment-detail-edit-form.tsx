@@ -64,7 +64,9 @@ interface AppointmentDetailEditFormProps {
   onStatusChange: (status: string) => void
   onTemporaryClientModeChange: (enabled: boolean) => void
   onEditStaffChange: (id: string) => void
+  onClearEditStaff: () => void
   onEditServiceChange: (id: string) => void
+  onClearEditService: () => void
   onToggleAddon: (addon: ServiceAddon) => void
   applyDurationInput: (value: string) => void
   triggerEdit: UseFormReturn<AppointmentFormInput>['trigger']
@@ -100,7 +102,9 @@ export function AppointmentDetailEditForm({
   onStatusChange,
   onTemporaryClientModeChange,
   onEditStaffChange,
+  onClearEditStaff,
   onEditServiceChange,
+  onClearEditService,
   onToggleAddon,
   applyDurationInput,
   triggerEdit,
@@ -212,6 +216,7 @@ export function AppointmentDetailEditForm({
               staff={staffRoleOnly}
               value={staffId || undefined}
               onChange={onEditStaffChange}
+              onClear={onClearEditStaff}
               getStatus={(member) => {
                 const serviceMismatch =
                   !!serviceId &&
@@ -232,6 +237,7 @@ export function AppointmentDetailEditForm({
               services={editableServices}
               value={serviceId || undefined}
               onChange={onEditServiceChange}
+              onClear={onClearEditService}
             />
           </Field>
 

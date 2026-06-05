@@ -61,6 +61,7 @@ export type AppointmentCreateViewModel = {
   selectedStaffHasServices: boolean
   selectedStaffCanPerformSelectedService: boolean
   serviceDisabledReason: (service: Service) => string | null
+  serviceStatusReason: (service: Service) => string | null
   staffPickerStatus: (
     member: User,
   ) => { disabled: true; reason: string } | undefined
@@ -139,7 +140,9 @@ export function buildAppointmentCreateViewModel({
   const activeServices = services.filter((service) => service.active)
   const staffRoleOnly = staff.filter((member) => member.role === 'staff')
   const selectedStaff = staffRoleOnly.find((member) => member.id === staffId)
-  const selectedService = activeServices.find((service) => service.id === serviceId)
+  const selectedService = activeServices.find(
+    (service) => service.id === serviceId,
+  )
   const selectedAddons = availableAddons.filter((addon) =>
     addonIds.includes(addon.id),
   )
@@ -150,7 +153,10 @@ export function buildAppointmentCreateViewModel({
     (selectedService?.price ?? 0) +
     selectedAddons.reduce((sum, addon) => sum + addon.priceDelta, 0)
 
-  const serviceIdsWithStaff = serviceIdsWithStaffSet(staffRoleOnly, activeServices)
+  const serviceIdsWithStaff = serviceIdsWithStaffSet(
+    staffRoleOnly,
+    activeServices,
+  )
 
   const selectedStaffEligibleServiceIds = selectedStaff
     ? new Set(
@@ -178,13 +184,16 @@ export function buildAppointmentCreateViewModel({
 
   const serviceDisabledReason = (service: Service) => {
     if (!serviceIdsWithStaff.has(service.id)) return 'بدون پرسنل'
-    if (!serviceIdsWithAvailableStaff.has(service.id)) {
-      return 'پرسنل در دسترس نیست'
-    }
     if (selectedStaff && !selectedStaffEligibleServiceIds.has(service.id)) {
       return 'برای این پرسنل نیست'
     }
     return null
+  }
+
+  const serviceStatusReason = (service: Service) => {
+    if (!serviceIdsWithStaff.has(service.id)) return null
+    if (serviceIdsWithAvailableStaff.has(service.id)) return null
+    return 'برای این ساعت در دسترس نیست'
   }
 
   const staffPickerStatus = (member: User) => {
@@ -192,7 +201,8 @@ export function buildAppointmentCreateViewModel({
     const noServices = (staffServiceCounts.get(member.id) ?? 0) === 0
     const serviceMismatch =
       !!serviceId && !eligibleStaffForService([member], serviceId).length
-    if (unavailable) return { disabled: true as const, reason: 'خارج از برنامه' }
+    if (unavailable)
+      return { disabled: true as const, reason: 'خارج از برنامه' }
     if (noServices) return { disabled: true as const, reason: 'خدمتی ندارد' }
     if (serviceMismatch) {
       return { disabled: true as const, reason: 'این خدمت را انجام نمی‌دهد' }
@@ -221,6 +231,7 @@ export function buildAppointmentCreateViewModel({
       !serviceId ||
       Boolean(selectedStaff && selectedStaffEligibleServiceIds.has(serviceId)),
     serviceDisabledReason,
+    serviceStatusReason,
     staffPickerStatus,
   }
 }
@@ -321,8 +332,7 @@ export function resolveIntakeStaffChange({
 
   if (serviceStillOk) return { staffId, serviceId }
 
-  const explicitList =
-    member.serviceIds != null && member.serviceIds.length > 0
+  const explicitList = member.serviceIds != null && member.serviceIds.length > 0
   const auto = autoPickServiceForStaff(eligible, {
     staffHasExplicitServiceList: explicitList,
   })
@@ -423,10 +433,7 @@ export function validateAppointmentIntakeSubmit({
     }
   }
 
-  const localCheck = validateAppointmentWindow(
-    values.startTime,
-    values.endTime,
-  )
+  const localCheck = validateAppointmentWindow(values.startTime, values.endTime)
   if (!localCheck.ok) {
     return { field: 'root', message: localCheck.error }
   }

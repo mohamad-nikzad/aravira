@@ -308,6 +308,11 @@ export function useAppointmentDetailDrawer({
     applyDuration(next.durationMinutes)
   }
 
+  const clearEditService = () => {
+    setEditValue('serviceId', '', { shouldDirty: true, shouldValidate: true })
+    setEditValue('addonIds', [], { shouldDirty: true, shouldValidate: true })
+  }
+
   const toggleEditAddon = (addon: ServiceAddon) => {
     const next = resolveIntakeAddonToggle({
       addon,
@@ -340,6 +345,10 @@ export function useAppointmentDetailDrawer({
     if (next.durationMinutes != null) {
       applyDuration(next.durationMinutes)
     }
+  }
+
+  const clearEditStaff = () => {
+    setEditValue('staffId', '', { shouldDirty: true, shouldValidate: true })
   }
 
   const handleTemporaryClientModeChange = (enabled: boolean) => {
@@ -509,8 +518,10 @@ export function useAppointmentDetailDrawer({
     handleDelete,
     handleClientCreated,
     handleEditServiceChange,
+    clearEditService,
     toggleEditAddon,
     handleEditStaffChange,
+    clearEditStaff,
     handleTemporaryClientModeChange,
     applyDuration,
     applyDurationInput,
