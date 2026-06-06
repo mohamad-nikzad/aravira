@@ -74,27 +74,29 @@ function WheelColumn({
   const containerHeight = VISIBLE_COUNT * ITEM_HEIGHT
 
   return (
-    <div className="relative flex-1 max-w-28" style={{ height: containerHeight }}>
-      {/* Selection highlight bar */}
+    <div
+      className="relative isolate max-w-28 flex-1 overflow-hidden rounded-2xl"
+      style={{ height: containerHeight }}
+    >
       <div
-        className="pointer-events-none absolute inset-x-1 z-0 rounded-lg bg-accent"
+        className="pointer-events-none absolute inset-x-1 z-0 rounded-full bg-accent/70 shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--foreground)_6%,transparent)]"
         style={{ top: PADDING, height: ITEM_HEIGHT }}
       />
 
-      {/* Top fade */}
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-10"
+        className="pointer-events-none absolute inset-x-0 top-0 z-10 rounded-t-2xl"
         style={{
           height: PADDING,
-          background: 'linear-gradient(to bottom, var(--color-background), transparent)',
+          background:
+            'linear-gradient(to bottom, var(--color-card) 8%, color-mix(in oklch, var(--color-card) 88%, transparent) 46%, transparent)',
         }}
       />
-      {/* Bottom fade */}
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-10"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-2xl"
         style={{
           height: PADDING,
-          background: 'linear-gradient(to top, var(--color-background), transparent)',
+          background:
+            'linear-gradient(to top, var(--color-card) 8%, color-mix(in oklch, var(--color-card) 88%, transparent) 46%, transparent)',
         }}
       />
 
