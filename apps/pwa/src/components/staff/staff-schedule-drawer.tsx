@@ -20,38 +20,26 @@ import { formatPersianTime } from '@repo/salon-core/persian-digits'
 import { z } from 'zod'
 import { staffScheduleSchema } from '@repo/salon-core/forms/staff'
 import type { StaffScheduleFormInput } from '@repo/salon-core/forms/staff'
+import { useQueryClient } from '@tanstack/react-query'
 import { useManagerDataClient } from '#/lib/manager-data-client'
 import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
 import { useStaffScheduleBundleQuery } from '#/lib/manager-data-queries'
+import { staffScheduleBundleQueryKey } from '#/lib/query-keys'
 import { useDismissGuard } from '#/lib/use-dismiss-guard'
+import {
+  defaultScheduleRows,
+  mergeSavedScheduleRows,
+  STAFF_SCHEDULE_DAYS,
+} from '#/components/staff/staff-schedule'
 
 const scheduleFormSchema = z.object({ rows: staffScheduleSchema })
 type ScheduleFormValues = z.input<typeof scheduleFormSchema>
-
-const days = [
-  { dayOfWeek: 6, label: 'شنبه' },
-  { dayOfWeek: 0, label: 'یکشنبه' },
-  { dayOfWeek: 1, label: 'دوشنبه' },
-  { dayOfWeek: 2, label: 'سه‌شنبه' },
-  { dayOfWeek: 3, label: 'چهارشنبه' },
-  { dayOfWeek: 4, label: 'پنجشنبه' },
-  { dayOfWeek: 5, label: 'جمعه' },
-] as const
 
 interface StaffScheduleDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   staff: User | null
   onSuccess: () => void
-}
-
-function defaultRows(hours?: BusinessHours): StaffScheduleFormInput {
-  return days.map((day) => ({
-    dayOfWeek: day.dayOfWeek,
-    active: day.dayOfWeek !== 5,
-    workingStart: hours?.workingStart ?? '09:00',
-    workingEnd: hours?.workingEnd ?? '19:00',
-  }))
 }
 
 function StaffScheduleRowsSkeleton() {
@@ -89,6 +77,7 @@ export function StaffScheduleDrawer({
   onSuccess,
 }: StaffScheduleDrawerProps) {
   const dc = useManagerDataClient()
+  const queryClient = useQueryClient()
   const [salonHours, setSalonHours] = useState<BusinessHours | null>(null)
   const bundleQuery = useStaffScheduleBundleQuery(staff?.id, open)
   const bundleLoading = bundleQuery.isPending
@@ -102,7 +91,7 @@ export function StaffScheduleDrawer({
     formState: { errors, isSubmitting, isDirty },
   } = useForm<ScheduleFormValues>({
     resolver: zodResolver(scheduleFormSchema),
-    defaultValues: { rows: defaultRows() },
+    defaultValues: { rows: defaultScheduleRows() },
     mode: 'onSubmit',
   })
 
@@ -110,24 +99,12 @@ export function StaffScheduleDrawer({
 
   useEffect(() => {
     if (!open || !staff) return
-    reset({ rows: defaultRows() })
+    reset({ rows: defaultScheduleRows() })
     const bundle = bundleQuery.data
     if (!bundle) return
     setSalonHours(bundle.businessHours)
-    const map = new Map(bundle.schedule.map((r) => [r.dayOfWeek, r]))
-    const base = defaultRows(bundle.businessHours)
     reset({
-      rows: base.map((row) => {
-        const saved = map.get(row.dayOfWeek)
-        return saved
-          ? {
-              dayOfWeek: saved.dayOfWeek,
-              active: saved.active,
-              workingStart: saved.workingStart,
-              workingEnd: saved.workingEnd,
-            }
-          : row
-      }),
+      rows: mergeSavedScheduleRows(bundle.schedule, bundle.businessHours),
     })
   }, [bundleQuery.data, open, reset, staff])
 
@@ -155,6 +132,12 @@ export function StaffScheduleDrawer({
         rows: StaffScheduleFormInput
       },
     ) => dataClient.staff.setSchedule(staffId, rows),
+    meta: { errorMessage: 'ذخیره برنامه کاری انجام نشد' },
+    onSuccess: (_data, { staffId }) => {
+      void queryClient.invalidateQueries({
+        queryKey: staffScheduleBundleQueryKey(staffId),
+      })
+    },
   })
 
   const onSubmit = handleSubmit(async ({ rows }) => {
@@ -213,7 +196,7 @@ export function StaffScheduleDrawer({
             <StaffScheduleRowsSkeleton />
           ) : (
             fields.map((field, idx) => {
-              const label = days.find(
+              const label = STAFF_SCHEDULE_DAYS.find(
                 (day) => day.dayOfWeek === field.dayOfWeek,
               )?.label
               const rowError = errors.rows?.[idx]

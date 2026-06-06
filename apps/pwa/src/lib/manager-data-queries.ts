@@ -106,14 +106,14 @@ export function useManagerBusinessSettingsQuery(enabled = true) {
 
 export function useStaffScheduleBundleQuery(
   staffId: string | undefined,
-  open: boolean,
+  enabled: boolean,
 ) {
   const dc = useManagerDataClient()
 
   return useQuery({
     queryKey: staffScheduleBundleQueryKey(staffId ?? ''),
     queryFn: () => dc!.staff.getScheduleBundle(staffId!),
-    enabled: open && !!staffId && !!dc,
+    enabled: enabled && !!staffId && !!dc,
   })
 }
 
