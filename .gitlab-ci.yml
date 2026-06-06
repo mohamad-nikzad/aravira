@@ -1,0 +1,195 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_PLATFORM: linux/amd64
+  SALUNA_NODE_IMAGE: hub.hamdocker.ir/library/node:22.12.0-alpine
+  SALUNA_NGINX_IMAGE: hub.hamdocker.ir/library/nginx:1.27-alpine
+  SALUNA_ALPINE_MIRROR: https://mirror.arvancloud.ir/alpine
+  SALUNA_NPM_REGISTRY: https://repo.hmirror.ir/npm/
+  SALUNA_PNPM_VERSION: 9.15.9
+
+.docker-build:
+  image: hub.hamdocker.ir/library/node:22.12.0-alpine
+  services:
+    - name: hub.hamdocker.ir/library/docker:27-dind
+      alias: docker
+  before_script:
+    - sed -i "s#https://dl-cdn.alpinelinux.org/alpine#${SALUNA_ALPINE_MIRROR}#g" /etc/apk/repositories
+    - apk add --no-cache bash docker-cli git
+    - test -n "$SALUNA_IMAGE_REGISTRY"
+    - test -n "$HAMDOCKER_USERNAME"
+    - test -n "$HAMDOCKER_PASSWORD"
+    - echo "$HAMDOCKER_PASSWORD" | docker login registry.hamdocker.ir -u "$HAMDOCKER_USERNAME" --password-stdin
+
+.deploy:
+  image: hub.hamdocker.ir/library/alpine:3.20
+  before_script:
+    - sed -i "s#https://dl-cdn.alpinelinux.org/alpine#${SALUNA_ALPINE_MIRROR}#g" /etc/apk/repositories
+    - apk add --no-cache openssh-client
+    - test -n "$VPS_HOST"
+    - test -n "$VPS_SSH_USER"
+    - test -n "$VPS_SSH_PRIVATE_KEY"
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+    - chmod 600 ~/.ssh/id_ed25519
+    - ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+    - when: never
+
+build-api:
+  extends: .docker-build
+  stage: build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - apps/api/**/*
+        - packages/brand/**/*
+        - packages/auth/**/*
+        - packages/database/**/*
+        - packages/notifications/**/*
+        - packages/salon-core/**/*
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - docker-compose.prod.yml
+        - scripts/build-push-registry-app.sh
+  script:
+    - export SALUNA_API_VERSION="$(node -e "console.log(require('./apps/api/package.json').version)")"
+    - export SALUNA_API_IMAGE_TAG="${SALUNA_API_VERSION}-${CI_COMMIT_SHORT_SHA}"
+    - ./scripts/build-push-registry-app.sh api
+    - printf 'APP=api\nIMAGE_TAG=%s\nAPP_VERSION=%s\n' "$SALUNA_API_IMAGE_TAG" "$SALUNA_API_VERSION" > build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+
+build-web:
+  extends: .docker-build
+  stage: build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - apps/web/**/*
+        - packages/brand/**/*
+        - packages/salon-core/**/*
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - docker-compose.prod.yml
+        - scripts/build-push-registry-app.sh
+  script:
+    - export SALUNA_WEB_VERSION="$(node -e "console.log(require('./apps/web/package.json').version)")"
+    - export SALUNA_WEB_IMAGE_TAG="${SALUNA_WEB_VERSION}-${CI_COMMIT_SHORT_SHA}"
+    - ./scripts/build-push-registry-app.sh web
+    - printf 'APP=web\nIMAGE_TAG=%s\nAPP_VERSION=%s\n' "$SALUNA_WEB_IMAGE_TAG" "$SALUNA_WEB_VERSION" > build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+
+build-pwa:
+  extends: .docker-build
+  stage: build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - apps/pwa/**/*
+        - packages/api-client/**/*
+        - packages/data-client/**/*
+        - packages/database/**/*
+        - packages/ui/**/*
+        - packages/brand/**/*
+        - packages/brand-tokens/**/*
+        - packages/salon-core/**/*
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - docker-compose.prod.yml
+        - scripts/build-push-registry-app.sh
+  script:
+    - export SALUNA_PWA_VERSION="$(node -e "console.log(require('./apps/pwa/package.json').version)")"
+    - export SALUNA_PWA_IMAGE_TAG="${SALUNA_PWA_VERSION}-${CI_COMMIT_SHORT_SHA}"
+    - ./scripts/build-push-registry-app.sh pwa
+    - printf 'APP=pwa\nIMAGE_TAG=%s\nAPP_VERSION=%s\n' "$SALUNA_PWA_IMAGE_TAG" "$SALUNA_PWA_VERSION" > build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+
+deploy-api:
+  extends: .deploy
+  stage: deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - apps/api/**/*
+        - packages/brand/**/*
+        - packages/auth/**/*
+        - packages/database/**/*
+        - packages/notifications/**/*
+        - packages/salon-core/**/*
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - docker-compose.prod.yml
+        - scripts/build-push-registry-app.sh
+      when: manual
+    - when: never
+  needs:
+    - job: build-api
+      artifacts: true
+  script:
+    - ssh "$VPS_SSH_USER@$VPS_HOST" "cd /opt/saluna && SALUNA_API_VERSION='$APP_VERSION' ./scripts/deploy-registry-app.sh api '$IMAGE_TAG'"
+
+deploy-web:
+  extends: .deploy
+  stage: deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - apps/web/**/*
+        - packages/brand/**/*
+        - packages/salon-core/**/*
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - docker-compose.prod.yml
+        - scripts/build-push-registry-app.sh
+      when: manual
+    - when: never
+  needs:
+    - job: build-web
+      artifacts: true
+  script:
+    - ssh "$VPS_SSH_USER@$VPS_HOST" "cd /opt/saluna && SALUNA_WEB_VERSION='$APP_VERSION' ./scripts/deploy-registry-app.sh web '$IMAGE_TAG'"
+
+deploy-pwa:
+  extends: .deploy
+  stage: deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - apps/pwa/**/*
+        - packages/api-client/**/*
+        - packages/data-client/**/*
+        - packages/database/**/*
+        - packages/ui/**/*
+        - packages/brand/**/*
+        - packages/brand-tokens/**/*
+        - packages/salon-core/**/*
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - docker-compose.prod.yml
+        - scripts/build-push-registry-app.sh
+      when: manual
+    - when: never
+  needs:
+    - job: build-pwa
+      artifacts: true
+  script:
+    - ssh "$VPS_SSH_USER@$VPS_HOST" "cd /opt/saluna && SALUNA_PWA_VERSION='$APP_VERSION' ./scripts/deploy-registry-app.sh pwa '$IMAGE_TAG'"

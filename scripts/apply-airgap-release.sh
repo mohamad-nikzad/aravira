@@ -20,6 +20,12 @@ fi
 
 saluna_image_tag_override="${SALUNA_IMAGE_TAG-}"
 saluna_image_tag_was_set="${SALUNA_IMAGE_TAG+x}"
+saluna_api_image_tag_override="${SALUNA_API_IMAGE_TAG-}"
+saluna_api_image_tag_was_set="${SALUNA_API_IMAGE_TAG+x}"
+saluna_web_image_tag_override="${SALUNA_WEB_IMAGE_TAG-}"
+saluna_web_image_tag_was_set="${SALUNA_WEB_IMAGE_TAG+x}"
+saluna_pwa_image_tag_override="${SALUNA_PWA_IMAGE_TAG-}"
+saluna_pwa_image_tag_was_set="${SALUNA_PWA_IMAGE_TAG+x}"
 set -a
 # shellcheck disable=SC1090
 . "$ENV_FILE"
@@ -27,11 +33,25 @@ set +a
 if [[ -n "$saluna_image_tag_was_set" ]]; then
   export SALUNA_IMAGE_TAG="$saluna_image_tag_override"
 fi
+if [[ -n "$saluna_api_image_tag_was_set" ]]; then
+  export SALUNA_API_IMAGE_TAG="$saluna_api_image_tag_override"
+fi
+if [[ -n "$saluna_web_image_tag_was_set" ]]; then
+  export SALUNA_WEB_IMAGE_TAG="$saluna_web_image_tag_override"
+fi
+if [[ -n "$saluna_pwa_image_tag_was_set" ]]; then
+  export SALUNA_PWA_IMAGE_TAG="$saluna_pwa_image_tag_override"
+fi
 
 if [[ -z "${SALUNA_IMAGE_TAG:-}" ]]; then
   echo "SALUNA_IMAGE_TAG is required in ${ENV_FILE} or the environment." >&2
   exit 1
 fi
+
+SALUNA_API_IMAGE_TAG="${SALUNA_API_IMAGE_TAG:-$SALUNA_IMAGE_TAG}"
+SALUNA_WEB_IMAGE_TAG="${SALUNA_WEB_IMAGE_TAG:-$SALUNA_IMAGE_TAG}"
+SALUNA_PWA_IMAGE_TAG="${SALUNA_PWA_IMAGE_TAG:-$SALUNA_IMAGE_TAG}"
+export SALUNA_API_IMAGE_TAG SALUNA_WEB_IMAGE_TAG SALUNA_PWA_IMAGE_TAG
 
 REGISTRY_PORT="${REGISTRY_PORT:-5000}"
 if [[ "$USE_REGISTRY" == "1" ]]; then
@@ -118,6 +138,9 @@ fi
 
 if [[ "$USE_REGISTRY" == "1" ]]; then
   echo "Pulling app images from ${SALUNA_IMAGE_REGISTRY}"
+  echo "  api: ${SALUNA_API_IMAGE_TAG}"
+  echo "  web: ${SALUNA_WEB_IMAGE_TAG}"
+  echo "  pwa: ${SALUNA_PWA_IMAGE_TAG}"
   compose pull api web pwa
 else
   load_bundle "$APP_BUNDLE"
@@ -144,4 +167,7 @@ smoke_check "${API_DOMAIN:-api.saluna.ir}" /health
 smoke_check "${APP_DOMAIN:-app.saluna.ir}" /healthz
 smoke_check "${PUBLIC_DOMAIN:-saluna.ir}" /
 
-echo "Release ${SALUNA_IMAGE_TAG} is running."
+echo "Release ${SALUNA_IMAGE_TAG} is running:"
+echo "  api: ${SALUNA_API_IMAGE_TAG}"
+echo "  web: ${SALUNA_WEB_IMAGE_TAG}"
+echo "  pwa: ${SALUNA_PWA_IMAGE_TAG}"

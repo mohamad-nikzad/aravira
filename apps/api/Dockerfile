@@ -1,9 +1,18 @@
 ARG NODE_VERSION=22.12.0
+ARG NODE_IMAGE=node:${NODE_VERSION}-alpine
 
-FROM node:${NODE_VERSION}-alpine AS base
+FROM ${NODE_IMAGE} AS base
 
-RUN apk add --no-cache libc6-compat \
-  && npm install -g pnpm@9.15.9
+ARG ALPINE_MIRROR=
+ARG NPM_REGISTRY=
+ARG PNPM_VERSION=9.15.9
+
+RUN if [ -n "$ALPINE_MIRROR" ]; then \
+    sed -i "s#https://dl-cdn.alpinelinux.org/alpine#${ALPINE_MIRROR%/}#g" /etc/apk/repositories; \
+  fi \
+  && apk add --no-cache libc6-compat \
+  && if [ -n "$NPM_REGISTRY" ]; then npm config set registry "$NPM_REGISTRY"; fi \
+  && npm install -g "pnpm@${PNPM_VERSION}"
 
 WORKDIR /app
 ENV CI=true
@@ -37,9 +46,14 @@ COPY packages/typescript-config ./packages/typescript-config
 RUN pnpm --filter @repo/api build \
   && pnpm --filter @repo/api build:bundle
 
-FROM node:${NODE_VERSION}-alpine AS runner
+FROM ${NODE_IMAGE} AS runner
 
-RUN apk add --no-cache libc6-compat
+ARG ALPINE_MIRROR=
+
+RUN if [ -n "$ALPINE_MIRROR" ]; then \
+    sed -i "s#https://dl-cdn.alpinelinux.org/alpine#${ALPINE_MIRROR%/}#g" /etc/apk/repositories; \
+  fi \
+  && apk add --no-cache libc6-compat
 
 WORKDIR /app
 

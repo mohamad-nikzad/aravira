@@ -21,6 +21,12 @@ fi
 if [[ -f "$ENV_FILE" ]]; then
   saluna_image_tag_override="${SALUNA_IMAGE_TAG-}"
   saluna_image_tag_was_set="${SALUNA_IMAGE_TAG+x}"
+  saluna_api_image_tag_override="${SALUNA_API_IMAGE_TAG-}"
+  saluna_api_image_tag_was_set="${SALUNA_API_IMAGE_TAG+x}"
+  saluna_web_image_tag_override="${SALUNA_WEB_IMAGE_TAG-}"
+  saluna_web_image_tag_was_set="${SALUNA_WEB_IMAGE_TAG+x}"
+  saluna_pwa_image_tag_override="${SALUNA_PWA_IMAGE_TAG-}"
+  saluna_pwa_image_tag_was_set="${SALUNA_PWA_IMAGE_TAG+x}"
   set -a
   # shellcheck disable=SC1090
   . "$ENV_FILE"
@@ -28,12 +34,26 @@ if [[ -f "$ENV_FILE" ]]; then
   if [[ -n "$saluna_image_tag_was_set" ]]; then
     export SALUNA_IMAGE_TAG="$saluna_image_tag_override"
   fi
+  if [[ -n "$saluna_api_image_tag_was_set" ]]; then
+    export SALUNA_API_IMAGE_TAG="$saluna_api_image_tag_override"
+  fi
+  if [[ -n "$saluna_web_image_tag_was_set" ]]; then
+    export SALUNA_WEB_IMAGE_TAG="$saluna_web_image_tag_override"
+  fi
+  if [[ -n "$saluna_pwa_image_tag_was_set" ]]; then
+    export SALUNA_PWA_IMAGE_TAG="$saluna_pwa_image_tag_override"
+  fi
 fi
 
 if [[ -z "${SALUNA_IMAGE_TAG:-}" ]]; then
   echo "SALUNA_IMAGE_TAG is required. Set it in ${ENV_FILE} or the environment." >&2
   exit 1
 fi
+
+SALUNA_API_IMAGE_TAG="${SALUNA_API_IMAGE_TAG:-$SALUNA_IMAGE_TAG}"
+SALUNA_WEB_IMAGE_TAG="${SALUNA_WEB_IMAGE_TAG:-$SALUNA_IMAGE_TAG}"
+SALUNA_PWA_IMAGE_TAG="${SALUNA_PWA_IMAGE_TAG:-$SALUNA_IMAGE_TAG}"
+export SALUNA_API_IMAGE_TAG SALUNA_WEB_IMAGE_TAG SALUNA_PWA_IMAGE_TAG
 
 APP_BUNDLE="${APP_BUNDLE:-${RELEASE_DIR}/saluna-apps-${SALUNA_IMAGE_TAG}.tar.gz}"
 INFRA_BUNDLE="${INFRA_BUNDLE:-${RELEASE_DIR}/saluna-infra-postgres16-nginx127.tar.gz}"
@@ -86,5 +106,8 @@ fi
 ssh "${ssh_args[@]}" "$remote" "chmod +x '${REMOTE_DIR}/scripts/apply-airgap-release.sh'"
 
 echo "Uploaded release ${SALUNA_IMAGE_TAG} to ${remote}:${REMOTE_DIR}"
+echo "  api: ${SALUNA_API_IMAGE_TAG}"
+echo "  web: ${SALUNA_WEB_IMAGE_TAG}"
+echo "  pwa: ${SALUNA_PWA_IMAGE_TAG}"
 echo "Apply it with:"
-echo "  ssh ${remote} 'cd ${REMOTE_DIR} && SALUNA_IMAGE_TAG=${SALUNA_IMAGE_TAG} ./scripts/apply-airgap-release.sh'"
+echo "  ssh ${remote} 'cd ${REMOTE_DIR} && SALUNA_IMAGE_TAG=${SALUNA_IMAGE_TAG} SALUNA_API_IMAGE_TAG=${SALUNA_API_IMAGE_TAG} SALUNA_WEB_IMAGE_TAG=${SALUNA_WEB_IMAGE_TAG} SALUNA_PWA_IMAGE_TAG=${SALUNA_PWA_IMAGE_TAG} ./scripts/apply-airgap-release.sh'"

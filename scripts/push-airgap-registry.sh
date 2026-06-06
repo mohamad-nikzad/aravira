@@ -20,6 +20,12 @@ fi
 if [[ -f "$ENV_FILE" ]]; then
   saluna_image_tag_override="${SALUNA_IMAGE_TAG-}"
   saluna_image_tag_was_set="${SALUNA_IMAGE_TAG+x}"
+  saluna_api_image_tag_override="${SALUNA_API_IMAGE_TAG-}"
+  saluna_api_image_tag_was_set="${SALUNA_API_IMAGE_TAG+x}"
+  saluna_web_image_tag_override="${SALUNA_WEB_IMAGE_TAG-}"
+  saluna_web_image_tag_was_set="${SALUNA_WEB_IMAGE_TAG+x}"
+  saluna_pwa_image_tag_override="${SALUNA_PWA_IMAGE_TAG-}"
+  saluna_pwa_image_tag_was_set="${SALUNA_PWA_IMAGE_TAG+x}"
   set -a
   # shellcheck disable=SC1090
   . "$ENV_FILE"
@@ -27,12 +33,26 @@ if [[ -f "$ENV_FILE" ]]; then
   if [[ -n "$saluna_image_tag_was_set" ]]; then
     export SALUNA_IMAGE_TAG="$saluna_image_tag_override"
   fi
+  if [[ -n "$saluna_api_image_tag_was_set" ]]; then
+    export SALUNA_API_IMAGE_TAG="$saluna_api_image_tag_override"
+  fi
+  if [[ -n "$saluna_web_image_tag_was_set" ]]; then
+    export SALUNA_WEB_IMAGE_TAG="$saluna_web_image_tag_override"
+  fi
+  if [[ -n "$saluna_pwa_image_tag_was_set" ]]; then
+    export SALUNA_PWA_IMAGE_TAG="$saluna_pwa_image_tag_override"
+  fi
 fi
 
 if [[ -z "${SALUNA_IMAGE_TAG:-}" ]]; then
   echo "SALUNA_IMAGE_TAG is required. Set it in ${ENV_FILE} or the environment." >&2
   exit 1
 fi
+
+SALUNA_API_IMAGE_TAG="${SALUNA_API_IMAGE_TAG:-$SALUNA_IMAGE_TAG}"
+SALUNA_WEB_IMAGE_TAG="${SALUNA_WEB_IMAGE_TAG:-$SALUNA_IMAGE_TAG}"
+SALUNA_PWA_IMAGE_TAG="${SALUNA_PWA_IMAGE_TAG:-$SALUNA_IMAGE_TAG}"
+export SALUNA_API_IMAGE_TAG SALUNA_WEB_IMAGE_TAG SALUNA_PWA_IMAGE_TAG
 
 ssh_args=()
 if [[ -n "$SSH_KEY" ]]; then
@@ -44,11 +64,15 @@ local_registry="127.0.0.1:${LOCAL_REGISTRY_PORT}"
 
 if [[ "$REMOTE_PUSH_LOADED" == "1" ]]; then
   echo "Pushing already-loaded VPS images into 127.0.0.1:${REGISTRY_PORT}"
-  ssh "${ssh_args[@]}" "$remote" bash -s -- "$SALUNA_IMAGE_TAG" "$REGISTRY_PORT" <<'REMOTE'
+  ssh "${ssh_args[@]}" "$remote" bash -s -- "$REGISTRY_PORT" "$SALUNA_API_IMAGE_TAG" "$SALUNA_WEB_IMAGE_TAG" "$SALUNA_PWA_IMAGE_TAG" <<'REMOTE'
 set -euo pipefail
-tag="$1"
-registry_port="$2"
-for image in saluna-api saluna-web saluna-pwa; do
+registry_port="$1"
+shift
+images=(saluna-api saluna-web saluna-pwa)
+tags=("$@")
+for index in "${!images[@]}"; do
+  image="${images[$index]}"
+  tag="${tags[$index]}"
   docker tag "${image}:${tag}" "127.0.0.1:${registry_port}/${image}:${tag}"
   docker push "127.0.0.1:${registry_port}/${image}:${tag}"
 done
@@ -65,10 +89,15 @@ tunnel_pid=$!
 trap 'kill "$tunnel_pid" >/dev/null 2>&1 || true' EXIT
 sleep 2
 
-for image in saluna-api saluna-web saluna-pwa; do
-  docker tag "${image}:${SALUNA_IMAGE_TAG}" "${local_registry}/${image}:${SALUNA_IMAGE_TAG}"
-  docker push "${local_registry}/${image}:${SALUNA_IMAGE_TAG}"
-done
+docker tag "saluna-api:${SALUNA_API_IMAGE_TAG}" "${local_registry}/saluna-api:${SALUNA_API_IMAGE_TAG}"
+docker push "${local_registry}/saluna-api:${SALUNA_API_IMAGE_TAG}"
+docker tag "saluna-web:${SALUNA_WEB_IMAGE_TAG}" "${local_registry}/saluna-web:${SALUNA_WEB_IMAGE_TAG}"
+docker push "${local_registry}/saluna-web:${SALUNA_WEB_IMAGE_TAG}"
+docker tag "saluna-pwa:${SALUNA_PWA_IMAGE_TAG}" "${local_registry}/saluna-pwa:${SALUNA_PWA_IMAGE_TAG}"
+docker push "${local_registry}/saluna-pwa:${SALUNA_PWA_IMAGE_TAG}"
 
-echo "Pushed Saluna app images with tag ${SALUNA_IMAGE_TAG} to the VPS-local registry."
+echo "Pushed Saluna app images to the VPS-local registry:"
+echo "  api: ${SALUNA_API_IMAGE_TAG}"
+echo "  web: ${SALUNA_WEB_IMAGE_TAG}"
+echo "  pwa: ${SALUNA_PWA_IMAGE_TAG}"
 echo "Apply on the VPS with USE_REGISTRY=1 so Compose pulls ${local_registry}/ images locally."
