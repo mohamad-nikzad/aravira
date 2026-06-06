@@ -3,10 +3,11 @@
 This runbook deploys Saluna to a single ParsPack-style VPS when the server has
 limited or unreliable outbound internet.
 
-The desired end state is registry-first CI/CD: CI builds only changed app
-images, pushes them to an Iranian-reachable registry, and asks the VPS to pull
-and restart only the affected services. The tarball workflow in this document is
-the bootstrap and emergency fallback path, not the long-term happy path.
+Normal production deployments are registry-first CI/CD: CI builds only changed
+app images, pushes them to an Iranian-reachable registry, and asks the VPS to
+pull and restart only the affected services. The tarball workflow in this
+document is the bootstrap and emergency fallback path, not the long-term happy
+path.
 
 The fallback air-gapped path is:
 
@@ -16,9 +17,8 @@ The fallback air-gapped path is:
    to `/opt/saluna`.
 4. Load images on the VPS and run Docker Compose.
 
-For the current connectivity audit, Iranian mirror coverage, and HamGit /
-Hamravesh CI/CD feasibility, see
-[`VPS_CONNECTIVITY_AND_MIRRORS.md`](./VPS_CONNECTIVITY_AND_MIRRORS.md).
+For the deployment workflow used today, see
+[`DEPLOYMENTS.md`](./DEPLOYMENTS.md).
 
 The retired public Next app and retired manager app are deprecated and are not
 deployed here.
@@ -86,8 +86,8 @@ Where those values come from:
 - `deploy/releases/saluna-release-2026-06-05-1.env` was built at
   `2026-06-05T18:51:28Z` from git SHA
   `e6fa2b7ca95c60af446b2956d27a56fc65d8124b`.
-- [`VPS_CONNECTIVITY_AND_MIRRORS.md`](./VPS_CONNECTIVITY_AND_MIRRORS.md) records
-  the last audited VPS containers as healthy on `2026-06-04-1304`.
+- [`DEPLOYMENTS.md`](./DEPLOYMENTS.md) records the current registry-first
+  deployment workflow.
 
 Current artifact reality:
 
@@ -169,17 +169,15 @@ per-app versions are adopted.
 Use this tarball workflow as the short-term, least-surprising bootstrap path. It
 avoids npm, apk, GitHub, and Docker Hub access from the VPS.
 
-For repeated production releases, the better target is HamGit/Hamravesh CI:
-build on a reachable runner using HamDocker, hmirror npm, and Arvan apk; push
-only the changed app image to `registry.hamdocker.ir`; then SSH to the VPS and
-pull/restart only that service. That removes manual tarball transfer, avoids
-large release artifacts on the developer machine, and gives each app an
-independent deployed version.
+For repeated production releases, use HamGit/Hamravesh CI: build on a reachable
+runner using HamDocker, hmirror npm, and Arvan apk; push only the changed app
+image to `registry.hamdocker.ir`; then SSH to the VPS and pull/restart only that
+service. That removes manual tarball transfer, avoids large release artifacts on
+the developer machine, and gives each app an independent deployed version.
 
-Do not build on the VPS as the default. It is only viable after the Dockerfiles
-and CI jobs are configured to use the Iranian mirrors documented in
-[`VPS_CONNECTIVITY_AND_MIRRORS.md`](./VPS_CONNECTIVITY_AND_MIRRORS.md), and it
-spends production CPU/RAM on builds.
+Do not build on the VPS as the default. The Dockerfiles and CI jobs are
+configured to use Iranian mirrors, but VPS-local builds still spend production
+CPU/RAM on builds.
 
 When a HamGit runner or emergency VPS build needs Iranian mirrors, set:
 
@@ -197,8 +195,7 @@ not acceptable.
 
 ## Target CI/CD Workflow
 
-This is the workflow to optimize for once deploy keys and registry credentials
-are ready:
+This is the normal workflow:
 
 ```text
 push to HamGit
@@ -287,9 +284,9 @@ require local certificate files because TLS blocks are present.
 
 ## Agent Quick Path
 
-For the audited ParsPack VPS, get the origin IP from
-[`VPS_CONNECTIVITY_AND_MIRRORS.md`](./VPS_CONNECTIVITY_AND_MIRRORS.md). Do not
-SSH to Arvan CDN IPs or CDN-resolved hostnames.
+For the ParsPack VPS, the origin IP is documented in
+[`DEPLOYMENTS.md`](./DEPLOYMENTS.md). Do not SSH to Arvan CDN IPs or
+CDN-resolved hostnames.
 
 Set these on the connected builder:
 
@@ -318,8 +315,7 @@ ssh "${SSH_USER}@${VPS_HOST}" \
   "cd /opt/saluna && SALUNA_IMAGE_TAG=${SALUNA_IMAGE_TAG} ./scripts/apply-airgap-release.sh"
 ```
 
-If the `deploy` user is not configured yet, use the available admin account for
-the one-time server setup, then create/fix the deploy user before automating.
+The `deploy` user is the normal SSH user for production operations.
 
 If you updated `SALUNA_IMAGE_TAG` inside `.env.production` before upload, the
 explicit remote override is redundant but harmless.
@@ -667,10 +663,9 @@ curl -I https://github.com
 curl -I https://api.telegram.org
 ```
 
-If these fail or are too slow, use the tarball workflow above. If Iranian
-mirrors work, follow the mirror-specific guidance in
-[`VPS_CONNECTIVITY_AND_MIRRORS.md`](./VPS_CONNECTIVITY_AND_MIRRORS.md) before
-attempting VPS or HamGit builds.
+If these fail or are too slow, use the tarball workflow above. Normal HamGit
+builds already use HamDocker, hmirror npm, and Arvan apk as described in
+[`DEPLOYMENTS.md`](./DEPLOYMENTS.md).
 
 ## Troubleshooting
 
@@ -695,7 +690,7 @@ attempting VPS or HamGit builds.
 - Done: add a registry-first deploy script that updates one app tag on the VPS, pulls
   only that service, runs API migrations only for `api`, and smoke-checks only
   the affected host.
-- Add CI affected-app detection so `api`, `web`, and `pwa` can deploy
+- Done: add CI affected-app detection so `api`, `web`, and `pwa` can deploy
   independently.
 - Split `PUBLIC_APP_URL` into explicit public web and manager app variables, then
   update the landing login/signup links.
@@ -703,10 +698,8 @@ attempting VPS or HamGit builds.
   dummy local certs.
 - Keep `upload-airgap-release.sh` as fallback; teach it to upload the release
   manifest only if agents need remote tarball metadata.
-- Configure a non-root deploy user and SSH key, then remove root/password deploy
-  steps from normal operations.
-- Move medium-term releases to HamGit/Hamravesh CI once registry credentials and
-  deploy SSH are ready.
+- Done: configure a non-root deploy user and SSH key for normal operations.
+- Done: move normal releases to HamGit/Hamravesh CI with registry-first deploys.
 
 ## External Facts Checked
 
