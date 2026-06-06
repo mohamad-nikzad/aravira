@@ -51,7 +51,9 @@ function expectLastCall(
     Authorization: 'Bearer token-123',
   })
   if ('body' in expected) {
-    expect(call?.init.headers).toMatchObject({ 'Content-Type': 'application/json' })
+    expect(call?.init.headers).toMatchObject({
+      'Content-Type': 'application/json',
+    })
     expect(call?.init.body).toBe(JSON.stringify(expected.body))
   } else {
     expect(call?.init.body).toBeUndefined()
@@ -120,24 +122,37 @@ describe('api modules', () => {
     await api.get('client-1')
     expectLastCall(calls, { path: '/api/v1/clients/client-1' })
 
-    await api.create({ name: 'Nika', phone: '09123456789', tags: [] })
+    await api.create({
+      name: 'Nika',
+      phone: '09123456789',
+      notes: undefined,
+      tags: [],
+    })
     expectLastCall(calls, {
       path: '/api/v1/clients',
       method: 'POST',
-      body: { name: 'Nika', phone: '09123456789', tags: [] },
+      body: {
+        name: 'Nika',
+        phone: '09123456789',
+        notes: undefined,
+        tags: [],
+      },
     })
 
-    await api.update('client-1', { notes: 'VIP' })
+    await api.update('client-1', { notes: 'VIP', tags: undefined })
     expectLastCall(calls, {
       path: '/api/v1/clients/client-1',
       method: 'PATCH',
-      body: { notes: 'VIP' },
+      body: { notes: 'VIP', tags: undefined },
     })
 
     await api.summary('client-1')
     expectLastCall(calls, { path: '/api/v1/clients/client-1/summary' })
 
-    await api.createFollowUp('client-1', { reason: 'manual', dueDate: '2026-05-12' })
+    await api.createFollowUp('client-1', {
+      reason: 'manual',
+      dueDate: '2026-05-12',
+    })
     expectLastCall(calls, {
       path: '/api/v1/clients/client-1/follow-ups',
       method: 'POST',
@@ -239,7 +254,11 @@ describe('api modules', () => {
       body: { name: 'ناخن', active: true },
     })
 
-    await api.families.create({ categoryId: 'category-1', name: 'کاشت ناخن', active: true })
+    await api.families.create({
+      categoryId: 'category-1',
+      name: 'کاشت ناخن',
+      active: true,
+    })
     expectLastCall(calls, {
       path: '/api/v1/service-families',
       method: 'POST',
@@ -275,6 +294,19 @@ describe('api modules', () => {
         password: 'secret12',
         role: 'staff',
       },
+    })
+
+    await api.updatePassword('staff-1', { password: 'newsecret12' })
+    expectLastCall(calls, {
+      path: '/api/v1/staff/staff-1/password',
+      method: 'PATCH',
+      body: { password: 'newsecret12' },
+    })
+
+    await api.delete('staff-1')
+    expectLastCall(calls, {
+      path: '/api/v1/staff/staff-1',
+      method: 'DELETE',
     })
 
     await api.updateServices('staff-1', { serviceIds: ['service-1'] })

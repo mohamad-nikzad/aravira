@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
+import type { Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Phone } from 'lucide-react'
 import { Input } from '@repo/ui/input'
@@ -41,19 +42,34 @@ function StaffScreen() {
     watch,
     formState: { errors },
   } = useForm<StaffCreateFormInput>({
-    resolver: zodResolver(staffCreateSchema),
-    defaultValues: { name: '', phone: '', password: '', role: 'staff' },
+    resolver: zodResolver(staffCreateSchema) as Resolver<StaffCreateFormInput>,
+    defaultValues: {
+      name: '',
+      phone: '',
+      password: '',
+      confirmPassword: '',
+      role: 'staff',
+    },
   })
 
   const name = watch('name')
   const phone = watch('phone')
   const password = watch('password')
+  const confirmPassword = watch('confirmPassword')
   const hasStaffDraft =
-    name.trim().length > 0 || phone.trim().length > 0 || password.length > 0
+    name.trim().length > 0 ||
+    phone.trim().length > 0 ||
+    password.length > 0 ||
+    confirmPassword.length > 0
 
   const createStaff = useMutation({
     mutationFn: (values: StaffCreateFormInput) =>
-      api.staff.create({ ...values, role: values.role ?? 'staff' }),
+      api.staff.create({
+        name: values.name,
+        phone: values.phone,
+        password: values.password,
+        role: values.role ?? 'staff',
+      }),
     meta: {
       skipToast: true,
       invalidatesQuery: managerStaffQueryKey,
@@ -181,6 +197,22 @@ function StaffScreen() {
             />
             {errors.password && (
               <FieldError>{errors.password.message}</FieldError>
+            )}
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="onboarding-staff-confirm-password">
+              تکرار رمز عبور
+            </FieldLabel>
+            <PasswordInput
+              id="onboarding-staff-confirm-password"
+              placeholder="تکرار رمز ورود"
+              disabled={pending}
+              className="h-11"
+              {...register('confirmPassword')}
+            />
+            {errors.confirmPassword && (
+              <FieldError>{errors.confirmPassword.message}</FieldError>
             )}
           </Field>
         </div>

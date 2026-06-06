@@ -1,6 +1,7 @@
 import type { BusinessHours, StaffSchedule, User } from '@repo/salon-core/types'
 import type {
   StaffCreateFormPayload,
+  StaffPasswordRequestPayload,
   StaffScheduleRequestPayload,
   StaffServiceIdsPayload,
   StaffUpdateFormPayload,
@@ -20,6 +21,7 @@ export type CreateStaffResponse = {
 
 export type UpdateStaffServicesInput = StaffServiceIdsPayload
 export type UpdateStaffInput = StaffUpdateFormPayload
+export type UpdateStaffPasswordInput = StaffPasswordRequestPayload
 
 export type StaffMemberResponse = {
   staff: User
@@ -35,7 +37,9 @@ export type UpdateStaffScheduleInput = StaffScheduleRequestPayload
 export function createStaffApi(client: ApiClient) {
   return {
     list(opts: { signal?: AbortSignal } = {}) {
-      return client.request<StaffResponse>(endpoints.staff, { signal: opts.signal })
+      return client.request<StaffResponse>(endpoints.staff, {
+        signal: opts.signal,
+      })
     },
     create(input: CreateStaffInput, opts: { signal?: AbortSignal } = {}) {
       return client.request<CreateStaffResponse>(endpoints.staff, {
@@ -44,10 +48,34 @@ export function createStaffApi(client: ApiClient) {
         signal: opts.signal,
       })
     },
-    update(id: string, input: UpdateStaffInput, opts: { signal?: AbortSignal } = {}) {
+    update(
+      id: string,
+      input: UpdateStaffInput,
+      opts: { signal?: AbortSignal } = {},
+    ) {
       return client.request<StaffMemberResponse>(`${endpoints.staff}/${id}`, {
         method: 'PATCH',
         body: input,
+        signal: opts.signal,
+      })
+    },
+    updatePassword(
+      id: string,
+      input: UpdateStaffPasswordInput,
+      opts: { signal?: AbortSignal } = {},
+    ) {
+      return client.request<{ success: true }>(
+        `${endpoints.staff}/${id}/password`,
+        {
+          method: 'PATCH',
+          body: input,
+          signal: opts.signal,
+        },
+      )
+    },
+    delete(id: string, opts: { signal?: AbortSignal } = {}) {
+      return client.request<{ success: true }>(`${endpoints.staff}/${id}`, {
+        method: 'DELETE',
         signal: opts.signal,
       })
     },
@@ -56,16 +84,22 @@ export function createStaffApi(client: ApiClient) {
       input: UpdateStaffServicesInput,
       opts: { signal?: AbortSignal } = {},
     ) {
-      return client.request<StaffMemberResponse>(`${endpoints.staff}/${id}/services`, {
-        method: 'PATCH',
-        body: input,
-        signal: opts.signal,
-      })
+      return client.request<StaffMemberResponse>(
+        `${endpoints.staff}/${id}/services`,
+        {
+          method: 'PATCH',
+          body: input,
+          signal: opts.signal,
+        },
+      )
     },
     getSchedule(id: string, opts: { signal?: AbortSignal } = {}) {
-      return client.request<StaffScheduleResponse>(`${endpoints.staff}/${id}/schedule`, {
-        signal: opts.signal,
-      })
+      return client.request<StaffScheduleResponse>(
+        `${endpoints.staff}/${id}/schedule`,
+        {
+          signal: opts.signal,
+        },
+      )
     },
     updateSchedule(
       id: string,

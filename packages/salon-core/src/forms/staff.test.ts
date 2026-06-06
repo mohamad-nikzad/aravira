@@ -14,6 +14,7 @@ describe('staffCreateSchema', () => {
       name: '  نرگس کاظمی  ',
       phone: '۰۹۱۲۳۴۵۶۷۸۹',
       password: 'secret12',
+      confirmPassword: 'secret12',
     })
     expect(result.name).toBe('نرگس کاظمی')
     expect(result.phone).toBe('09123456789')
@@ -25,6 +26,7 @@ describe('staffCreateSchema', () => {
       name: 'م',
       phone: '09123456789',
       password: 'secret12',
+      confirmPassword: 'secret12',
       role: 'manager',
     })
     expect(result.role).toBe('manager')
@@ -35,6 +37,7 @@ describe('staffCreateSchema', () => {
       name: 'x',
       phone: '09123456789',
       password: '123',
+      confirmPassword: '123',
     })
     expect(result.success).toBe(false)
   })
@@ -44,6 +47,7 @@ describe('staffCreateSchema', () => {
       name: 'x',
       phone: '12',
       password: 'secret12',
+      confirmPassword: 'secret12',
     })
     expect(result.success).toBe(false)
   })
@@ -53,8 +57,29 @@ describe('staffCreateSchema', () => {
       name: '   ',
       phone: '09123456789',
       password: 'secret12',
+      confirmPassword: 'secret12',
     })
     expect(result.success).toBe(false)
+  })
+
+  it('rejects mismatched password confirmation', () => {
+    const result = staffCreateSchema.safeParse({
+      name: 'x',
+      phone: '09123456789',
+      password: 'secret12',
+      confirmPassword: 'secret13',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('omits confirm password from payload', () => {
+    const result = staffCreateSchema.parse({
+      name: 'x',
+      phone: '09123456789',
+      password: 'secret12',
+      confirmPassword: 'secret12',
+    })
+    expect(result).not.toHaveProperty('confirmPassword')
   })
 })
 
@@ -126,13 +151,18 @@ describe('staffScheduleSchema', () => {
 
 describe('staff server schemas', () => {
   it('requires a non-empty schedule request', () => {
-    expect(staffScheduleRequestSchema.safeParse({ schedule: [] }).success).toBe(false)
+    expect(staffScheduleRequestSchema.safeParse({ schedule: [] }).success).toBe(
+      false,
+    )
   })
 
   it('normalizes empty staff service selections to unrestricted', () => {
-    expect(staffServiceIdsSchema.parse({ serviceIds: [] }).serviceIds).toBeNull()
-    expect(staffServiceIdsSchema.parse({ serviceIds: ['svc-1', 'svc-1', ' '] }).serviceIds).toEqual([
-      'svc-1',
-    ])
+    expect(
+      staffServiceIdsSchema.parse({ serviceIds: [] }).serviceIds,
+    ).toBeNull()
+    expect(
+      staffServiceIdsSchema.parse({ serviceIds: ['svc-1', 'svc-1', ' '] })
+        .serviceIds,
+    ).toEqual(['svc-1'])
   })
 })

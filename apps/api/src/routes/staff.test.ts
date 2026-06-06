@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@repo/database/staff', () => ({
   getAllStaff: vi.fn(),
+  deactivateStaffMember: vi.fn(),
   getUserById: vi.fn(),
   getUserWithServiceIds: vi.fn(),
   setStaffServiceIds: vi.fn(),
@@ -9,6 +10,8 @@ vi.mock('@repo/database/staff', () => ({
   getStaffSchedules: vi.fn(),
   getStaffBookingAvailabilityForSlot: vi.fn(),
   getBusinessSettings: vi.fn(),
+  updateStaffMember: vi.fn(),
+  updateStaffPassword: vi.fn(),
   validateActiveServiceIds: vi.fn(),
 }))
 
@@ -60,13 +63,25 @@ const validCreate = {
   name: 'Ali',
   phone: '09121234567',
   password: 'secret123',
+  confirmPassword: 'secret123',
   role: 'staff',
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(authServer.api.getSession).mockImplementation(async (args: any) => (args?.headers?.get?.('Authorization') ? { user: { id: 'u1' } } : null) as never)
-  vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u1', organizationId: 's1', role: 'owner', name: 'Manager', username: '09120000000' } as never)
+  vi.mocked(authServer.api.getSession).mockImplementation(
+    async (args: any) =>
+      (args?.headers?.get?.('Authorization')
+        ? { user: { id: 'u1' } }
+        : null) as never,
+  )
+  vi.mocked(getMemberForUser).mockResolvedValue({
+    userId: 'u1',
+    organizationId: 's1',
+    role: 'owner',
+    name: 'Manager',
+    username: '09120000000',
+  } as never)
 })
 
 describe('staff router', () => {
@@ -76,7 +91,13 @@ describe('staff router', () => {
   })
 
   it('200 on GET / for any authed user', async () => {
-    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({
+      userId: 'u2',
+      organizationId: 's1',
+      role: 'member',
+      name: 'Staff',
+      username: '09120000001',
+    } as never)
     vi.mocked(db.getAllStaff).mockResolvedValue([{ id: 'u2' }] as never)
     const res = await app.request('/api/v1/staff', { headers: authHeaders })
     expect(res.status).toBe(200)
@@ -84,7 +105,13 @@ describe('staff router', () => {
   })
 
   it('staff is 403 on POST', async () => {
-    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({
+      userId: 'u2',
+      organizationId: 's1',
+      role: 'member',
+      name: 'Staff',
+      username: '09120000001',
+    } as never)
     const res = await app.request('/api/v1/staff', {
       method: 'POST',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
@@ -102,11 +129,25 @@ describe('staff router', () => {
     expect(res.status).toBe(400)
   })
 
+  it('400 on create when password confirmation mismatches', async () => {
+    const res = await app.request('/api/v1/staff', {
+      method: 'POST',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...validCreate, confirmPassword: 'different123' }),
+    })
+    expect(res.status).toBe(400)
+  })
+
   it('200 on POST create', async () => {
     vi.mocked(db.getAllStaff).mockResolvedValue([] as never)
-    vi.mocked(authServer.api.signUpEmail).mockResolvedValue({ user: { id: 'u3' } } as never)
+    vi.mocked(authServer.api.signUpEmail).mockResolvedValue({
+      user: { id: 'u3' },
+    } as never)
     vi.mocked(authServer.api.addMember).mockResolvedValue({} as never)
-    vi.mocked(db.getUserById).mockResolvedValue({ id: 'u3', name: 'Ali' } as never)
+    vi.mocked(db.getUserById).mockResolvedValue({
+      id: 'u3',
+      name: 'Ali',
+    } as never)
     const res = await app.request('/api/v1/staff', {
       method: 'POST',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
@@ -118,7 +159,9 @@ describe('staff router', () => {
 
   it('409 on duplicate phone', async () => {
     vi.mocked(db.getAllStaff).mockResolvedValue([] as never)
-    vi.mocked(authServer.api.signUpEmail).mockRejectedValue(new Error('unique violation'))
+    vi.mocked(authServer.api.signUpEmail).mockRejectedValue(
+      new Error('unique violation'),
+    )
     const res = await app.request('/api/v1/staff', {
       method: 'POST',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
@@ -159,6 +202,71 @@ describe('staff router', () => {
     })
   })
 
+  it('200 on PATCH /:id/password', async () => {
+    vi.mocked(db.getUserById).mockResolvedValue({
+      id: 'u2',
+      salonId: 's1',
+      role: 'staff',
+    } as never)
+    vi.mocked(db.updateStaffPassword).mockResolvedValue(true as never)
+    const res = await app.request('/api/v1/staff/u2/password', {
+      method: 'PATCH',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password: 'newsecret123',
+        confirmPassword: 'newsecret123',
+      }),
+    })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ success: true })
+    expect(db.updateStaffPassword).toHaveBeenCalledWith(
+      's1',
+      'u2',
+      'newsecret123',
+    )
+  })
+
+  it('400 on PATCH /:id/password short password', async () => {
+    const res = await app.request('/api/v1/staff/u2/password', {
+      method: 'PATCH',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password: '123',
+      }),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('200 on DELETE /:id soft deletes staff', async () => {
+    vi.mocked(db.getUserById).mockResolvedValue({
+      id: 'u2',
+      salonId: 's1',
+      role: 'staff',
+    } as never)
+    vi.mocked(db.deactivateStaffMember).mockResolvedValue(true as never)
+    const res = await app.request('/api/v1/staff/u2', {
+      method: 'DELETE',
+      headers: authHeaders,
+    })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ success: true })
+    expect(db.deactivateStaffMember).toHaveBeenCalledWith('s1', 'u2')
+  })
+
+  it('400 on DELETE current user', async () => {
+    vi.mocked(db.getUserById).mockResolvedValue({
+      id: 'u1',
+      salonId: 's1',
+      role: 'manager',
+    } as never)
+    const res = await app.request('/api/v1/staff/u1', {
+      method: 'DELETE',
+      headers: authHeaders,
+    })
+    expect(res.status).toBe(400)
+    expect(db.deactivateStaffMember).not.toHaveBeenCalled()
+  })
+
   it('400 on booking-availability with end before start', async () => {
     const res = await app.request(
       '/api/v1/staff/booking-availability?date=2026-05-18&startTime=10:00&endTime=09:00',
@@ -182,7 +290,13 @@ describe('staff router', () => {
   })
 
   it('staff is 403 on booking-availability', async () => {
-    vi.mocked(getMemberForUser).mockResolvedValue({ userId: 'u2', organizationId: 's1', role: 'member', name: 'Staff', username: '09120000001' } as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({
+      userId: 'u2',
+      organizationId: 's1',
+      role: 'member',
+      name: 'Staff',
+      username: '09120000001',
+    } as never)
     const res = await app.request(
       '/api/v1/staff/booking-availability?date=2026-05-18&startTime=10:00&endTime=10:30',
       { headers: authHeaders },
@@ -205,8 +319,12 @@ describe('staff router', () => {
       salonId: 's1',
       role: 'staff',
     } as never)
-    vi.mocked(db.getStaffSchedules).mockResolvedValue([{ dayOfWeek: 0 }] as never)
-    vi.mocked(db.getBusinessSettings).mockResolvedValue({ openTime: '09:00' } as never)
+    vi.mocked(db.getStaffSchedules).mockResolvedValue([
+      { dayOfWeek: 0 },
+    ] as never)
+    vi.mocked(db.getBusinessSettings).mockResolvedValue({
+      openTime: '09:00',
+    } as never)
     const res = await app.request('/api/v1/staff/u2/schedule', {
       headers: authHeaders,
     })
@@ -223,7 +341,9 @@ describe('staff router', () => {
       salonId: 's1',
       role: 'staff',
     } as never)
-    vi.mocked(db.setStaffSchedules).mockResolvedValue([{ dayOfWeek: 0 }] as never)
+    vi.mocked(db.setStaffSchedules).mockResolvedValue([
+      { dayOfWeek: 0 },
+    ] as never)
     const body = {
       schedule: [
         {

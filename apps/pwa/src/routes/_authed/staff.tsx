@@ -14,13 +14,26 @@ import {
   User as UserIcon,
   ListChecks,
   Clock3,
+  KeyRound,
   Pencil,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@repo/ui/alert-dialog'
 import { Avatar, AvatarFallback } from '@repo/ui/avatar'
 import { Badge } from '@repo/ui/badge'
 import { StaffDrawer } from '#/components/staff/staff-drawer'
+import { StaffPasswordDrawer } from '#/components/staff/staff-password-drawer'
 import { StaffServicesDrawer } from '#/components/staff/staff-services-drawer'
 import { StaffScheduleDrawer } from '#/components/staff/staff-schedule-drawer'
 import { useAuth } from '#/lib/auth'
@@ -33,6 +46,8 @@ import { StaffSkeleton } from '#/components/staff/staff-skeleton'
 import type { User } from '@repo/salon-core/types'
 import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { displayPhone } from '@repo/salon-core/phone'
+import { api } from '#/lib/api-client'
+import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
 
 export const Route = createFileRoute('/_authed/staff')({
   beforeLoad: ({ context }) => {
@@ -50,8 +65,10 @@ function StaffPage() {
   const [search, setSearch] = useState('')
   const [showDrawer, setShowDrawer] = useState(false)
   const [editingStaff, setEditingStaff] = useState<User | null>(null)
+  const [passwordStaff, setPasswordStaff] = useState<User | null>(null)
   const [servicesStaff, setServicesStaff] = useState<User | null>(null)
   const [scheduleStaff, setScheduleStaff] = useState<User | null>(null)
+  const [deletingStaff, setDeletingStaff] = useState<User | null>(null)
 
   const isManager = user?.role === 'manager'
   const staffQuery = useManagerStaffQuery(!!dc && isManager)
@@ -90,6 +107,10 @@ function StaffPage() {
     void dc?.staff.refresh()
   }
 
+  const handlePasswordSuccess = () => {
+    setPasswordStaff(null)
+  }
+
   const handleScheduleSuccess = () => {
     setScheduleStaff(null)
     void dc?.staff.refresh()
@@ -105,6 +126,17 @@ function StaffPage() {
 
   const staffLoading =
     isManager && !!dc && (staffQuery.isPending || servicesQuery.isPending)
+
+  const deleteStaff = useManagerWriteMutation('staff.delete', {
+    apiFn: async (member: User) => {
+      await api.staff.delete(member.id)
+    },
+    meta: { errorMessage: 'حذف پرسنل انجام نشد' },
+    onSuccess: () => {
+      setDeletingStaff(null)
+      void dc?.staff.refresh()
+    },
+  })
 
   if (staffLoading) {
     return <StaffSkeleton />
@@ -226,6 +258,32 @@ function StaffPage() {
                     <Pencil className="h-4 w-4" />
                     <span className="hidden sm:inline">ویرایش</span>
                   </Button>
+                  {member.id !== user.id ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="touch-manipulation gap-1"
+                        aria-label={`تغییر رمز عبور ${member.name}`}
+                        onClick={() => setPasswordStaff(member)}
+                      >
+                        <KeyRound className="h-4 w-4" />
+                        <span className="hidden sm:inline">رمز</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="touch-manipulation gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        aria-label={`حذف ${member.name}`}
+                        onClick={() => setDeletingStaff(member)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="hidden sm:inline">حذف</span>
+                      </Button>
+                    </>
+                  ) : null}
                   {member.role === 'staff' ? (
                     <>
                       <Button
@@ -277,12 +335,52 @@ function StaffPage() {
         onSuccess={handleServicesSuccess}
       />
 
+      <StaffPasswordDrawer
+        open={!!passwordStaff}
+        onOpenChange={(o) => !o && setPasswordStaff(null)}
+        staff={passwordStaff}
+        onSuccess={handlePasswordSuccess}
+      />
+
       <StaffScheduleDrawer
         open={!!scheduleStaff}
         onOpenChange={(o) => !o && setScheduleStaff(null)}
         staff={scheduleStaff}
         onSuccess={handleScheduleSuccess}
       />
+
+      <AlertDialog
+        open={!!deletingStaff}
+        onOpenChange={(open) => {
+          if (!open && !deleteStaff.isPending) setDeletingStaff(null)
+        }}
+      >
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader className="text-start">
+            <AlertDialogTitle>حذف پرسنل؟</AlertDialogTitle>
+            <AlertDialogDescription className="text-start">
+              {deletingStaff
+                ? `${deletingStaff.name} از فهرست پرسنل و دسترسی سالن حذف می‌شود، اما سوابق نوبت‌ها باقی می‌ماند.`
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteStaff.isPending}>
+              انصراف
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!deletingStaff || deleteStaff.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(event) => {
+                event.preventDefault()
+                if (deletingStaff) deleteStaff.mutate(deletingStaff)
+              }}
+            >
+              {deleteStaff.isPending ? 'در حال حذف…' : 'حذف پرسنل'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

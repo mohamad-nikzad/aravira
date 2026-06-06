@@ -19,6 +19,7 @@ const emptyValues: StaffCreateFormInput = {
   name: '',
   phone: '',
   password: '',
+  confirmPassword: '',
   role: 'staff',
 };
 
@@ -87,7 +88,12 @@ export function StaffFormModal({ open, onClose, onSaved }: StaffFormModalProps) 
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await staffApi.create(values as StaffCreateFormPayload);
+      await staffApi.create({
+        name: values.name,
+        phone: values.phone,
+        password: values.password,
+        role: values.role ?? 'staff',
+      } satisfies StaffCreateFormPayload);
       onSaved();
     } catch (err) {
       const message =
@@ -128,6 +134,14 @@ export function StaffFormModal({ open, onClose, onSaved }: StaffFormModalProps) 
               name="password"
               label="رمز عبور"
               placeholder="رمز ورود به سیستم"
+              secureTextEntry
+              editable={!isSubmitting}
+            />
+            <FormTextField
+              control={control}
+              name="confirmPassword"
+              label="تکرار رمز عبور"
+              placeholder="تکرار رمز ورود"
               secureTextEntry
               editable={!isSubmitting}
             />

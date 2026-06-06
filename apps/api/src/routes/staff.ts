@@ -4,6 +4,7 @@ import {
   getAllStaff,
   getBusinessSettings,
   countManagers,
+  deactivateStaffMember,
   getStaffBookingAvailabilityForSlot,
   getStaffSchedules,
   getUserById,
@@ -11,6 +12,7 @@ import {
   setStaffSchedules,
   setStaffServiceIds,
   updateStaffMember,
+  updateStaffPassword,
   validateActiveServiceIds,
 } from '@repo/database/staff'
 import { auth } from '@repo/auth/server'
@@ -21,6 +23,7 @@ import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { validateAppointmentWindow } from '@repo/salon-core/appointment-time'
 import {
   staffCreateSchema,
+  staffPasswordRequestSchema,
   staffScheduleRequestSchema,
   staffServiceIdsSchema,
   staffUpdateSchema,
@@ -142,7 +145,11 @@ export const staff = new Hono<AppEnv>()
         return error(c, 'کاربر یافت نشد', 404)
       }
       if (id === userId && values.role === 'staff') {
-        return error(c, 'نقش حساب فعلی خودتان را نمی‌توانید به پرسنل تغییر دهید.', 400)
+        return error(
+          c,
+          'نقش حساب فعلی خودتان را نمی‌توانید به پرسنل تغییر دهید.',
+          400,
+        )
       }
       if (target.role === 'manager' && values.role === 'staff') {
         const managerCount = await countManagers(salonId)
@@ -161,6 +168,49 @@ export const staff = new Hono<AppEnv>()
       }
       if (!updated) return error(c, 'کاربر یافت نشد', 404)
       return ok(c, { staff: updated })
+    },
+  )
+  .patch(
+    '/:id/password',
+    requireTenant('manage_settings'),
+    zValidator('param', idParamSchema),
+    zValidator('json', staffPasswordRequestSchema),
+    async (c) => {
+      const { salonId } = c.var.tenant
+      const { id } = c.req.valid('param')
+      const { password } = c.req.valid('json')
+      const target = await getUserById(id)
+      if (!target || target.salonId !== salonId) {
+        return error(c, 'کاربر یافت نشد', 404)
+      }
+      const updated = await updateStaffPassword(salonId, id, password)
+      if (!updated) return error(c, 'کاربر یافت نشد', 404)
+      return ok(c, { success: true })
+    },
+  )
+  .delete(
+    '/:id',
+    requireTenant('manage_settings'),
+    zValidator('param', idParamSchema),
+    async (c) => {
+      const { salonId, userId } = c.var.tenant
+      const { id } = c.req.valid('param')
+      const target = await getUserById(id)
+      if (!target || target.salonId !== salonId) {
+        return error(c, 'کاربر یافت نشد', 404)
+      }
+      if (id === userId) {
+        return error(c, 'حساب فعلی خودتان را نمی‌توانید حذف کنید.', 400)
+      }
+      if (target.role === 'manager') {
+        const managerCount = await countManagers(salonId)
+        if (managerCount <= 1) {
+          return error(c, 'حداقل یک مدیر باید در سالن باقی بماند.', 400)
+        }
+      }
+      const deleted = await deactivateStaffMember(salonId, id)
+      if (!deleted) return error(c, 'کاربر یافت نشد', 404)
+      return ok(c, { success: true })
     },
   )
   .get(

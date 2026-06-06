@@ -1,5 +1,11 @@
+import { randomBytes, scrypt } from 'node:crypto'
 import { and, asc, count, eq, inArray, isNull, ne, or } from 'drizzle-orm'
-import type { BusinessHours, StaffSchedule, User, UserRole } from '@repo/salon-core/types'
+import type {
+  BusinessHours,
+  StaffSchedule,
+  User,
+  UserRole,
+} from '@repo/salon-core/types'
 import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import {
   dayOfWeekFromDate,
@@ -7,7 +13,14 @@ import {
   type StaffAvailabilityResult,
 } from '@repo/salon-core/staff-availability'
 import { getDb } from '../client'
-import { member, salonMember, staffSchedules, staffServices, user } from '../schema'
+import {
+  account,
+  member,
+  salonMember,
+  staffSchedules,
+  staffServices,
+  user,
+} from '../schema'
 import { rowToStaffSchedule, rowToUser, staffUserSelect } from './row-mappers'
 import { getUserById } from './user-queries'
 import { getBusinessSettings } from './settings-queries'
@@ -20,6 +33,37 @@ export type UpdateStaffInput = {
   color: string
 }
 
+const PASSWORD_HASH_CONFIG = {
+  N: 16384,
+  r: 16,
+  p: 1,
+  dkLen: 64,
+}
+
+function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString('hex')
+  return new Promise((resolve, reject) => {
+    scrypt(
+      password.normalize('NFKC'),
+      salt,
+      PASSWORD_HASH_CONFIG.dkLen,
+      {
+        N: PASSWORD_HASH_CONFIG.N,
+        r: PASSWORD_HASH_CONFIG.r,
+        p: PASSWORD_HASH_CONFIG.p,
+        maxmem: 128 * PASSWORD_HASH_CONFIG.N * PASSWORD_HASH_CONFIG.r * 2,
+      },
+      (err, key) => {
+        if (err) {
+          reject(err)
+          return
+        }
+        resolve(`${salt}:${key.toString('hex')}`)
+      },
+    )
+  })
+}
+
 export async function getAllStaff(salonId: string): Promise<User[]> {
   const db = getDb()
   const joined = await db
@@ -28,13 +72,16 @@ export async function getAllStaff(salonId: string): Promise<User[]> {
     .innerJoin(user, eq(member.userId, user.id))
     .leftJoin(
       salonMember,
-      and(eq(salonMember.userId, user.id), eq(salonMember.organizationId, salonId))
+      and(
+        eq(salonMember.userId, user.id),
+        eq(salonMember.organizationId, salonId),
+      ),
     )
     .where(
       and(
         eq(member.organizationId, salonId),
-        or(isNull(salonMember.active), eq(salonMember.active, true))
-      )
+        or(isNull(salonMember.active), eq(salonMember.active, true)),
+      ),
     )
     .orderBy(asc(user.name))
   const rows = joined.map(rowToUser)
@@ -47,7 +94,12 @@ export async function getAllStaff(salonId: string): Promise<User[]> {
       serviceId: staffServices.serviceId,
     })
     .from(staffServices)
-    .where(and(eq(staffServices.salonId, salonId), inArray(staffServices.staffUserId, ids)))
+    .where(
+      and(
+        eq(staffServices.salonId, salonId),
+        inArray(staffServices.staffUserId, ids),
+      ),
+    )
 
   const byUser = new Map<string, string[]>()
   for (const row of links) {
@@ -74,7 +126,7 @@ function emailForUpdatedPhone(currentEmail: string, phone: string): string {
 export async function updateStaffMember(
   salonId: string,
   staffUserId: string,
-  input: UpdateStaffInput
+  input: UpdateStaffInput,
 ): Promise<User | undefined> {
   const db = getDb()
   const rows = await db
@@ -85,7 +137,9 @@ export async function updateStaffMember(
     })
     .from(member)
     .innerJoin(user, eq(member.userId, user.id))
-    .where(and(eq(member.organizationId, salonId), eq(member.userId, staffUserId)))
+    .where(
+      and(eq(member.organizationId, salonId), eq(member.userId, staffUserId)),
+    )
     .limit(1)
 
   const existing = rows[0]
@@ -115,7 +169,9 @@ export async function updateStaffMember(
     await tx
       .update(member)
       .set({ role: nextRole })
-      .where(and(eq(member.organizationId, salonId), eq(member.userId, staffUserId)))
+      .where(
+        and(eq(member.organizationId, salonId), eq(member.userId, staffUserId)),
+      )
 
     await tx
       .insert(salonMember)
@@ -135,6 +191,87 @@ export async function updateStaffMember(
   return getUserWithServiceIds(staffUserId, salonId)
 }
 
+export async function deactivateStaffMember(
+  salonId: string,
+  staffUserId: string,
+): Promise<boolean> {
+  const db = getDb()
+  const rows = await db
+    .select({ userId: member.userId })
+    .from(member)
+    .where(
+      and(eq(member.organizationId, salonId), eq(member.userId, staffUserId)),
+    )
+    .limit(1)
+
+  if (!rows[0]) return false
+
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(salonMember)
+      .values({
+        userId: staffUserId,
+        organizationId: salonId,
+        active: false,
+      })
+      .onConflictDoUpdate({
+        target: [salonMember.userId, salonMember.organizationId],
+        set: { active: false },
+      })
+
+    await tx
+      .delete(staffServices)
+      .where(
+        and(
+          eq(staffServices.salonId, salonId),
+          eq(staffServices.staffUserId, staffUserId),
+        ),
+      )
+  })
+
+  return true
+}
+
+export async function updateStaffPassword(
+  salonId: string,
+  staffUserId: string,
+  password: string,
+): Promise<boolean> {
+  const db = getDb()
+  const rows = await db
+    .select({ userId: member.userId })
+    .from(member)
+    .where(
+      and(eq(member.organizationId, salonId), eq(member.userId, staffUserId)),
+    )
+    .limit(1)
+
+  if (!rows[0]) return false
+
+  const passwordHash = await hashPassword(password)
+  const updated = await db
+    .update(account)
+    .set({ password: passwordHash, updatedAt: new Date() })
+    .where(
+      and(
+        eq(account.userId, staffUserId),
+        eq(account.providerId, 'credential'),
+      ),
+    )
+    .returning({ id: account.id })
+
+  if (updated.length > 0) return true
+
+  await db.insert(account).values({
+    userId: staffUserId,
+    accountId: staffUserId,
+    providerId: 'credential',
+    password: passwordHash,
+  })
+
+  return true
+}
+
 export async function countManagers(salonId: string): Promise<number> {
   const db = getDb()
   const rows = await db
@@ -142,14 +279,17 @@ export async function countManagers(salonId: string): Promise<number> {
     .from(member)
     .leftJoin(
       salonMember,
-      and(eq(salonMember.userId, member.userId), eq(salonMember.organizationId, salonId))
+      and(
+        eq(salonMember.userId, member.userId),
+        eq(salonMember.organizationId, salonId),
+      ),
     )
     .where(
       and(
         eq(member.organizationId, salonId),
         inArray(member.role, ['owner', 'admin']),
-        or(isNull(salonMember.active), ne(salonMember.active, false))
-      )
+        or(isNull(salonMember.active), ne(salonMember.active, false)),
+      ),
     )
   return Number(rows[0]?.value ?? 0)
 }
@@ -162,18 +302,18 @@ export async function countManagers(salonId: string): Promise<number> {
  */
 export async function findSoleCapableStaffUserId(
   salonId: string,
-  serviceId: string
+  serviceId: string,
 ): Promise<string | null> {
   const staff = await getAllStaff(salonId)
   const capable = staff.filter(
-    (s) => s.serviceIds == null || s.serviceIds.includes(serviceId)
+    (s) => s.serviceIds == null || s.serviceIds.includes(serviceId),
   )
   return capable.length === 1 ? capable[0]!.id : null
 }
 
 export async function listCapableStaffForService(
   salonId: string,
-  serviceId: string
+  serviceId: string,
 ): Promise<{ id: string; name: string }[]> {
   const staff = await getAllStaff(salonId)
   return staff
@@ -184,20 +324,25 @@ export async function listCapableStaffForService(
 export async function staffMayPerformService(
   staffId: string,
   serviceId: string,
-  salonId: string
+  salonId: string,
 ): Promise<boolean> {
   const db = getDb()
   const rows = await db
     .select({ serviceId: staffServices.serviceId })
     .from(staffServices)
-    .where(and(eq(staffServices.salonId, salonId), eq(staffServices.staffUserId, staffId)))
+    .where(
+      and(
+        eq(staffServices.salonId, salonId),
+        eq(staffServices.staffUserId, staffId),
+      ),
+    )
   if (rows.length === 0) return true
   return rows.some((r) => r.serviceId === serviceId)
 }
 
 export async function getUserWithServiceIds(
   id: string,
-  salonId: string
+  salonId: string,
 ): Promise<User | undefined> {
   const base = await getUserById(id)
   if (!base || base.salonId !== salonId) return undefined
@@ -205,7 +350,12 @@ export async function getUserWithServiceIds(
   const links = await db
     .select({ serviceId: staffServices.serviceId })
     .from(staffServices)
-    .where(and(eq(staffServices.salonId, salonId), eq(staffServices.staffUserId, id)))
+    .where(
+      and(
+        eq(staffServices.salonId, salonId),
+        eq(staffServices.staffUserId, id),
+      ),
+    )
   if (links.length === 0) {
     return { ...base, serviceIds: null as string[] | null }
   }
@@ -217,20 +367,25 @@ export async function getUserWithServiceIds(
 export async function setStaffServiceIds(
   staffUserId: string,
   serviceIds: string[] | null,
-  salonId: string
+  salonId: string,
 ): Promise<void> {
   const db = getDb()
   await db.transaction(async (tx) => {
     await tx
       .delete(staffServices)
-      .where(and(eq(staffServices.salonId, salonId), eq(staffServices.staffUserId, staffUserId)))
+      .where(
+        and(
+          eq(staffServices.salonId, salonId),
+          eq(staffServices.staffUserId, staffUserId),
+        ),
+      )
     if (serviceIds != null && serviceIds.length > 0) {
       await tx.insert(staffServices).values(
         serviceIds.map((serviceId) => ({
           staffUserId,
           serviceId,
           salonId,
-        }))
+        })),
       )
     }
   })
@@ -239,7 +394,7 @@ export async function setStaffServiceIds(
 export async function getStaffScheduleForDay(
   salonId: string,
   staffId: string,
-  dayOfWeek: number
+  dayOfWeek: number,
 ): Promise<StaffSchedule | undefined> {
   const db = getDb()
   const rows = await db
@@ -250,8 +405,8 @@ export async function getStaffScheduleForDay(
         eq(staffSchedules.salonId, salonId),
         eq(staffSchedules.staffId, staffId),
         eq(staffSchedules.dayOfWeek, dayOfWeek),
-        eq(staffSchedules.active, true)
-      )
+        eq(staffSchedules.active, true),
+      ),
     )
     .limit(1)
   const row = rows[0]
@@ -261,7 +416,7 @@ export async function getStaffScheduleForDay(
 export async function getStaffScheduleForDayAnyStatus(
   salonId: string,
   staffId: string,
-  dayOfWeek: number
+  dayOfWeek: number,
 ): Promise<StaffSchedule | undefined> {
   const db = getDb()
   const rows = await db
@@ -271,8 +426,8 @@ export async function getStaffScheduleForDayAnyStatus(
       and(
         eq(staffSchedules.salonId, salonId),
         eq(staffSchedules.staffId, staffId),
-        eq(staffSchedules.dayOfWeek, dayOfWeek)
-      )
+        eq(staffSchedules.dayOfWeek, dayOfWeek),
+      ),
     )
     .limit(1)
   const row = rows[0]
@@ -281,13 +436,18 @@ export async function getStaffScheduleForDayAnyStatus(
 
 export async function getStaffSchedules(
   salonId: string,
-  staffId: string
+  staffId: string,
 ): Promise<StaffSchedule[]> {
   const db = getDb()
   const rows = await db
     .select()
     .from(staffSchedules)
-    .where(and(eq(staffSchedules.salonId, salonId), eq(staffSchedules.staffId, staffId)))
+    .where(
+      and(
+        eq(staffSchedules.salonId, salonId),
+        eq(staffSchedules.staffId, staffId),
+      ),
+    )
     .orderBy(asc(staffSchedules.dayOfWeek))
   return rows.map(rowToStaffSchedule)
 }
@@ -300,7 +460,7 @@ export async function setStaffSchedules(
     active: boolean
     workingStart: string
     workingEnd: string
-  }>
+  }>,
 ): Promise<StaffSchedule[]> {
   const db = getDb()
   await db.transaction(async (tx) => {
@@ -316,7 +476,11 @@ export async function setStaffSchedules(
           workingEnd: row.workingEnd,
         })
         .onConflictDoUpdate({
-          target: [staffSchedules.salonId, staffSchedules.staffId, staffSchedules.dayOfWeek],
+          target: [
+            staffSchedules.salonId,
+            staffSchedules.staffId,
+            staffSchedules.dayOfWeek,
+          ],
           set: {
             active: row.active,
             workingStart: row.workingStart,
@@ -335,11 +499,12 @@ export async function checkStaffAvailabilityForAppointment(
   staffId: string,
   date: string,
   startTime: string,
-  endTime: string
+  endTime: string,
 ): Promise<StaffAvailabilityResult> {
   const businessHours = await getBusinessSettings(salonId)
   const dayOfWeek = dayOfWeekFromDate(date)
-  const schedules = dayOfWeek >= 0 ? await getStaffSchedules(salonId, staffId) : []
+  const schedules =
+    dayOfWeek >= 0 ? await getStaffSchedules(salonId, staffId) : []
   const schedule = schedules.find((row) => row.dayOfWeek === dayOfWeek)
 
   return validateStaffAvailability({
@@ -355,32 +520,42 @@ export async function getStaffBookingAvailabilityForSlot(
   salonId: string,
   date: string,
   startTime: string,
-  endTime: string
+  endTime: string,
 ): Promise<Array<{ staffId: string; available: boolean; reason?: string }>> {
   const everyone = await getAllStaff(salonId)
   const staffMembers = everyone.filter((u) => u.role === 'staff')
   return Promise.all(
     staffMembers.map(async (u) => {
-      const r = await checkStaffAvailabilityForAppointment(salonId, u.id, date, startTime, endTime)
+      const r = await checkStaffAvailabilityForAppointment(
+        salonId,
+        u.id,
+        date,
+        startTime,
+        endTime,
+      )
       return {
         staffId: u.id,
         available: r.ok,
         ...(r.ok ? {} : { reason: r.error }),
       }
-    })
+    }),
   )
 }
 
 export async function getEffectiveBusinessHours(
   salonId: string,
-  options?: { staffId?: string; dayOfWeek?: number }
+  options?: { staffId?: string; dayOfWeek?: number },
 ): Promise<BusinessHours> {
   const salonHours = await getBusinessSettings(salonId)
   if (options?.staffId == null || options.dayOfWeek == null) {
     return salonHours
   }
 
-  const schedule = await getStaffScheduleForDay(salonId, options.staffId, options.dayOfWeek)
+  const schedule = await getStaffScheduleForDay(
+    salonId,
+    options.staffId,
+    options.dayOfWeek,
+  )
   if (!schedule) {
     return salonHours
   }

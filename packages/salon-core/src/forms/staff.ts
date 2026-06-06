@@ -19,14 +19,28 @@ const MIN_PASSWORD_LENGTH = 8
 export const staffRoleSchema = z.enum(['staff', 'manager'])
 export type StaffRole = z.infer<typeof staffRoleSchema>
 
-export const staffCreateSchema = z.object({
-  name: requiredTextSchema,
-  phone: phoneSchema,
-  password: z
-    .string({ error: formMessages.required })
-    .min(MIN_PASSWORD_LENGTH, formMessages.passwordTooShort),
-  role: staffRoleSchema.default('staff'),
-})
+const passwordSchema = z
+  .string({ error: formMessages.required })
+  .min(MIN_PASSWORD_LENGTH, formMessages.passwordTooShort)
+
+export const staffCreateSchema = z
+  .object({
+    name: requiredTextSchema,
+    phone: phoneSchema,
+    password: passwordSchema,
+    confirmPassword: z.string({ error: formMessages.required }),
+    role: staffRoleSchema.default('staff'),
+  })
+  .superRefine((value, ctx) => {
+    if (value.password !== value.confirmPassword) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['confirmPassword'],
+        message: formMessages.passwordMismatch,
+      })
+    }
+  })
+  .transform(({ confirmPassword: _confirmPassword, ...payload }) => payload)
 
 export type StaffCreateFormInput = z.input<typeof staffCreateSchema>
 export type StaffCreateFormPayload = z.output<typeof staffCreateSchema>
@@ -55,6 +69,40 @@ export const staffUpdateSchema = z.object({
 
 export type StaffUpdateFormInput = z.input<typeof staffUpdateSchema>
 export type StaffUpdateFormPayload = z.output<typeof staffUpdateSchema>
+
+export const staffPasswordRequestSchema = z.object({
+  password: passwordSchema,
+})
+
+export type StaffPasswordRequestInput = z.input<
+  typeof staffPasswordRequestSchema
+>
+export type StaffPasswordRequestPayload = z.output<
+  typeof staffPasswordRequestSchema
+>
+
+export const staffPasswordUpdateSchema = z
+  .object({
+    password: passwordSchema,
+    confirmPassword: z.string({ error: formMessages.required }),
+  })
+  .superRefine((value, ctx) => {
+    if (value.password !== value.confirmPassword) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['confirmPassword'],
+        message: formMessages.passwordMismatch,
+      })
+    }
+  })
+  .transform(({ confirmPassword: _confirmPassword, password }) => ({
+    password,
+  }))
+
+export type StaffPasswordUpdateInput = z.input<typeof staffPasswordUpdateSchema>
+export type StaffPasswordUpdatePayload = z.output<
+  typeof staffPasswordUpdateSchema
+>
 
 export const staffScheduleDaySchema = z
   .object({
@@ -96,7 +144,11 @@ export type StaffScheduleDayInput = z.input<typeof staffScheduleDaySchema>
 export type StaffScheduleDayPayload = z.output<typeof staffScheduleDaySchema>
 export type StaffScheduleFormInput = z.input<typeof staffScheduleSchema>
 export type StaffScheduleFormPayload = z.output<typeof staffScheduleSchema>
-export type StaffScheduleRequestInput = z.input<typeof staffScheduleRequestSchema>
-export type StaffScheduleRequestPayload = z.output<typeof staffScheduleRequestSchema>
+export type StaffScheduleRequestInput = z.input<
+  typeof staffScheduleRequestSchema
+>
+export type StaffScheduleRequestPayload = z.output<
+  typeof staffScheduleRequestSchema
+>
 export type StaffServiceIdsInput = z.input<typeof staffServiceIdsSchema>
 export type StaffServiceIdsPayload = z.output<typeof staffServiceIdsSchema>

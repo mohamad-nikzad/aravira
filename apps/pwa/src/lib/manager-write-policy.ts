@@ -20,6 +20,8 @@ export const MANAGER_WRITE_OPERATIONS = [
   'serviceAddon.save',
   'staff.create',
   'staff.update',
+  'staff.updatePassword',
+  'staff.delete',
   'staff.setServiceIds',
   'staff.saveSchedule',
   'staffToday.appointment.updateStatus',
@@ -48,6 +50,10 @@ export const MANAGER_WRITE_POLICIES: Record<
   'staff.create': 'require-online',
   /** Staff/account profile editing — server-side auth identity; no offline queue. */
   'staff.update': 'require-online',
+  /** Staff credential updates — server-side auth identity; no offline queue. */
+  'staff.updatePassword': 'require-online',
+  /** Staff access removal — server-side auth identity; no offline queue. */
+  'staff.delete': 'require-online',
   'staff.setServiceIds': 'queue-offline',
   'staff.saveSchedule': 'queue-offline',
   /** Staff /today status changes — online API only (no offline queue). */
@@ -63,15 +69,21 @@ export function getWritePolicy(
   return MANAGER_WRITE_POLICIES[operation]
 }
 
-export function writePolicyQueuesOffline(operation: ManagerWriteOperation): boolean {
+export function writePolicyQueuesOffline(
+  operation: ManagerWriteOperation,
+): boolean {
   return getWritePolicy(operation) === 'queue-offline'
 }
 
-export function writePolicyRequiresOnline(operation: ManagerWriteOperation): boolean {
+export function writePolicyRequiresOnline(
+  operation: ManagerWriteOperation,
+): boolean {
   return getWritePolicy(operation) === 'require-online'
 }
 
-export function writePolicyUsesDataClient(operation: ManagerWriteOperation): boolean {
+export function writePolicyUsesDataClient(
+  operation: ManagerWriteOperation,
+): boolean {
   return getWritePolicy(operation) === 'queue-offline'
 }
 

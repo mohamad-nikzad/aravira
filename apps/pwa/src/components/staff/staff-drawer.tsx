@@ -57,6 +57,7 @@ function emptyValues(roleLocked?: 'staff' | 'manager'): StaffFormValues {
     nickname: '',
     phone: '',
     password: '',
+    confirmPassword: '',
     role: roleLocked ?? 'staff',
     color: STAFF_COLORS[0],
   }
@@ -71,6 +72,7 @@ function valuesForStaff(
     nickname: staff.nickname ?? '',
     phone: staff.phone,
     password: '',
+    confirmPassword: '',
     role: roleLocked ?? staff.role,
     color: normalizeCalendarColorId(staff.color),
   }
@@ -107,6 +109,7 @@ export function StaffDrawer({
   const nameValue = watch('name')
   const phoneValue = watch('phone')
   const passwordValue = watch('password')
+  const confirmPasswordValue = watch('confirmPassword')
   const colorValue = normalizeCalendarColorId(watch('color'))
 
   const { requestClose, confirmDialog } = useDismissGuard({
@@ -126,7 +129,9 @@ export function StaffDrawer({
     apiFn: async (values: StaffCreateFormInput) => {
       try {
         await api.staff.create({
-          ...values,
+          name: values.name,
+          phone: values.phone,
+          password: values.password,
           role: roleLocked ?? values.role ?? 'staff',
         })
       } catch (error) {
@@ -247,17 +252,33 @@ export function StaffDrawer({
             </Field>
 
             {!staff ? (
-              <Field>
-                <FieldLabel htmlFor="staff-password">رمز عبور</FieldLabel>
-                <PasswordInput
-                  id="staff-password"
-                  placeholder="رمز ورود به سیستم"
-                  {...register('password')}
-                />
-                {errors.password && (
-                  <FieldError>{errors.password.message}</FieldError>
-                )}
-              </Field>
+              <>
+                <Field>
+                  <FieldLabel htmlFor="staff-password">رمز عبور</FieldLabel>
+                  <PasswordInput
+                    id="staff-password"
+                    placeholder="رمز ورود به سیستم"
+                    {...register('password')}
+                  />
+                  {errors.password && (
+                    <FieldError>{errors.password.message}</FieldError>
+                  )}
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="staff-confirm-password">
+                    تکرار رمز عبور
+                  </FieldLabel>
+                  <PasswordInput
+                    id="staff-confirm-password"
+                    placeholder="تکرار رمز ورود"
+                    {...register('confirmPassword')}
+                  />
+                  {errors.confirmPassword && (
+                    <FieldError>{errors.confirmPassword.message}</FieldError>
+                  )}
+                </Field>
+              </>
             ) : null}
 
             {roleLocked ? (
@@ -341,7 +362,7 @@ export function StaffDrawer({
               isSubmitting ||
               !nameValue ||
               !phoneValue ||
-              (!staff && !passwordValue)
+              (!staff && (!passwordValue || !confirmPasswordValue))
             }
             className="touch-manipulation"
           >
