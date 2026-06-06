@@ -193,7 +193,7 @@ echo "Restarting ${app}"
 compose up -d --no-deps "$app"
 
 echo "Ensuring gateway is running"
-compose up -d gateway
+compose up -d --no-deps gateway
 
 smoke_check "$smoke_host" "$smoke_path"
 
