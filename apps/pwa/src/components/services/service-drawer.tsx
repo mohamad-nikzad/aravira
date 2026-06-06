@@ -103,7 +103,7 @@ export function ServiceDrawer({
   const [initialComponentIds, setInitialComponentIds] = useState<string[]>([])
   const isComboService = service?.kind === 'combo'
   const comboQuery = useComboComponentsQuery(service?.id, open, isComboService)
-  const loadingComponents = comboQuery.isPending
+  const loadingComponents = comboQuery.isFetching
   const {
     register,
     control,
