@@ -24,7 +24,9 @@ import { Route as AuthedOnboardingRouteImport } from './routes/_authed/onboardin
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as AuthedClientsRouteImport } from './routes/_authed/clients'
 import { Route as AuthedCalendarRouteImport } from './routes/_authed/calendar'
+import { Route as AuthedStaffIndexRouteImport } from './routes/_authed/staff.index'
 import { Route as AuthedOnboardingIndexRouteImport } from './routes/_authed/onboarding/index'
+import { Route as AuthedStaffIdRouteImport } from './routes/_authed/staff.$id'
 import { Route as AuthedOnboardingWelcomeRouteImport } from './routes/_authed/onboarding/welcome'
 import { Route as AuthedOnboardingStaffRouteImport } from './routes/_authed/onboarding/staff'
 import { Route as AuthedOnboardingServicesRouteImport } from './routes/_authed/onboarding/services'
@@ -109,10 +111,20 @@ const AuthedCalendarRoute = AuthedCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedStaffIndexRoute = AuthedStaffIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedStaffRoute,
+} as any)
 const AuthedOnboardingIndexRoute = AuthedOnboardingIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthedOnboardingRoute,
+} as any)
+const AuthedStaffIdRoute = AuthedStaffIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthedStaffRoute,
 } as any)
 const AuthedOnboardingWelcomeRoute = AuthedOnboardingWelcomeRouteImport.update({
   id: '/welcome',
@@ -176,7 +188,7 @@ export interface FileRoutesByFullPath {
   '/retention': typeof AuthedRetentionRoute
   '/services': typeof AuthedServicesRoute
   '/settings': typeof AuthedSettingsRoute
-  '/staff': typeof AuthedStaffRoute
+  '/staff': typeof AuthedStaffRouteWithChildren
   '/today': typeof AuthedTodayRoute
   '/clients/$id': typeof AuthedClientsIdRoute
   '/onboarding/done': typeof AuthedOnboardingDoneRoute
@@ -187,7 +199,9 @@ export interface FileRoutesByFullPath {
   '/onboarding/services': typeof AuthedOnboardingServicesRoute
   '/onboarding/staff': typeof AuthedOnboardingStaffRoute
   '/onboarding/welcome': typeof AuthedOnboardingWelcomeRoute
+  '/staff/$id': typeof AuthedStaffIdRoute
   '/onboarding/': typeof AuthedOnboardingIndexRoute
+  '/staff/': typeof AuthedStaffIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -201,7 +215,6 @@ export interface FileRoutesByTo {
   '/retention': typeof AuthedRetentionRoute
   '/services': typeof AuthedServicesRoute
   '/settings': typeof AuthedSettingsRoute
-  '/staff': typeof AuthedStaffRoute
   '/today': typeof AuthedTodayRoute
   '/clients/$id': typeof AuthedClientsIdRoute
   '/onboarding/done': typeof AuthedOnboardingDoneRoute
@@ -212,7 +225,9 @@ export interface FileRoutesByTo {
   '/onboarding/services': typeof AuthedOnboardingServicesRoute
   '/onboarding/staff': typeof AuthedOnboardingStaffRoute
   '/onboarding/welcome': typeof AuthedOnboardingWelcomeRoute
+  '/staff/$id': typeof AuthedStaffIdRoute
   '/onboarding': typeof AuthedOnboardingIndexRoute
+  '/staff': typeof AuthedStaffIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -229,7 +244,7 @@ export interface FileRoutesById {
   '/_authed/retention': typeof AuthedRetentionRoute
   '/_authed/services': typeof AuthedServicesRoute
   '/_authed/settings': typeof AuthedSettingsRoute
-  '/_authed/staff': typeof AuthedStaffRoute
+  '/_authed/staff': typeof AuthedStaffRouteWithChildren
   '/_authed/today': typeof AuthedTodayRoute
   '/_authed/clients/$id': typeof AuthedClientsIdRoute
   '/_authed/onboarding/done': typeof AuthedOnboardingDoneRoute
@@ -240,7 +255,9 @@ export interface FileRoutesById {
   '/_authed/onboarding/services': typeof AuthedOnboardingServicesRoute
   '/_authed/onboarding/staff': typeof AuthedOnboardingStaffRoute
   '/_authed/onboarding/welcome': typeof AuthedOnboardingWelcomeRoute
+  '/_authed/staff/$id': typeof AuthedStaffIdRoute
   '/_authed/onboarding/': typeof AuthedOnboardingIndexRoute
+  '/_authed/staff/': typeof AuthedStaffIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -268,7 +285,9 @@ export interface FileRouteTypes {
     | '/onboarding/services'
     | '/onboarding/staff'
     | '/onboarding/welcome'
+    | '/staff/$id'
     | '/onboarding/'
+    | '/staff/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -282,7 +301,6 @@ export interface FileRouteTypes {
     | '/retention'
     | '/services'
     | '/settings'
-    | '/staff'
     | '/today'
     | '/clients/$id'
     | '/onboarding/done'
@@ -293,7 +311,9 @@ export interface FileRouteTypes {
     | '/onboarding/services'
     | '/onboarding/staff'
     | '/onboarding/welcome'
+    | '/staff/$id'
     | '/onboarding'
+    | '/staff'
   id:
     | '__root__'
     | '/'
@@ -320,7 +340,9 @@ export interface FileRouteTypes {
     | '/_authed/onboarding/services'
     | '/_authed/onboarding/staff'
     | '/_authed/onboarding/welcome'
+    | '/_authed/staff/$id'
     | '/_authed/onboarding/'
+    | '/_authed/staff/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -437,12 +459,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCalendarRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/staff/': {
+      id: '/_authed/staff/'
+      path: '/'
+      fullPath: '/staff/'
+      preLoaderRoute: typeof AuthedStaffIndexRouteImport
+      parentRoute: typeof AuthedStaffRoute
+    }
     '/_authed/onboarding/': {
       id: '/_authed/onboarding/'
       path: '/'
       fullPath: '/onboarding/'
       preLoaderRoute: typeof AuthedOnboardingIndexRouteImport
       parentRoute: typeof AuthedOnboardingRoute
+    }
+    '/_authed/staff/$id': {
+      id: '/_authed/staff/$id'
+      path: '/$id'
+      fullPath: '/staff/$id'
+      preLoaderRoute: typeof AuthedStaffIdRouteImport
+      parentRoute: typeof AuthedStaffRoute
     }
     '/_authed/onboarding/welcome': {
       id: '/_authed/onboarding/welcome'
@@ -549,6 +585,20 @@ const AuthedOnboardingRouteChildren: AuthedOnboardingRouteChildren = {
 const AuthedOnboardingRouteWithChildren =
   AuthedOnboardingRoute._addFileChildren(AuthedOnboardingRouteChildren)
 
+interface AuthedStaffRouteChildren {
+  AuthedStaffIdRoute: typeof AuthedStaffIdRoute
+  AuthedStaffIndexRoute: typeof AuthedStaffIndexRoute
+}
+
+const AuthedStaffRouteChildren: AuthedStaffRouteChildren = {
+  AuthedStaffIdRoute: AuthedStaffIdRoute,
+  AuthedStaffIndexRoute: AuthedStaffIndexRoute,
+}
+
+const AuthedStaffRouteWithChildren = AuthedStaffRoute._addFileChildren(
+  AuthedStaffRouteChildren,
+)
+
 interface AuthedRouteChildren {
   AuthedCalendarRoute: typeof AuthedCalendarRoute
   AuthedClientsRoute: typeof AuthedClientsRouteWithChildren
@@ -559,7 +609,7 @@ interface AuthedRouteChildren {
   AuthedRetentionRoute: typeof AuthedRetentionRoute
   AuthedServicesRoute: typeof AuthedServicesRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
-  AuthedStaffRoute: typeof AuthedStaffRoute
+  AuthedStaffRoute: typeof AuthedStaffRouteWithChildren
   AuthedTodayRoute: typeof AuthedTodayRoute
 }
 
@@ -573,7 +623,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedRetentionRoute: AuthedRetentionRoute,
   AuthedServicesRoute: AuthedServicesRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
-  AuthedStaffRoute: AuthedStaffRoute,
+  AuthedStaffRoute: AuthedStaffRouteWithChildren,
   AuthedTodayRoute: AuthedTodayRoute,
 }
 
