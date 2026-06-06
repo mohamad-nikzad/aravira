@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO, subDays, addDays } from 'date-fns'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, X } from 'lucide-react'
 import { z } from 'zod'
 import { cn } from '@repo/ui/utils'
 import { Button } from '@repo/ui/button'
@@ -29,6 +29,7 @@ import { useCalendarIndexedDbSources } from '#/lib/use-calendar-indexeddb-source
 import { CalendarHeader } from '#/components/calendar/calendar-header'
 import { SalonFullCalendar } from '#/components/calendar/salon-full-calendar'
 import { StaffFilter } from '#/components/calendar/staff-filter'
+import { ServiceFilter } from '#/components/calendar/service-filter'
 import { DaySummarySheet } from '#/components/calendar/day-summary-sheet'
 import {
   ConcurrentAppointmentsSheet,
@@ -108,6 +109,7 @@ function CalendarPage() {
     null,
   )
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([])
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([])
   const [concurrentCluster, setConcurrentCluster] = useState<
     AppointmentWithDetails[] | null
   >(null)
@@ -198,10 +200,27 @@ function CalendarPage() {
     defaultTime: businessWorkingStart,
   })
 
+  const filterableServices = useMemo(() => {
+    const byId = new Map(services.map((service) => [service.id, service]))
+    for (const appointment of appointments) {
+      if (!byId.has(appointment.service.id)) {
+        byId.set(appointment.service.id, appointment.service)
+      }
+    }
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'fa'))
+  }, [appointments, services])
+
   const filteredAppointments = useMemo(() => {
-    if (!isManager || selectedStaffIds.length === 0) return appointments
-    return appointments.filter((a) => selectedStaffIds.includes(a.staffId))
-  }, [appointments, selectedStaffIds, isManager])
+    if (!isManager) return appointments
+    return appointments.filter((a) => {
+      const staffMatches =
+        selectedStaffIds.length === 0 || selectedStaffIds.includes(a.staffId)
+      const serviceMatches =
+        selectedServiceIds.length === 0 ||
+        selectedServiceIds.includes(a.serviceId)
+      return staffMatches && serviceMatches
+    })
+  }, [appointments, selectedServiceIds, selectedStaffIds, isManager])
 
   const clustersById = useMemo(
     () => buildConcurrencyClusters(filteredAppointments),
@@ -215,38 +234,60 @@ function CalendarPage() {
     )
   }, [filteredAppointments, visibleRange])
 
-  const selectedStaffAppointments = useMemo(() => {
-    if (!isManager || selectedStaffIds.length === 0) return []
+  const activeFilterAppointments = useMemo(() => {
+    if (
+      !isManager ||
+      (selectedStaffIds.length === 0 && selectedServiceIds.length === 0)
+    ) {
+      return []
+    }
     return appointments
-      .filter((a) => selectedStaffIds.includes(a.staffId))
+      .filter((a) => {
+        const staffMatches =
+          selectedStaffIds.length === 0 || selectedStaffIds.includes(a.staffId)
+        const serviceMatches =
+          selectedServiceIds.length === 0 ||
+          selectedServiceIds.includes(a.serviceId)
+        return staffMatches && serviceMatches
+      })
       .sort(compareAppointments)
-  }, [appointments, isManager, selectedStaffIds])
+  }, [appointments, isManager, selectedServiceIds, selectedStaffIds])
 
-  const selectedStaffOutsideVisible = useMemo(() => {
+  const filteredOutsideVisible = useMemo(() => {
     if (!visibleRange) return []
-    return selectedStaffAppointments.filter(
+    return activeFilterAppointments.filter(
       (a) => a.date < visibleRange.start || a.date > visibleRange.end,
     )
-  }, [selectedStaffAppointments, visibleRange])
+  }, [activeFilterAppointments, visibleRange])
 
-  const nextSelectedStaffAppointment =
-    useMemo<AppointmentWithDetails | null>(() => {
-      const today = format(new Date(), 'yyyy-MM-dd')
-      const upcoming = selectedStaffOutsideVisible.find((a) => a.date >= today)
-      if (upcoming) return upcoming
-      return selectedStaffOutsideVisible.length > 0
-        ? selectedStaffOutsideVisible[0]
-        : null
-    }, [selectedStaffOutsideVisible])
+  const nextFilteredAppointment = useMemo<AppointmentWithDetails | null>(() => {
+    const today = format(new Date(), 'yyyy-MM-dd')
+    const upcoming = filteredOutsideVisible.find((a) => a.date >= today)
+    if (upcoming) return upcoming
+    return filteredOutsideVisible.length > 0 ? filteredOutsideVisible[0] : null
+  }, [filteredOutsideVisible])
 
-  const selectedStaffLabel = useMemo(() => {
+  const hasActiveFilters =
+    selectedStaffIds.length > 0 || selectedServiceIds.length > 0
+
+  const activeFilterLabel = useMemo(() => {
+    const parts: string[] = []
     const selected = staff.filter((member) =>
       selectedStaffIds.includes(member.id),
     )
-    if (selected.length === 0) return ''
-    if (selected.length === 1) return selected[0].name
-    return `${selected.length} نفر انتخاب شده`
-  }, [selectedStaffIds, staff])
+    if (selected.length === 1) parts.push(selected[0].name)
+    else if (selected.length > 1) parts.push(`${selected.length} نفر`)
+
+    const selectedServices = filterableServices.filter((service) =>
+      selectedServiceIds.includes(service.id),
+    )
+    if (selectedServices.length === 1) parts.push(selectedServices[0].name)
+    else if (selectedServices.length > 1) {
+      parts.push(`${selectedServices.length} خدمت`)
+    }
+
+    return parts.join(' و ')
+  }, [filterableServices, selectedServiceIds, selectedStaffIds, staff])
 
   useEffect(() => {
     if (!search.date) return
@@ -306,12 +347,6 @@ function CalendarPage() {
     [],
   )
 
-  const handleStaffToggle = (id: string) => {
-    setSelectedStaffIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
-    )
-  }
-
   const handleToday = () => {
     const t = new Date()
     setNavDate(t)
@@ -363,14 +398,19 @@ function CalendarPage() {
   )
 
   const handleJumpToFilteredAppointment = useCallback(() => {
-    if (!nextSelectedStaffAppointment) return
-    const parsed = parseISO(nextSelectedStaffAppointment.date)
+    if (!nextFilteredAppointment) return
+    const parsed = parseISO(nextFilteredAppointment.date)
     if (Number.isNaN(parsed.getTime())) return
     setNavDate(parsed)
     setTitleAnchor(parsed)
     setRange(null)
     setVisibleRange(null)
-  }, [nextSelectedStaffAppointment])
+  }, [nextFilteredAppointment])
+
+  const handleClearFilters = useCallback(() => {
+    setSelectedStaffIds([])
+    setSelectedServiceIds([])
+  }, [])
 
   const upsertAppointmentInCache = useCallback(
     (appointment: AppointmentWithDetails) => {
@@ -534,7 +574,7 @@ function CalendarPage() {
       />
 
       <div className="flex flex-col gap-2 border-b border-border/50 bg-card/90 px-3 py-2 sm:flex-row sm:items-center sm:px-4">
-        <div className="flex w-full shrink-0 items-stretch rounded-2xl bg-muted/70 p-0.5">
+        <div className="flex w-full shrink-0 items-stretch rounded-2xl bg-muted/70 p-0.5 sm:flex-1 sm:shrink">
           {VIEW_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -553,14 +593,37 @@ function CalendarPage() {
           ))}
         </div>
 
-        {isManager && staff.length > 0 && (
-          <div className="w-full overflow-hidden sm:flex-1">
-            <StaffFilter
-              staff={staff}
-              selectedIds={selectedStaffIds}
-              onToggle={handleStaffToggle}
-              onClear={() => setSelectedStaffIds([])}
-            />
+        {isManager && (staff.length > 0 || filterableServices.length > 0) && (
+          <div className="flex w-full gap-2 sm:w-auto sm:shrink-0">
+            {staff.length > 0 && (
+              <StaffFilter
+                staff={staff}
+                selectedIds={selectedStaffIds}
+                onChange={setSelectedStaffIds}
+              />
+            )}
+            {filterableServices.length > 0 && (
+              <ServiceFilter
+                services={filterableServices}
+                selectedIds={selectedServiceIds}
+                onChange={setSelectedServiceIds}
+              />
+            )}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className={cn(
+                  'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-xs font-bold transition-colors touch-manipulation',
+                  'border-line-soft bg-card text-muted-foreground shadow-sm',
+                  'hover:border-destructive/35 hover:bg-destructive/8 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35',
+                )}
+                aria-label="پاک کردن همه فیلترها"
+              >
+                <X className="size-4" />
+                <span>پاک کردن</span>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -584,22 +647,23 @@ function CalendarPage() {
             }
           />
           {isManager &&
-            selectedStaffIds.length > 0 &&
+            (selectedStaffIds.length > 0 || selectedServiceIds.length > 0) &&
             visibleFilteredAppointments.length === 0 && (
               <div className="pointer-events-none absolute inset-x-3 top-4 z-30 flex justify-center">
                 <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-border/70 bg-card/95 p-4 text-right shadow-lg shadow-foreground/10 backdrop-blur">
                   <p className="text-sm font-bold text-foreground">
-                    برای {selectedStaffLabel} در این بازه نوبتی دیده نمی‌شود
+                    برای {activeFilterLabel} در این بازه نوبتی دیده نمی‌شود
                   </p>
                   <p className="mt-1.5 text-xs leading-6 text-muted-foreground">
-                    فیلتر پرسنل فعال است. می‌توانید فیلتر را پاک کنید یا به
-                    نزدیک‌ترین نوبت همین پرسنل در داده‌های بارگذاری‌شده بروید.
+                    فیلتر تقویم فعال است. می‌توانید فیلتر را پاک کنید یا به
+                    نزدیک‌ترین نوبت همین انتخاب‌ها در داده‌های بارگذاری‌شده
+                    بروید.
                   </p>
-                  {nextSelectedStaffAppointment && (
+                  {nextFilteredAppointment && (
                     <p className="mt-2 text-xs font-semibold text-foreground">
                       نزدیک‌ترین نوبت:{' '}
                       {formatPersianFullDate(
-                        parseISO(nextSelectedStaffAppointment.date),
+                        parseISO(nextFilteredAppointment.date),
                       )}
                     </p>
                   )}
@@ -608,11 +672,11 @@ function CalendarPage() {
                       type="button"
                       variant="outline"
                       className="min-h-10 rounded-xl"
-                      onClick={() => setSelectedStaffIds([])}
+                      onClick={handleClearFilters}
                     >
                       پاک کردن فیلتر
                     </Button>
-                    {nextSelectedStaffAppointment && (
+                    {nextFilteredAppointment && (
                       <Button
                         type="button"
                         className="min-h-10 rounded-xl"
