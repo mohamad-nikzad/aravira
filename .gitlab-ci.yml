@@ -3,8 +3,6 @@ stages:
   - deploy
 
 variables:
-  DOCKER_HOST: tcp://docker:2375
-  DOCKER_TLS_CERTDIR: ""
   DOCKER_PLATFORM: linux/amd64
   SALUNA_NODE_IMAGE: hub.hamdocker.ir/library/node:22.12.0-alpine
   SALUNA_NGINX_IMAGE: hub.hamdocker.ir/library/nginx:1.27-alpine
@@ -12,18 +10,18 @@ variables:
   SALUNA_NPM_REGISTRY: https://repo.hmirror.ir/npm/
   SALUNA_PNPM_VERSION: 9.15.9
 
-.docker-build:
-  image: hub.hamdocker.ir/library/node:22.12.0-alpine
-  services:
-    - name: hub.hamdocker.ir/library/docker:27-dind
-      alias: docker
+.kaniko-build:
+  image:
+    name: gcr.hamdocker.ir/kaniko-project/executor:v1.23.2-debug
+    entrypoint: [""]
   before_script:
-    - sed -i "s#https://dl-cdn.alpinelinux.org/alpine#${SALUNA_ALPINE_MIRROR}#g" /etc/apk/repositories
-    - apk add --no-cache bash docker-cli git
     - test -n "$SALUNA_IMAGE_REGISTRY"
     - test -n "$HAMDOCKER_USERNAME"
     - test -n "$HAMDOCKER_PASSWORD"
-    - echo "$HAMDOCKER_PASSWORD" | docker login registry.hamdocker.ir -u "$HAMDOCKER_USERNAME" --password-stdin
+    - mkdir -p /kaniko/.docker
+    - |
+      auth="$(printf '%s:%s' "$HAMDOCKER_USERNAME" "$HAMDOCKER_PASSWORD" | base64 | tr -d '\n')"
+      printf '{"auths":{"registry.hamdocker.ir":{"auth":"%s"}}}\n' "$auth" > /kaniko/.docker/config.json
 
 .deploy:
   image: hub.hamdocker.ir/library/alpine:3.20
@@ -44,7 +42,7 @@ variables:
     - when: never
 
 build-api:
-  extends: .docker-build
+  extends: .kaniko-build
   stage: build
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
@@ -61,16 +59,29 @@ build-api:
         - docker-compose.prod.yml
         - scripts/build-push-registry-app.sh
   script:
-    - export SALUNA_API_VERSION="$(node -e "console.log(require('./apps/api/package.json').version)")"
+    - export SALUNA_API_VERSION="$(sed -n 's/.*"version":[[:space:]]*"\([^"]*\)".*/\1/p' apps/api/package.json | head -n 1)"
     - export SALUNA_API_IMAGE_TAG="${SALUNA_API_VERSION}-${CI_COMMIT_SHORT_SHA}"
-    - ./scripts/build-push-registry-app.sh api
+    - export SALUNA_IMAGE_REGISTRY="${SALUNA_IMAGE_REGISTRY%/}/"
+    - |
+      /kaniko/executor \
+        --context "$CI_PROJECT_DIR" \
+        --dockerfile "$CI_PROJECT_DIR/apps/api/Dockerfile" \
+        --destination "${SALUNA_IMAGE_REGISTRY}saluna-api:${SALUNA_API_IMAGE_TAG}" \
+        --build-arg "NODE_IMAGE=${SALUNA_NODE_IMAGE}" \
+        --build-arg "ALPINE_MIRROR=${SALUNA_ALPINE_MIRROR}" \
+        --build-arg "NPM_REGISTRY=${SALUNA_NPM_REGISTRY}" \
+        --build-arg "PNPM_VERSION=${SALUNA_PNPM_VERSION}" \
+        --label "org.opencontainers.image.title=saluna-api" \
+        --label "org.opencontainers.image.version=${SALUNA_API_VERSION}" \
+        --label "org.opencontainers.image.revision=${CI_COMMIT_SHA}" \
+        --label "org.opencontainers.image.source=${CI_PROJECT_URL}"
     - printf 'APP=api\nIMAGE_TAG=%s\nAPP_VERSION=%s\n' "$SALUNA_API_IMAGE_TAG" "$SALUNA_API_VERSION" > build.env
   artifacts:
     reports:
       dotenv: build.env
 
 build-web:
-  extends: .docker-build
+  extends: .kaniko-build
   stage: build
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
@@ -84,16 +95,31 @@ build-web:
         - docker-compose.prod.yml
         - scripts/build-push-registry-app.sh
   script:
-    - export SALUNA_WEB_VERSION="$(node -e "console.log(require('./apps/web/package.json').version)")"
+    - export SALUNA_WEB_VERSION="$(sed -n 's/.*"version":[[:space:]]*"\([^"]*\)".*/\1/p' apps/web/package.json | head -n 1)"
     - export SALUNA_WEB_IMAGE_TAG="${SALUNA_WEB_VERSION}-${CI_COMMIT_SHORT_SHA}"
-    - ./scripts/build-push-registry-app.sh web
+    - export SALUNA_IMAGE_REGISTRY="${SALUNA_IMAGE_REGISTRY%/}/"
+    - |
+      /kaniko/executor \
+        --context "$CI_PROJECT_DIR" \
+        --dockerfile "$CI_PROJECT_DIR/apps/web/Dockerfile" \
+        --destination "${SALUNA_IMAGE_REGISTRY}saluna-web:${SALUNA_WEB_IMAGE_TAG}" \
+        --build-arg "NODE_IMAGE=${SALUNA_NODE_IMAGE}" \
+        --build-arg "ALPINE_MIRROR=${SALUNA_ALPINE_MIRROR}" \
+        --build-arg "NPM_REGISTRY=${SALUNA_NPM_REGISTRY}" \
+        --build-arg "PNPM_VERSION=${SALUNA_PNPM_VERSION}" \
+        --build-arg "PUBLIC_APP_URL=${PUBLIC_APP_URL:-https://saluna.ir}" \
+        --build-arg "PUBLIC_API_URL=${PUBLIC_API_URL:-https://api.saluna.ir}" \
+        --label "org.opencontainers.image.title=saluna-web" \
+        --label "org.opencontainers.image.version=${SALUNA_WEB_VERSION}" \
+        --label "org.opencontainers.image.revision=${CI_COMMIT_SHA}" \
+        --label "org.opencontainers.image.source=${CI_PROJECT_URL}"
     - printf 'APP=web\nIMAGE_TAG=%s\nAPP_VERSION=%s\n' "$SALUNA_WEB_IMAGE_TAG" "$SALUNA_WEB_VERSION" > build.env
   artifacts:
     reports:
       dotenv: build.env
 
 build-pwa:
-  extends: .docker-build
+  extends: .kaniko-build
   stage: build
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
@@ -112,9 +138,27 @@ build-pwa:
         - docker-compose.prod.yml
         - scripts/build-push-registry-app.sh
   script:
-    - export SALUNA_PWA_VERSION="$(node -e "console.log(require('./apps/pwa/package.json').version)")"
+    - export SALUNA_PWA_VERSION="$(sed -n 's/.*"version":[[:space:]]*"\([^"]*\)".*/\1/p' apps/pwa/package.json | head -n 1)"
     - export SALUNA_PWA_IMAGE_TAG="${SALUNA_PWA_VERSION}-${CI_COMMIT_SHORT_SHA}"
-    - ./scripts/build-push-registry-app.sh pwa
+    - export SALUNA_IMAGE_REGISTRY="${SALUNA_IMAGE_REGISTRY%/}/"
+    - |
+      /kaniko/executor \
+        --context "$CI_PROJECT_DIR" \
+        --dockerfile "$CI_PROJECT_DIR/apps/pwa/Dockerfile" \
+        --destination "${SALUNA_IMAGE_REGISTRY}saluna-pwa:${SALUNA_PWA_IMAGE_TAG}" \
+        --build-arg "NODE_IMAGE=${SALUNA_NODE_IMAGE}" \
+        --build-arg "NGINX_IMAGE=${SALUNA_NGINX_IMAGE}" \
+        --build-arg "ALPINE_MIRROR=${SALUNA_ALPINE_MIRROR}" \
+        --build-arg "NPM_REGISTRY=${SALUNA_NPM_REGISTRY}" \
+        --build-arg "PNPM_VERSION=${SALUNA_PNPM_VERSION}" \
+        --build-arg "VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://api.saluna.ir}" \
+        --build-arg "VITE_APP_URL=${VITE_APP_URL:-https://app.saluna.ir}" \
+        --build-arg "VITE_WEB_URL=${VITE_WEB_URL:-https://saluna.ir}" \
+        --build-arg "VITE_PWA_ASSET_VERSION=${SALUNA_PWA_IMAGE_TAG}" \
+        --label "org.opencontainers.image.title=saluna-pwa" \
+        --label "org.opencontainers.image.version=${SALUNA_PWA_VERSION}" \
+        --label "org.opencontainers.image.revision=${CI_COMMIT_SHA}" \
+        --label "org.opencontainers.image.source=${CI_PROJECT_URL}"
     - printf 'APP=pwa\nIMAGE_TAG=%s\nAPP_VERSION=%s\n' "$SALUNA_PWA_IMAGE_TAG" "$SALUNA_PWA_VERSION" > build.env
   artifacts:
     reports:
