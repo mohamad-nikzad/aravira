@@ -17,14 +17,17 @@ import type {
 
 import { api } from '#/lib/api-client'
 import { useAuth } from '#/lib/auth'
+import {
+  appointmentsRangeInvalidationKeys,
+  appointmentsRangeQueryOptions,
+  getApiV1AppointmentsQueryKey,
+} from '#/lib/appointments-queries'
 import { servicesListQueryOptions } from '#/lib/services-queries'
 import {
   clientsListQueryOptions,
   getApiV1ClientsQueryKey,
 } from '#/lib/clients-queries'
 import { staffListQueryOptions } from '#/lib/staff-queries'
-import { useNetworkStatus } from '#/lib/network-status'
-import { useCalendarIndexedDbSources } from '#/lib/use-calendar-indexeddb-sources'
 import { CalendarHeader } from '#/components/calendar/calendar-header'
 import { SalonFullCalendar } from '#/components/calendar/salon-full-calendar'
 import { StaffFilter } from '#/components/calendar/staff-filter'
@@ -40,10 +43,6 @@ import {
   useAppointmentFlow,
 } from '#/components/appointments'
 import type { AppointmentDetailChange } from '#/lib/appointment-surface'
-import {
-  NetworkStatusBanner,
-  OfflineStateCard,
-} from '#/components/offline-state'
 
 const searchSchema = z.object({
   date: z.string().optional(),
@@ -51,7 +50,6 @@ const searchSchema = z.object({
   appointmentId: z.string().optional(),
 })
 
-type AppointmentsResponse = { appointments: AppointmentWithDetails[] }
 type BusinessResponse = { settings: BusinessHours | null }
 
 const VIEW_OPTIONS: { value: CalendarView; label: string }[] = [
@@ -67,9 +65,6 @@ function defaultRange(anchor: Date) {
     end: format(addDays(anchor, 120), 'yyyy-MM-dd'),
   }
 }
-
-const appointmentsKey = (start: string, end: string) =>
-  ['appointments', 'range', start, end] as const
 
 export const Route = createFileRoute('/_authed/calendar')({
   validateSearch: searchSchema,
@@ -88,7 +83,6 @@ function CalendarPage() {
   const navigate = useNavigate()
   const search = Route.useSearch()
   const { user } = useAuth()
-  const isOnline = useNetworkStatus()
   const isManager = user?.role === 'manager'
   const queryClient = useQueryClient()
 
@@ -120,10 +114,8 @@ function CalendarPage() {
   const fallbackRange = useMemo(() => defaultRange(navDate), [navDate])
   const { start: startDate, end: endDate } = range ?? fallbackRange
 
-  const appointmentsQuery = useQuery<AppointmentsResponse>({
-    queryKey: appointmentsKey(startDate, endDate),
-    queryFn: ({ signal }) =>
-      api.appointments.listRange({ startDate, endDate }, { signal }),
+  const appointmentsQuery = useQuery({
+    ...appointmentsRangeQueryOptions(startDate, endDate),
     placeholderData: (prev) => prev,
   })
 
@@ -140,42 +132,14 @@ function CalendarPage() {
     queryFn: ({ signal }) => api.businessSettings.get({ signal }),
   })
 
-  const indexedDbLive = useMemo(
-    () => ({
-      appointmentsData: appointmentsQuery.data,
-      staff: staffQuery.data,
-      services: servicesQuery.data,
-      clients: clientsQuery.data,
-      businessData: businessQuery.data,
-    }),
-    [
-      appointmentsQuery.data,
-      staffQuery.data,
-      servicesQuery.data,
-      clientsQuery.data,
-      businessQuery.data,
-    ],
-  )
-
-  const idb = useCalendarIndexedDbSources(
-    Boolean(user),
-    isOnline,
-    Boolean(isManager),
-    startDate,
-    endDate,
-    indexedDbLive,
-  )
-
-  const appointmentsSource = idb.appointments ?? appointmentsQuery.data
-  const businessSource = idb.business ?? businessQuery.data
-
   const appointments = useMemo<AppointmentWithDetails[]>(
-    () => appointmentsSource?.appointments ?? [],
-    [appointmentsSource],
+    () => appointmentsQuery.data ?? [],
+    [appointmentsQuery.data],
   )
-  const staff = idb.staff
-  const services = idb.services
-  const clients = idb.clients
+  const staff = staffQuery.data ?? []
+  const services = servicesQuery.data ?? []
+  const clients = clientsQuery.data ?? []
+  const businessSource = businessQuery.data
 
   const businessHours: BusinessHours = useMemo(() => {
     const s = businessSource?.settings
@@ -417,15 +381,17 @@ function CalendarPage() {
     (appointment: AppointmentWithDetails) => {
       const shouldKeep =
         appointment.date >= startDate && appointment.date <= endDate
-      queryClient.setQueryData<AppointmentsResponse>(
-        appointmentsKey(startDate, endDate),
+      queryClient.setQueryData<AppointmentWithDetails[]>(
+        getApiV1AppointmentsQueryKey({
+          query: { startDate, endDate },
+        }),
         (current) => {
-          const base = current?.appointments ?? appointments
+          const base = current ?? appointments
           const withoutApt = base.filter((a) => a.id !== appointment.id)
           const next = shouldKeep
             ? [...withoutApt, appointment].sort(compareAppointments)
             : withoutApt
-          return { ...(current ?? { appointments: [] }), appointments: next }
+          return next
         },
       )
     },
@@ -437,7 +403,7 @@ function CalendarPage() {
       upsertAppointmentInCache(appointment)
       appointmentFlow.actions.closeCreateAfterSuccess()
       void queryClient.invalidateQueries({
-        queryKey: ['appointments', 'range'],
+        queryKey: appointmentsRangeInvalidationKeys()[0],
       })
     },
     [appointmentFlow.actions, queryClient, upsertAppointmentInCache],
@@ -469,17 +435,12 @@ function CalendarPage() {
   const handleDetailChange = useCallback(
     (change: AppointmentDetailChange) => {
       if (change.type === 'deleted') {
-        queryClient.setQueryData<AppointmentsResponse>(
-          appointmentsKey(startDate, endDate),
+        queryClient.setQueryData<AppointmentWithDetails[]>(
+          getApiV1AppointmentsQueryKey({
+            query: { startDate, endDate },
+          }),
           (current) =>
-            current
-              ? {
-                  ...current,
-                  appointments: current.appointments.filter(
-                    (a) => a.id !== change.id,
-                  ),
-                }
-              : current,
+            current?.filter((a) => a.id !== change.id),
         )
         appointmentFlow.actions.closeDetail()
       } else {
@@ -491,7 +452,7 @@ function CalendarPage() {
         }
       }
       void queryClient.invalidateQueries({
-        queryKey: ['appointments', 'range'],
+        queryKey: appointmentsRangeInvalidationKeys()[0],
       })
     },
     [
@@ -518,13 +479,13 @@ function CalendarPage() {
     isManager,
   ])
 
-  if (appointmentsQuery.isLoading && !appointmentsSource) {
+  if (appointmentsQuery.isLoading && appointments.length === 0) {
     return <CalendarSkeleton />
   }
 
   if (!user) return null
 
-  if (!appointmentsSource) {
+  if (appointmentsQuery.isError) {
     return (
       <div className="flex h-full flex-col bg-background">
         <CalendarHeader
@@ -534,23 +495,17 @@ function CalendarPage() {
           onDateChange={setNavDate}
           onToday={handleToday}
         />
-        <NetworkStatusBanner
-          routeLabel="تقویم"
-          isOnline={isOnline}
-          hasSnapshot={idb.hasSnapshot}
-          snapshotUpdatedAt={idb.snapshotUpdatedAt}
-          hasError={Boolean(appointmentsQuery.error)}
-          onRetry={handleRetry}
-        />
-        <OfflineStateCard
-          title="تقویم فعلا آماده نمایش نیست"
-          description={
-            isOnline
-              ? 'بارگذاری تقویم کامل نشد. یک بار دیگر تلاش کنید.'
-              : 'برای دیدن تقویم به اینترنت نیاز دارید، مگر این که قبلاً همین بازه را با همین حساب باز کرده باشید.'
-          }
-          onAction={handleRetry}
-        />
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+          <p className="text-sm font-bold text-foreground">
+            تقویم فعلا آماده نمایش نیست
+          </p>
+          <p className="text-xs leading-6 text-muted-foreground">
+            بارگذاری تقویم کامل نشد. یک بار دیگر تلاش کنید.
+          </p>
+          <Button type="button" onClick={handleRetry}>
+            تلاش دوباره
+          </Button>
+        </div>
       </div>
     )
   }
@@ -563,15 +518,6 @@ function CalendarPage() {
         view={view}
         onDateChange={setNavDate}
         onToday={handleToday}
-      />
-
-      <NetworkStatusBanner
-        routeLabel="تقویم"
-        isOnline={isOnline}
-        hasSnapshot={idb.hasSnapshot}
-        snapshotUpdatedAt={idb.snapshotUpdatedAt}
-        hasError={Boolean(appointmentsQuery.error)}
-        onRetry={handleRetry}
       />
 
       <div className="flex flex-col gap-2 border-b border-border/50 bg-card/90 px-3 py-2 sm:flex-row sm:items-center sm:px-4">
@@ -697,7 +643,7 @@ function CalendarPage() {
         <div className="absolute bottom-5 left-4 z-40 flex flex-col items-center gap-3">
           <button
             onClick={handleOpenAvailability}
-            disabled={!isOnline || services.length === 0 || staff.length === 0}
+            disabled={services.length === 0 || staff.length === 0}
             className="flex h-14 w-14 items-center justify-center rounded-[18px] border border-border bg-card text-foreground shadow-lg shadow-foreground/10 transition-all active:scale-[0.92] disabled:pointer-events-none disabled:opacity-40 touch-manipulation"
             aria-label="بررسی زمان خالی"
           >

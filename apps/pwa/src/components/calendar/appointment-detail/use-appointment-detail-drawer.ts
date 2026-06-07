@@ -18,9 +18,7 @@ import type {
   CompletePlaceholderClientInput,
 } from '@repo/salon-core/forms/appointment'
 import { eligibleStaffForService } from '@repo/salon-core/staff-service-autofill'
-import { useManagerDataClient } from '#/lib/manager-data-client'
 import { useServiceAddons } from '#/lib/use-service-addons'
-import { useNetworkStatus } from '#/lib/network-status'
 import {
   appointmentEditFormDefaults,
   buildAppointmentDetailEditViewModel,
@@ -38,6 +36,7 @@ import type {
   AppointmentStatusActionState,
 } from '#/lib/appointment-surface'
 import {
+  duplicateClientFromError,
   isDuplicateClientError,
   useAppointmentIntakeMutations,
 } from '#/lib/use-appointment-intake-mutations'
@@ -66,8 +65,6 @@ export function useAppointmentDetailDrawer({
   onClientsChanged,
   readOnly = false,
 }: UseAppointmentDetailDrawerParams) {
-  const dataClient = useManagerDataClient()
-  const isOnline = useNetworkStatus()
   const [statusAction, setStatusAction] = useState<StatusActionState>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editingAppointmentId, setEditingAppointmentId] = useState<
@@ -403,8 +400,7 @@ export function useAppointmentDetailDrawer({
     } catch (err) {
       if (isDuplicateClientError(err)) {
         setCompleteFormError('root', { message: err.message })
-        const body = err.body as { existingClient?: Client } | null
-        setDuplicateClient(body?.existingClient ?? null)
+        setDuplicateClient(duplicateClientFromError(err))
       } else {
         setCompleteFormError('root', {
           message: 'خطایی رخ داد. لطفاً دوباره تلاش کنید.',
@@ -460,8 +456,8 @@ export function useAppointmentDetailDrawer({
     setStatusAction(
       buildStatusActionState({
         nextStatus,
-        hasDataClient: Boolean(dataClient),
-        isOnline,
+        hasDataClient: false,
+        isOnline: true,
         changeType: 'updated',
         phase: 'saving',
       }),
@@ -476,8 +472,8 @@ export function useAppointmentDetailDrawer({
       setStatusAction(
         buildStatusActionState({
           nextStatus,
-          hasDataClient: Boolean(dataClient),
-          isOnline,
+          hasDataClient: false,
+          isOnline: true,
           changeType: result.type,
           phase: 'done',
         }),

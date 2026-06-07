@@ -8,12 +8,6 @@
 export type WritePolicyMode = 'queue-offline' | 'require-online'
 
 export const MANAGER_WRITE_OPERATIONS = [
-  'appointment.create',
-  'appointment.update',
-  'appointment.delete',
-  'appointment.updateStatus',
-  'appointment.completePlaceholderClient',
-  'staffToday.appointment.updateStatus',
   'appointmentRequest.approve',
   'appointmentRequest.reject',
 ] as const
@@ -25,13 +19,6 @@ export const MANAGER_WRITE_POLICIES: Record<
   ManagerWriteOperation,
   WritePolicyMode
 > = {
-  'appointment.create': 'queue-offline',
-  'appointment.update': 'queue-offline',
-  'appointment.delete': 'queue-offline',
-  'appointment.updateStatus': 'queue-offline',
-  'appointment.completePlaceholderClient': 'queue-offline',
-  /** Staff /today status changes — online API only (no offline queue). */
-  'staffToday.appointment.updateStatus': 'require-online',
   /** ADR-0001 / ADR-0002: intake at approval; no offline queue or soft-hold. */
   'appointmentRequest.approve': 'require-online',
   'appointmentRequest.reject': 'require-online',

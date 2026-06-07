@@ -515,6 +515,105 @@ export type ApplyCatalogPresetRequest = {
     }>;
 };
 
+export type AppointmentsListResponse = {
+    appointments: Array<AppointmentWithDetails>;
+};
+
+export type AppointmentResponse = {
+    appointment: AppointmentWithDetails;
+};
+
+export type AppointmentCreateRequest = {
+    /**
+     * Optional client-provided UUID for offline-first sync
+     */
+    id?: string;
+    clientId?: string;
+    placeholderClient?: {
+        name: string;
+        notes?: string;
+    };
+    staffId: string;
+    serviceId: string;
+    addonIds?: Array<string>;
+    date: string;
+    startTime: string;
+    endTime?: string;
+    durationMinutes?: number;
+    notes?: string;
+};
+
+export type AvailabilityResponse = DayAvailabilityResponse | NearestAvailabilityResponse;
+
+export type DayAvailabilityResponse = {
+    mode: 'day';
+    slots: Array<AvailabilitySlot>;
+    emptyReason?: AvailabilityEmptyReason;
+};
+
+export type AvailabilitySlot = {
+    date: string;
+    startTime: string;
+    endTime: string;
+    staffId: string;
+    staffName: string;
+};
+
+export type AvailabilityEmptyReason = 'NO_QUALIFIED_STAFF' | 'SALON_CLOSED' | 'STAFF_OFF_DAY' | 'ALL_QUALIFIED_STAFF_OFF_DAY' | 'FULLY_BOOKED' | 'OUTSIDE_SEARCH_WINDOW';
+
+export type NearestAvailabilityResponse = {
+    mode: 'nearest';
+    slot: AvailabilitySlot & unknown;
+    emptyReason?: AvailabilityEmptyReason;
+};
+
+export type AppointmentUpdateResponse = AppointmentResponse | AppointmentCleanupResponse;
+
+export type AppointmentCleanupResponse = {
+    success: true;
+    removedAppointmentId: string;
+    cleanup: true;
+};
+
+export type AppointmentUpdateRequest = {
+    clientId?: string;
+    placeholderClient?: {
+        name: string;
+        notes?: string;
+    };
+    staffId?: string;
+    serviceId?: string;
+    addonIds?: Array<string>;
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+    durationMinutes?: number;
+    status?: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show';
+    notes?: string;
+};
+
+export type AppointmentDeleteResponse = {
+    success: boolean;
+};
+
+export type CompletePlaceholderClientResponse = {
+    appointment: AppointmentWithDetails;
+    outcome: 'created-client' | 'reassigned-client';
+};
+
+export type DuplicateClientError = {
+    error: string;
+    code: 'duplicate-phone';
+    existingClient?: Client;
+};
+
+export type CompletePlaceholderClientRequest = {
+    name: string;
+    phone: string;
+    notes?: string;
+    reassignToExistingClientId?: string;
+};
+
 export type GetApiV1ClientsData = {
     body?: never;
     path?: never;
@@ -1766,3 +1865,262 @@ export type PostApiV1CatalogPresetsByIdApplyResponses = {
 };
 
 export type PostApiV1CatalogPresetsByIdApplyResponse = PostApiV1CatalogPresetsByIdApplyResponses[keyof PostApiV1CatalogPresetsByIdApplyResponses];
+
+export type GetApiV1AppointmentsData = {
+    body?: never;
+    path?: never;
+    query: {
+        startDate: string;
+        endDate: string;
+    };
+    url: '/api/v1/appointments';
+};
+
+export type GetApiV1AppointmentsErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing required permission
+     */
+    403: ApiError;
+};
+
+export type GetApiV1AppointmentsError = GetApiV1AppointmentsErrors[keyof GetApiV1AppointmentsErrors];
+
+export type GetApiV1AppointmentsResponses = {
+    /**
+     * Appointments with client, staff, and service details
+     */
+    200: AppointmentsListResponse;
+};
+
+export type GetApiV1AppointmentsResponse = GetApiV1AppointmentsResponses[keyof GetApiV1AppointmentsResponses];
+
+export type PostApiV1AppointmentsData = {
+    body: AppointmentCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/appointments';
+};
+
+export type PostApiV1AppointmentsErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing required permission
+     */
+    403: ApiError;
+};
+
+export type PostApiV1AppointmentsError = PostApiV1AppointmentsErrors[keyof PostApiV1AppointmentsErrors];
+
+export type PostApiV1AppointmentsResponses = {
+    /**
+     * Created appointment with details
+     */
+    200: AppointmentResponse;
+};
+
+export type PostApiV1AppointmentsResponse = PostApiV1AppointmentsResponses[keyof PostApiV1AppointmentsResponses];
+
+export type GetApiV1AppointmentsAvailabilityData = {
+    body?: never;
+    path?: never;
+    query: {
+        mode: 'day' | 'nearest';
+        serviceId: string;
+        date: string;
+        staffId?: string;
+    };
+    url: '/api/v1/appointments/availability';
+};
+
+export type GetApiV1AppointmentsAvailabilityErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing required permission
+     */
+    403: ApiError;
+};
+
+export type GetApiV1AppointmentsAvailabilityError = GetApiV1AppointmentsAvailabilityErrors[keyof GetApiV1AppointmentsAvailabilityErrors];
+
+export type GetApiV1AppointmentsAvailabilityResponses = {
+    /**
+     * Day or nearest availability slots
+     */
+    200: AvailabilityResponse;
+};
+
+export type GetApiV1AppointmentsAvailabilityResponse = GetApiV1AppointmentsAvailabilityResponses[keyof GetApiV1AppointmentsAvailabilityResponses];
+
+export type DeleteApiV1AppointmentsByIdData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/appointments/{id}';
+};
+
+export type DeleteApiV1AppointmentsByIdErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing required permission
+     */
+    403: ApiError;
+    /**
+     * Appointment not found
+     */
+    404: ApiError;
+};
+
+export type DeleteApiV1AppointmentsByIdError = DeleteApiV1AppointmentsByIdErrors[keyof DeleteApiV1AppointmentsByIdErrors];
+
+export type DeleteApiV1AppointmentsByIdResponses = {
+    /**
+     * Deletion result
+     */
+    200: AppointmentDeleteResponse;
+};
+
+export type DeleteApiV1AppointmentsByIdResponse = DeleteApiV1AppointmentsByIdResponses[keyof DeleteApiV1AppointmentsByIdResponses];
+
+export type GetApiV1AppointmentsByIdData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/appointments/{id}';
+};
+
+export type GetApiV1AppointmentsByIdErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing required permission
+     */
+    403: ApiError;
+    /**
+     * Appointment not found
+     */
+    404: ApiError;
+};
+
+export type GetApiV1AppointmentsByIdError = GetApiV1AppointmentsByIdErrors[keyof GetApiV1AppointmentsByIdErrors];
+
+export type GetApiV1AppointmentsByIdResponses = {
+    /**
+     * Appointment with details
+     */
+    200: AppointmentResponse;
+};
+
+export type GetApiV1AppointmentsByIdResponse = GetApiV1AppointmentsByIdResponses[keyof GetApiV1AppointmentsByIdResponses];
+
+export type PatchApiV1AppointmentsByIdData = {
+    body: AppointmentUpdateRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/appointments/{id}';
+};
+
+export type PatchApiV1AppointmentsByIdErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing required permission
+     */
+    403: ApiError;
+    /**
+     * Appointment not found
+     */
+    404: ApiError;
+};
+
+export type PatchApiV1AppointmentsByIdError = PatchApiV1AppointmentsByIdErrors[keyof PatchApiV1AppointmentsByIdErrors];
+
+export type PatchApiV1AppointmentsByIdResponses = {
+    /**
+     * Updated appointment or cleanup result
+     */
+    200: AppointmentUpdateResponse;
+};
+
+export type PatchApiV1AppointmentsByIdResponse = PatchApiV1AppointmentsByIdResponses[keyof PatchApiV1AppointmentsByIdResponses];
+
+export type PostApiV1AppointmentsByIdCompleteClientData = {
+    body: CompletePlaceholderClientRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/appointments/{id}/complete-client';
+};
+
+export type PostApiV1AppointmentsByIdCompleteClientErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing required permission
+     */
+    403: ApiError;
+    /**
+     * Appointment not found
+     */
+    404: ApiError;
+    /**
+     * Phone number already registered for another client
+     */
+    409: DuplicateClientError;
+};
+
+export type PostApiV1AppointmentsByIdCompleteClientError = PostApiV1AppointmentsByIdCompleteClientErrors[keyof PostApiV1AppointmentsByIdCompleteClientErrors];
+
+export type PostApiV1AppointmentsByIdCompleteClientResponses = {
+    /**
+     * Updated appointment after client completion
+     */
+    200: CompletePlaceholderClientResponse;
+};
+
+export type PostApiV1AppointmentsByIdCompleteClientResponse = PostApiV1AppointmentsByIdCompleteClientResponses[keyof PostApiV1AppointmentsByIdCompleteClientResponses];

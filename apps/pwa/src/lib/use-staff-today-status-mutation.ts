@@ -1,27 +1,17 @@
 import { useState } from 'react'
 import type { AppointmentWithDetails } from '@repo/salon-core/types'
 
-import { api } from '#/lib/api-client'
 import type { StatusActionFeedback } from '#/components/today/staff-today-context'
-import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
+import { useUpdateAppointmentStatusMutation } from '#/lib/appointments-queries'
 
 export function useStaffTodayStatusMutation(onAfterSuccess: () => void) {
   const [statusFeedback, setStatusFeedback] =
     useState<StatusActionFeedback>(null)
 
-  const updateAppointmentStatus = useManagerWriteMutation(
-    'staffToday.appointment.updateStatus',
-    {
-      apiFn: ({
-        appointmentId,
-        status,
-      }: {
-        appointmentId: string
-        status: AppointmentWithDetails['status']
-      }) => api.appointments.updateStatus(appointmentId, status),
-      meta: { skipSuccessToast: true, skipErrorToast: true },
-    },
-  )
+  const updateAppointmentStatus = useUpdateAppointmentStatusMutation({
+    skipSuccessToast: true,
+    skipErrorToast: true,
+  })
 
   const patchStatus = async (
     appointmentId: string,
@@ -36,14 +26,14 @@ export function useStaffTodayStatusMutation(onAfterSuccess: () => void) {
     try {
       const payload = await updateAppointmentStatus.mutateAsync({
         appointmentId,
-        status,
+        nextStatus: status,
       })
       setStatusFeedback({
         appointmentId,
         status,
         mode: 'saved',
         message:
-          'removedAppointmentId' in payload && payload.removedAppointmentId
+          payload.type === 'deleted'
             ? 'رزرو موقت لغو و حذف شد.'
             : 'وضعیت ثبت شد.',
       })

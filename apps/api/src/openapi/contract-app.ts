@@ -37,6 +37,15 @@ import {
   updateServiceRoute,
 } from './routes/services'
 import {
+  completePlaceholderClientRoute,
+  createAppointmentRoute,
+  deleteAppointmentRoute,
+  getAppointmentAvailabilityRoute,
+  getAppointmentRoute,
+  listAppointmentsRoute,
+  updateAppointmentRoute,
+} from './routes/appointments'
+import {
   createStaffRoute,
   deleteStaffRoute,
   getStaffBookingAvailabilityRoute,
@@ -290,6 +299,58 @@ const listCatalogPresetsStub: RouteHandler<typeof listCatalogPresetsRoute> = (c)
 const applyCatalogPresetStub: RouteHandler<typeof applyCatalogPresetRoute> = (c) =>
   c.json({ importedCategoryIds: [], importedVariantIds: [] }, 200)
 
+const stubAppointment = {
+  id: 'stub',
+  clientId: 'stub',
+  staffId: 'stub',
+  serviceId: 'stub',
+  bookedServiceName: 'stub',
+  bookedServiceDuration: 45,
+  bookedServicePrice: 0,
+  bookedTotalDuration: 45,
+  bookedTotalPrice: 0,
+  bookedAddonCount: 0,
+  date: '2026-06-07',
+  startTime: '10:00',
+  endTime: '10:45',
+  status: 'scheduled' as const,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  client: stubClient,
+  staff: stubStaffUser,
+  service: stubService,
+}
+
+const listAppointmentsStub: RouteHandler<typeof listAppointmentsRoute> = (c) =>
+  c.json({ appointments: [] }, 200)
+
+const createAppointmentStub: RouteHandler<typeof createAppointmentRoute> = (c) =>
+  c.json({ appointment: stubAppointment }, 200)
+
+const getAppointmentAvailabilityStub: RouteHandler<
+  typeof getAppointmentAvailabilityRoute
+> = (c) => c.json({ mode: 'day' as const, slots: [] }, 200)
+
+const getAppointmentStub: RouteHandler<typeof getAppointmentRoute> = (c) =>
+  c.json({ appointment: stubAppointment }, 200)
+
+const updateAppointmentStub: RouteHandler<typeof updateAppointmentRoute> = (c) =>
+  c.json({ appointment: stubAppointment }, 200)
+
+const deleteAppointmentStub: RouteHandler<typeof deleteAppointmentRoute> = (c) =>
+  c.json({ success: true as const }, 200)
+
+const completePlaceholderClientStub: RouteHandler<
+  typeof completePlaceholderClientRoute
+> = (c) =>
+  c.json(
+    {
+      appointment: stubAppointment,
+      outcome: 'created-client' as const,
+    },
+    200,
+  )
+
 /**
  * Minimal OpenAPI app used only for contract generation.
  * Stub handlers avoid loading auth/database modules at generate time.
@@ -357,6 +418,17 @@ export const contractApp = new OpenAPIHono()
       .openapi(listCatalogPresetsRoute, listCatalogPresetsStub)
       .openapi(applyCatalogPresetRoute, applyCatalogPresetStub),
   )
+  .route(
+    '/api/v1/appointments',
+    new OpenAPIHono()
+      .openapi(listAppointmentsRoute, listAppointmentsStub)
+      .openapi(createAppointmentRoute, createAppointmentStub)
+      .openapi(getAppointmentAvailabilityRoute, getAppointmentAvailabilityStub)
+      .openapi(getAppointmentRoute, getAppointmentStub)
+      .openapi(updateAppointmentRoute, updateAppointmentStub)
+      .openapi(deleteAppointmentRoute, deleteAppointmentStub)
+      .openapi(completePlaceholderClientRoute, completePlaceholderClientStub),
+  )
 
 export const openApiDocumentConfig = {
   openapi: '3.0.0' as const,
@@ -365,7 +437,7 @@ export const openApiDocumentConfig = {
     version: '0.7.0',
     description:
       'Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. ' +
-      'This contract is expanded incrementally; clients, staff, and services catalog route groups are documented.',
+      'This contract is expanded incrementally; clients, staff, services catalog, and appointments route groups are documented.',
   },
   servers: [{ url: '', description: 'Saluna API (paths include /api/v1 prefix)' }],
   tags: [
@@ -379,6 +451,7 @@ export const openApiDocumentConfig = {
     { name: 'Service families', description: 'Grouped services within a category' },
     { name: 'Service addons', description: 'Optional booking add-ons' },
     { name: 'Catalog presets', description: 'Starter catalog templates' },
+    { name: 'Appointments', description: 'Calendar appointments and availability' },
   ],
   components: {
     securitySchemes: {

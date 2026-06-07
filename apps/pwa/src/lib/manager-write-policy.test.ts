@@ -25,35 +25,15 @@ describe('manager-write-policy', () => {
     expect(writePolicyQueuesOffline('appointmentRequest.approve')).toBe(false)
   })
 
-  it('queues manager appointment writes offline', () => {
-    expect(getWritePolicy('appointment.update')).toBe('queue-offline')
-    expect(getWritePolicy('appointment.updateStatus')).toBe('queue-offline')
-    expect(writePolicyQueuesOffline('appointment.delete')).toBe(true)
-  })
-
-  it('requires online for staff today appointment status', () => {
-    expect(getWritePolicy('staffToday.appointment.updateStatus')).toBe(
-      'require-online',
-    )
-    expect(
-      writePolicyUsesDataClient('staffToday.appointment.updateStatus'),
-    ).toBe(false)
-  })
-
   it('assertOnlineForWrite throws when require-online and offline', () => {
     expect(() =>
       assertOnlineForWrite('appointmentRequest.approve', false),
     ).toThrow(OFFLINE_WRITE_BLOCKED_MESSAGE)
-
-    expect(() =>
-      assertOnlineForWrite('staffToday.appointment.updateStatus', false),
-    ).toThrow(OFFLINE_WRITE_BLOCKED_MESSAGE)
   })
 
-  it('assertOnlineForWrite allows queue-offline when offline', () => {
-    expect(() =>
-      assertOnlineForWrite('appointment.update', false),
-    ).not.toThrow()
+  it('does not use data-client for remaining operations', () => {
+    for (const operation of MANAGER_WRITE_OPERATIONS) {
+      expect(writePolicyUsesDataClient(operation)).toBe(false)
+    }
   })
-
 })

@@ -50,9 +50,8 @@ import type { Service, User } from '@repo/salon-core/types'
 import { availabilitySearchSchema } from '@repo/salon-core/forms/appointment'
 import type { AvailabilitySearchInput } from '@repo/salon-core/forms/appointment'
 import { ServicePicker } from '#/components/services/service-picker'
-import { api } from '#/lib/api-client'
+import { fetchAppointmentAvailability } from '#/lib/appointments-queries'
 import { getMutationErrorMessage } from '#/lib/query-client'
-import { useNetworkStatus } from '#/lib/network-status'
 import { useDismissGuard } from '#/lib/use-dismiss-guard'
 
 type AvailabilitySearchMode = 'day' | 'nearest'
@@ -135,7 +134,6 @@ export function AvailabilityDrawer({
   services,
   onSelectSlot,
 }: AvailabilityDrawerProps) {
-  const isOnline = useNetworkStatus()
   const abortRef = useRef<AbortController | null>(null)
   const wasOpenRef = useRef(open)
 
@@ -190,7 +188,7 @@ export function AvailabilityDrawer({
       targetDate: string
       signal: AbortSignal
     }) => {
-      const response = await api.appointments.availability(
+      const response = await fetchAppointmentAvailability(
         {
           mode,
           serviceId,
@@ -199,7 +197,7 @@ export function AvailabilityDrawer({
             ? { staffId: staffSelection }
             : {}),
         },
-        { signal },
+        signal,
       )
 
       if (mode === 'day' && response.mode === 'day') {
@@ -410,7 +408,7 @@ export function AvailabilityDrawer({
             <Button
               type="button"
               className="h-11 gap-2 rounded-2xl"
-              disabled={!serviceId || !isOnline || loadingMode === 'day'}
+              disabled={!serviceId || loadingMode === 'day'}
               onClick={() => void runSearch('day')}
             >
               {loadingMode === 'day' ? (
@@ -420,15 +418,6 @@ export function AvailabilityDrawer({
               )}
               {loadingMode === 'day' ? 'در حال بررسی...' : 'بررسی زمان'}
             </Button>
-
-            {!isOnline ? (
-              <Alert className="border-amber-400/30 bg-amber-50/80 text-amber-900">
-                <AlertTriangle className="size-4" />
-                <AlertDescription className="text-amber-900/80">
-                  بررسی زمان در نسخه اول فقط به‌صورت آنلاین کار می‌کند.
-                </AlertDescription>
-              </Alert>
-            ) : null}
 
             {error ? <FieldError>{error}</FieldError> : null}
 
@@ -523,7 +512,7 @@ export function AvailabilityDrawer({
                       variant="outline"
                       className="w-full gap-2 rounded-2xl"
                       disabled={
-                        !serviceId || !isOnline || loadingMode === 'nearest'
+                        !serviceId || loadingMode === 'nearest'
                       }
                       onClick={() => void runSearch('nearest')}
                     >
