@@ -26,6 +26,7 @@ import { Route as AuthedClientsRouteImport } from './routes/_authed/clients'
 import { Route as AuthedCalendarRouteImport } from './routes/_authed/calendar'
 import { Route as AuthedStaffIndexRouteImport } from './routes/_authed/staff.index'
 import { Route as AuthedOnboardingIndexRouteImport } from './routes/_authed/onboarding/index'
+import { Route as AuthedClientsIndexRouteImport } from './routes/_authed/clients.index'
 import { Route as AuthedStaffIdRouteImport } from './routes/_authed/staff.$id'
 import { Route as AuthedOnboardingWelcomeRouteImport } from './routes/_authed/onboarding/welcome'
 import { Route as AuthedOnboardingStaffRouteImport } from './routes/_authed/onboarding/staff'
@@ -121,6 +122,11 @@ const AuthedOnboardingIndexRoute = AuthedOnboardingIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthedOnboardingRoute,
 } as any)
+const AuthedClientsIndexRoute = AuthedClientsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedClientsRoute,
+} as any)
 const AuthedStaffIdRoute = AuthedStaffIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/staff': typeof AuthedOnboardingStaffRoute
   '/onboarding/welcome': typeof AuthedOnboardingWelcomeRoute
   '/staff/$id': typeof AuthedStaffIdRoute
+  '/clients/': typeof AuthedClientsIndexRoute
   '/onboarding/': typeof AuthedOnboardingIndexRoute
   '/staff/': typeof AuthedStaffIndexRoute
 }
@@ -208,7 +215,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/calendar': typeof AuthedCalendarRoute
-  '/clients': typeof AuthedClientsRouteWithChildren
   '/dashboard': typeof AuthedDashboardRoute
   '/public-page': typeof AuthedPublicPageRoute
   '/requests': typeof AuthedRequestsRoute
@@ -226,6 +232,7 @@ export interface FileRoutesByTo {
   '/onboarding/staff': typeof AuthedOnboardingStaffRoute
   '/onboarding/welcome': typeof AuthedOnboardingWelcomeRoute
   '/staff/$id': typeof AuthedStaffIdRoute
+  '/clients': typeof AuthedClientsIndexRoute
   '/onboarding': typeof AuthedOnboardingIndexRoute
   '/staff': typeof AuthedStaffIndexRoute
 }
@@ -256,6 +263,7 @@ export interface FileRoutesById {
   '/_authed/onboarding/staff': typeof AuthedOnboardingStaffRoute
   '/_authed/onboarding/welcome': typeof AuthedOnboardingWelcomeRoute
   '/_authed/staff/$id': typeof AuthedStaffIdRoute
+  '/_authed/clients/': typeof AuthedClientsIndexRoute
   '/_authed/onboarding/': typeof AuthedOnboardingIndexRoute
   '/_authed/staff/': typeof AuthedStaffIndexRoute
 }
@@ -286,6 +294,7 @@ export interface FileRouteTypes {
     | '/onboarding/staff'
     | '/onboarding/welcome'
     | '/staff/$id'
+    | '/clients/'
     | '/onboarding/'
     | '/staff/'
   fileRoutesByTo: FileRoutesByTo
@@ -294,7 +303,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/calendar'
-    | '/clients'
     | '/dashboard'
     | '/public-page'
     | '/requests'
@@ -312,6 +320,7 @@ export interface FileRouteTypes {
     | '/onboarding/staff'
     | '/onboarding/welcome'
     | '/staff/$id'
+    | '/clients'
     | '/onboarding'
     | '/staff'
   id:
@@ -341,6 +350,7 @@ export interface FileRouteTypes {
     | '/_authed/onboarding/staff'
     | '/_authed/onboarding/welcome'
     | '/_authed/staff/$id'
+    | '/_authed/clients/'
     | '/_authed/onboarding/'
     | '/_authed/staff/'
   fileRoutesById: FileRoutesById
@@ -473,6 +483,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedOnboardingIndexRouteImport
       parentRoute: typeof AuthedOnboardingRoute
     }
+    '/_authed/clients/': {
+      id: '/_authed/clients/'
+      path: '/'
+      fullPath: '/clients/'
+      preLoaderRoute: typeof AuthedClientsIndexRouteImport
+      parentRoute: typeof AuthedClientsRoute
+    }
     '/_authed/staff/$id': {
       id: '/_authed/staff/$id'
       path: '/$id'
@@ -548,10 +565,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthedClientsRouteChildren {
   AuthedClientsIdRoute: typeof AuthedClientsIdRoute
+  AuthedClientsIndexRoute: typeof AuthedClientsIndexRoute
 }
 
 const AuthedClientsRouteChildren: AuthedClientsRouteChildren = {
   AuthedClientsIdRoute: AuthedClientsIdRoute,
+  AuthedClientsIndexRoute: AuthedClientsIndexRoute,
 }
 
 const AuthedClientsRouteWithChildren = AuthedClientsRoute._addFileChildren(

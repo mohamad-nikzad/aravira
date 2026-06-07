@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createFileRoute, Link, redirect } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowRight,
@@ -43,11 +43,6 @@ import {
 import { ClientSummarySkeleton } from '#/components/clients/client-summary-skeleton'
 
 export const Route = createFileRoute('/_authed/clients/$id')({
-  beforeLoad: ({ context }) => {
-    if (context.user.role !== 'manager') {
-      throw redirect({ to: '/today' })
-    }
-  },
   loader: async ({ context, params }): Promise<ClientSummary> =>
     context.queryClient.fetchQuery(clientSummaryQueryOptions(params.id)),
   component: ClientDetailPage,
