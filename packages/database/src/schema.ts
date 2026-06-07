@@ -605,6 +605,38 @@ export const clientFollowUps = pgTable(
   ]
 )
 
+export const clientFollowUpMessageDeliveries = pgTable(
+  'client_follow_up_message_deliveries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    followUpId: uuid('follow_up_id')
+      .notNull()
+      .references(() => clientFollowUps.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => clients.id, { onDelete: 'cascade' }),
+    provider: text('provider').notNull().$type<'bale_safir'>(),
+    phone: text('phone').notNull(),
+    requestId: text('request_id').notNull(),
+    status: text('status').notNull().$type<'sent' | 'failed' | 'skipped'>(),
+    providerMessageId: text('provider_message_id'),
+    error: text('error'),
+    sentByUserId: uuid('sent_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('client_follow_up_msg_deliveries_salon_follow_up_idx').on(t.salonId, t.followUpId),
+    index('client_follow_up_msg_deliveries_client_idx').on(t.salonId, t.clientId),
+    index('client_follow_up_msg_deliveries_provider_status_idx').on(t.provider, t.status),
+  ]
+)
+
 export const businessSettings = pgTable(
   'business_settings',
   {

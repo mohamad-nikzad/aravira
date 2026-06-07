@@ -7,10 +7,67 @@ import type {
 } from '@repo/salon-core/types'
 import { salonTodayYmd } from '@repo/salon-core/salon-local-time'
 import { getDb } from '../client'
-import { clientFollowUps } from '../schema'
+import {
+  clientFollowUpMessageDeliveries,
+  clientFollowUps,
+  clients,
+  organization,
+} from '../schema'
 import { rowToClientFollowUp } from './row-mappers'
 import { getClientAppointmentsWithDetails } from './appointment-queries'
 import { getClientById, getClientTags } from './client-queries'
+
+export type ClientFollowUpMessageDeliveryProvider = 'bale_safir'
+export type ClientFollowUpMessageDeliveryStatus = 'sent' | 'failed' | 'skipped'
+
+export type ClientFollowUpMessageDelivery = {
+  id: string
+  salonId: string
+  followUpId: string
+  clientId: string
+  provider: ClientFollowUpMessageDeliveryProvider
+  phone: string
+  requestId: string
+  status: ClientFollowUpMessageDeliveryStatus
+  providerMessageId: string | null
+  error: string | null
+  sentByUserId: string | null
+  createdAt: Date
+  sentAt: Date | null
+}
+
+export type ClientFollowUpMessageContext = {
+  followUp: ClientFollowUp
+  client: {
+    id: string
+    name: string
+    phone: string | null
+  }
+  salon: {
+    id: string
+    name: string
+  }
+}
+
+function rowToClientFollowUpMessageDelivery(
+  row: typeof clientFollowUpMessageDeliveries.$inferSelect
+): ClientFollowUpMessageDelivery {
+  return {
+    id: row.id,
+    salonId: row.salonId,
+    followUpId: row.followUpId,
+    clientId: row.clientId,
+    provider: row.provider,
+    phone: row.phone,
+    requestId: row.requestId,
+    status: row.status,
+    providerMessageId: row.providerMessageId,
+    error: row.error,
+    sentByUserId: row.sentByUserId,
+    createdAt: row.createdAt,
+    sentAt: row.sentAt,
+  }
+}
 
 export async function getClientSummary(
   salonId: string,
@@ -134,4 +191,95 @@ export async function updateClientFollowUpStatus(
     .where(and(eq(clientFollowUps.salonId, salonId), eq(clientFollowUps.id, id)))
     .returning()
   return row ? rowToClientFollowUp(row) : undefined
+}
+
+export async function getClientFollowUpMessageContext(
+  salonId: string,
+  followUpId: string
+): Promise<ClientFollowUpMessageContext | null> {
+  const db = getDb()
+  const [row] = await db
+    .select({
+      followUp: clientFollowUps,
+      clientId: clients.id,
+      clientName: clients.name,
+      clientPhone: clients.phone,
+      salonId: organization.id,
+      salonName: organization.name,
+    })
+    .from(clientFollowUps)
+    .innerJoin(clients, eq(clients.id, clientFollowUps.clientId))
+    .innerJoin(organization, eq(organization.id, clientFollowUps.salonId))
+    .where(and(eq(clientFollowUps.salonId, salonId), eq(clientFollowUps.id, followUpId)))
+    .limit(1)
+
+  if (!row) return null
+
+  return {
+    followUp: rowToClientFollowUp(row.followUp),
+    client: {
+      id: row.clientId,
+      name: row.clientName,
+      phone: row.clientPhone,
+    },
+    salon: {
+      id: row.salonId,
+      name: row.salonName,
+    },
+  }
+}
+
+export async function getLatestClientFollowUpMessageDelivery(input: {
+  salonId: string
+  followUpId: string
+  provider: ClientFollowUpMessageDeliveryProvider
+}): Promise<ClientFollowUpMessageDelivery | null> {
+  const db = getDb()
+  const [row] = await db
+    .select()
+    .from(clientFollowUpMessageDeliveries)
+    .where(
+      and(
+        eq(clientFollowUpMessageDeliveries.salonId, input.salonId),
+        eq(clientFollowUpMessageDeliveries.followUpId, input.followUpId),
+        eq(clientFollowUpMessageDeliveries.provider, input.provider)
+      )
+    )
+    .orderBy(desc(clientFollowUpMessageDeliveries.createdAt))
+    .limit(1)
+
+  return row ? rowToClientFollowUpMessageDelivery(row) : null
+}
+
+export async function createClientFollowUpMessageDelivery(input: {
+  salonId: string
+  followUpId: string
+  clientId: string
+  provider: ClientFollowUpMessageDeliveryProvider
+  phone: string
+  requestId: string
+  status: ClientFollowUpMessageDeliveryStatus
+  providerMessageId?: string | null
+  error?: string | null
+  sentByUserId: string
+}): Promise<ClientFollowUpMessageDelivery> {
+  const db = getDb()
+  const [row] = await db
+    .insert(clientFollowUpMessageDeliveries)
+    .values({
+      salonId: input.salonId,
+      followUpId: input.followUpId,
+      clientId: input.clientId,
+      provider: input.provider,
+      phone: input.phone,
+      requestId: input.requestId,
+      status: input.status,
+      providerMessageId: input.providerMessageId ?? null,
+      error: input.error ?? null,
+      sentByUserId: input.sentByUserId,
+      sentAt: input.status === 'sent' ? new Date() : null,
+    })
+    .returning()
+
+  return rowToClientFollowUpMessageDelivery(row)
 }

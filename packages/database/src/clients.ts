@@ -21,8 +21,15 @@ export {
 } from './internal/placeholder-client-queries'
 
 export {
+  createClientFollowUpMessageDelivery,
   createClientFollowUp,
+  getClientFollowUpMessageContext,
+  getLatestClientFollowUpMessageDelivery,
   getClientFollowUps,
   getClientSummary,
   updateClientFollowUpStatus,
+} from './internal/client-followup-queries'
+export type {
+  ClientFollowUpMessageContext,
+  ClientFollowUpMessageDelivery,
 } from './internal/client-followup-queries'
