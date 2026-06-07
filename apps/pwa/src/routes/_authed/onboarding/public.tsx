@@ -48,7 +48,7 @@ function PublicScreen() {
     setValue,
     watch,
     formState: { errors },
-  } = useForm<PublicPageOnboardingInput, any, PublicPageOnboardingPayload>({
+  } = useForm<PublicPageOnboardingInput, unknown, PublicPageOnboardingPayload>({
     resolver: zodResolver(publicPageOnboardingSchema),
     defaultValues: { enabled: true, bioText: '' },
   })

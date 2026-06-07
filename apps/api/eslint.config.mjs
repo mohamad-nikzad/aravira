@@ -3,6 +3,6 @@ import base from '@repo/eslint-config/base'
 export default [
   ...base,
   {
-    ignores: ['dist/**', 'node_modules/**'],
+    ignores: ['dist/**', 'node_modules/**', '.wrangler/**'],
   },
 ]

@@ -15,6 +15,9 @@ const config = [
       'tsconfig.tsbuildinfo',
       'public/sw.js',
       'public/icons/**',
+      'apps/api/.wrangler/**',
+      'packages/api-client/src/generated/**',
+      'packages/data-client/portability/dist-portability/**',
     ],
   },
   {
@@ -62,6 +65,13 @@ const config = [
       'react-hooks/purity': 'off',
       'react-hooks/refs': 'off',
       'react-hooks/set-state-in-effect': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
     },
   },
 ]

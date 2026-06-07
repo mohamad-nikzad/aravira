@@ -199,7 +199,7 @@ function SettingsPage() {
     setValue: setBusinessHoursValue,
     watch: watchBusinessHours,
     formState: { errors: businessHoursErrors, isSubmitting: savingHours },
-  } = useForm<BusinessSettingsInput, any, BusinessSettingsPayload>({
+  } = useForm<BusinessSettingsInput, unknown, BusinessSettingsPayload>({
     resolver: zodResolver(businessSettingsSchema),
     defaultValues: {
       workingStart: '09:00',

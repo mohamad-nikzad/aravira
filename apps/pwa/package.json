@@ -12,7 +12,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "lint": "eslint",
+    "lint": "eslint .",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check ."
@@ -52,7 +52,7 @@
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/devtools-vite": "latest",
-    "@tanstack/eslint-config": "latest",
+    "@repo/eslint-config": "workspace:*",
     "@tanstack/router-plugin": "latest",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.0",

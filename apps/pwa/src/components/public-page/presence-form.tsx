@@ -48,7 +48,7 @@ export function usePresenceForm(options: UsePresenceFormOptions = {}) {
     setFocus,
     watch,
     formState: { errors },
-  } = useForm<PresenceInput, any, PresencePayload>({
+  } = useForm<PresenceInput, unknown, PresencePayload>({
     resolver: zodResolver(presenceSchema),
     defaultValues: EMPTY_PRESENCE_INPUT,
   })

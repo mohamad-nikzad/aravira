@@ -43,7 +43,7 @@ function HoursScreen() {
     setValue,
     watch,
     formState: { errors },
-  } = useForm<BusinessSettingsInput, any, BusinessSettingsPayload>({
+  } = useForm<BusinessSettingsInput, unknown, BusinessSettingsPayload>({
     resolver: zodResolver(businessSettingsSchema),
     defaultValues: {
       workingStart: '09:00',
