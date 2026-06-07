@@ -1,24 +1,16 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import type { TodayData } from '@repo/salon-core/types'
 import { salonTodayYmd } from '@repo/salon-core/salon-local-time'
 
-import { api } from '#/lib/api-client'
-import { servicesListQueryOptions } from '#/lib/services-queries'
 import { clientsListQueryOptions } from '#/lib/clients-queries'
+import { servicesListQueryOptions } from '#/lib/services-queries'
 import { staffListQueryOptions } from '#/lib/staff-queries'
-import { useNetworkStatus } from '#/lib/network-status'
+import { todayQueryOptions } from '#/lib/today-queries'
 import { firstNameOf } from '#/lib/today-view-model'
-import { useManagerTodayIndexedDbSources } from '#/lib/use-manager-today-indexeddb'
 import {
-  ManagerTodayContext
-  
+  ManagerTodayContext,
 } from '#/components/today/manager-today-context'
-import type {ManagerTodayContextValue} from '#/components/today/manager-today-context';
-import {
-  pickTodayDisplayData,
-  todayLoadingWithoutData,
-} from '#/components/today/today-data'
+import type { ManagerTodayContextValue } from '#/components/today/manager-today-context'
 
 export function ManagerTodayProvider({
   userName,
@@ -27,49 +19,23 @@ export function ManagerTodayProvider({
   userName: string
   children: React.ReactNode
 }) {
-  const isOnline = useNetworkStatus()
-  const initialToday = useMemo(() => salonTodayYmd(), [])
-  const [date, setDate] = useState(initialToday)
+  const [date, setDate] = useState(() => salonTodayYmd())
 
-  const todayQuery = useQuery<TodayData>({
-    queryKey: ['today', date],
-    queryFn: ({ signal }) => api.today.get(date, { signal }),
-    enabled: true,
-  })
-
+  const todayQuery = useQuery(todayQueryOptions(date))
   const staffQuery = useQuery(staffListQueryOptions())
   const servicesQuery = useQuery(servicesListQueryOptions())
   const clientsQuery = useQuery(clientsListQueryOptions())
-
-  const idb = useManagerTodayIndexedDbSources(
-    true,
-    isOnline,
-    date,
-    todayQuery.data,
-    staffQuery.data,
-    servicesQuery.data,
-    clientsQuery.data,
-  )
-
-  const displayData = pickTodayDisplayData(idb.todayData, todayQuery.data)
 
   const value = useMemo<ManagerTodayContextValue>(
     () => ({
       state: {
         date,
-        data: displayData,
-        isLoading: todayLoadingWithoutData(
-          todayQuery.isLoading,
-          idb.idbLoading,
-          displayData,
-        ),
+        data: todayQuery.data,
+        isLoading: todayQuery.isLoading && !todayQuery.data,
         error: todayQuery.error,
-        snapshotUpdatedAt: idb.snapshotUpdatedAt,
-        hasSnapshot: idb.hasSnapshot,
-        isOnline,
-        staff: idb.staff,
-        services: idb.services,
-        clients: idb.clients,
+        staff: staffQuery.data ?? [],
+        services: servicesQuery.data ?? [],
+        clients: clientsQuery.data ?? [],
         managerName: firstNameOf(userName),
       },
       actions: {
@@ -84,16 +50,17 @@ export function ManagerTodayProvider({
     }),
     [
       date,
-      displayData,
+      todayQuery.data,
       todayQuery.isLoading,
       todayQuery.error,
       todayQuery.refetch,
-      idb,
-      isOnline,
-      userName,
+      staffQuery.data,
+      servicesQuery.data,
+      clientsQuery.data,
       staffQuery.refetch,
       servicesQuery.refetch,
       clientsQuery.refetch,
+      userName,
     ],
   )
 

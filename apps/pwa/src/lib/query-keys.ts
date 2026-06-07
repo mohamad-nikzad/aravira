@@ -1,4 +1,3 @@
-export const dashboardQueryKey = ['dashboard'] as const
 export const notificationPreferencesQueryKey = [
   'notification-preferences',
 ] as const

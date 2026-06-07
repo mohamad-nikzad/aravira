@@ -1,21 +1,13 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import type { TodayData } from '@repo/salon-core/types'
 import { addDaysYmd, salonTodayYmd } from '@repo/salon-core/salon-local-time'
 
-import { api } from '#/lib/api-client'
-import { useNetworkStatus } from '#/lib/network-status'
+import { todayQueryOptions } from '#/lib/today-queries'
 import { firstNameOf } from '#/lib/today-view-model'
-import { useStaffTodayOfflineProjection } from '#/lib/use-staff-today-offline-projection'
 import {
-  StaffTodayContext
-  
+  StaffTodayContext,
 } from '#/components/today/staff-today-context'
-import type {StaffTodayContextValue} from '#/components/today/staff-today-context';
-import {
-  pickTodayDisplayData,
-  todayLoadingWithoutData,
-} from '#/components/today/today-data'
+import type { StaffTodayContextValue } from '#/components/today/staff-today-context'
 
 export function StaffTodayProvider({
   userName,
@@ -27,64 +19,30 @@ export function StaffTodayProvider({
   enabled: boolean
   children: React.ReactNode
 }) {
-  const isOnline = useNetworkStatus()
   const todayDate = useMemo(() => salonTodayYmd(), [])
   const tomorrowDate = useMemo(() => addDaysYmd(todayDate, 1), [todayDate])
 
-  const todayQuery = useQuery<TodayData>({
-    queryKey: ['today', 'staff', todayDate],
-    queryFn: ({ signal }) => api.today.get(todayDate, { signal }),
+  const todayQuery = useQuery({
+    ...todayQueryOptions(todayDate),
     enabled,
   })
 
-  const tomorrowQuery = useQuery<TodayData>({
-    queryKey: ['today', 'staff', tomorrowDate],
-    queryFn: ({ signal }) => api.today.get(tomorrowDate, { signal }),
+  const tomorrowQuery = useQuery({
+    ...todayQueryOptions(tomorrowDate),
     enabled,
   })
-
-  const offline = useStaffTodayOfflineProjection({
-    enabled,
-    isOnline,
-    todayDate,
-    tomorrowDate,
-    todayLive: todayQuery.data,
-    tomorrowLive: tomorrowQuery.data,
-  })
-
-  const todayData = pickTodayDisplayData(
-    offline.today.value,
-    todayQuery.data,
-  )
-  const tomorrowData = pickTodayDisplayData(
-    offline.tomorrow.value,
-    tomorrowQuery.data,
-  )
 
   const value = useMemo<StaffTodayContextValue>(
     () => ({
       state: {
         todayDate,
         tomorrowDate,
-        todayData,
-        tomorrowData,
-        todayLoading: todayLoadingWithoutData(
-          todayQuery.isLoading,
-          offline.today.idbLoading,
-          todayData,
-        ),
-        tomorrowLoading: todayLoadingWithoutData(
-          tomorrowQuery.isLoading,
-          offline.tomorrow.idbLoading,
-          tomorrowData,
-        ),
+        todayData: todayQuery.data,
+        tomorrowData: tomorrowQuery.data,
+        todayLoading: todayQuery.isLoading && !todayQuery.data,
+        tomorrowLoading: tomorrowQuery.isLoading && !tomorrowQuery.data,
         todayError: todayQuery.error,
         tomorrowError: tomorrowQuery.error,
-        todaySnapshotUpdatedAt: offline.today.snapshotUpdatedAt,
-        tomorrowSnapshotUpdatedAt: offline.tomorrow.snapshotUpdatedAt,
-        hasTodaySnapshot: offline.today.hasSnapshot,
-        hasTomorrowSnapshot: offline.tomorrow.hasSnapshot,
-        isOnline,
         staffName: firstNameOf(userName),
       },
       actions: {
@@ -95,16 +53,14 @@ export function StaffTodayProvider({
     [
       todayDate,
       tomorrowDate,
-      todayData,
-      tomorrowData,
+      todayQuery.data,
+      tomorrowQuery.data,
       todayQuery.isLoading,
       tomorrowQuery.isLoading,
       todayQuery.error,
       tomorrowQuery.error,
       todayQuery.refetch,
       tomorrowQuery.refetch,
-      offline,
-      isOnline,
       userName,
     ],
   )

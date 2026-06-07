@@ -788,6 +788,133 @@ export type OnboardingUpdateRequest = {
 
 export type OnboardingAction = 'complete' | 'skip' | 'reopen' | 'set-manager-staff' | 'confirm-business-hours';
 
+export type DashboardData = {
+    totalClients: number;
+    totalStaff: number;
+    todayAppointments: number;
+    weekAppointments: number;
+    monthAppointments: number;
+    todayStatusBreakdown: Array<AppointmentStatusCount>;
+    monthStatusBreakdown: Array<AppointmentStatusCount>;
+    popularServices: Array<PopularServiceCount>;
+    staffLoad: Array<StaffLoadItem>;
+    monthRevenue: number;
+    newClientsThisMonth: number;
+};
+
+export type AppointmentStatusCount = {
+    status: AppointmentStatus;
+    count: number;
+};
+
+export type AppointmentStatus = 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show';
+
+export type PopularServiceCount = {
+    name: string;
+    count: number;
+};
+
+export type StaffLoadItem = {
+    name: string;
+    color: string;
+    count: number;
+};
+
+export type TodayData = {
+    date: string;
+    counts: TodayCounts;
+    appointments: Array<AppointmentWithDetails>;
+    attentionItems: Array<TodayAttentionItem>;
+    staffLoad: Array<TodayStaffLoad>;
+    openSlots: Array<TodayOpenSlot>;
+};
+
+export type TodayCounts = {
+    scheduled: number;
+    confirmed: number;
+    completed: number;
+    cancelled: number;
+    'no-show': number;
+};
+
+export type TodayAttentionItem = {
+    id: string;
+    type: 'soon' | 'overdue' | 'no-show-risk' | 'first-time' | 'vip' | 'incomplete-client';
+    title: string;
+    detail: string;
+    appointmentId?: string;
+    clientId?: string;
+    priority: number;
+};
+
+export type TodayStaffLoad = {
+    staffId: string;
+    staffName: string;
+    appointmentCount: number;
+    bookedMinutes: number;
+};
+
+export type TodayOpenSlot = {
+    staffId: string;
+    staffName: string;
+    ranges: Array<TodayOpenSlotRange>;
+};
+
+export type TodayOpenSlotRange = {
+    startTime: string;
+    endTime: string;
+};
+
+export type RetentionListResponse = {
+    items: Array<RetentionItem>;
+};
+
+export type RetentionItem = {
+    id: string;
+    client: Client;
+    reason: FollowUpReason;
+    status: FollowUpStatus;
+    dueDate: string;
+    lastVisitDate: string | null;
+    lastServiceName: string | null;
+    completedCount: number;
+    estimatedSpend: number;
+    noShowCount: number;
+    suggestedReason: string;
+};
+
+export type RetentionUpdateResponse = {
+    followUp: ClientFollowUp;
+};
+
+export type RetentionUpdateRequest = {
+    status: FollowUpStatus;
+};
+
+export type RetentionBaleMessageResponse = {
+    delivery: RetentionMessageDelivery;
+    result: RetentionBaleMessageResult;
+};
+
+export type RetentionMessageDelivery = {
+    id: string;
+    provider: 'bale_safir';
+    status: 'sent' | 'failed' | 'skipped';
+    providerMessageId: string | null;
+    error: string | null;
+};
+
+export type RetentionBaleMessageResult = {
+    status: 'sent' | 'failed' | 'skipped';
+    providerMessageId?: string | null;
+    error?: string | null;
+    phone?: string | null;
+};
+
+export type RetentionBaleMessageRequest = {
+    retry?: boolean;
+};
+
 export type GetApiV1ClientsData = {
     body?: never;
     path?: never;
@@ -2699,3 +2826,177 @@ export type PatchApiV1OnboardingResponses = {
 };
 
 export type PatchApiV1OnboardingResponse = PatchApiV1OnboardingResponses[keyof PatchApiV1OnboardingResponses];
+
+export type GetApiV1DashboardData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/dashboard';
+};
+
+export type GetApiV1DashboardErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing view_dashboard permission
+     */
+    403: ApiError;
+};
+
+export type GetApiV1DashboardError = GetApiV1DashboardErrors[keyof GetApiV1DashboardErrors];
+
+export type GetApiV1DashboardResponses = {
+    /**
+     * Dashboard metrics for the authenticated salon
+     */
+    200: DashboardData;
+};
+
+export type GetApiV1DashboardResponse = GetApiV1DashboardResponses[keyof GetApiV1DashboardResponses];
+
+export type GetApiV1TodayData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Calendar date (YYYY-MM-DD). Defaults to salon local today.
+         */
+        date?: string;
+    };
+    url: '/api/v1/today';
+};
+
+export type GetApiV1TodayErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but not a salon member
+     */
+    403: ApiError;
+};
+
+export type GetApiV1TodayError = GetApiV1TodayErrors[keyof GetApiV1TodayErrors];
+
+export type GetApiV1TodayResponses = {
+    /**
+     * Today view payload for the requested date
+     */
+    200: TodayData;
+};
+
+export type GetApiV1TodayResponse = GetApiV1TodayResponses[keyof GetApiV1TodayResponses];
+
+export type GetApiV1RetentionData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/retention';
+};
+
+export type GetApiV1RetentionErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_settings permission
+     */
+    403: ApiError;
+};
+
+export type GetApiV1RetentionError = GetApiV1RetentionErrors[keyof GetApiV1RetentionErrors];
+
+export type GetApiV1RetentionResponses = {
+    /**
+     * Retention queue items for the authenticated salon
+     */
+    200: RetentionListResponse;
+};
+
+export type GetApiV1RetentionResponse = GetApiV1RetentionResponses[keyof GetApiV1RetentionResponses];
+
+export type PatchApiV1RetentionByIdData = {
+    body: RetentionUpdateRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/retention/{id}';
+};
+
+export type PatchApiV1RetentionByIdErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_settings permission
+     */
+    403: ApiError;
+    /**
+     * Follow-up not found
+     */
+    404: ApiError;
+};
+
+export type PatchApiV1RetentionByIdError = PatchApiV1RetentionByIdErrors[keyof PatchApiV1RetentionByIdErrors];
+
+export type PatchApiV1RetentionByIdResponses = {
+    /**
+     * Updated follow-up
+     */
+    200: RetentionUpdateResponse;
+};
+
+export type PatchApiV1RetentionByIdResponse = PatchApiV1RetentionByIdResponses[keyof PatchApiV1RetentionByIdResponses];
+
+export type PostApiV1RetentionByIdBaleMessageData = {
+    body?: RetentionBaleMessageRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/retention/{id}/bale-message';
+};
+
+export type PostApiV1RetentionByIdBaleMessageErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_settings permission
+     */
+    403: ApiError;
+    /**
+     * Follow-up not found
+     */
+    404: ApiError;
+    /**
+     * Follow-up not open, message already sent, or retry required
+     */
+    409: ApiError;
+};
+
+export type PostApiV1RetentionByIdBaleMessageError = PostApiV1RetentionByIdBaleMessageErrors[keyof PostApiV1RetentionByIdBaleMessageErrors];
+
+export type PostApiV1RetentionByIdBaleMessageResponses = {
+    /**
+     * Message delivery result
+     */
+    200: RetentionBaleMessageResponse;
+};
+
+export type PostApiV1RetentionByIdBaleMessageResponse = PostApiV1RetentionByIdBaleMessageResponses[keyof PostApiV1RetentionByIdBaleMessageResponses];

@@ -11,14 +11,12 @@ import { cn } from '@repo/ui/utils'
 import { displayPhone } from '@repo/salon-core/phone'
 import { toPersianDigits } from '@repo/salon-core/persian-digits'
 import type { Client } from '@repo/salon-core/types'
-import type { RetentionQueueResponse } from '@repo/api-client'
 
-import { api } from '#/lib/api-client'
 import {
   clientsListQueryOptions,
   getApiV1ClientsQueryKey,
 } from '#/lib/clients-queries'
-import { HEAVY_QUERY_STALE_TIME_MS } from '#/lib/query-client'
+import { retentionListQueryOptions } from '#/lib/retention-queries'
 import { ClientDrawer } from '#/components/clients/client-drawer'
 import {
   ClientAvatar,
@@ -31,7 +29,6 @@ import { ClientsSkeleton } from '#/components/clients/clients-skeleton'
 type FilterId = 'all' | 'vip' | 'followup'
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000
-const retentionQueryKey = ['retention'] as const
 
 export const Route = createFileRoute('/_authed/clients')({
   beforeLoad: ({ context }) => {
@@ -101,11 +98,7 @@ function ClientsPage() {
 
   const { data: clients = [], isPending } = useQuery(clientsListQueryOptions())
 
-  const { data: retentionData } = useQuery({
-    queryKey: retentionQueryKey,
-    queryFn: ({ signal }) => api.retention.list({ signal }),
-    staleTime: HEAVY_QUERY_STALE_TIME_MS,
-  }) as { data: RetentionQueueResponse | undefined }
+  const { data: retentionData } = useQuery(retentionListQueryOptions())
 
   const followUpIds = useMemo(
     () => new Set((retentionData?.items ?? []).map((item) => item.client.id)),

@@ -3,7 +3,7 @@
   "info": {
     "title": "Saluna API",
     "version": "0.7.0",
-    "description": "Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. This contract is expanded incrementally; clients, staff, services catalog, appointments, appointment-requests, settings, salon-profile, salon-public-settings, and onboarding route groups are documented."
+    "description": "Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. This contract is expanded incrementally; clients, staff, services catalog, appointments, appointment-requests, settings, salon-profile, salon-public-settings, onboarding, dashboard, today, and retention route groups are documented."
   },
   "servers": [
     {
@@ -63,6 +63,18 @@
     {
       "name": "Onboarding",
       "description": "Manager onboarding wizard status and step actions"
+    },
+    {
+      "name": "Dashboard",
+      "description": "Manager dashboard aggregates and metrics"
+    },
+    {
+      "name": "Today",
+      "description": "Manager and staff today views"
+    },
+    {
+      "name": "Retention",
+      "description": "Client follow-up retention queue"
     }
   ],
   "components": {
@@ -3063,6 +3075,477 @@
           "set-manager-staff",
           "confirm-business-hours"
         ]
+      },
+      "DashboardData": {
+        "type": "object",
+        "properties": {
+          "totalClients": {
+            "type": "number"
+          },
+          "totalStaff": {
+            "type": "number"
+          },
+          "todayAppointments": {
+            "type": "number"
+          },
+          "weekAppointments": {
+            "type": "number"
+          },
+          "monthAppointments": {
+            "type": "number"
+          },
+          "todayStatusBreakdown": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppointmentStatusCount"
+            }
+          },
+          "monthStatusBreakdown": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppointmentStatusCount"
+            }
+          },
+          "popularServices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PopularServiceCount"
+            }
+          },
+          "staffLoad": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StaffLoadItem"
+            }
+          },
+          "monthRevenue": {
+            "type": "number"
+          },
+          "newClientsThisMonth": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "totalClients",
+          "totalStaff",
+          "todayAppointments",
+          "weekAppointments",
+          "monthAppointments",
+          "todayStatusBreakdown",
+          "monthStatusBreakdown",
+          "popularServices",
+          "staffLoad",
+          "monthRevenue",
+          "newClientsThisMonth"
+        ]
+      },
+      "AppointmentStatusCount": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/AppointmentStatus"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "status",
+          "count"
+        ]
+      },
+      "AppointmentStatus": {
+        "type": "string",
+        "enum": [
+          "scheduled",
+          "confirmed",
+          "completed",
+          "cancelled",
+          "no-show"
+        ]
+      },
+      "PopularServiceCount": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "count"
+        ]
+      },
+      "StaffLoadItem": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "color",
+          "count"
+        ]
+      },
+      "TodayData": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/TodayCounts"
+          },
+          "appointments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppointmentWithDetails"
+            }
+          },
+          "attentionItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TodayAttentionItem"
+            }
+          },
+          "staffLoad": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TodayStaffLoad"
+            }
+          },
+          "openSlots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TodayOpenSlot"
+            }
+          }
+        },
+        "required": [
+          "date",
+          "counts",
+          "appointments",
+          "attentionItems",
+          "staffLoad",
+          "openSlots"
+        ]
+      },
+      "TodayCounts": {
+        "type": "object",
+        "properties": {
+          "scheduled": {
+            "type": "number"
+          },
+          "confirmed": {
+            "type": "number"
+          },
+          "completed": {
+            "type": "number"
+          },
+          "cancelled": {
+            "type": "number"
+          },
+          "no-show": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "scheduled",
+          "confirmed",
+          "completed",
+          "cancelled",
+          "no-show"
+        ]
+      },
+      "TodayAttentionItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "soon",
+              "overdue",
+              "no-show-risk",
+              "first-time",
+              "vip",
+              "incomplete-client"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "appointmentId": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "title",
+          "detail",
+          "priority"
+        ]
+      },
+      "TodayStaffLoad": {
+        "type": "object",
+        "properties": {
+          "staffId": {
+            "type": "string"
+          },
+          "staffName": {
+            "type": "string"
+          },
+          "appointmentCount": {
+            "type": "number"
+          },
+          "bookedMinutes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "staffId",
+          "staffName",
+          "appointmentCount",
+          "bookedMinutes"
+        ]
+      },
+      "TodayOpenSlot": {
+        "type": "object",
+        "properties": {
+          "staffId": {
+            "type": "string"
+          },
+          "staffName": {
+            "type": "string"
+          },
+          "ranges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TodayOpenSlotRange"
+            }
+          }
+        },
+        "required": [
+          "staffId",
+          "staffName",
+          "ranges"
+        ]
+      },
+      "TodayOpenSlotRange": {
+        "type": "object",
+        "properties": {
+          "startTime": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "startTime",
+          "endTime"
+        ]
+      },
+      "RetentionListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RetentionItem"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "RetentionItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "client": {
+            "$ref": "#/components/schemas/Client"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/FollowUpReason"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FollowUpStatus"
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "lastVisitDate": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastServiceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "completedCount": {
+            "type": "number"
+          },
+          "estimatedSpend": {
+            "type": "number"
+          },
+          "noShowCount": {
+            "type": "number"
+          },
+          "suggestedReason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "client",
+          "reason",
+          "status",
+          "dueDate",
+          "lastVisitDate",
+          "lastServiceName",
+          "completedCount",
+          "estimatedSpend",
+          "noShowCount",
+          "suggestedReason"
+        ]
+      },
+      "RetentionUpdateResponse": {
+        "type": "object",
+        "properties": {
+          "followUp": {
+            "$ref": "#/components/schemas/ClientFollowUp"
+          }
+        },
+        "required": [
+          "followUp"
+        ]
+      },
+      "RetentionUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/FollowUpStatus"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "RetentionBaleMessageResponse": {
+        "type": "object",
+        "properties": {
+          "delivery": {
+            "$ref": "#/components/schemas/RetentionMessageDelivery"
+          },
+          "result": {
+            "$ref": "#/components/schemas/RetentionBaleMessageResult"
+          }
+        },
+        "required": [
+          "delivery",
+          "result"
+        ]
+      },
+      "RetentionMessageDelivery": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "bale_safir"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "failed",
+              "skipped"
+            ]
+          },
+          "providerMessageId": {
+            "type": "string",
+            "nullable": true
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "status",
+          "providerMessageId",
+          "error"
+        ]
+      },
+      "RetentionBaleMessageResult": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "failed",
+              "skipped"
+            ]
+          },
+          "providerMessageId": {
+            "type": "string",
+            "nullable": true
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "RetentionBaleMessageRequest": {
+        "type": "object",
+        "properties": {
+          "retry": {
+            "type": "boolean",
+            "default": false
+          }
+        }
       }
     },
     "parameters": {}
@@ -7071,6 +7554,356 @@
           },
           "403": {
             "description": "Authenticated but missing manage_settings permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Get salon dashboard metrics",
+        "description": "Aggregated counts, revenue, and breakdowns for the manager dashboard.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard metrics for the authenticated salon",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardData"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing view_dashboard permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/today": {
+      "get": {
+        "tags": [
+          "Today"
+        ],
+        "summary": "Get today view data",
+        "description": "Appointments, attention items, staff load, and open slots for a calendar day. Staff members only see their own appointments.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "2026-06-07",
+              "description": "Calendar date (YYYY-MM-DD). Defaults to salon local today."
+            },
+            "required": false,
+            "description": "Calendar date (YYYY-MM-DD). Defaults to salon local today.",
+            "name": "date",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Today view payload for the requested date",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodayData"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not a salon member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/retention": {
+      "get": {
+        "tags": [
+          "Retention"
+        ],
+        "summary": "List retention follow-up queue",
+        "description": "Open client follow-ups derived from appointment history. Does not send messages automatically.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retention queue items for the authenticated salon",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing manage_settings permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/retention/{id}": {
+      "patch": {
+        "tags": [
+          "Retention"
+        ],
+        "summary": "Update retention follow-up status",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated follow-up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionUpdateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing manage_settings permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Follow-up not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/retention/{id}/bale-message": {
+      "post": {
+        "tags": [
+          "Retention"
+        ],
+        "summary": "Send Bale retention message",
+        "description": "Sends a one-off follow-up message via Bale Safir for an open retention item.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionBaleMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message delivery result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionBaleMessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing manage_settings permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Follow-up not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Follow-up not open, message already sent, or retry required",
             "content": {
               "application/json": {
                 "schema": {

@@ -7,7 +7,7 @@ import type {
 export type StatusActionFeedback = {
   appointmentId: string
   status: AppointmentWithDetails['status']
-  mode: 'saving' | 'saved' | 'queued' | 'error'
+  mode: 'saving' | 'saved' | 'error'
   message: string
 } | null
 
@@ -20,11 +20,6 @@ export interface StaffTodayState {
   tomorrowLoading: boolean
   todayError: unknown
   tomorrowError: unknown
-  todaySnapshotUpdatedAt?: string | null
-  tomorrowSnapshotUpdatedAt?: string | null
-  hasTodaySnapshot: boolean
-  hasTomorrowSnapshot: boolean
-  isOnline: boolean
   staffName: string
 }
 

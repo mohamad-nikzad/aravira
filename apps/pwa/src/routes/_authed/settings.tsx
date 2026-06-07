@@ -37,16 +37,15 @@ import type {
 } from '@repo/salon-core/forms/settings'
 
 import { useAuth } from '#/lib/auth'
+import { api } from '#/lib/api-client'
 import { useManagerDataClient } from '#/lib/manager-data-client'
 import { useTheme } from '#/lib/theme'
-import { api } from '#/lib/api-client'
-import { HEAVY_QUERY_STALE_TIME_MS } from '#/lib/query-client'
+import { dashboardQueryOptions } from '#/lib/dashboard-queries'
 import {
   businessSettingsQueryOptions,
   useUpdateBusinessSettingsMutation,
 } from '#/lib/settings-queries'
 import {
-  dashboardQueryKey,
   notificationPreferencesQueryKey,
 } from '#/lib/query-keys'
 import { BusinessHoursFields } from '#/components/business-hours/business-hours-fields'
@@ -171,10 +170,8 @@ function SettingsPage() {
     queryFn: ({ signal }) => api.notificationPreferences.get({ signal }),
   })
   const dashboardQuery = useQuery({
-    queryKey: dashboardQueryKey,
-    queryFn: ({ signal }) => api.dashboard.get({ signal }),
+    ...dashboardQueryOptions(),
     enabled: isManager,
-    staleTime: HEAVY_QUERY_STALE_TIME_MS,
   })
 
   const updateLocalAlerts = useMutation({

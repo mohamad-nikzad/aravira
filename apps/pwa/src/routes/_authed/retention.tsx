@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, CalendarPlus, Check, Phone, Send, X } from 'lucide-react'
 import {
   AlertDialog,
@@ -20,15 +20,14 @@ import { displayPhone } from '@repo/salon-core/phone'
 import { toPersianDigits } from '@repo/salon-core/persian-digits'
 import type {
   FollowUpReason,
-  FollowUpStatus,
   RetentionItem,
 } from '@repo/salon-core/types'
-import type { RetentionQueueResponse } from '@repo/api-client'
 
-import { api } from '#/lib/api-client'
-import { HEAVY_QUERY_STALE_TIME_MS } from '#/lib/query-client'
-
-const retentionQueryKey = ['retention'] as const
+import {
+  retentionListQueryOptions,
+  useSendRetentionBaleMessageMutation,
+  useUpdateRetentionStatusMutation,
+} from '#/lib/retention-queries'
 
 export const Route = createFileRoute('/_authed/retention')({
   beforeLoad: ({ context }) => {
@@ -37,11 +36,7 @@ export const Route = createFileRoute('/_authed/retention')({
     }
   },
   loader: ({ context }) =>
-    context.queryClient.ensureQueryData<RetentionQueueResponse>({
-      queryKey: retentionQueryKey,
-      queryFn: ({ signal }) => api.retention.list({ signal }),
-      staleTime: HEAVY_QUERY_STALE_TIME_MS,
-    }),
+    context.queryClient.ensureQueryData(retentionListQueryOptions()),
   component: RetentionPage,
   pendingComponent: RetentionPending,
   errorComponent: RetentionError,
@@ -110,48 +105,14 @@ function RetentionPage() {
   >({})
   const initial = Route.useLoaderData()
   const { data } = useQuery({
-    queryKey: retentionQueryKey,
-    queryFn: ({ signal }) => api.retention.list({ signal }),
+    ...retentionListQueryOptions(),
     initialData: initial,
-    staleTime: HEAVY_QUERY_STALE_TIME_MS,
   })
 
-  const updateStatus = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: FollowUpStatus }) =>
-      api.retention.updateStatus(id, status),
-    meta: {
-      skipToast: true,
-      invalidatesQuery: retentionQueryKey,
-    },
-  })
+  const updateStatus = useUpdateRetentionStatusMutation()
+  const sendBaleMessage = useSendRetentionBaleMessageMutation()
 
-  const sendBaleMessage = useMutation({
-    mutationFn: ({ id, retry }: { id: string; retry?: boolean }) =>
-      api.retention.sendBaleMessage(id, { retry }),
-    meta: {
-      skipToast: true,
-    },
-    onSuccess: (response, variables) => {
-      setBaleDeliveryById((current) => ({
-        ...current,
-        [variables.id]: {
-          status: response.delivery.status,
-          error: response.delivery.error,
-        },
-      }))
-    },
-    onError: (error, variables) => {
-      setBaleDeliveryById((current) => ({
-        ...current,
-        [variables.id]: {
-          status: 'failed',
-          error: error instanceof Error ? error.message : null,
-        },
-      }))
-    },
-  })
-
-  const items: RetentionItem[] = data.items
+  const items = data.items as unknown as RetentionItem[]
   const busyId = updateStatus.isPending ? updateStatus.variables.id : null
   const baleBusyId = sendBaleMessage.isPending
     ? sendBaleMessage.variables.id
@@ -366,6 +327,25 @@ function RetentionPage() {
                       baleDeliveryById[confirmItem.id]?.status === 'failed',
                   },
                   {
+                    onSuccess: (response) => {
+                      setBaleDeliveryById((current) => ({
+                        ...current,
+                        [confirmItem.id]: {
+                          status: response.delivery.status,
+                          error: response.delivery.error,
+                        },
+                      }))
+                    },
+                    onError: (error) => {
+                      setBaleDeliveryById((current) => ({
+                        ...current,
+                        [confirmItem.id]: {
+                          status: 'failed',
+                          error:
+                            error instanceof Error ? error.message : null,
+                        },
+                      }))
+                    },
                     onSettled: () => setConfirmItem(null),
                   },
                 )

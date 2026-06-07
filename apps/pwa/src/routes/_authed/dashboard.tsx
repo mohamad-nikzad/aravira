@@ -16,11 +16,9 @@ import { Button } from '@repo/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card'
 import { Spinner } from '@repo/ui/spinner'
 import { APPOINTMENT_STATUS } from '@repo/salon-core/types'
-import type { DashboardData } from '@repo/api-client'
 
-import { api } from '#/lib/api-client'
+import { dashboardQueryOptions } from '#/lib/dashboard-queries'
 import { HEAVY_QUERY_STALE_TIME_MS } from '#/lib/query-client'
-import { dashboardQueryKey } from '#/lib/query-keys'
 
 export const Route = createFileRoute('/_authed/dashboard')({
   beforeLoad: ({ context }) => {
@@ -30,11 +28,7 @@ export const Route = createFileRoute('/_authed/dashboard')({
     }
   },
   loader: ({ context }) =>
-    context.queryClient.ensureQueryData<DashboardData>({
-      queryKey: dashboardQueryKey,
-      queryFn: ({ signal }) => api.dashboard.get({ signal }),
-      staleTime: HEAVY_QUERY_STALE_TIME_MS,
-    }),
+    context.queryClient.ensureQueryData(dashboardQueryOptions()),
   component: DashboardPage,
   pendingComponent: DashboardPending,
   errorComponent: DashboardError,
@@ -142,10 +136,8 @@ function DashboardPage() {
   const navigate = useNavigate()
   const initial = Route.useLoaderData()
   const { data } = useQuery({
-    queryKey: dashboardQueryKey,
-    queryFn: ({ signal }) => api.dashboard.get({ signal }),
+    ...dashboardQueryOptions(),
     initialData: initial,
-    staleTime: HEAVY_QUERY_STALE_TIME_MS,
     refetchInterval: HEAVY_QUERY_STALE_TIME_MS,
   })
 

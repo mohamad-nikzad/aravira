@@ -67,6 +67,13 @@ import {
   getOnboardingRoute,
   updateOnboardingRoute,
 } from './routes/onboarding'
+import { getDashboardRoute } from './routes/dashboard'
+import { getTodayRoute } from './routes/today'
+import {
+  listRetentionRoute,
+  sendRetentionBaleMessageRoute,
+  updateRetentionRoute,
+} from './routes/retention'
 import {
   createStaffRoute,
   deleteStaffRoute,
@@ -487,6 +494,75 @@ const getOnboardingStub: RouteHandler<typeof getOnboardingRoute> = (c) =>
 const updateOnboardingStub: RouteHandler<typeof updateOnboardingRoute> = (c) =>
   c.json({ onboarding: stubOnboardingStatus }, 200)
 
+const stubDashboardData = {
+  totalClients: 0,
+  totalStaff: 0,
+  todayAppointments: 0,
+  weekAppointments: 0,
+  monthAppointments: 0,
+  todayStatusBreakdown: [] as Array<{
+    status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show'
+    count: number
+  }>,
+  monthStatusBreakdown: [] as Array<{
+    status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show'
+    count: number
+  }>,
+  popularServices: [] as Array<{ name: string; count: number }>,
+  staffLoad: [] as Array<{ name: string; color: string; count: number }>,
+  monthRevenue: 0,
+  newClientsThisMonth: 0,
+}
+
+const getDashboardStub: RouteHandler<typeof getDashboardRoute> = (c) =>
+  c.json(stubDashboardData, 200)
+
+const stubTodayData = {
+  date: '2026-06-07',
+  counts: {
+    scheduled: 0,
+    confirmed: 0,
+    completed: 0,
+    cancelled: 0,
+    'no-show': 0,
+  },
+  appointments: [],
+  attentionItems: [],
+  staffLoad: [],
+  openSlots: [],
+}
+
+const getTodayStub: RouteHandler<typeof getTodayRoute> = (c) =>
+  c.json(stubTodayData, 200)
+
+const listRetentionStub: RouteHandler<typeof listRetentionRoute> = (c) =>
+  c.json({ items: [] }, 200)
+
+const updateRetentionStub: RouteHandler<typeof updateRetentionRoute> = (c) =>
+  c.json({ followUp: stubFollowUp }, 200)
+
+const sendRetentionBaleMessageStub: RouteHandler<
+  typeof sendRetentionBaleMessageRoute
+> = (c) =>
+  c.json(
+    {
+      delivery: {
+        id: 'stub',
+        provider: 'bale_safir' as const,
+        status: 'sent' as const,
+        providerMessageId: null,
+        error: null,
+      },
+      result: {
+        status: 'sent' as const,
+        providerMessageId: null,
+        error: null,
+        phone: null,
+      },
+    },
+    200,
+  )
+
 /**
  * Minimal OpenAPI app used only for contract generation.
  * Stub handlers avoid loading auth/database modules at generate time.
@@ -597,6 +673,18 @@ export const contractApp = new OpenAPIHono()
       .openapi(getOnboardingRoute, getOnboardingStub)
       .openapi(updateOnboardingRoute, updateOnboardingStub),
   )
+  .route(
+    '/api/v1/dashboard',
+    new OpenAPIHono().openapi(getDashboardRoute, getDashboardStub),
+  )
+  .route('/api/v1/today', new OpenAPIHono().openapi(getTodayRoute, getTodayStub))
+  .route(
+    '/api/v1/retention',
+    new OpenAPIHono()
+      .openapi(listRetentionRoute, listRetentionStub)
+      .openapi(updateRetentionRoute, updateRetentionStub)
+      .openapi(sendRetentionBaleMessageRoute, sendRetentionBaleMessageStub),
+  )
 
 export const openApiDocumentConfig = {
   openapi: '3.0.0' as const,
@@ -605,7 +693,7 @@ export const openApiDocumentConfig = {
     version: '0.7.0',
     description:
       'Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. ' +
-      'This contract is expanded incrementally; clients, staff, services catalog, appointments, appointment-requests, settings, salon-profile, salon-public-settings, and onboarding route groups are documented.',
+      'This contract is expanded incrementally; clients, staff, services catalog, appointments, appointment-requests, settings, salon-profile, salon-public-settings, onboarding, dashboard, today, and retention route groups are documented.',
   },
   servers: [{ url: '', description: 'Saluna API (paths include /api/v1 prefix)' }],
   tags: [
@@ -636,6 +724,18 @@ export const openApiDocumentConfig = {
     {
       name: 'Onboarding',
       description: 'Manager onboarding wizard status and step actions',
+    },
+    {
+      name: 'Dashboard',
+      description: 'Manager dashboard aggregates and metrics',
+    },
+    {
+      name: 'Today',
+      description: 'Manager and staff today views',
+    },
+    {
+      name: 'Retention',
+      description: 'Client follow-up retention queue',
     },
   ],
   components: {

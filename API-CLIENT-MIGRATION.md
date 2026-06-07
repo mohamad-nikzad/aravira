@@ -26,7 +26,8 @@ Saluna monorepo — shared `@repo/api-client` migration using HeyAPI-generated S
 | 12. Appointment requests | ✅ Done | OpenAPI appointment-requests; PWA requests inbox on generated options |
 | 13. Settings & public page | ✅ Done | OpenAPI settings/salon-profile/salon-public-settings; PWA settings + public page on generated options |
 | 14. Onboarding | ✅ Done | OpenAPI onboarding; PWA wizard on generated options |
-| 15–16. Vertical slices | ⏳ Planned | OpenAPI + app migration per route group (see below) |
+| 15. Dashboard, today & retention | ✅ Done | OpenAPI dashboard/today/retention; PWA on generated options |
+| 16. Messaging & notifications | ⏳ Planned | OpenAPI + app migration per route group (see below) |
 | 17. data-client removal | ⏳ Planned | Drop offline layer after CRUD slices proven |
 | 18. Web public API | ⏳ Planned | `apps/web` raw fetch → generated SDK |
 | 19. Native app | ⏳ Deferred | Not in prod — migrate when scoped |
@@ -531,7 +532,7 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 | business-settings | ✅ | `legacy/business-settings.ts` | `business-settings-module` |
 | salon-profile / salon-public-settings | ✅ | `legacy/salon-profile.ts`, `salon-public-settings.ts` | — |
 | onboarding | ✅ | `legacy/onboarding.ts` | — |
-| dashboard / today / retention | ❌ | `legacy/dashboard.ts`, `today.ts`, `retention.ts` | `today-module` |
+| dashboard / today / retention | ✅ | `legacy/dashboard.ts`, `today.ts`, `retention.ts` | `today-module` (removed from today views) |
 | messaging / notifications | ❌ | `legacy/messaging.ts`, `notifications.ts` | — |
 | auth | ❌ (stay legacy) | `legacy/auth.ts` | `session-module` |
 | public booking | ❌ (Phase 18) | — | — |
@@ -584,6 +585,8 @@ Migrated domains are **online-only**. When a slice moves to the generated client
 **Phase 13 (settings & public page) done:** settings page business hours use `settings-queries.ts` (no data-client); public page, slug editor, and presence form use `salon-public-settings-queries.ts` and `salon-profile-queries.ts`; `useManagerBusinessSettingsQuery` removed.
 
 **Phase 14 (onboarding) done:** OpenAPI `onboarding` route group; wizard layout, step guards, `_authed` gate, and step screens use `onboarding-queries.ts`; hours/public steps reuse `settings-queries.ts` / `salon-public-settings-queries.ts`; legacy `onboardingQueryKey` removed.
+
+**Phase 15 (dashboard, today, retention) done:** OpenAPI `dashboard`, `today`, and `retention` route groups; dashboard, settings metrics, retention page, and clients follow-up sidebar use `dashboard-queries.ts` / `retention-queries.ts`; manager and staff today views use `today-queries.ts` with offline IndexedDB/localStorage projection removed.
 
 ---
 
@@ -753,7 +756,7 @@ Migrated domains are **online-only**. When a slice moves to the generated client
 
 ---
 
-### Phase 15: Dashboard, today & retention
+### Phase 15: Dashboard, today & retention ✅
 
 **Goal:** Read-heavy aggregates and today views off legacy API.
 
@@ -915,7 +918,7 @@ Phase 20  Legacy cleanup
  ✅ 12. OpenAPI appointment-requests → migrate requests inbox
  ✅ 13. OpenAPI settings/public → migrate settings + public page
  ✅ 14. OpenAPI onboarding → migrate wizard
- → 15. OpenAPI dashboard/today/retention → migrate aggregates
+ ✅ 15. OpenAPI dashboard/today/retention → migrate aggregates
  → 16. OpenAPI messaging/notifications → migrate connect + prefs
  → 17. Remove @repo/data-client + offline UX
  → 18. OpenAPI public → migrate apps/web
@@ -956,7 +959,7 @@ Phase 20  Legacy cleanup
 - [x] Phase 12: OpenAPI appointment-requests + migrate requests
 - [x] Phase 13: OpenAPI settings/public + migrate settings & public page
 - [x] Phase 14: OpenAPI onboarding + migrate wizard
-- [ ] Phase 15: OpenAPI dashboard/today/retention + migrate reads
+- [x] Phase 15: OpenAPI dashboard/today/retention + migrate reads
 - [ ] Phase 16: OpenAPI messaging/notifications + migrate connect/prefs
 - [ ] Phase 17: Remove `@repo/data-client` and offline UX
 - [ ] Phase 18: OpenAPI public + migrate `apps/web`

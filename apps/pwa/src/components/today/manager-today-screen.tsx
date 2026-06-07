@@ -17,20 +17,12 @@ import { toPersianDigits } from '@repo/salon-core/persian-digits'
 import { salonTodayYmd } from '@repo/salon-core/salon-local-time'
 import type { AppointmentWithDetails } from '@repo/salon-core/types'
 
-import {
-  useBumpOfflineData,
-  useManagerDataClient,
-} from '#/lib/manager-data-client'
 import { buildManagerTodayViewModel, buildWeekStrip } from '#/lib/today-view-model'
 import type { AppointmentDetailChange } from '#/lib/appointment-surface'
 import {
   AppointmentFlowDrawers,
   useAppointmentFlow,
 } from '#/components/appointments'
-import {
-  NetworkStatusBanner,
-  OfflineStateCard,
-} from '#/components/offline-state'
 import { ManagerTodaySkeleton } from '#/components/today-skeleton'
 import { ManagerTodayContext } from '#/components/today/manager-today-context'
 import {
@@ -151,9 +143,6 @@ export function ManagerTodayScreen() {
     data,
     isLoading,
     error,
-    snapshotUpdatedAt,
-    hasSnapshot,
-    isOnline,
     staff,
     services,
     clients,
@@ -162,16 +151,13 @@ export function ManagerTodayScreen() {
   const { setDate, mutateToday, onRefreshResources } = actions
 
   const navigate = useNavigate()
-  const dataClient = useManagerDataClient()
-  const bumpOfflineData = useBumpOfflineData()
   const [showDatePicker, setShowDatePicker] = useState(false)
   const appointmentFlow = useAppointmentFlow({
     defaultDate: date,
     defaultTime: '09:00',
   })
   const createReady = staff.length > 0 && services.length > 0
-  const availabilityReady = createReady && isOnline
-  const createDisabled = (!isOnline && !dataClient) || !createReady
+  const createDisabled = !createReady
 
   const {
     queue,
@@ -198,7 +184,6 @@ export function ManagerTodayScreen() {
 
   const handleAppointmentCreated = (appointment: AppointmentWithDetails) => {
     appointmentFlow.actions.closeCreateAfterSuccess()
-    bumpOfflineData()
     if (appointment.date !== date) {
       navigate({ to: '/calendar', search: { date: appointment.date } })
       return
@@ -208,7 +193,6 @@ export function ManagerTodayScreen() {
 
   const handleDetailChange = (_change: AppointmentDetailChange) => {
     appointmentFlow.actions.closeDetail()
-    bumpOfflineData()
     mutateToday()
   }
 
@@ -244,26 +228,17 @@ export function ManagerTodayScreen() {
     return (
       <div className="flex h-full flex-col bg-background">
         <ManagerTodayHeader {...headerProps} />
-
-        <NetworkStatusBanner
-          routeLabel="نمای امروز"
-          isOnline={isOnline}
-          hasSnapshot={hasSnapshot}
-          snapshotUpdatedAt={snapshotUpdatedAt}
-          hasError={Boolean(error)}
-          onRetry={handleRetry}
-        />
-
-        <OfflineStateCard
-          title="نمای امروز فعلا در دسترس نیست"
-          description={
-            isOnline
-              ? 'بارگذاری اطلاعات امروز کامل نشد. دوباره تلاش کنید.'
-              : 'برای اولین بارگذاری این بخش باید دوباره به اینترنت متصل شوید.'
-          }
-          onAction={handleRetry}
-        />
-
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            نمای امروز بارگذاری نشد
+          </p>
+          {error instanceof Error ? (
+            <p className="text-xs text-destructive">{error.message}</p>
+          ) : null}
+          <Button size="sm" onClick={handleRetry}>
+            تلاش دوباره
+          </Button>
+        </div>
         {appointmentFlowDrawers}
       </div>
     )
@@ -272,15 +247,6 @@ export function ManagerTodayScreen() {
   return (
     <div className="flex h-full flex-col bg-background">
       <ManagerTodayHeader {...headerProps} />
-
-      <NetworkStatusBanner
-        routeLabel="نمای امروز"
-        isOnline={isOnline}
-        hasSnapshot={hasSnapshot}
-        snapshotUpdatedAt={snapshotUpdatedAt}
-        hasError={Boolean(error)}
-        onRetry={handleRetry}
-      />
 
       <div className="flex-1 overflow-auto px-5 py-4">
         <div className="flex flex-col gap-5">
@@ -403,7 +369,7 @@ export function ManagerTodayScreen() {
                   variant="ghost"
                   size="sm"
                   className="h-auto p-0 text-xs text-primary"
-                  disabled={!availabilityReady}
+                  disabled={!createReady}
                   onClick={() => appointmentFlow.actions.setAvailabilityOpen(true)}
                 >
                   بررسی زمان خالی

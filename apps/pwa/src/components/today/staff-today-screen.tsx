@@ -22,10 +22,6 @@ import {
   summarizeNextOpenSlot,
 } from '#/lib/today-view-model'
 import { StatusPill } from '#/components/status-pill'
-import {
-  NetworkStatusBanner,
-  OfflineStateCard,
-} from '#/components/offline-state'
 import { StaffTodaySkeleton } from '#/components/today-skeleton'
 import {
   StaffTodayContext
@@ -87,12 +83,10 @@ function StaffAppointmentCard({
 function StaffActionButtons({
   appointment,
   feedback,
-  isOnline,
   onPatchStatus,
 }: {
   appointment: AppointmentWithDetails
   feedback: StatusActionFeedback
-  isOnline: boolean
   onPatchStatus: (
     appointmentId: string,
     status: AppointmentWithDetails['status'],
@@ -102,7 +96,6 @@ function StaffActionButtons({
     feedback?.appointmentId === appointment.id ? feedback : null
   const isSaving = currentFeedback?.mode === 'saving'
   const canActOnVisit = ACTIVE_STATUSES.has(appointment.status)
-  const networkBlocked = !isOnline
 
   if (!canActOnVisit) {
     return null
@@ -116,7 +109,7 @@ function StaffActionButtons({
             size="sm"
             variant="outline"
             className="h-8 touch-manipulation text-xs"
-            disabled={isSaving || networkBlocked}
+            disabled={isSaving}
             onClick={() => onPatchStatus(appointment.id, 'confirmed')}
           >
             {isSaving && currentFeedback.status === 'confirmed' && (
@@ -128,7 +121,7 @@ function StaffActionButtons({
         <Button
           size="sm"
           className="h-8 touch-manipulation text-xs"
-          disabled={isSaving || networkBlocked}
+          disabled={isSaving}
           onClick={() => onPatchStatus(appointment.id, 'completed')}
         >
           {isSaving && currentFeedback.status === 'completed' && (
@@ -140,7 +133,7 @@ function StaffActionButtons({
           size="sm"
           variant="secondary"
           className="h-8 touch-manipulation text-xs"
-          disabled={isSaving || networkBlocked}
+          disabled={isSaving}
           onClick={() => onPatchStatus(appointment.id, 'no-show')}
         >
           {isSaving && currentFeedback.status === 'no-show' && (
@@ -155,9 +148,7 @@ function StaffActionButtons({
             'rounded-xl border px-2.5 py-1.5 text-xs',
             currentFeedback.mode === 'error'
               ? 'border-destructive/30 bg-destructive/10 text-destructive'
-              : currentFeedback.mode === 'queued'
-                ? 'border-amber/40 bg-amber-soft text-amber-fg'
-                : 'border-mint/40 bg-mint-soft text-mint-fg',
+              : 'border-mint/40 bg-mint-soft text-mint-fg',
           )}
         >
           {currentFeedback.message}
@@ -180,9 +171,7 @@ function StatusFeedbackBanner({
         'rounded-2xl border px-3 py-2 text-xs shadow-sm',
         feedback.mode === 'error'
           ? 'border-destructive/30 bg-destructive/10 text-destructive'
-          : feedback.mode === 'queued'
-            ? 'border-amber/40 bg-amber-soft text-amber-fg'
-            : 'border-mint/40 bg-mint-soft text-mint-fg',
+          : 'border-mint/40 bg-mint-soft text-mint-fg',
       )}
     >
       {feedback.message}
@@ -205,12 +194,6 @@ export function StaffTodayScreen() {
     todayLoading,
     tomorrowLoading,
     todayError,
-    tomorrowError,
-    todaySnapshotUpdatedAt,
-    tomorrowSnapshotUpdatedAt,
-    hasTodaySnapshot,
-    hasTomorrowSnapshot,
-    isOnline,
     staffName,
   } = state
   const { mutateToday, mutateTomorrow } = actions
@@ -287,27 +270,17 @@ export function StaffTodayScreen() {
     return (
       <div className="flex h-full flex-col bg-background">
         {staffHeader}
-
-        <NetworkStatusBanner
-          routeLabel="برنامه من"
-          isOnline={isOnline}
-          hasSnapshot={hasTodaySnapshot || hasTomorrowSnapshot}
-          snapshotUpdatedAt={
-            todaySnapshotUpdatedAt ?? tomorrowSnapshotUpdatedAt
-          }
-          hasError={Boolean(todayError || tomorrowError)}
-          onRetry={handleRetry}
-        />
-
-        <OfflineStateCard
-          title="برنامه امروز فعلا در دسترس نیست"
-          description={
-            isOnline
-              ? 'بارگذاری برنامه شما کامل نشد. دوباره تلاش کنید.'
-              : 'برای اولین بارگذاری این بخش باید دوباره به اینترنت متصل شوید.'
-          }
-          onAction={handleRetry}
-        />
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            برنامه امروز بارگذاری نشد
+          </p>
+          {todayError instanceof Error ? (
+            <p className="text-xs text-destructive">{todayError.message}</p>
+          ) : null}
+          <Button size="sm" onClick={handleRetry}>
+            تلاش دوباره
+          </Button>
+        </div>
       </div>
     )
   }
@@ -315,15 +288,6 @@ export function StaffTodayScreen() {
   return (
     <div className="flex h-full flex-col bg-background">
       {staffHeader}
-
-      <NetworkStatusBanner
-        routeLabel="برنامه من"
-        isOnline={isOnline}
-        hasSnapshot={hasTodaySnapshot || hasTomorrowSnapshot}
-        snapshotUpdatedAt={todaySnapshotUpdatedAt ?? tomorrowSnapshotUpdatedAt}
-        hasError={Boolean(todayError || tomorrowError)}
-        onRetry={handleRetry}
-      />
 
       <div className="flex-1 overflow-auto p-4">
         <div className="space-y-4">
@@ -421,7 +385,6 @@ export function StaffTodayScreen() {
                     <StaffActionButtons
                       appointment={appointment}
                       feedback={statusFeedback}
-                      isOnline={isOnline}
                       onPatchStatus={patchStatus}
                     />
                   </StaffAppointmentCard>

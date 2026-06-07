@@ -11,9 +11,6 @@ export interface ManagerTodayState {
   data?: TodayData
   isLoading: boolean
   error: unknown
-  snapshotUpdatedAt?: string | null
-  hasSnapshot: boolean
-  isOnline: boolean
   staff: User[]
   services: Service[]
   clients: Client[]
