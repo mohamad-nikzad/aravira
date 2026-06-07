@@ -3,8 +3,8 @@
 import { queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { deleteApiV1AppointmentsById, deleteApiV1StaffById, getApiV1Appointments, getApiV1AppointmentsAvailability, getApiV1AppointmentsById, getApiV1CatalogPresets, getApiV1Clients, getApiV1ClientsById, getApiV1ClientsByIdSummary, getApiV1ServiceAddons, getApiV1ServiceCategories, getApiV1ServiceFamilies, getApiV1Services, getApiV1ServicesById, getApiV1ServicesByIdAddons, getApiV1ServicesByIdComboComponents, getApiV1Staff, getApiV1StaffBookingAvailability, getApiV1StaffByIdSchedule, type Options, patchApiV1AppointmentsById, patchApiV1ClientsById, patchApiV1ServiceAddonsById, patchApiV1ServiceCategoriesById, patchApiV1ServiceFamiliesById, patchApiV1ServicesById, patchApiV1StaffById, patchApiV1StaffByIdPassword, patchApiV1StaffByIdServices, postApiV1Appointments, postApiV1AppointmentsByIdCompleteClient, postApiV1CatalogPresetsByIdApply, postApiV1Clients, postApiV1ClientsByIdFollowUps, postApiV1ServiceAddons, postApiV1ServiceCategories, postApiV1ServiceFamilies, postApiV1Services, postApiV1ServicesImportStarterTemplates, postApiV1Staff, putApiV1ServicesByIdComboComponents, putApiV1StaffByIdSchedule } from '../sdk.gen';
-import type { DeleteApiV1AppointmentsByIdData, DeleteApiV1AppointmentsByIdError, DeleteApiV1AppointmentsByIdResponse, DeleteApiV1StaffByIdData, DeleteApiV1StaffByIdError, DeleteApiV1StaffByIdResponse, GetApiV1AppointmentsAvailabilityData, GetApiV1AppointmentsAvailabilityError, GetApiV1AppointmentsAvailabilityResponse, GetApiV1AppointmentsByIdData, GetApiV1AppointmentsByIdError, GetApiV1AppointmentsByIdResponse, GetApiV1AppointmentsData, GetApiV1AppointmentsError, GetApiV1AppointmentsResponse, GetApiV1CatalogPresetsData, GetApiV1CatalogPresetsError, GetApiV1CatalogPresetsResponse, GetApiV1ClientsByIdData, GetApiV1ClientsByIdError, GetApiV1ClientsByIdResponse, GetApiV1ClientsByIdSummaryData, GetApiV1ClientsByIdSummaryError, GetApiV1ClientsByIdSummaryResponse, GetApiV1ClientsData, GetApiV1ClientsError, GetApiV1ClientsResponse, GetApiV1ServiceAddonsData, GetApiV1ServiceAddonsError, GetApiV1ServiceAddonsResponse, GetApiV1ServiceCategoriesData, GetApiV1ServiceCategoriesError, GetApiV1ServiceCategoriesResponse, GetApiV1ServiceFamiliesData, GetApiV1ServiceFamiliesError, GetApiV1ServiceFamiliesResponse, GetApiV1ServicesByIdAddonsData, GetApiV1ServicesByIdAddonsError, GetApiV1ServicesByIdAddonsResponse, GetApiV1ServicesByIdComboComponentsData, GetApiV1ServicesByIdComboComponentsError, GetApiV1ServicesByIdComboComponentsResponse, GetApiV1ServicesByIdData, GetApiV1ServicesByIdError, GetApiV1ServicesByIdResponse, GetApiV1ServicesData, GetApiV1ServicesError, GetApiV1ServicesResponse, GetApiV1StaffBookingAvailabilityData, GetApiV1StaffBookingAvailabilityError, GetApiV1StaffBookingAvailabilityResponse, GetApiV1StaffByIdScheduleData, GetApiV1StaffByIdScheduleError, GetApiV1StaffByIdScheduleResponse, GetApiV1StaffData, GetApiV1StaffError, GetApiV1StaffResponse, PatchApiV1AppointmentsByIdData, PatchApiV1AppointmentsByIdError, PatchApiV1AppointmentsByIdResponse, PatchApiV1ClientsByIdData, PatchApiV1ClientsByIdError, PatchApiV1ClientsByIdResponse, PatchApiV1ServiceAddonsByIdData, PatchApiV1ServiceAddonsByIdError, PatchApiV1ServiceAddonsByIdResponse, PatchApiV1ServiceCategoriesByIdData, PatchApiV1ServiceCategoriesByIdError, PatchApiV1ServiceCategoriesByIdResponse, PatchApiV1ServiceFamiliesByIdData, PatchApiV1ServiceFamiliesByIdError, PatchApiV1ServiceFamiliesByIdResponse, PatchApiV1ServicesByIdData, PatchApiV1ServicesByIdError, PatchApiV1ServicesByIdResponse, PatchApiV1StaffByIdData, PatchApiV1StaffByIdError, PatchApiV1StaffByIdPasswordData, PatchApiV1StaffByIdPasswordError, PatchApiV1StaffByIdPasswordResponse, PatchApiV1StaffByIdResponse, PatchApiV1StaffByIdServicesData, PatchApiV1StaffByIdServicesError, PatchApiV1StaffByIdServicesResponse, PostApiV1AppointmentsByIdCompleteClientData, PostApiV1AppointmentsByIdCompleteClientError, PostApiV1AppointmentsByIdCompleteClientResponse, PostApiV1AppointmentsData, PostApiV1AppointmentsError, PostApiV1AppointmentsResponse, PostApiV1CatalogPresetsByIdApplyData, PostApiV1CatalogPresetsByIdApplyError, PostApiV1CatalogPresetsByIdApplyResponse, PostApiV1ClientsByIdFollowUpsData, PostApiV1ClientsByIdFollowUpsError, PostApiV1ClientsByIdFollowUpsResponse, PostApiV1ClientsData, PostApiV1ClientsError, PostApiV1ClientsResponse, PostApiV1ServiceAddonsData, PostApiV1ServiceAddonsError, PostApiV1ServiceAddonsResponse, PostApiV1ServiceCategoriesData, PostApiV1ServiceCategoriesError, PostApiV1ServiceCategoriesResponse, PostApiV1ServiceFamiliesData, PostApiV1ServiceFamiliesError, PostApiV1ServiceFamiliesResponse, PostApiV1ServicesData, PostApiV1ServicesError, PostApiV1ServicesImportStarterTemplatesData, PostApiV1ServicesImportStarterTemplatesError, PostApiV1ServicesImportStarterTemplatesResponse, PostApiV1ServicesResponse, PostApiV1StaffData, PostApiV1StaffError, PostApiV1StaffResponse, PutApiV1ServicesByIdComboComponentsData, PutApiV1ServicesByIdComboComponentsError, PutApiV1ServicesByIdComboComponentsResponse, PutApiV1StaffByIdScheduleData, PutApiV1StaffByIdScheduleError, PutApiV1StaffByIdScheduleResponse } from '../types.gen';
+import { deleteApiV1AppointmentsById, deleteApiV1StaffById, getApiV1AppointmentRequests, getApiV1Appointments, getApiV1AppointmentsAvailability, getApiV1AppointmentsById, getApiV1CatalogPresets, getApiV1Clients, getApiV1ClientsById, getApiV1ClientsByIdSummary, getApiV1ServiceAddons, getApiV1ServiceCategories, getApiV1ServiceFamilies, getApiV1Services, getApiV1ServicesById, getApiV1ServicesByIdAddons, getApiV1ServicesByIdComboComponents, getApiV1Staff, getApiV1StaffBookingAvailability, getApiV1StaffByIdSchedule, type Options, patchApiV1AppointmentsById, patchApiV1ClientsById, patchApiV1ServiceAddonsById, patchApiV1ServiceCategoriesById, patchApiV1ServiceFamiliesById, patchApiV1ServicesById, patchApiV1StaffById, patchApiV1StaffByIdPassword, patchApiV1StaffByIdServices, postApiV1AppointmentRequestsByIdApprove, postApiV1AppointmentRequestsByIdReject, postApiV1Appointments, postApiV1AppointmentsByIdCompleteClient, postApiV1CatalogPresetsByIdApply, postApiV1Clients, postApiV1ClientsByIdFollowUps, postApiV1ServiceAddons, postApiV1ServiceCategories, postApiV1ServiceFamilies, postApiV1Services, postApiV1ServicesImportStarterTemplates, postApiV1Staff, putApiV1ServicesByIdComboComponents, putApiV1StaffByIdSchedule } from '../sdk.gen';
+import type { DeleteApiV1AppointmentsByIdData, DeleteApiV1AppointmentsByIdError, DeleteApiV1AppointmentsByIdResponse, DeleteApiV1StaffByIdData, DeleteApiV1StaffByIdError, DeleteApiV1StaffByIdResponse, GetApiV1AppointmentRequestsData, GetApiV1AppointmentRequestsError, GetApiV1AppointmentRequestsResponse, GetApiV1AppointmentsAvailabilityData, GetApiV1AppointmentsAvailabilityError, GetApiV1AppointmentsAvailabilityResponse, GetApiV1AppointmentsByIdData, GetApiV1AppointmentsByIdError, GetApiV1AppointmentsByIdResponse, GetApiV1AppointmentsData, GetApiV1AppointmentsError, GetApiV1AppointmentsResponse, GetApiV1CatalogPresetsData, GetApiV1CatalogPresetsError, GetApiV1CatalogPresetsResponse, GetApiV1ClientsByIdData, GetApiV1ClientsByIdError, GetApiV1ClientsByIdResponse, GetApiV1ClientsByIdSummaryData, GetApiV1ClientsByIdSummaryError, GetApiV1ClientsByIdSummaryResponse, GetApiV1ClientsData, GetApiV1ClientsError, GetApiV1ClientsResponse, GetApiV1ServiceAddonsData, GetApiV1ServiceAddonsError, GetApiV1ServiceAddonsResponse, GetApiV1ServiceCategoriesData, GetApiV1ServiceCategoriesError, GetApiV1ServiceCategoriesResponse, GetApiV1ServiceFamiliesData, GetApiV1ServiceFamiliesError, GetApiV1ServiceFamiliesResponse, GetApiV1ServicesByIdAddonsData, GetApiV1ServicesByIdAddonsError, GetApiV1ServicesByIdAddonsResponse, GetApiV1ServicesByIdComboComponentsData, GetApiV1ServicesByIdComboComponentsError, GetApiV1ServicesByIdComboComponentsResponse, GetApiV1ServicesByIdData, GetApiV1ServicesByIdError, GetApiV1ServicesByIdResponse, GetApiV1ServicesData, GetApiV1ServicesError, GetApiV1ServicesResponse, GetApiV1StaffBookingAvailabilityData, GetApiV1StaffBookingAvailabilityError, GetApiV1StaffBookingAvailabilityResponse, GetApiV1StaffByIdScheduleData, GetApiV1StaffByIdScheduleError, GetApiV1StaffByIdScheduleResponse, GetApiV1StaffData, GetApiV1StaffError, GetApiV1StaffResponse, PatchApiV1AppointmentsByIdData, PatchApiV1AppointmentsByIdError, PatchApiV1AppointmentsByIdResponse, PatchApiV1ClientsByIdData, PatchApiV1ClientsByIdError, PatchApiV1ClientsByIdResponse, PatchApiV1ServiceAddonsByIdData, PatchApiV1ServiceAddonsByIdError, PatchApiV1ServiceAddonsByIdResponse, PatchApiV1ServiceCategoriesByIdData, PatchApiV1ServiceCategoriesByIdError, PatchApiV1ServiceCategoriesByIdResponse, PatchApiV1ServiceFamiliesByIdData, PatchApiV1ServiceFamiliesByIdError, PatchApiV1ServiceFamiliesByIdResponse, PatchApiV1ServicesByIdData, PatchApiV1ServicesByIdError, PatchApiV1ServicesByIdResponse, PatchApiV1StaffByIdData, PatchApiV1StaffByIdError, PatchApiV1StaffByIdPasswordData, PatchApiV1StaffByIdPasswordError, PatchApiV1StaffByIdPasswordResponse, PatchApiV1StaffByIdResponse, PatchApiV1StaffByIdServicesData, PatchApiV1StaffByIdServicesError, PatchApiV1StaffByIdServicesResponse, PostApiV1AppointmentRequestsByIdApproveData, PostApiV1AppointmentRequestsByIdApproveError, PostApiV1AppointmentRequestsByIdApproveResponse, PostApiV1AppointmentRequestsByIdRejectData, PostApiV1AppointmentRequestsByIdRejectError, PostApiV1AppointmentRequestsByIdRejectResponse, PostApiV1AppointmentsByIdCompleteClientData, PostApiV1AppointmentsByIdCompleteClientError, PostApiV1AppointmentsByIdCompleteClientResponse, PostApiV1AppointmentsData, PostApiV1AppointmentsError, PostApiV1AppointmentsResponse, PostApiV1CatalogPresetsByIdApplyData, PostApiV1CatalogPresetsByIdApplyError, PostApiV1CatalogPresetsByIdApplyResponse, PostApiV1ClientsByIdFollowUpsData, PostApiV1ClientsByIdFollowUpsError, PostApiV1ClientsByIdFollowUpsResponse, PostApiV1ClientsData, PostApiV1ClientsError, PostApiV1ClientsResponse, PostApiV1ServiceAddonsData, PostApiV1ServiceAddonsError, PostApiV1ServiceAddonsResponse, PostApiV1ServiceCategoriesData, PostApiV1ServiceCategoriesError, PostApiV1ServiceCategoriesResponse, PostApiV1ServiceFamiliesData, PostApiV1ServiceFamiliesError, PostApiV1ServiceFamiliesResponse, PostApiV1ServicesData, PostApiV1ServicesError, PostApiV1ServicesImportStarterTemplatesData, PostApiV1ServicesImportStarterTemplatesError, PostApiV1ServicesImportStarterTemplatesResponse, PostApiV1ServicesResponse, PostApiV1StaffData, PostApiV1StaffError, PostApiV1StaffResponse, PutApiV1ServicesByIdComboComponentsData, PutApiV1ServicesByIdComboComponentsError, PutApiV1ServicesByIdComboComponentsResponse, PutApiV1StaffByIdScheduleData, PutApiV1StaffByIdScheduleError, PutApiV1StaffByIdScheduleResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -749,6 +749,60 @@ export const postApiV1AppointmentsByIdCompleteClientMutation = (options?: Partia
     const mutationOptions: UseMutationOptions<PostApiV1AppointmentsByIdCompleteClientResponse, PostApiV1AppointmentsByIdCompleteClientError, Options<PostApiV1AppointmentsByIdCompleteClientData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await postApiV1AppointmentsByIdCompleteClient({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getApiV1AppointmentRequestsQueryKey = (options?: Options<GetApiV1AppointmentRequestsData>) => createQueryKey('getApiV1AppointmentRequests', options);
+
+/**
+ * List appointment requests
+ *
+ * Manager inbox for public booking requests. Pending filter excludes past requested dates.
+ */
+export const getApiV1AppointmentRequestsOptions = (options?: Options<GetApiV1AppointmentRequestsData>) => queryOptions<GetApiV1AppointmentRequestsResponse, GetApiV1AppointmentRequestsError, GetApiV1AppointmentRequestsResponse, ReturnType<typeof getApiV1AppointmentRequestsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getApiV1AppointmentRequests({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getApiV1AppointmentRequestsQueryKey(options)
+});
+
+/**
+ * Approve appointment request
+ */
+export const postApiV1AppointmentRequestsByIdApproveMutation = (options?: Partial<Options<PostApiV1AppointmentRequestsByIdApproveData>>): UseMutationOptions<PostApiV1AppointmentRequestsByIdApproveResponse, PostApiV1AppointmentRequestsByIdApproveError, Options<PostApiV1AppointmentRequestsByIdApproveData>> => {
+    const mutationOptions: UseMutationOptions<PostApiV1AppointmentRequestsByIdApproveResponse, PostApiV1AppointmentRequestsByIdApproveError, Options<PostApiV1AppointmentRequestsByIdApproveData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postApiV1AppointmentRequestsByIdApprove({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Reject appointment request
+ */
+export const postApiV1AppointmentRequestsByIdRejectMutation = (options?: Partial<Options<PostApiV1AppointmentRequestsByIdRejectData>>): UseMutationOptions<PostApiV1AppointmentRequestsByIdRejectResponse, PostApiV1AppointmentRequestsByIdRejectError, Options<PostApiV1AppointmentRequestsByIdRejectData>> => {
+    const mutationOptions: UseMutationOptions<PostApiV1AppointmentRequestsByIdRejectResponse, PostApiV1AppointmentRequestsByIdRejectError, Options<PostApiV1AppointmentRequestsByIdRejectData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postApiV1AppointmentRequestsByIdReject({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

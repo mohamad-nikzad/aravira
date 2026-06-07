@@ -4,8 +4,8 @@ import { CalendarDays, CalendarRange, Inbox, Menu, Users } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@repo/ui/utils'
 
+import { pendingAppointmentRequestsQueryOptions } from '#/lib/appointment-requests-queries'
 import { useAuth } from '#/lib/auth'
-import { api } from '#/lib/api-client'
 
 type NavItem = {
   to: string
@@ -47,9 +47,7 @@ export function BottomNav() {
   const isManager = user?.role === 'manager'
   const onOnboarding = pathname.startsWith('/onboarding')
   const { data: pendingData } = useQuery({
-    queryKey: ['appointment-requests', 'pending'],
-    queryFn: ({ signal }) =>
-      api.appointmentRequests.list({ status: 'pending', signal }),
+    ...pendingAppointmentRequestsQueryOptions(),
     enabled: isManager && !onOnboarding,
     refetchInterval: 60_000,
   })

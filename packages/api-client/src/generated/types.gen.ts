@@ -614,6 +614,70 @@ export type CompletePlaceholderClientRequest = {
     reassignToExistingClientId?: string;
 };
 
+export type AppointmentRequestsListResponse = {
+    requests: Array<AppointmentRequestListItem>;
+};
+
+export type AppointmentRequestListItem = {
+    id: string;
+    salonId: string;
+    serviceId: string;
+    staffId: string | null;
+    requestedDate: string;
+    requestedStartTime: string;
+    requestedEndTime: string;
+    customerName: string;
+    customerPhone: string;
+    notes: string | null;
+    bookedServiceName: string;
+    bookedServiceDuration: number;
+    bookedServicePrice: number;
+    status: AppointmentRequestStatus;
+    paymentStatus: AppointmentRequestPaymentStatus;
+    depositAmount: number | null;
+    confirmationToken: string;
+    reviewedByUserId: string | null;
+    reviewedAt: string | string | unknown;
+    rejectionReason: string | null;
+    appointmentId: string | null;
+    createdAt: string | string;
+    updatedAt: string | string;
+    existingClient: AppointmentRequestExistingClient;
+    [key: string]: unknown;
+};
+
+export type AppointmentRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'expired';
+
+export type AppointmentRequestPaymentStatus = 'none' | 'pending' | 'paid';
+
+export type AppointmentRequestExistingClient = {
+    id: string;
+    name: string;
+} | null;
+
+export type ApproveAppointmentRequestResponse = {
+    appointmentId: string;
+    clientId: string;
+};
+
+export type ApproveAppointmentRequestRequest = {
+    /**
+     * Staff member assigned when converting the request to an appointment
+     */
+    staffId: string;
+};
+
+export type RejectAppointmentRequestResponse = {
+    ok: true;
+};
+
+export type RejectAppointmentRequestRequest = {
+    /**
+     * Optional rejection reason shown to salon staff
+     */
+    reason?: string;
+};
+
 export type GetApiV1ClientsData = {
     body?: never;
     path?: never;
@@ -2124,3 +2188,123 @@ export type PostApiV1AppointmentsByIdCompleteClientResponses = {
 };
 
 export type PostApiV1AppointmentsByIdCompleteClientResponse = PostApiV1AppointmentsByIdCompleteClientResponses[keyof PostApiV1AppointmentsByIdCompleteClientResponses];
+
+export type GetApiV1AppointmentRequestsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Filter by request status. Defaults to pending on the server.
+         */
+        status?: AppointmentRequestStatus & unknown;
+    };
+    url: '/api/v1/appointment-requests';
+};
+
+export type GetApiV1AppointmentRequestsErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_appointments permission
+     */
+    403: ApiError;
+};
+
+export type GetApiV1AppointmentRequestsError = GetApiV1AppointmentRequestsErrors[keyof GetApiV1AppointmentRequestsErrors];
+
+export type GetApiV1AppointmentRequestsResponses = {
+    /**
+     * Appointment requests for the authenticated salon
+     */
+    200: AppointmentRequestsListResponse;
+};
+
+export type GetApiV1AppointmentRequestsResponse = GetApiV1AppointmentRequestsResponses[keyof GetApiV1AppointmentRequestsResponses];
+
+export type PostApiV1AppointmentRequestsByIdApproveData = {
+    body: ApproveAppointmentRequestRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/appointment-requests/{id}/approve';
+};
+
+export type PostApiV1AppointmentRequestsByIdApproveErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_appointments permission
+     */
+    403: ApiError;
+    /**
+     * Appointment request not found or no longer pending
+     */
+    404: ApiError;
+    /**
+     * Slot no longer available or intake validation failed
+     */
+    409: ApiError;
+};
+
+export type PostApiV1AppointmentRequestsByIdApproveError = PostApiV1AppointmentRequestsByIdApproveErrors[keyof PostApiV1AppointmentRequestsByIdApproveErrors];
+
+export type PostApiV1AppointmentRequestsByIdApproveResponses = {
+    /**
+     * Request approved and appointment created
+     */
+    200: ApproveAppointmentRequestResponse;
+};
+
+export type PostApiV1AppointmentRequestsByIdApproveResponse = PostApiV1AppointmentRequestsByIdApproveResponses[keyof PostApiV1AppointmentRequestsByIdApproveResponses];
+
+export type PostApiV1AppointmentRequestsByIdRejectData = {
+    body?: RejectAppointmentRequestRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/appointment-requests/{id}/reject';
+};
+
+export type PostApiV1AppointmentRequestsByIdRejectErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_appointments permission
+     */
+    403: ApiError;
+    /**
+     * Appointment request not found or no longer pending
+     */
+    404: ApiError;
+};
+
+export type PostApiV1AppointmentRequestsByIdRejectError = PostApiV1AppointmentRequestsByIdRejectErrors[keyof PostApiV1AppointmentRequestsByIdRejectErrors];
+
+export type PostApiV1AppointmentRequestsByIdRejectResponses = {
+    /**
+     * Request rejected
+     */
+    200: RejectAppointmentRequestResponse;
+};
+
+export type PostApiV1AppointmentRequestsByIdRejectResponse = PostApiV1AppointmentRequestsByIdRejectResponses[keyof PostApiV1AppointmentRequestsByIdRejectResponses];

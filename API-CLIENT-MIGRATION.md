@@ -23,7 +23,8 @@ Saluna monorepo — shared `@repo/api-client` migration using HeyAPI-generated S
 | 9. Staff | ✅ Done | OpenAPI staff routes; PWA staff screens on generated query/mutation options |
 | 10. Services catalog | ✅ Done | OpenAPI services/categories/families/addons/catalog-presets; PWA catalog on generated options |
 | 11. Appointments & calendar | ✅ Done | OpenAPI appointments + availability; PWA calendar on generated options |
-| 12–16. Vertical slices | ⏳ Planned | OpenAPI + app migration per route group (see below) |
+| 12. Appointment requests | ✅ Done | OpenAPI appointment-requests; PWA requests inbox on generated options |
+| 13–16. Vertical slices | ⏳ Planned | OpenAPI + app migration per route group (see below) |
 | 17. data-client removal | ⏳ Planned | Drop offline layer after CRUD slices proven |
 | 18. Web public API | ⏳ Planned | `apps/web` raw fetch → generated SDK |
 | 19. Native app | ⏳ Deferred | Not in prod — migrate when scoped |
@@ -524,7 +525,7 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 | staff | ✅ | `legacy/staff.ts` | `staff-module` |
 | services (+ categories, families, addons) | ✅ | `legacy/services.ts` | `services-module` |
 | appointments (+ availability) | ✅ | `legacy/appointments.ts` | `appointments-module` |
-| appointment-requests | ❌ | `legacy/appointment-requests.ts` | — |
+| appointment-requests | ✅ | `legacy/appointment-requests.ts` | — |
 | business-settings | ❌ | `legacy/business-settings.ts` | `business-settings-module` |
 | salon-profile / salon-public-settings | ❌ | `legacy/salon-profile.ts`, `salon-public-settings.ts` | — |
 | onboarding | ❌ | `legacy/onboarding.ts` | — |
@@ -575,6 +576,8 @@ Migrated domains are **online-only**. When a slice moves to the generated client
 **Phase 10 (services) done:** no `service.save` / `serviceCategory.save` / `serviceFamily.save` / `serviceAddon.save` in write policy; catalog screens use `services-queries.ts`.
 
 **Phase 11 (appointments) done:** no `appointment.*` or `staffToday.appointment.updateStatus` in write policy; calendar/availability/intake use `appointments-queries.ts`; calendar no longer uses IndexedDB projection.
+
+**Phase 12 (appointment requests) done:** no `appointmentRequest.*` in write policy; requests inbox and bottom-nav badge use `appointment-requests-queries.ts`.
 
 ---
 
@@ -692,7 +695,7 @@ Migrated domains are **online-only**. When a slice moves to the generated client
 
 ---
 
-### Phase 12: Appointment requests
+### Phase 12: Appointment requests ✅
 
 **Goal:** Manager requests inbox off legacy API.
 
@@ -903,7 +906,7 @@ Phase 20  Legacy cleanup
  ✅ 9.  OpenAPI staff → migrate staff screens
  ✅ 10. OpenAPI services → migrate catalog
  ✅ 11. OpenAPI appointments → migrate calendar
- → 12. OpenAPI appointment-requests → migrate requests inbox
+ ✅ 12. OpenAPI appointment-requests → migrate requests inbox
  → 13. OpenAPI settings/public → migrate settings + public page
  → 14. OpenAPI onboarding → migrate wizard
  → 15. OpenAPI dashboard/today/retention → migrate aggregates
@@ -944,7 +947,7 @@ Phase 20  Legacy cleanup
 - [x] Phase 9: OpenAPI staff + migrate staff screens
 - [x] Phase 10: OpenAPI services catalog + migrate services screens
 - [x] Phase 11: OpenAPI appointments + migrate calendar
-- [ ] Phase 12: OpenAPI appointment-requests + migrate requests
+- [x] Phase 12: OpenAPI appointment-requests + migrate requests
 - [ ] Phase 13: OpenAPI settings/public + migrate settings & public page
 - [ ] Phase 14: OpenAPI onboarding + migrate wizard
 - [ ] Phase 15: OpenAPI dashboard/today/retention + migrate reads

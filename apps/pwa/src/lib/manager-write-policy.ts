@@ -1,28 +1,20 @@
 /**
  * Write policy for manager PWA mutations.
  *
- * - queue-offline: DataClient write + flush pending sync on success
- * - require-online: API-only; no offline queue (ADR-gated where noted)
+ * Migrated domains use generated query/mutation hooks directly (online-only).
+ * Remaining data-client operations will be removed in Phase 17.
  */
 
 export type WritePolicyMode = 'queue-offline' | 'require-online'
 
-export const MANAGER_WRITE_OPERATIONS = [
-  'appointmentRequest.approve',
-  'appointmentRequest.reject',
-] as const
+export const MANAGER_WRITE_OPERATIONS = [] as const
 
 export type ManagerWriteOperation = (typeof MANAGER_WRITE_OPERATIONS)[number]
 
-/** Per-operation write policy. ADR: request approve/reject stay require-online. */
 export const MANAGER_WRITE_POLICIES: Record<
   ManagerWriteOperation,
   WritePolicyMode
-> = {
-  /** ADR-0001 / ADR-0002: intake at approval; no offline queue or soft-hold. */
-  'appointmentRequest.approve': 'require-online',
-  'appointmentRequest.reject': 'require-online',
-}
+> = {}
 
 export function getWritePolicy(
   operation: ManagerWriteOperation,

@@ -42,16 +42,18 @@ import {
 import { formatJalaliFullDate } from '@repo/salon-core/jalali'
 import { displayPhone } from '@repo/salon-core/phone'
 import type { User, Service } from '@repo/salon-core/types'
-import type {
-  AppointmentRequestListItem,
-  AppointmentRequestStatus,
-  ListAppointmentRequestsResponse,
-} from '@repo/api-client'
 
-import { api } from '#/lib/api-client'
+import {
+  appointmentRequestsListQueryOptions,
+  getApiV1AppointmentRequestsQueryKey,
+  pendingAppointmentRequestsQueryOptions,
+  useApproveAppointmentRequestMutation,
+  useRejectAppointmentRequestMutation,
+  type AppointmentRequestListItem,
+  type AppointmentRequestStatus,
+} from '#/lib/appointment-requests-queries'
 import { servicesListQueryOptions } from '#/lib/services-queries'
 import { staffListQueryOptions } from '#/lib/staff-queries'
-import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
 import { ClientAvatar } from '#/components/clients/client-visuals'
 
 type StatusTab = AppointmentRequestStatus
@@ -117,10 +119,6 @@ const EMPTY_COPY: Record<StatusTab, { title: string; sub: string }> = {
   },
 }
 
-const pendingKey = ['appointment-requests', 'pending'] as const
-const statusKey = (status: StatusTab) =>
-  ['appointment-requests', status] as const
-
 const searchSchema = z.object({
   focus: z.string().optional(),
 })
@@ -133,11 +131,7 @@ export const Route = createFileRoute('/_authed/requests')({
     }
   },
   loader: ({ context }) =>
-    context.queryClient.ensureQueryData<ListAppointmentRequestsResponse>({
-      queryKey: pendingKey,
-      queryFn: ({ signal }) =>
-        api.appointmentRequests.list({ status: 'pending', signal }),
-    }),
+    context.queryClient.ensureQueryData(pendingAppointmentRequestsQueryOptions()),
   component: RequestsPage,
   pendingComponent: RequestsPending,
   errorComponent: RequestsError,
@@ -170,9 +164,7 @@ function RequestsPage() {
   const activeTab: StatusTab = focus ? 'pending' : tab
 
   const { data: pendingData } = useQuery({
-    queryKey: pendingKey,
-    queryFn: ({ signal }) =>
-      api.appointmentRequests.list({ status: 'pending', signal }),
+    ...pendingAppointmentRequestsQueryOptions(),
     initialData: initial,
     refetchInterval: 60_000,
   })
@@ -288,10 +280,9 @@ function RequestsList({
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
-  const { data, error, isLoading } = useQuery({
-    queryKey: statusKey(status),
-    queryFn: ({ signal }) => api.appointmentRequests.list({ status, signal }),
-  })
+  const { data, error, isLoading } = useQuery(
+    appointmentRequestsListQueryOptions(status),
+  )
 
   const { data: staffData } = useQuery({
     ...staffListQueryOptions(),
@@ -309,8 +300,14 @@ function RequestsList({
   }, [requests, status, onCount])
 
   const onChanged = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: statusKey(status) })
-    void queryClient.invalidateQueries({ queryKey: pendingKey })
+    void queryClient.invalidateQueries({
+      queryKey: getApiV1AppointmentRequestsQueryKey({ query: { status } }),
+    })
+    void queryClient.invalidateQueries({
+      queryKey: getApiV1AppointmentRequestsQueryKey({
+        query: { status: 'pending' },
+      }),
+    })
   }, [queryClient, status])
 
   const clearFocus = useCallback(
@@ -469,36 +466,8 @@ function PendingCard({
   const isReturning = request.existingClient != null
   const name = request.existingClient?.name ?? request.customerName
 
-  const approveMutation = useManagerWriteMutation('appointmentRequest.approve', {
-    apiFn: () => api.appointmentRequests.approve(request.id, { staffId }),
-    meta: { skipToast: true },
-    onSuccess: () => {
-      setErrMsg(null)
-      onChanged()
-    },
-    onError: (e: unknown) => {
-      setErrMsg(
-        e instanceof Error ? e.message : 'تأیید درخواست انجام نشد',
-      )
-    },
-  })
-
-  const rejectMutation = useManagerWriteMutation('appointmentRequest.reject', {
-    apiFn: () =>
-      api.appointmentRequests.reject(request.id, {
-        ...(rejectReason.trim() ? { reason: rejectReason.trim() } : {}),
-      }),
-    meta: { skipToast: true },
-    onSuccess: () => {
-      setErrMsg(null)
-      setRejectOpen(false)
-      setRejectReason('')
-      onChanged()
-    },
-    onError: (e: unknown) => {
-      setErrMsg(e instanceof Error ? e.message : 'رد درخواست انجام نشد')
-    },
-  })
+  const approveMutation = useApproveAppointmentRequestMutation()
+  const rejectMutation = useRejectAppointmentRequestMutation()
 
   const submitting = approveMutation.isPending || rejectMutation.isPending
 
@@ -508,12 +477,41 @@ function PendingCard({
       return
     }
     setErrMsg(null)
-    approveMutation.mutate()
+    approveMutation.mutate(
+      { requestId: request.id, staffId },
+      {
+        onSuccess: () => {
+          setErrMsg(null)
+          onChanged()
+        },
+        onError: (e: unknown) => {
+          setErrMsg(
+            e instanceof Error ? e.message : 'تأیید درخواست انجام نشد',
+          )
+        },
+      },
+    )
   }
 
   const reject = () => {
     setErrMsg(null)
-    rejectMutation.mutate()
+    rejectMutation.mutate(
+      {
+        requestId: request.id,
+        ...(rejectReason.trim() ? { reason: rejectReason.trim() } : {}),
+      },
+      {
+        onSuccess: () => {
+          setErrMsg(null)
+          setRejectOpen(false)
+          setRejectReason('')
+          onChanged()
+        },
+        onError: (e: unknown) => {
+          setErrMsg(e instanceof Error ? e.message : 'رد درخواست انجام نشد')
+        },
+      },
+    )
   }
 
   return (

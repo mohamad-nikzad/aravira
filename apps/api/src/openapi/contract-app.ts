@@ -46,6 +46,11 @@ import {
   updateAppointmentRoute,
 } from './routes/appointments'
 import {
+  approveAppointmentRequestRoute,
+  listAppointmentRequestsRoute,
+  rejectAppointmentRequestRoute,
+} from './routes/appointment-requests'
+import {
   createStaffRoute,
   deleteStaffRoute,
   getStaffBookingAvailabilityRoute,
@@ -351,6 +356,46 @@ const completePlaceholderClientStub: RouteHandler<
     200,
   )
 
+const stubAppointmentRequest = {
+  id: 'stub',
+  salonId: 'stub',
+  serviceId: 'stub',
+  staffId: null,
+  requestedDate: '2026-06-07',
+  requestedStartTime: '10:00',
+  requestedEndTime: '11:00',
+  customerName: 'stub',
+  customerPhone: '09120000000',
+  notes: null,
+  bookedServiceName: 'stub',
+  bookedServiceDuration: 45,
+  bookedServicePrice: 0,
+  status: 'pending' as const,
+  paymentStatus: 'none' as const,
+  depositAmount: null,
+  confirmationToken: 'stub',
+  reviewedByUserId: null,
+  reviewedAt: null,
+  rejectionReason: null,
+  appointmentId: null,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  existingClient: null,
+}
+
+const listAppointmentRequestsStub: RouteHandler<
+  typeof listAppointmentRequestsRoute
+> = (c) => c.json({ requests: [] }, 200)
+
+const approveAppointmentRequestStub: RouteHandler<
+  typeof approveAppointmentRequestRoute
+> = (c) =>
+  c.json({ appointmentId: stubAppointment.id, clientId: stubClient.id }, 200)
+
+const rejectAppointmentRequestStub: RouteHandler<
+  typeof rejectAppointmentRequestRoute
+> = (c) => c.json({ ok: true as const }, 200)
+
 /**
  * Minimal OpenAPI app used only for contract generation.
  * Stub handlers avoid loading auth/database modules at generate time.
@@ -429,6 +474,13 @@ export const contractApp = new OpenAPIHono()
       .openapi(deleteAppointmentRoute, deleteAppointmentStub)
       .openapi(completePlaceholderClientRoute, completePlaceholderClientStub),
   )
+  .route(
+    '/api/v1/appointment-requests',
+    new OpenAPIHono()
+      .openapi(listAppointmentRequestsRoute, listAppointmentRequestsStub)
+      .openapi(approveAppointmentRequestRoute, approveAppointmentRequestStub)
+      .openapi(rejectAppointmentRequestRoute, rejectAppointmentRequestStub),
+  )
 
 export const openApiDocumentConfig = {
   openapi: '3.0.0' as const,
@@ -437,7 +489,7 @@ export const openApiDocumentConfig = {
     version: '0.7.0',
     description:
       'Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. ' +
-      'This contract is expanded incrementally; clients, staff, services catalog, and appointments route groups are documented.',
+      'This contract is expanded incrementally; clients, staff, services catalog, appointments, and appointment-requests route groups are documented.',
   },
   servers: [{ url: '', description: 'Saluna API (paths include /api/v1 prefix)' }],
   tags: [
@@ -452,6 +504,10 @@ export const openApiDocumentConfig = {
     { name: 'Service addons', description: 'Optional booking add-ons' },
     { name: 'Catalog presets', description: 'Starter catalog templates' },
     { name: 'Appointments', description: 'Calendar appointments and availability' },
+    {
+      name: 'Appointment requests',
+      description: 'Public booking request inbox (approve / reject)',
+    },
   ],
   components: {
     securitySchemes: {

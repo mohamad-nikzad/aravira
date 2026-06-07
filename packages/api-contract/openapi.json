@@ -3,7 +3,7 @@
   "info": {
     "title": "Saluna API",
     "version": "0.7.0",
-    "description": "Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. This contract is expanded incrementally; clients, staff, services catalog, and appointments route groups are documented."
+    "description": "Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. This contract is expanded incrementally; clients, staff, services catalog, appointments, and appointment-requests route groups are documented."
   },
   "servers": [
     {
@@ -43,6 +43,10 @@
     {
       "name": "Appointments",
       "description": "Calendar appointments and availability"
+    },
+    {
+      "name": "Appointment requests",
+      "description": "Public booking request inbox (approve / reject)"
     }
   ],
   "components": {
@@ -2406,6 +2410,248 @@
           "name",
           "phone"
         ]
+      },
+      "AppointmentRequestsListResponse": {
+        "type": "object",
+        "properties": {
+          "requests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppointmentRequestListItem"
+            }
+          }
+        },
+        "required": [
+          "requests"
+        ]
+      },
+      "AppointmentRequestListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "salonId": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "staffId": {
+            "type": "string",
+            "nullable": true
+          },
+          "requestedDate": {
+            "type": "string",
+            "example": "2026-06-07"
+          },
+          "requestedStartTime": {
+            "type": "string",
+            "example": "10:00"
+          },
+          "requestedEndTime": {
+            "type": "string",
+            "example": "11:00"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "customerPhone": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "bookedServiceName": {
+            "type": "string"
+          },
+          "bookedServiceDuration": {
+            "type": "integer"
+          },
+          "bookedServicePrice": {
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AppointmentRequestStatus"
+          },
+          "paymentStatus": {
+            "$ref": "#/components/schemas/AppointmentRequestPaymentStatus"
+          },
+          "depositAmount": {
+            "type": "integer",
+            "nullable": true
+          },
+          "confirmationToken": {
+            "type": "string"
+          },
+          "reviewedByUserId": {
+            "type": "string",
+            "nullable": true
+          },
+          "reviewedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "rejectionReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "appointmentId": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "existingClient": {
+            "$ref": "#/components/schemas/AppointmentRequestExistingClient"
+          }
+        },
+        "required": [
+          "id",
+          "salonId",
+          "serviceId",
+          "staffId",
+          "requestedDate",
+          "requestedStartTime",
+          "requestedEndTime",
+          "customerName",
+          "customerPhone",
+          "notes",
+          "bookedServiceName",
+          "bookedServiceDuration",
+          "bookedServicePrice",
+          "status",
+          "paymentStatus",
+          "depositAmount",
+          "confirmationToken",
+          "reviewedByUserId",
+          "reviewedAt",
+          "rejectionReason",
+          "appointmentId",
+          "createdAt",
+          "updatedAt",
+          "existingClient"
+        ],
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "AppointmentRequestStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "approved",
+          "rejected",
+          "cancelled",
+          "expired"
+        ]
+      },
+      "AppointmentRequestPaymentStatus": {
+        "type": "string",
+        "enum": [
+          "none",
+          "pending",
+          "paid"
+        ]
+      },
+      "AppointmentRequestExistingClient": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "ApproveAppointmentRequestResponse": {
+        "type": "object",
+        "properties": {
+          "appointmentId": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "appointmentId",
+          "clientId"
+        ]
+      },
+      "ApproveAppointmentRequestRequest": {
+        "type": "object",
+        "properties": {
+          "staffId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Staff member assigned when converting the request to an appointment"
+          }
+        },
+        "required": [
+          "staffId"
+        ]
+      },
+      "RejectAppointmentRequestResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "RejectAppointmentRequestRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional rejection reason shown to salon staff"
+          }
+        }
       }
     },
     "parameters": {}
@@ -5623,6 +5869,273 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DuplicateClientError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appointment-requests": {
+      "get": {
+        "tags": [
+          "Appointment requests"
+        ],
+        "summary": "List appointment requests",
+        "description": "Manager inbox for public booking requests. Pending filter excludes past requested dates.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/AppointmentRequestStatus"
+                },
+                {
+                  "description": "Filter by request status. Defaults to pending on the server."
+                }
+              ]
+            },
+            "required": false,
+            "description": "Filter by request status. Defaults to pending on the server.",
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Appointment requests for the authenticated salon",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppointmentRequestsListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing manage_appointments permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appointment-requests/{id}/approve": {
+      "post": {
+        "tags": [
+          "Appointment requests"
+        ],
+        "summary": "Approve appointment request",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveAppointmentRequestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Request approved and appointment created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApproveAppointmentRequestResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing manage_appointments permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Appointment request not found or no longer pending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Slot no longer available or intake validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appointment-requests/{id}/reject": {
+      "post": {
+        "tags": [
+          "Appointment requests"
+        ],
+        "summary": "Reject appointment request",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectAppointmentRequestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RejectAppointmentRequestResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing manage_appointments permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Appointment request not found or no longer pending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
