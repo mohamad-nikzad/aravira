@@ -1,6 +1,17 @@
+import { useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { ArrowRight, CalendarPlus, Check, Phone, X } from 'lucide-react'
+import { ArrowRight, CalendarPlus, Check, Phone, Send, X } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@repo/ui/alert-dialog'
 import { Badge } from '@repo/ui/badge'
 import { Button } from '@repo/ui/button'
 import { Card, CardContent } from '@repo/ui/card'
@@ -72,8 +83,31 @@ function reasonLabel(reason: FollowUpReason): string {
   }
 }
 
+function baleDeliveryLabel(status: 'sent' | 'failed' | 'skipped'): string {
+  switch (status) {
+    case 'sent':
+      return 'پیام بله ارسال شد'
+    case 'failed':
+      return 'ارسال بله ناموفق بود'
+    case 'skipped':
+      return 'ارسال بله انجام نشد'
+    default:
+      return status
+  }
+}
+
 function RetentionPage() {
   const navigate = useNavigate()
+  const [confirmItem, setConfirmItem] = useState<RetentionItem | null>(null)
+  const [baleDeliveryById, setBaleDeliveryById] = useState<
+    Record<
+      string,
+      {
+        status: 'sent' | 'failed' | 'skipped'
+        error?: string | null
+      }
+    >
+  >({})
   const initial = Route.useLoaderData()
   const { data } = useQuery({
     queryKey: retentionQueryKey,
@@ -91,8 +125,37 @@ function RetentionPage() {
     },
   })
 
+  const sendBaleMessage = useMutation({
+    mutationFn: ({ id, retry }: { id: string; retry?: boolean }) =>
+      api.retention.sendBaleMessage(id, { retry }),
+    meta: {
+      skipToast: true,
+    },
+    onSuccess: (response, variables) => {
+      setBaleDeliveryById((current) => ({
+        ...current,
+        [variables.id]: {
+          status: response.delivery.status,
+          error: response.delivery.error,
+        },
+      }))
+    },
+    onError: (error, variables) => {
+      setBaleDeliveryById((current) => ({
+        ...current,
+        [variables.id]: {
+          status: 'failed',
+          error: error instanceof Error ? error.message : null,
+        },
+      }))
+    },
+  })
+
   const items: RetentionItem[] = data.items
   const busyId = updateStatus.isPending ? updateStatus.variables.id : null
+  const baleBusyId = sendBaleMessage.isPending
+    ? sendBaleMessage.variables.id
+    : null
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -141,6 +204,25 @@ function RetentionPage() {
                   {item.suggestedReason}
                 </p>
 
+                {baleDeliveryById[item.id] ? (
+                  <div
+                    className={
+                      baleDeliveryById[item.id].status === 'sent'
+                        ? 'rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800'
+                        : 'rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive'
+                    }
+                  >
+                    <span className="font-medium">
+                      {baleDeliveryLabel(baleDeliveryById[item.id].status)}
+                    </span>
+                    {baleDeliveryById[item.id].error ? (
+                      <span className="ms-1">
+                        {baleDeliveryById[item.id].error}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4">
                   <div>
                     <span className="block text-[10px]">آخرین مراجعه</span>
@@ -186,6 +268,20 @@ function RetentionPage() {
                       </a>
                     </Button>
                   ) : null}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="touch-manipulation gap-1"
+                    disabled={
+                      baleBusyId === item.id ||
+                      baleDeliveryById[item.id]?.status === 'sent' ||
+                      !item.client.phone
+                    }
+                    onClick={() => setConfirmItem(item)}
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    پیام بله
+                  </Button>
                   <Button
                     size="sm"
                     variant="secondary"
@@ -234,6 +330,52 @@ function RetentionPage() {
           ))
         )}
       </div>
+
+      <AlertDialog
+        open={confirmItem !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmItem(null)
+        }}
+      >
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader className="text-start">
+            <AlertDialogTitle>ارسال پیام بله؟</AlertDialogTitle>
+            <AlertDialogDescription className="text-start">
+              {confirmItem ? (
+                <>
+                  برای {confirmItem.client.name} یک پیام کوتاه پیگیری از طرف
+                  سالن ارسال می‌شود. این پیام در صف پیگیری ثبت می‌شود و ارسال
+                  خودکار دوره‌ای فعال نمی‌کند.
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={sendBaleMessage.isPending}>
+              انصراف
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!confirmItem || sendBaleMessage.isPending}
+              onClick={(event) => {
+                event.preventDefault()
+                if (!confirmItem) return
+                sendBaleMessage.mutate(
+                  {
+                    id: confirmItem.id,
+                    retry:
+                      baleDeliveryById[confirmItem.id]?.status === 'failed',
+                  },
+                  {
+                    onSettled: () => setConfirmItem(null),
+                  },
+                )
+              }}
+            >
+              ارسال پیام
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
