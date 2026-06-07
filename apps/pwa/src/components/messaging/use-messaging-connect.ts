@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import type { QueryKey } from '@tanstack/react-query'
-import type { MessagingProviderId } from '@repo/api-client'
+import type { MessagingProviderId } from '@repo/api-client/types'
 
-import { api } from '#/lib/api-client'
+import { useCreateMessagingLinkMutation } from '#/lib/messaging-queries'
 import { getMutationErrorMessage } from '#/lib/query-client'
 
 export function useMessagingConnect(
@@ -29,36 +29,35 @@ export function useMessagingConnect(
     skipSuccessToast = true,
   } = options ?? {}
 
-  const connect = useMutation({
-    mutationFn: () => api.messaging.createLink({ provider }),
-    meta: {
-      skipSuccessToast,
-      skipErrorToast,
-      errorMessage,
-    },
-    onSuccess: (data) => {
-      setLinkError(null)
-      window.open(data.deepLink, '_blank', 'noopener,noreferrer')
-      if (invalidateQueries.length > 0) {
-        const invalidate = () => {
-          for (const queryKey of invalidateQueries) {
-            void queryClient.invalidateQueries({ queryKey })
-          }
-        }
-        if (invalidateDelayMs > 0) {
-          window.setTimeout(invalidate, invalidateDelayMs)
-        } else {
-          invalidate()
-        }
-      }
-    },
-    onError: (err) => {
-      setLinkError(getMutationErrorMessage(err, errorMessage))
-    },
+  const connect = useCreateMessagingLinkMutation({
+    skipSuccessToast,
+    skipErrorToast,
+    errorMessage,
   })
 
   return {
-    connect: () => connect.mutate(),
+    connect: () =>
+      connect.mutate(provider, {
+        onSuccess: (data) => {
+          setLinkError(null)
+          window.open(data.deepLink, '_blank', 'noopener,noreferrer')
+          if (invalidateQueries.length > 0) {
+            const invalidate = () => {
+              for (const queryKey of invalidateQueries) {
+                void queryClient.invalidateQueries({ queryKey })
+              }
+            }
+            if (invalidateDelayMs > 0) {
+              window.setTimeout(invalidate, invalidateDelayMs)
+            } else {
+              invalidate()
+            }
+          }
+        },
+        onError: (err) => {
+          setLinkError(getMutationErrorMessage(err, errorMessage))
+        },
+      }),
     isPending: connect.isPending,
     linkError,
     clearError: () => setLinkError(null),

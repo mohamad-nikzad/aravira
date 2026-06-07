@@ -8,12 +8,11 @@ const mocks = vi.hoisted(() => ({
   createLink: vi.fn(),
 }))
 
-vi.mock('#/lib/api-client', () => ({
-  api: {
-    messaging: {
-      createLink: mocks.createLink,
-    },
-  },
+vi.mock('#/lib/messaging-queries', () => ({
+  useCreateMessagingLinkMutation: () => ({
+    mutate: mocks.createLink,
+    isPending: false,
+  }),
 }))
 
 import { useMessagingConnect } from './use-messaging-connect'
@@ -29,9 +28,11 @@ function wrapper({ children }: { children: ReactNode }) {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mocks.createLink.mockResolvedValue({
-    deepLink: 'https://ble.ir/saluna_bot?start=token',
-    expiresAt: '2026-06-07T00:00:00.000Z',
+  mocks.createLink.mockImplementation((_provider, options) => {
+    options?.onSuccess?.({
+      deepLink: 'https://ble.ir/saluna_bot?start=token',
+      expiresAt: '2026-06-07T00:00:00.000Z',
+    })
   })
   vi.spyOn(window, 'open').mockImplementation(() => null)
 })
@@ -47,7 +48,13 @@ describe('useMessagingConnect', () => {
     })
 
     await waitFor(() => {
-      expect(mocks.createLink).toHaveBeenCalledWith({ provider: 'bale' })
+      expect(mocks.createLink).toHaveBeenCalledWith(
+        'bale',
+        expect.objectContaining({
+          onSuccess: expect.any(Function),
+          onError: expect.any(Function),
+        }),
+      )
     })
     expect(window.open).toHaveBeenCalledWith(
       'https://ble.ir/saluna_bot?start=token',

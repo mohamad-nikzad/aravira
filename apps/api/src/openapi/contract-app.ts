@@ -85,6 +85,22 @@ import {
   updateStaffScheduleRoute,
   updateStaffServicesRoute,
 } from './routes/staff'
+import {
+  createMessagingLinkRoute,
+  deleteMessagingAccountRoute,
+  listMessagingAccountsRoute,
+  patchMessagingAccountRoute,
+} from './routes/messaging'
+import {
+  createNotificationTestRoute,
+  listNotificationsRoute,
+  markAllNotificationsReadRoute,
+  markNotificationReadRoute,
+} from './routes/notifications'
+import {
+  getNotificationPreferencesRoute,
+  updateNotificationPreferencesRoute,
+} from './routes/notification-preferences'
 
 const stubClient = {
   id: 'stub',
@@ -563,6 +579,87 @@ const sendRetentionBaleMessageStub: RouteHandler<
     200,
   )
 
+const stubMessagingAccount = {
+  id: 'stub',
+  provider: 'telegram' as const,
+  displayName: null,
+  enabled: true,
+  linkedAt: new Date().toISOString(),
+}
+
+const listMessagingAccountsStub: RouteHandler<
+  typeof listMessagingAccountsRoute
+> = (c) =>
+  c.json(
+    {
+      providers: [{ id: 'telegram' as const, displayName: 'Telegram' }],
+      accounts: [],
+    },
+    200,
+  )
+
+const createMessagingLinkStub: RouteHandler<typeof createMessagingLinkRoute> = (c) =>
+  c.json(
+    {
+      deepLink: 'https://t.me/saluna_bot?start=stub',
+      expiresAt: new Date().toISOString(),
+    },
+    201,
+  )
+
+const patchMessagingAccountStub: RouteHandler<
+  typeof patchMessagingAccountRoute
+> = (c) => c.json({ account: stubMessagingAccount }, 200)
+
+const deleteMessagingAccountStub: RouteHandler<
+  typeof deleteMessagingAccountRoute
+> = (c) => c.json({ ok: true as const }, 200)
+
+const stubAppNotification = {
+  id: 'stub',
+  salonId: 'stub',
+  userId: 'stub',
+  type: 'appointment_created' as const,
+  title: 'stub',
+  body: 'stub',
+  route: '/notifications',
+  data: {},
+  readAt: null,
+  createdAt: new Date().toISOString(),
+}
+
+const listNotificationsStub: RouteHandler<typeof listNotificationsRoute> = (c) =>
+  c.json({ notifications: [] }, 200)
+
+const markAllNotificationsReadStub: RouteHandler<
+  typeof markAllNotificationsReadRoute
+> = (c) => c.json({ success: true as const, updatedCount: 0 }, 200)
+
+const createNotificationTestStub: RouteHandler<
+  typeof createNotificationTestRoute
+> = (c) => c.json({ notification: stubAppNotification }, 200)
+
+const markNotificationReadStub: RouteHandler<typeof markNotificationReadRoute> = (c) =>
+  c.json({ notification: stubAppNotification }, 200)
+
+const stubNotificationPreferences = {
+  salonId: 'stub',
+  userId: 'stub',
+  appointmentAlertsEnabled: true,
+  localAlertsEnabled: true,
+  smsAlertsEnabled: false,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+}
+
+const getNotificationPreferencesStub: RouteHandler<
+  typeof getNotificationPreferencesRoute
+> = (c) => c.json({ preferences: stubNotificationPreferences }, 200)
+
+const updateNotificationPreferencesStub: RouteHandler<
+  typeof updateNotificationPreferencesRoute
+> = (c) => c.json({ preferences: stubNotificationPreferences }, 200)
+
 /**
  * Minimal OpenAPI app used only for contract generation.
  * Stub handlers avoid loading auth/database modules at generate time.
@@ -685,6 +782,28 @@ export const contractApp = new OpenAPIHono()
       .openapi(updateRetentionRoute, updateRetentionStub)
       .openapi(sendRetentionBaleMessageRoute, sendRetentionBaleMessageStub),
   )
+  .route(
+    '/api/v1/messaging',
+    new OpenAPIHono()
+      .openapi(listMessagingAccountsRoute, listMessagingAccountsStub)
+      .openapi(createMessagingLinkRoute, createMessagingLinkStub)
+      .openapi(patchMessagingAccountRoute, patchMessagingAccountStub)
+      .openapi(deleteMessagingAccountRoute, deleteMessagingAccountStub),
+  )
+  .route(
+    '/api/v1/notifications',
+    new OpenAPIHono()
+      .openapi(listNotificationsRoute, listNotificationsStub)
+      .openapi(markAllNotificationsReadRoute, markAllNotificationsReadStub)
+      .openapi(createNotificationTestRoute, createNotificationTestStub)
+      .openapi(markNotificationReadRoute, markNotificationReadStub),
+  )
+  .route(
+    '/api/v1/notification-preferences',
+    new OpenAPIHono()
+      .openapi(getNotificationPreferencesRoute, getNotificationPreferencesStub)
+      .openapi(updateNotificationPreferencesRoute, updateNotificationPreferencesStub),
+  )
 
 export const openApiDocumentConfig = {
   openapi: '3.0.0' as const,
@@ -693,7 +812,7 @@ export const openApiDocumentConfig = {
     version: '0.7.0',
     description:
       'Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. ' +
-      'This contract is expanded incrementally; clients, staff, services catalog, appointments, appointment-requests, settings, salon-profile, salon-public-settings, onboarding, dashboard, today, and retention route groups are documented.',
+      'This contract is expanded incrementally; clients, staff, services catalog, appointments, appointment-requests, settings, salon-profile, salon-public-settings, onboarding, dashboard, today, retention, messaging, notifications, and notification-preferences route groups are documented.',
   },
   servers: [{ url: '', description: 'Saluna API (paths include /api/v1 prefix)' }],
   tags: [
@@ -736,6 +855,18 @@ export const openApiDocumentConfig = {
     {
       name: 'Retention',
       description: 'Client follow-up retention queue',
+    },
+    {
+      name: 'Messaging',
+      description: 'Messaging provider account linking (Telegram, Bale, etc.)',
+    },
+    {
+      name: 'Notifications',
+      description: 'In-app notification inbox',
+    },
+    {
+      name: 'Notification preferences',
+      description: 'Per-user notification channel preferences',
     },
   ],
   components: {

@@ -1,13 +1,17 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Send, Unlink } from 'lucide-react'
 import type {
   MessagingAccount,
   MessagingProviderId,
-} from '@repo/api-client'
+} from '@repo/api-client/types'
 
 import { useAuth } from '#/lib/auth'
-import { api } from '#/lib/api-client'
-import { messagingAccountsQueryKey } from '#/lib/query-keys'
+import {
+  getApiV1MessagingAccountsQueryKey,
+  messagingAccountsQueryOptions,
+  useDeleteMessagingAccountMutation,
+  usePatchMessagingAccountMutation,
+} from '#/lib/messaging-queries'
 import { useMessagingConnect } from '#/components/messaging/use-messaging-connect'
 
 import { SettingsRow, ToggleRow } from '#/components/settings/settings-rows'
@@ -42,8 +46,7 @@ export function MessagingAccountsSection() {
   const isManager = user?.role === 'manager'
 
   const messagingAccountsQuery = useQuery({
-    queryKey: messagingAccountsQueryKey,
-    queryFn: ({ signal }) => api.messaging.listAccounts({ signal }),
+    ...messagingAccountsQueryOptions(),
     enabled: isManager,
   })
 
@@ -93,28 +96,18 @@ function MessagingProviderRow({
     config.provider,
     {
       errorMessage: `اتصال ${config.displayName} انجام نشد`,
-      invalidateQueries: [messagingAccountsQueryKey],
+      invalidateQueries: [getApiV1MessagingAccountsQueryKey()],
       invalidateDelayMs: 4000,
     },
   )
 
-  const toggleAccount = useMutation({
-    mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
-      api.messaging.setEnabled(id, enabled),
-    meta: {
-      skipSuccessToast: true,
-      errorMessage: `تغییر وضعیت ${config.displayName} انجام نشد`,
-      invalidatesQuery: messagingAccountsQueryKey,
-    },
+  const toggleAccount = usePatchMessagingAccountMutation({
+    errorMessage: `تغییر وضعیت ${config.displayName} انجام نشد`,
   })
 
-  const unlinkAccount = useMutation({
-    mutationFn: (id: string) => api.messaging.unlink(id),
-    meta: {
-      successMessage: `اتصال ${config.displayName} قطع شد`,
-      errorMessage: `قطع اتصال ${config.displayName} انجام نشد`,
-      invalidatesQuery: messagingAccountsQueryKey,
-    },
+  const unlinkAccount = useDeleteMessagingAccountMutation({
+    successMessage: `اتصال ${config.displayName} قطع شد`,
+    errorMessage: `قطع اتصال ${config.displayName} انجام نشد`,
   })
 
   if (account) {

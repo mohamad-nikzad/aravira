@@ -3,8 +3,8 @@
 import { queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { deleteApiV1AppointmentsById, deleteApiV1StaffById, getApiV1AppointmentRequests, getApiV1Appointments, getApiV1AppointmentsAvailability, getApiV1AppointmentsById, getApiV1CatalogPresets, getApiV1Clients, getApiV1ClientsById, getApiV1ClientsByIdSummary, getApiV1Dashboard, getApiV1Onboarding, getApiV1Retention, getApiV1SalonProfilePresence, getApiV1SalonPublicSettings, getApiV1ServiceAddons, getApiV1ServiceCategories, getApiV1ServiceFamilies, getApiV1Services, getApiV1ServicesById, getApiV1ServicesByIdAddons, getApiV1ServicesByIdComboComponents, getApiV1SettingsBusiness, getApiV1Staff, getApiV1StaffBookingAvailability, getApiV1StaffByIdSchedule, getApiV1Today, type Options, patchApiV1AppointmentsById, patchApiV1ClientsById, patchApiV1Onboarding, patchApiV1RetentionById, patchApiV1SalonProfilePresence, patchApiV1SalonPublicSettingsSlug, patchApiV1ServiceAddonsById, patchApiV1ServiceCategoriesById, patchApiV1ServiceFamiliesById, patchApiV1ServicesById, patchApiV1SettingsBusiness, patchApiV1StaffById, patchApiV1StaffByIdPassword, patchApiV1StaffByIdServices, postApiV1AppointmentRequestsByIdApprove, postApiV1AppointmentRequestsByIdReject, postApiV1Appointments, postApiV1AppointmentsByIdCompleteClient, postApiV1CatalogPresetsByIdApply, postApiV1Clients, postApiV1ClientsByIdFollowUps, postApiV1RetentionByIdBaleMessage, postApiV1ServiceAddons, postApiV1ServiceCategories, postApiV1ServiceFamilies, postApiV1Services, postApiV1ServicesImportStarterTemplates, postApiV1Staff, putApiV1SalonPublicSettings, putApiV1ServicesByIdComboComponents, putApiV1StaffByIdSchedule } from '../sdk.gen';
-import type { DeleteApiV1AppointmentsByIdData, DeleteApiV1AppointmentsByIdError, DeleteApiV1AppointmentsByIdResponse, DeleteApiV1StaffByIdData, DeleteApiV1StaffByIdError, DeleteApiV1StaffByIdResponse, GetApiV1AppointmentRequestsData, GetApiV1AppointmentRequestsError, GetApiV1AppointmentRequestsResponse, GetApiV1AppointmentsAvailabilityData, GetApiV1AppointmentsAvailabilityError, GetApiV1AppointmentsAvailabilityResponse, GetApiV1AppointmentsByIdData, GetApiV1AppointmentsByIdError, GetApiV1AppointmentsByIdResponse, GetApiV1AppointmentsData, GetApiV1AppointmentsError, GetApiV1AppointmentsResponse, GetApiV1CatalogPresetsData, GetApiV1CatalogPresetsError, GetApiV1CatalogPresetsResponse, GetApiV1ClientsByIdData, GetApiV1ClientsByIdError, GetApiV1ClientsByIdResponse, GetApiV1ClientsByIdSummaryData, GetApiV1ClientsByIdSummaryError, GetApiV1ClientsByIdSummaryResponse, GetApiV1ClientsData, GetApiV1ClientsError, GetApiV1ClientsResponse, GetApiV1DashboardData, GetApiV1DashboardError, GetApiV1DashboardResponse, GetApiV1OnboardingData, GetApiV1OnboardingError, GetApiV1OnboardingResponse, GetApiV1RetentionData, GetApiV1RetentionError, GetApiV1RetentionResponse, GetApiV1SalonProfilePresenceData, GetApiV1SalonProfilePresenceError, GetApiV1SalonProfilePresenceResponse, GetApiV1SalonPublicSettingsData, GetApiV1SalonPublicSettingsError, GetApiV1SalonPublicSettingsResponse, GetApiV1ServiceAddonsData, GetApiV1ServiceAddonsError, GetApiV1ServiceAddonsResponse, GetApiV1ServiceCategoriesData, GetApiV1ServiceCategoriesError, GetApiV1ServiceCategoriesResponse, GetApiV1ServiceFamiliesData, GetApiV1ServiceFamiliesError, GetApiV1ServiceFamiliesResponse, GetApiV1ServicesByIdAddonsData, GetApiV1ServicesByIdAddonsError, GetApiV1ServicesByIdAddonsResponse, GetApiV1ServicesByIdComboComponentsData, GetApiV1ServicesByIdComboComponentsError, GetApiV1ServicesByIdComboComponentsResponse, GetApiV1ServicesByIdData, GetApiV1ServicesByIdError, GetApiV1ServicesByIdResponse, GetApiV1ServicesData, GetApiV1ServicesError, GetApiV1ServicesResponse, GetApiV1SettingsBusinessData, GetApiV1SettingsBusinessError, GetApiV1SettingsBusinessResponse, GetApiV1StaffBookingAvailabilityData, GetApiV1StaffBookingAvailabilityError, GetApiV1StaffBookingAvailabilityResponse, GetApiV1StaffByIdScheduleData, GetApiV1StaffByIdScheduleError, GetApiV1StaffByIdScheduleResponse, GetApiV1StaffData, GetApiV1StaffError, GetApiV1StaffResponse, GetApiV1TodayData, GetApiV1TodayError, GetApiV1TodayResponse, PatchApiV1AppointmentsByIdData, PatchApiV1AppointmentsByIdError, PatchApiV1AppointmentsByIdResponse, PatchApiV1ClientsByIdData, PatchApiV1ClientsByIdError, PatchApiV1ClientsByIdResponse, PatchApiV1OnboardingData, PatchApiV1OnboardingError, PatchApiV1OnboardingResponse, PatchApiV1RetentionByIdData, PatchApiV1RetentionByIdError, PatchApiV1RetentionByIdResponse, PatchApiV1SalonProfilePresenceData, PatchApiV1SalonProfilePresenceError, PatchApiV1SalonProfilePresenceResponse, PatchApiV1SalonPublicSettingsSlugData, PatchApiV1SalonPublicSettingsSlugError, PatchApiV1SalonPublicSettingsSlugResponse, PatchApiV1ServiceAddonsByIdData, PatchApiV1ServiceAddonsByIdError, PatchApiV1ServiceAddonsByIdResponse, PatchApiV1ServiceCategoriesByIdData, PatchApiV1ServiceCategoriesByIdError, PatchApiV1ServiceCategoriesByIdResponse, PatchApiV1ServiceFamiliesByIdData, PatchApiV1ServiceFamiliesByIdError, PatchApiV1ServiceFamiliesByIdResponse, PatchApiV1ServicesByIdData, PatchApiV1ServicesByIdError, PatchApiV1ServicesByIdResponse, PatchApiV1SettingsBusinessData, PatchApiV1SettingsBusinessError, PatchApiV1SettingsBusinessResponse, PatchApiV1StaffByIdData, PatchApiV1StaffByIdError, PatchApiV1StaffByIdPasswordData, PatchApiV1StaffByIdPasswordError, PatchApiV1StaffByIdPasswordResponse, PatchApiV1StaffByIdResponse, PatchApiV1StaffByIdServicesData, PatchApiV1StaffByIdServicesError, PatchApiV1StaffByIdServicesResponse, PostApiV1AppointmentRequestsByIdApproveData, PostApiV1AppointmentRequestsByIdApproveError, PostApiV1AppointmentRequestsByIdApproveResponse, PostApiV1AppointmentRequestsByIdRejectData, PostApiV1AppointmentRequestsByIdRejectError, PostApiV1AppointmentRequestsByIdRejectResponse, PostApiV1AppointmentsByIdCompleteClientData, PostApiV1AppointmentsByIdCompleteClientError, PostApiV1AppointmentsByIdCompleteClientResponse, PostApiV1AppointmentsData, PostApiV1AppointmentsError, PostApiV1AppointmentsResponse, PostApiV1CatalogPresetsByIdApplyData, PostApiV1CatalogPresetsByIdApplyError, PostApiV1CatalogPresetsByIdApplyResponse, PostApiV1ClientsByIdFollowUpsData, PostApiV1ClientsByIdFollowUpsError, PostApiV1ClientsByIdFollowUpsResponse, PostApiV1ClientsData, PostApiV1ClientsError, PostApiV1ClientsResponse, PostApiV1RetentionByIdBaleMessageData, PostApiV1RetentionByIdBaleMessageError, PostApiV1RetentionByIdBaleMessageResponse, PostApiV1ServiceAddonsData, PostApiV1ServiceAddonsError, PostApiV1ServiceAddonsResponse, PostApiV1ServiceCategoriesData, PostApiV1ServiceCategoriesError, PostApiV1ServiceCategoriesResponse, PostApiV1ServiceFamiliesData, PostApiV1ServiceFamiliesError, PostApiV1ServiceFamiliesResponse, PostApiV1ServicesData, PostApiV1ServicesError, PostApiV1ServicesImportStarterTemplatesData, PostApiV1ServicesImportStarterTemplatesError, PostApiV1ServicesImportStarterTemplatesResponse, PostApiV1ServicesResponse, PostApiV1StaffData, PostApiV1StaffError, PostApiV1StaffResponse, PutApiV1SalonPublicSettingsData, PutApiV1SalonPublicSettingsError, PutApiV1SalonPublicSettingsResponse, PutApiV1ServicesByIdComboComponentsData, PutApiV1ServicesByIdComboComponentsError, PutApiV1ServicesByIdComboComponentsResponse, PutApiV1StaffByIdScheduleData, PutApiV1StaffByIdScheduleError, PutApiV1StaffByIdScheduleResponse } from '../types.gen';
+import { deleteApiV1AppointmentsById, deleteApiV1MessagingAccountsById, deleteApiV1StaffById, getApiV1AppointmentRequests, getApiV1Appointments, getApiV1AppointmentsAvailability, getApiV1AppointmentsById, getApiV1CatalogPresets, getApiV1Clients, getApiV1ClientsById, getApiV1ClientsByIdSummary, getApiV1Dashboard, getApiV1MessagingAccounts, getApiV1NotificationPreferences, getApiV1Notifications, getApiV1Onboarding, getApiV1Retention, getApiV1SalonProfilePresence, getApiV1SalonPublicSettings, getApiV1ServiceAddons, getApiV1ServiceCategories, getApiV1ServiceFamilies, getApiV1Services, getApiV1ServicesById, getApiV1ServicesByIdAddons, getApiV1ServicesByIdComboComponents, getApiV1SettingsBusiness, getApiV1Staff, getApiV1StaffBookingAvailability, getApiV1StaffByIdSchedule, getApiV1Today, type Options, patchApiV1AppointmentsById, patchApiV1ClientsById, patchApiV1MessagingAccountsById, patchApiV1NotificationPreferences, patchApiV1Onboarding, patchApiV1RetentionById, patchApiV1SalonProfilePresence, patchApiV1SalonPublicSettingsSlug, patchApiV1ServiceAddonsById, patchApiV1ServiceCategoriesById, patchApiV1ServiceFamiliesById, patchApiV1ServicesById, patchApiV1SettingsBusiness, patchApiV1StaffById, patchApiV1StaffByIdPassword, patchApiV1StaffByIdServices, postApiV1AppointmentRequestsByIdApprove, postApiV1AppointmentRequestsByIdReject, postApiV1Appointments, postApiV1AppointmentsByIdCompleteClient, postApiV1CatalogPresetsByIdApply, postApiV1Clients, postApiV1ClientsByIdFollowUps, postApiV1MessagingLink, postApiV1NotificationsByIdRead, postApiV1NotificationsReadAll, postApiV1NotificationsTest, postApiV1RetentionByIdBaleMessage, postApiV1ServiceAddons, postApiV1ServiceCategories, postApiV1ServiceFamilies, postApiV1Services, postApiV1ServicesImportStarterTemplates, postApiV1Staff, putApiV1SalonPublicSettings, putApiV1ServicesByIdComboComponents, putApiV1StaffByIdSchedule } from '../sdk.gen';
+import type { DeleteApiV1AppointmentsByIdData, DeleteApiV1AppointmentsByIdError, DeleteApiV1AppointmentsByIdResponse, DeleteApiV1MessagingAccountsByIdData, DeleteApiV1MessagingAccountsByIdError, DeleteApiV1MessagingAccountsByIdResponse, DeleteApiV1StaffByIdData, DeleteApiV1StaffByIdError, DeleteApiV1StaffByIdResponse, GetApiV1AppointmentRequestsData, GetApiV1AppointmentRequestsError, GetApiV1AppointmentRequestsResponse, GetApiV1AppointmentsAvailabilityData, GetApiV1AppointmentsAvailabilityError, GetApiV1AppointmentsAvailabilityResponse, GetApiV1AppointmentsByIdData, GetApiV1AppointmentsByIdError, GetApiV1AppointmentsByIdResponse, GetApiV1AppointmentsData, GetApiV1AppointmentsError, GetApiV1AppointmentsResponse, GetApiV1CatalogPresetsData, GetApiV1CatalogPresetsError, GetApiV1CatalogPresetsResponse, GetApiV1ClientsByIdData, GetApiV1ClientsByIdError, GetApiV1ClientsByIdResponse, GetApiV1ClientsByIdSummaryData, GetApiV1ClientsByIdSummaryError, GetApiV1ClientsByIdSummaryResponse, GetApiV1ClientsData, GetApiV1ClientsError, GetApiV1ClientsResponse, GetApiV1DashboardData, GetApiV1DashboardError, GetApiV1DashboardResponse, GetApiV1MessagingAccountsData, GetApiV1MessagingAccountsError, GetApiV1MessagingAccountsResponse, GetApiV1NotificationPreferencesData, GetApiV1NotificationPreferencesError, GetApiV1NotificationPreferencesResponse, GetApiV1NotificationsData, GetApiV1NotificationsError, GetApiV1NotificationsResponse, GetApiV1OnboardingData, GetApiV1OnboardingError, GetApiV1OnboardingResponse, GetApiV1RetentionData, GetApiV1RetentionError, GetApiV1RetentionResponse, GetApiV1SalonProfilePresenceData, GetApiV1SalonProfilePresenceError, GetApiV1SalonProfilePresenceResponse, GetApiV1SalonPublicSettingsData, GetApiV1SalonPublicSettingsError, GetApiV1SalonPublicSettingsResponse, GetApiV1ServiceAddonsData, GetApiV1ServiceAddonsError, GetApiV1ServiceAddonsResponse, GetApiV1ServiceCategoriesData, GetApiV1ServiceCategoriesError, GetApiV1ServiceCategoriesResponse, GetApiV1ServiceFamiliesData, GetApiV1ServiceFamiliesError, GetApiV1ServiceFamiliesResponse, GetApiV1ServicesByIdAddonsData, GetApiV1ServicesByIdAddonsError, GetApiV1ServicesByIdAddonsResponse, GetApiV1ServicesByIdComboComponentsData, GetApiV1ServicesByIdComboComponentsError, GetApiV1ServicesByIdComboComponentsResponse, GetApiV1ServicesByIdData, GetApiV1ServicesByIdError, GetApiV1ServicesByIdResponse, GetApiV1ServicesData, GetApiV1ServicesError, GetApiV1ServicesResponse, GetApiV1SettingsBusinessData, GetApiV1SettingsBusinessError, GetApiV1SettingsBusinessResponse, GetApiV1StaffBookingAvailabilityData, GetApiV1StaffBookingAvailabilityError, GetApiV1StaffBookingAvailabilityResponse, GetApiV1StaffByIdScheduleData, GetApiV1StaffByIdScheduleError, GetApiV1StaffByIdScheduleResponse, GetApiV1StaffData, GetApiV1StaffError, GetApiV1StaffResponse, GetApiV1TodayData, GetApiV1TodayError, GetApiV1TodayResponse, PatchApiV1AppointmentsByIdData, PatchApiV1AppointmentsByIdError, PatchApiV1AppointmentsByIdResponse, PatchApiV1ClientsByIdData, PatchApiV1ClientsByIdError, PatchApiV1ClientsByIdResponse, PatchApiV1MessagingAccountsByIdData, PatchApiV1MessagingAccountsByIdError, PatchApiV1MessagingAccountsByIdResponse, PatchApiV1NotificationPreferencesData, PatchApiV1NotificationPreferencesError, PatchApiV1NotificationPreferencesResponse, PatchApiV1OnboardingData, PatchApiV1OnboardingError, PatchApiV1OnboardingResponse, PatchApiV1RetentionByIdData, PatchApiV1RetentionByIdError, PatchApiV1RetentionByIdResponse, PatchApiV1SalonProfilePresenceData, PatchApiV1SalonProfilePresenceError, PatchApiV1SalonProfilePresenceResponse, PatchApiV1SalonPublicSettingsSlugData, PatchApiV1SalonPublicSettingsSlugError, PatchApiV1SalonPublicSettingsSlugResponse, PatchApiV1ServiceAddonsByIdData, PatchApiV1ServiceAddonsByIdError, PatchApiV1ServiceAddonsByIdResponse, PatchApiV1ServiceCategoriesByIdData, PatchApiV1ServiceCategoriesByIdError, PatchApiV1ServiceCategoriesByIdResponse, PatchApiV1ServiceFamiliesByIdData, PatchApiV1ServiceFamiliesByIdError, PatchApiV1ServiceFamiliesByIdResponse, PatchApiV1ServicesByIdData, PatchApiV1ServicesByIdError, PatchApiV1ServicesByIdResponse, PatchApiV1SettingsBusinessData, PatchApiV1SettingsBusinessError, PatchApiV1SettingsBusinessResponse, PatchApiV1StaffByIdData, PatchApiV1StaffByIdError, PatchApiV1StaffByIdPasswordData, PatchApiV1StaffByIdPasswordError, PatchApiV1StaffByIdPasswordResponse, PatchApiV1StaffByIdResponse, PatchApiV1StaffByIdServicesData, PatchApiV1StaffByIdServicesError, PatchApiV1StaffByIdServicesResponse, PostApiV1AppointmentRequestsByIdApproveData, PostApiV1AppointmentRequestsByIdApproveError, PostApiV1AppointmentRequestsByIdApproveResponse, PostApiV1AppointmentRequestsByIdRejectData, PostApiV1AppointmentRequestsByIdRejectError, PostApiV1AppointmentRequestsByIdRejectResponse, PostApiV1AppointmentsByIdCompleteClientData, PostApiV1AppointmentsByIdCompleteClientError, PostApiV1AppointmentsByIdCompleteClientResponse, PostApiV1AppointmentsData, PostApiV1AppointmentsError, PostApiV1AppointmentsResponse, PostApiV1CatalogPresetsByIdApplyData, PostApiV1CatalogPresetsByIdApplyError, PostApiV1CatalogPresetsByIdApplyResponse, PostApiV1ClientsByIdFollowUpsData, PostApiV1ClientsByIdFollowUpsError, PostApiV1ClientsByIdFollowUpsResponse, PostApiV1ClientsData, PostApiV1ClientsError, PostApiV1ClientsResponse, PostApiV1MessagingLinkData, PostApiV1MessagingLinkError, PostApiV1MessagingLinkResponse, PostApiV1NotificationsByIdReadData, PostApiV1NotificationsByIdReadError, PostApiV1NotificationsByIdReadResponse, PostApiV1NotificationsReadAllData, PostApiV1NotificationsReadAllError, PostApiV1NotificationsReadAllResponse, PostApiV1NotificationsTestData, PostApiV1NotificationsTestError, PostApiV1NotificationsTestResponse, PostApiV1RetentionByIdBaleMessageData, PostApiV1RetentionByIdBaleMessageError, PostApiV1RetentionByIdBaleMessageResponse, PostApiV1ServiceAddonsData, PostApiV1ServiceAddonsError, PostApiV1ServiceAddonsResponse, PostApiV1ServiceCategoriesData, PostApiV1ServiceCategoriesError, PostApiV1ServiceCategoriesResponse, PostApiV1ServiceFamiliesData, PostApiV1ServiceFamiliesError, PostApiV1ServiceFamiliesResponse, PostApiV1ServicesData, PostApiV1ServicesError, PostApiV1ServicesImportStarterTemplatesData, PostApiV1ServicesImportStarterTemplatesError, PostApiV1ServicesImportStarterTemplatesResponse, PostApiV1ServicesResponse, PostApiV1StaffData, PostApiV1StaffError, PostApiV1StaffResponse, PutApiV1SalonPublicSettingsData, PutApiV1SalonPublicSettingsError, PutApiV1SalonPublicSettingsResponse, PutApiV1ServicesByIdComboComponentsData, PutApiV1ServicesByIdComboComponentsError, PutApiV1ServicesByIdComboComponentsResponse, PutApiV1StaffByIdScheduleData, PutApiV1StaffByIdScheduleError, PutApiV1StaffByIdScheduleResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -1064,6 +1064,185 @@ export const postApiV1RetentionByIdBaleMessageMutation = (options?: Partial<Opti
     const mutationOptions: UseMutationOptions<PostApiV1RetentionByIdBaleMessageResponse, PostApiV1RetentionByIdBaleMessageError, Options<PostApiV1RetentionByIdBaleMessageData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await postApiV1RetentionByIdBaleMessage({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getApiV1MessagingAccountsQueryKey = (options?: Options<GetApiV1MessagingAccountsData>) => createQueryKey('getApiV1MessagingAccounts', options);
+
+/**
+ * List linked messaging accounts
+ *
+ * Returns configured messaging providers and the authenticated user linked accounts.
+ */
+export const getApiV1MessagingAccountsOptions = (options?: Options<GetApiV1MessagingAccountsData>) => queryOptions<GetApiV1MessagingAccountsResponse, GetApiV1MessagingAccountsError, GetApiV1MessagingAccountsResponse, ReturnType<typeof getApiV1MessagingAccountsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getApiV1MessagingAccounts({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getApiV1MessagingAccountsQueryKey(options)
+});
+
+/**
+ * Create a messaging account link
+ *
+ * Creates a short-lived deep link token for linking a messaging provider account.
+ */
+export const postApiV1MessagingLinkMutation = (options?: Partial<Options<PostApiV1MessagingLinkData>>): UseMutationOptions<PostApiV1MessagingLinkResponse, PostApiV1MessagingLinkError, Options<PostApiV1MessagingLinkData>> => {
+    const mutationOptions: UseMutationOptions<PostApiV1MessagingLinkResponse, PostApiV1MessagingLinkError, Options<PostApiV1MessagingLinkData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postApiV1MessagingLink({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Unlink a messaging account
+ */
+export const deleteApiV1MessagingAccountsByIdMutation = (options?: Partial<Options<DeleteApiV1MessagingAccountsByIdData>>): UseMutationOptions<DeleteApiV1MessagingAccountsByIdResponse, DeleteApiV1MessagingAccountsByIdError, Options<DeleteApiV1MessagingAccountsByIdData>> => {
+    const mutationOptions: UseMutationOptions<DeleteApiV1MessagingAccountsByIdResponse, DeleteApiV1MessagingAccountsByIdError, Options<DeleteApiV1MessagingAccountsByIdData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await deleteApiV1MessagingAccountsById({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Enable or disable a linked messaging account
+ */
+export const patchApiV1MessagingAccountsByIdMutation = (options?: Partial<Options<PatchApiV1MessagingAccountsByIdData>>): UseMutationOptions<PatchApiV1MessagingAccountsByIdResponse, PatchApiV1MessagingAccountsByIdError, Options<PatchApiV1MessagingAccountsByIdData>> => {
+    const mutationOptions: UseMutationOptions<PatchApiV1MessagingAccountsByIdResponse, PatchApiV1MessagingAccountsByIdError, Options<PatchApiV1MessagingAccountsByIdData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await patchApiV1MessagingAccountsById({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getApiV1NotificationsQueryKey = (options?: Options<GetApiV1NotificationsData>) => createQueryKey('getApiV1Notifications', options);
+
+/**
+ * List in-app notifications
+ */
+export const getApiV1NotificationsOptions = (options?: Options<GetApiV1NotificationsData>) => queryOptions<GetApiV1NotificationsResponse, GetApiV1NotificationsError, GetApiV1NotificationsResponse, ReturnType<typeof getApiV1NotificationsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getApiV1Notifications({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getApiV1NotificationsQueryKey(options)
+});
+
+/**
+ * Mark all notifications as read
+ */
+export const postApiV1NotificationsReadAllMutation = (options?: Partial<Options<PostApiV1NotificationsReadAllData>>): UseMutationOptions<PostApiV1NotificationsReadAllResponse, PostApiV1NotificationsReadAllError, Options<PostApiV1NotificationsReadAllData>> => {
+    const mutationOptions: UseMutationOptions<PostApiV1NotificationsReadAllResponse, PostApiV1NotificationsReadAllError, Options<PostApiV1NotificationsReadAllData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postApiV1NotificationsReadAll({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Create a test notification
+ *
+ * Development-only route. Returns 404 when ENABLE_NOTIFICATION_TEST is not set or in production.
+ */
+export const postApiV1NotificationsTestMutation = (options?: Partial<Options<PostApiV1NotificationsTestData>>): UseMutationOptions<PostApiV1NotificationsTestResponse, PostApiV1NotificationsTestError, Options<PostApiV1NotificationsTestData>> => {
+    const mutationOptions: UseMutationOptions<PostApiV1NotificationsTestResponse, PostApiV1NotificationsTestError, Options<PostApiV1NotificationsTestData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postApiV1NotificationsTest({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Mark a notification as read
+ */
+export const postApiV1NotificationsByIdReadMutation = (options?: Partial<Options<PostApiV1NotificationsByIdReadData>>): UseMutationOptions<PostApiV1NotificationsByIdReadResponse, PostApiV1NotificationsByIdReadError, Options<PostApiV1NotificationsByIdReadData>> => {
+    const mutationOptions: UseMutationOptions<PostApiV1NotificationsByIdReadResponse, PostApiV1NotificationsByIdReadError, Options<PostApiV1NotificationsByIdReadData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postApiV1NotificationsByIdRead({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getApiV1NotificationPreferencesQueryKey = (options?: Options<GetApiV1NotificationPreferencesData>) => createQueryKey('getApiV1NotificationPreferences', options);
+
+/**
+ * Get notification preferences
+ */
+export const getApiV1NotificationPreferencesOptions = (options?: Options<GetApiV1NotificationPreferencesData>) => queryOptions<GetApiV1NotificationPreferencesResponse, GetApiV1NotificationPreferencesError, GetApiV1NotificationPreferencesResponse, ReturnType<typeof getApiV1NotificationPreferencesQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getApiV1NotificationPreferences({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getApiV1NotificationPreferencesQueryKey(options)
+});
+
+/**
+ * Update notification preferences
+ */
+export const patchApiV1NotificationPreferencesMutation = (options?: Partial<Options<PatchApiV1NotificationPreferencesData>>): UseMutationOptions<PatchApiV1NotificationPreferencesResponse, PatchApiV1NotificationPreferencesError, Options<PatchApiV1NotificationPreferencesData>> => {
+    const mutationOptions: UseMutationOptions<PatchApiV1NotificationPreferencesResponse, PatchApiV1NotificationPreferencesError, Options<PatchApiV1NotificationPreferencesData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await patchApiV1NotificationPreferences({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 
-import { messagingAccountsQueryKey } from '#/lib/query-keys'
+import { getApiV1MessagingAccountsQueryKey } from '#/lib/messaging-queries'
 import {
   getApiV1OnboardingQueryKey,
   onboardingQueryOptions,
@@ -31,7 +31,7 @@ function NotificationsScreen() {
 
   useTelegramFocusRefresh([
     getApiV1OnboardingQueryKey(),
-    messagingAccountsQueryKey,
+    getApiV1MessagingAccountsQueryKey(),
   ])
 
   const { connect, isPending, linkError } = useTelegramConnect({

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -37,7 +37,6 @@ import type {
 } from '@repo/salon-core/forms/settings'
 
 import { useAuth } from '#/lib/auth'
-import { api } from '#/lib/api-client'
 import { useManagerDataClient } from '#/lib/manager-data-client'
 import { useTheme } from '#/lib/theme'
 import { dashboardQueryOptions } from '#/lib/dashboard-queries'
@@ -46,8 +45,9 @@ import {
   useUpdateBusinessSettingsMutation,
 } from '#/lib/settings-queries'
 import {
-  notificationPreferencesQueryKey,
-} from '#/lib/query-keys'
+  notificationPreferencesQueryOptions,
+  useUpdateNotificationPreferencesMutation,
+} from '#/lib/notification-preferences-queries'
 import { BusinessHoursFields } from '#/components/business-hours/business-hours-fields'
 import { MessagingAccountsSection } from '#/components/settings/messaging-accounts-section'
 import { SettingsRow, ToggleRow } from '#/components/settings/settings-rows'
@@ -165,23 +165,13 @@ function SettingsPage() {
     ...businessSettingsQueryOptions(),
     enabled: isManager,
   })
-  const notificationPrefsQuery = useQuery({
-    queryKey: notificationPreferencesQueryKey,
-    queryFn: ({ signal }) => api.notificationPreferences.get({ signal }),
-  })
+  const notificationPrefsQuery = useQuery(notificationPreferencesQueryOptions())
   const dashboardQuery = useQuery({
     ...dashboardQueryOptions(),
     enabled: isManager,
   })
 
-  const updateLocalAlerts = useMutation({
-    mutationFn: (enabled: boolean) =>
-      api.notificationPreferences.update({ localAlertsEnabled: enabled }),
-    meta: {
-      skipSuccessToast: true,
-      invalidatesQuery: notificationPreferencesQueryKey,
-    },
-  })
+  const updateLocalAlerts = useUpdateNotificationPreferencesMutation()
 
   const saveBusinessHoursMutation = useUpdateBusinessSettingsMutation()
 
@@ -232,7 +222,7 @@ function SettingsPage() {
 
   const toggleLocalAlerts = (next: boolean) => {
     setLocalAlerts(next)
-    updateLocalAlerts.mutate(next, {
+    updateLocalAlerts.mutate({ localAlertsEnabled: next }, {
       onError: () => setLocalAlerts(!next),
     })
   }

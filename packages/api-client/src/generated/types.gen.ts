@@ -915,6 +915,97 @@ export type RetentionBaleMessageRequest = {
     retry?: boolean;
 };
 
+export type ListMessagingAccountsResponse = {
+    providers: Array<MessagingProviderSummary>;
+    accounts: Array<MessagingAccount>;
+};
+
+export type MessagingProviderSummary = {
+    id: MessagingProviderId;
+    displayName: string;
+};
+
+export type MessagingProviderId = 'telegram' | 'bale' | 'rubika' | 'whatsapp';
+
+export type MessagingAccount = {
+    id: string;
+    provider: MessagingProviderId;
+    displayName: string | null;
+    enabled: boolean;
+    linkedAt: string | string;
+};
+
+export type CreateMessagingLinkResponse = {
+    deepLink: string;
+    expiresAt: string | string;
+};
+
+export type CreateMessagingLinkRequest = {
+    provider: MessagingProviderId;
+};
+
+export type MessagingAccountResponse = {
+    account: MessagingAccount;
+};
+
+export type PatchMessagingAccountRequest = {
+    enabled: boolean;
+};
+
+export type DeleteMessagingAccountResponse = {
+    ok: true;
+};
+
+export type NotificationsListResponse = {
+    notifications: Array<AppNotification>;
+};
+
+export type AppNotification = {
+    id: string;
+    salonId: string;
+    userId: string;
+    type: NotificationType;
+    title: string;
+    body: string;
+    route: string;
+    data: {
+        [key: string]: unknown;
+    };
+    readAt: string | string | unknown;
+    createdAt: string | string;
+};
+
+export type NotificationType = 'appointment_created' | 'appointment_request_pending' | 'appointment_request_approved' | 'appointment_request_rejected' | 'appointment_reminder';
+
+export type MarkAllNotificationsReadResponse = {
+    success: true;
+    updatedCount: number;
+};
+
+export type NotificationResponse = {
+    notification: AppNotification;
+};
+
+export type NotificationPreferencesResponse = {
+    preferences: NotificationPreferences;
+};
+
+export type NotificationPreferences = {
+    salonId: string;
+    userId: string;
+    appointmentAlertsEnabled: boolean;
+    localAlertsEnabled: boolean;
+    smsAlertsEnabled: boolean;
+    createdAt: string | string;
+    updatedAt: string | string;
+};
+
+export type UpdateNotificationPreferencesRequest = {
+    appointmentAlertsEnabled?: boolean;
+    localAlertsEnabled?: boolean;
+    smsAlertsEnabled?: boolean;
+};
+
 export type GetApiV1ClientsData = {
     body?: never;
     path?: never;
@@ -3000,3 +3091,336 @@ export type PostApiV1RetentionByIdBaleMessageResponses = {
 };
 
 export type PostApiV1RetentionByIdBaleMessageResponse = PostApiV1RetentionByIdBaleMessageResponses[keyof PostApiV1RetentionByIdBaleMessageResponses];
+
+export type GetApiV1MessagingAccountsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/messaging/accounts';
+};
+
+export type GetApiV1MessagingAccountsErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_settings permission
+     */
+    403: ApiError;
+};
+
+export type GetApiV1MessagingAccountsError = GetApiV1MessagingAccountsErrors[keyof GetApiV1MessagingAccountsErrors];
+
+export type GetApiV1MessagingAccountsResponses = {
+    /**
+     * Configured providers and linked accounts
+     */
+    200: ListMessagingAccountsResponse;
+};
+
+export type GetApiV1MessagingAccountsResponse = GetApiV1MessagingAccountsResponses[keyof GetApiV1MessagingAccountsResponses];
+
+export type PostApiV1MessagingLinkData = {
+    body: CreateMessagingLinkRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/messaging/link';
+};
+
+export type PostApiV1MessagingLinkErrors = {
+    /**
+     * Messaging provider is not configured or available
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_settings permission
+     */
+    403: ApiError;
+    /**
+     * Too many link creation requests
+     */
+    429: ApiError;
+};
+
+export type PostApiV1MessagingLinkError = PostApiV1MessagingLinkErrors[keyof PostApiV1MessagingLinkErrors];
+
+export type PostApiV1MessagingLinkResponses = {
+    /**
+     * Deep link for the selected provider
+     */
+    201: CreateMessagingLinkResponse;
+};
+
+export type PostApiV1MessagingLinkResponse = PostApiV1MessagingLinkResponses[keyof PostApiV1MessagingLinkResponses];
+
+export type DeleteApiV1MessagingAccountsByIdData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/messaging/accounts/{id}';
+};
+
+export type DeleteApiV1MessagingAccountsByIdErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_settings permission
+     */
+    403: ApiError;
+    /**
+     * Messaging account not found
+     */
+    404: ApiError;
+};
+
+export type DeleteApiV1MessagingAccountsByIdError = DeleteApiV1MessagingAccountsByIdErrors[keyof DeleteApiV1MessagingAccountsByIdErrors];
+
+export type DeleteApiV1MessagingAccountsByIdResponses = {
+    /**
+     * Account unlinked
+     */
+    200: DeleteMessagingAccountResponse;
+};
+
+export type DeleteApiV1MessagingAccountsByIdResponse = DeleteApiV1MessagingAccountsByIdResponses[keyof DeleteApiV1MessagingAccountsByIdResponses];
+
+export type PatchApiV1MessagingAccountsByIdData = {
+    body: PatchMessagingAccountRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/messaging/accounts/{id}';
+};
+
+export type PatchApiV1MessagingAccountsByIdErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_settings permission
+     */
+    403: ApiError;
+    /**
+     * Messaging account not found
+     */
+    404: ApiError;
+};
+
+export type PatchApiV1MessagingAccountsByIdError = PatchApiV1MessagingAccountsByIdErrors[keyof PatchApiV1MessagingAccountsByIdErrors];
+
+export type PatchApiV1MessagingAccountsByIdResponses = {
+    /**
+     * Updated messaging account
+     */
+    200: MessagingAccountResponse;
+};
+
+export type PatchApiV1MessagingAccountsByIdResponse = PatchApiV1MessagingAccountsByIdResponses[keyof PatchApiV1MessagingAccountsByIdResponses];
+
+export type GetApiV1NotificationsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * When "true", return only unread notifications
+         */
+        unreadOnly?: 'true';
+    };
+    url: '/api/v1/notifications';
+};
+
+export type GetApiV1NotificationsErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing tenant context
+     */
+    403: ApiError;
+};
+
+export type GetApiV1NotificationsError = GetApiV1NotificationsErrors[keyof GetApiV1NotificationsErrors];
+
+export type GetApiV1NotificationsResponses = {
+    /**
+     * Notifications for the authenticated user
+     */
+    200: NotificationsListResponse;
+};
+
+export type GetApiV1NotificationsResponse = GetApiV1NotificationsResponses[keyof GetApiV1NotificationsResponses];
+
+export type PostApiV1NotificationsReadAllData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notifications/read-all';
+};
+
+export type PostApiV1NotificationsReadAllErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing tenant context
+     */
+    403: ApiError;
+};
+
+export type PostApiV1NotificationsReadAllError = PostApiV1NotificationsReadAllErrors[keyof PostApiV1NotificationsReadAllErrors];
+
+export type PostApiV1NotificationsReadAllResponses = {
+    /**
+     * All notifications marked read
+     */
+    200: MarkAllNotificationsReadResponse;
+};
+
+export type PostApiV1NotificationsReadAllResponse = PostApiV1NotificationsReadAllResponses[keyof PostApiV1NotificationsReadAllResponses];
+
+export type PostApiV1NotificationsTestData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notifications/test';
+};
+
+export type PostApiV1NotificationsTestErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing tenant context
+     */
+    403: ApiError;
+    /**
+     * Notification not found
+     */
+    404: ApiError;
+};
+
+export type PostApiV1NotificationsTestError = PostApiV1NotificationsTestErrors[keyof PostApiV1NotificationsTestErrors];
+
+export type PostApiV1NotificationsTestResponses = {
+    /**
+     * Created test notification
+     */
+    200: NotificationResponse;
+};
+
+export type PostApiV1NotificationsTestResponse = PostApiV1NotificationsTestResponses[keyof PostApiV1NotificationsTestResponses];
+
+export type PostApiV1NotificationsByIdReadData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/notifications/{id}/read';
+};
+
+export type PostApiV1NotificationsByIdReadErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing tenant context
+     */
+    403: ApiError;
+    /**
+     * Notification not found
+     */
+    404: ApiError;
+};
+
+export type PostApiV1NotificationsByIdReadError = PostApiV1NotificationsByIdReadErrors[keyof PostApiV1NotificationsByIdReadErrors];
+
+export type PostApiV1NotificationsByIdReadResponses = {
+    /**
+     * Updated notification
+     */
+    200: NotificationResponse;
+};
+
+export type PostApiV1NotificationsByIdReadResponse = PostApiV1NotificationsByIdReadResponses[keyof PostApiV1NotificationsByIdReadResponses];
+
+export type GetApiV1NotificationPreferencesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notification-preferences';
+};
+
+export type GetApiV1NotificationPreferencesErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing tenant context
+     */
+    403: ApiError;
+};
+
+export type GetApiV1NotificationPreferencesError = GetApiV1NotificationPreferencesErrors[keyof GetApiV1NotificationPreferencesErrors];
+
+export type GetApiV1NotificationPreferencesResponses = {
+    /**
+     * Notification preferences for the authenticated user
+     */
+    200: NotificationPreferencesResponse;
+};
+
+export type GetApiV1NotificationPreferencesResponse = GetApiV1NotificationPreferencesResponses[keyof GetApiV1NotificationPreferencesResponses];
+
+export type PatchApiV1NotificationPreferencesData = {
+    body: UpdateNotificationPreferencesRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notification-preferences';
+};
+
+export type PatchApiV1NotificationPreferencesErrors = {
+    /**
+     * Invalid request body
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing tenant context
+     */
+    403: ApiError;
+};
+
+export type PatchApiV1NotificationPreferencesError = PatchApiV1NotificationPreferencesErrors[keyof PatchApiV1NotificationPreferencesErrors];
+
+export type PatchApiV1NotificationPreferencesResponses = {
+    /**
+     * Updated notification preferences
+     */
+    200: NotificationPreferencesResponse;
+};
+
+export type PatchApiV1NotificationPreferencesResponse = PatchApiV1NotificationPreferencesResponses[keyof PatchApiV1NotificationPreferencesResponses];

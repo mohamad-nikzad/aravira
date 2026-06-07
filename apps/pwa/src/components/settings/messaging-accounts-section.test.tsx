@@ -20,15 +20,29 @@ vi.mock('#/lib/auth', () => ({
   useAuth: mocks.useAuth,
 }))
 
-vi.mock('#/lib/api-client', () => ({
-  api: {
-    messaging: {
-      listAccounts: mocks.listAccounts,
-      createLink: vi.fn(),
-      setEnabled: mocks.setEnabled,
-      unlink: mocks.unlink,
-    },
-  },
+vi.mock('#/lib/messaging-queries', () => ({
+  getApiV1MessagingAccountsQueryKey: () => [{ _id: 'getApiV1MessagingAccounts' }],
+  messagingAccountsQueryOptions: () => ({
+    queryKey: [{ _id: 'getApiV1MessagingAccounts' }],
+    queryFn: mocks.listAccounts,
+  }),
+  usePatchMessagingAccountMutation: () => ({
+    mutate: mocks.setEnabled,
+    isPending: false,
+  }),
+  useDeleteMessagingAccountMutation: () => ({
+    mutate: mocks.unlink,
+    isPending: false,
+  }),
+}))
+
+vi.mock('#/components/messaging/use-messaging-connect', () => ({
+  useMessagingConnect: () => ({
+    connect: vi.fn(),
+    isPending: false,
+    linkError: null,
+    clearError: vi.fn(),
+  }),
 }))
 
 import { MessagingAccountsSection } from './messaging-accounts-section'

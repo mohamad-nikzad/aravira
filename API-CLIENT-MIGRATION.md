@@ -27,7 +27,7 @@ Saluna monorepo — shared `@repo/api-client` migration using HeyAPI-generated S
 | 13. Settings & public page | ✅ Done | OpenAPI settings/salon-profile/salon-public-settings; PWA settings + public page on generated options |
 | 14. Onboarding | ✅ Done | OpenAPI onboarding; PWA wizard on generated options |
 | 15. Dashboard, today & retention | ✅ Done | OpenAPI dashboard/today/retention; PWA on generated options |
-| 16. Messaging & notifications | ⏳ Planned | OpenAPI + app migration per route group (see below) |
+| 16. Messaging & notifications | ✅ Done | OpenAPI messaging/notifications/notification-preferences; PWA connect + prefs on generated options |
 | 17. data-client removal | ⏳ Planned | Drop offline layer after CRUD slices proven |
 | 18. Web public API | ⏳ Planned | `apps/web` raw fetch → generated SDK |
 | 19. Native app | ⏳ Deferred | Not in prod — migrate when scoped |
@@ -533,7 +533,7 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 | salon-profile / salon-public-settings | ✅ | `legacy/salon-profile.ts`, `salon-public-settings.ts` | — |
 | onboarding | ✅ | `legacy/onboarding.ts` | — |
 | dashboard / today / retention | ✅ | `legacy/dashboard.ts`, `today.ts`, `retention.ts` | `today-module` (removed from today views) |
-| messaging / notifications | ❌ | `legacy/messaging.ts`, `notifications.ts` | — |
+| messaging / notifications | ✅ | `legacy/messaging.ts`, `notifications.ts` | — |
 | auth | ❌ (stay legacy) | `legacy/auth.ts` | `session-module` |
 | public booking | ❌ (Phase 18) | — | — |
 | push / webhooks / health | ❌ (excluded) | — | — |
@@ -587,6 +587,8 @@ Migrated domains are **online-only**. When a slice moves to the generated client
 **Phase 14 (onboarding) done:** OpenAPI `onboarding` route group; wizard layout, step guards, `_authed` gate, and step screens use `onboarding-queries.ts`; hours/public steps reuse `settings-queries.ts` / `salon-public-settings-queries.ts`; legacy `onboardingQueryKey` removed.
 
 **Phase 15 (dashboard, today, retention) done:** OpenAPI `dashboard`, `today`, and `retention` route groups; dashboard, settings metrics, retention page, and clients follow-up sidebar use `dashboard-queries.ts` / `retention-queries.ts`; manager and staff today views use `today-queries.ts` with offline IndexedDB/localStorage projection removed.
+
+**Phase 16 (messaging & notifications) done:** OpenAPI `messaging`, `notifications`, and `notification-preferences` route groups; settings messaging section and onboarding notifications step use `messaging-queries.ts`; settings local alerts toggle uses `notification-preferences-queries.ts`; legacy `messagingAccountsQueryKey` / `notificationPreferencesQueryKey` removed.
 
 ---
 
@@ -775,7 +777,7 @@ Migrated domains are **online-only**. When a slice moves to the generated client
 
 ---
 
-### Phase 16: Messaging & notifications
+### Phase 16: Messaging & notifications ✅
 
 **Goal:** Messaging connect and notification preferences off legacy API.
 
@@ -919,7 +921,7 @@ Phase 20  Legacy cleanup
  ✅ 13. OpenAPI settings/public → migrate settings + public page
  ✅ 14. OpenAPI onboarding → migrate wizard
  ✅ 15. OpenAPI dashboard/today/retention → migrate aggregates
- → 16. OpenAPI messaging/notifications → migrate connect + prefs
+ ✅ 16. OpenAPI messaging/notifications → migrate connect + prefs
  → 17. Remove @repo/data-client + offline UX
  → 18. OpenAPI public → migrate apps/web
  → 19. Native (when scoped)
@@ -960,7 +962,7 @@ Phase 20  Legacy cleanup
 - [x] Phase 13: OpenAPI settings/public + migrate settings & public page
 - [x] Phase 14: OpenAPI onboarding + migrate wizard
 - [x] Phase 15: OpenAPI dashboard/today/retention + migrate reads
-- [ ] Phase 16: OpenAPI messaging/notifications + migrate connect/prefs
+- [x] Phase 16: OpenAPI messaging/notifications + migrate connect/prefs
 - [ ] Phase 17: Remove `@repo/data-client` and offline UX
 - [ ] Phase 18: OpenAPI public + migrate `apps/web`
 - [ ] Phase 19: Native (when scoped)
