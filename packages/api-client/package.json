@@ -19,6 +19,7 @@
     "./services": "./src/legacy/services.ts",
     "./appointments": "./src/legacy/appointments.ts",
     "./errors": "./src/errors.ts",
+    "./generated-client": "./src/client.ts",
     "./endpoints": "./src/legacy/endpoints.ts",
     "./sdk": "./src/generated/sdk.gen.ts",
     "./query": "./src/generated/@tanstack/react-query.gen.ts",
