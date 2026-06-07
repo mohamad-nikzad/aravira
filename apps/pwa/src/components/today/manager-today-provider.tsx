@@ -6,10 +6,10 @@ import { salonTodayYmd } from '@repo/salon-core/salon-local-time'
 import { api } from '#/lib/api-client'
 import { useManagerDataClient } from '#/lib/manager-data-client'
 import {
-  useManagerClientsQuery,
   useManagerServicesQuery,
   useManagerStaffQuery,
 } from '#/lib/manager-data-queries'
+import { clientsListQueryOptions } from '#/lib/clients-queries'
 import { useNetworkStatus } from '#/lib/network-status'
 import { firstNameOf } from '#/lib/today-view-model'
 import { useManagerTodayIndexedDbSources } from '#/lib/use-manager-today-indexeddb'
@@ -43,7 +43,10 @@ export function ManagerTodayProvider({
 
   const staffQuery = useManagerStaffQuery(Boolean(dc))
   const servicesQuery = useManagerServicesQuery(Boolean(dc))
-  const clientsQuery = useManagerClientsQuery(Boolean(dc))
+  const clientsQuery = useQuery({
+    ...clientsListQueryOptions(),
+    enabled: Boolean(dc),
+  })
 
   const idb = useManagerTodayIndexedDbSources(
     true,

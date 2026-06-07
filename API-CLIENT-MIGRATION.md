@@ -2,7 +2,7 @@
 
 Saluna monorepo — shared `@repo/api-client` migration using HeyAPI-generated SDK, types, and TanStack Query options.
 
-**Status:** Phases 1–6 **complete**. App migration (Phase 7) and `@repo/data-client` removal are deferred.
+**Status:** Phases 1–6 **complete**. Phases 7–20 below are the app migration execution plan.
 
 **Docs:** `packages/api-client/README.md` (usage) · `packages/api-contract/README.md` (contract generation)
 
@@ -18,8 +18,13 @@ Saluna monorepo — shared `@repo/api-client` migration using HeyAPI-generated S
 | 4. Generated client config | ✅ Done | `configureGeneratedApiClient()` in `src/client.ts`, exported via `./generated-client`, error normalization + tests |
 | 5. React scaffold | ✅ Done | `src/react/index.ts` (empty), `./react` export |
 | 6. Documentation | ✅ Done | `packages/api-client/README.md` |
-| 7. App migration | ⏳ Deferred | — |
-| data-client removal | ⏳ Deferred | — |
+| 7. App foundation | ✅ Done | `generated-api-client.ts` wired at PWA startup; dual-run with legacy |
+| 8. Clients (pilot) | ✅ Done | List/detail/CRUD on generated query/mutation options; online-only |
+| 9–16. Vertical slices | ⏳ Planned | OpenAPI + app migration per route group (see below) |
+| 17. data-client removal | ⏳ Planned | Drop offline layer after CRUD slices proven |
+| 18. Web public API | ⏳ Planned | `apps/web` raw fetch → generated SDK |
+| 19. Native app | ⏳ Deferred | Not in prod — migrate when scoped |
+| 20. Legacy cleanup | ⏳ Planned | Remove `src/legacy/` when no consumers remain |
 
 **Known gaps (non-blocking for Phase 7 start):**
 
@@ -37,10 +42,11 @@ Saluna monorepo — shared `@repo/api-client` migration using HeyAPI-generated S
 - OpenAPI contract generated from Hono route definitions (clients route group first).
 - Infrastructure and documentation complete (`packages/api-client/README.md`).
 
-**Next (Phase 7+):**
+**Next (Phases 7–20):**
 
-- Migrate apps by vertical slice to generated query options / SDK.
-- Expand OpenAPI coverage route group by route group.
+- Wire generated client in apps; migrate by vertical slice (OpenAPI first, then screens).
+- Remove `@repo/data-client` after tenant CRUD is on generated options.
+- Retire legacy client when all consumers are migrated.
 
 ---
 
@@ -476,31 +482,398 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 
 ---
 
-## Next up (deferred)
+## Migration inventory (what we are moving)
 
-### Phase 7: App migration
+### Apps and current HTTP layers
 
-- Migrate apps by vertical slice (one screen/route at a time).
-- PWA: start with direct `api-client` flows; avoid data-client manager screens until data-client removal is planned.
-- Include query + mutation + invalidation + auth per slice.
-- Native and web: TBD when Phase 7 begins.
+| App | HTTP today | Scope |
+|-----|------------|-------|
+| **PWA** (`apps/pwa`) | Legacy `api` object (`#/lib/api-client.ts`) + `@repo/data-client` offline layer | Primary migration target |
+| **Web** (`apps/web`) | Raw `fetch` in `public-api.ts` | Phase 18 |
+| **Native** (`apps/native`) | Legacy `createApiClient` in `lib/api.ts` | Phase 19 (not in prod) |
 
-### `@repo/data-client` removal
+### PWA: dual path today
 
-- Offline support is being dropped.
-- Remove `packages/data-client` and PWA offline patterns in a separate effort after generated client is proven on tenant CRUD APIs.
+**Direct legacy API** (~35 files import `#/lib/api-client`):
 
-### Later OpenAPI passes
+- Auth/session: `auth.tsx`, `login.tsx`, `signup.tsx`
+- Onboarding: `_authed/onboarding/*`, `-steps.ts`
+- Clients detail: `clients.$id.tsx` (`api.clients.summary`)
+- Staff CRUD (partial): `staff-drawer`, `staff-password-drawer`, `use-staff-page-controller`, onboarding staff step
+- Calendar/availability: `calendar.tsx`, `availability-drawer.tsx`
+- Reads/aggregates: `dashboard`, `retention`, `requests`, `public-page`, `settings` (partial)
+- Today: `manager-today-provider`, `staff-today-provider`, `use-staff-today-status-mutation`
+- Messaging/notifications: `use-messaging-connect`, `messaging-accounts-section`, `bottom-nav`
 
-- Public booking API
-- Push API
-- Messaging webhooks
-- Health / internal ops
-- Saluna-owned auth wrappers (if stable schemas exist)
+**data-client offline path** (~40 files):
+
+- Provider: `ManagerDataClientProvider` in `_authed.tsx`
+- Collection hooks: `use-manager-collection`, `manager-data-queries` (clients, staff, services, catalog, business settings, schedules)
+- Mutations: `use-manager-mutation`, drawers (clients, staff, services, addons, categories, families)
+- Calendar/appointments: `calendar.tsx`, appointment detail, intake mutations
+- Offline UX: `manager-sync-bar`, `offline-state`, IndexedDB hooks, `clearOfflineDatabase` on auth
+
+### OpenAPI coverage today
+
+| Route group | OpenAPI | Legacy module | data-client module |
+|-------------|---------|---------------|-------------------|
+| clients | ✅ | `legacy/clients.ts` | `clients-module` |
+| staff | ❌ | `legacy/staff.ts` | `staff-module` |
+| services (+ categories, families, addons) | ❌ | `legacy/services.ts` | `services-module` |
+| appointments (+ availability) | ❌ | `legacy/appointments.ts` | `appointments-module` |
+| appointment-requests | ❌ | `legacy/appointment-requests.ts` | — |
+| business-settings | ❌ | `legacy/business-settings.ts` | `business-settings-module` |
+| salon-profile / salon-public-settings | ❌ | `legacy/salon-profile.ts`, `salon-public-settings.ts` | — |
+| onboarding | ❌ | `legacy/onboarding.ts` | — |
+| dashboard / today / retention | ❌ | `legacy/dashboard.ts`, `today.ts`, `retention.ts` | `today-module` |
+| messaging / notifications | ❌ | `legacy/messaging.ts`, `notifications.ts` | — |
+| auth | ❌ (stay legacy) | `legacy/auth.ts` | `session-module` |
+| public booking | ❌ (Phase 18) | — | — |
+| push / webhooks / health | ❌ (excluded) | — | — |
+
+### Per-slice migration pattern
+
+Each vertical slice follows the same steps:
+
+```txt
+1. Add OpenAPI routes in apps/api/src/openapi/ (reuse salon-core Zod schemas)
+2. pnpm generate:api-contract && pnpm generate:api-client
+3. Wire configureGeneratedApiClient() if not already (Phase 7)
+4. Replace legacy api.* calls with generated query/mutation options
+5. Replace data-client collection/mutation hooks for that domain
+6. Migrate query keys + invalidation together (legacy keys → generated keys)
+7. Remove offline UI/hooks for that domain only (see “Offline cleanup per slice” below)
+8. Delete legacy module usage for that slice when grep shows zero consumers
+```
+
+**Always migrate together per slice:** queries, mutations, invalidation, and error handling (`ApiError` / `NetworkError`).
+
+**Do not:** big-bang replace all `api.*` usage; create wrapper hooks per endpoint; rewrite salon-core schemas globally.
+
+### Offline cleanup per slice (Phases 8–16)
+
+Migrated domains are **online-only**. When a slice moves to the generated client, remove offline-era code for that domain in the same PR — do not carry forward `manager-write-policy` / `useNetworkStatus` guards into new `*-queries.ts` hooks.
+
+**Remove from the migrated slice:**
+
+- `useManagerWriteMutation` / `useManagerMutation` for that domain
+- `assertOnlineForWrite`, `useNetworkStatus`, and `enabled: isOnline` gating on queries/mutations
+- IndexedDB projection hooks (`use-*-indexeddb.ts`) and offline snapshot UI (`NetworkStatusBanner`, `OfflineStateCard`) on those screens
+- The domain’s `MANAGER_WRITE_OPERATIONS` entry in `manager-write-policy.ts` once nothing references it
+
+**Keep until Phase 17 (repo-wide):** `ManagerDataClientProvider`, `use-manager-collection`, global sync bar — other unmigrated domains still use them.
+
+**Network failures:** let generated client throw `NetworkError` / `ApiError`; rely on React Query error state and existing mutation toasts — no bespoke offline pre-checks in migrated hooks.
+
+**Phase 8 (clients) done:** no `client.save` in write policy; no offline guards in `clients-queries.ts` or clients screens.
+
+**Phase 9+ (staff, services, …):** same rule — generated `*-queries.ts` hooks use `postApiV1*Mutation` / `patchApiV1*Mutation` directly; drop `staff.create` / `staff.update` / etc. from write policy when staff slice migrates.
 
 ---
 
-## Implementation order (Phases 1–6 — complete)
+## Phases 7–20: App migration execution plan
+
+### Phase 7: App foundation (PWA)
+
+**Goal:** Generated client is configured and usable alongside legacy during migration.
+
+**OpenAPI:** none (clients already generated).
+
+**Tasks:**
+
+1. Call `configureGeneratedApiClient({ baseUrl, credentials: 'include' })` at PWA startup (e.g. alongside `#/lib/api-client.ts` wiring in app bootstrap).
+2. Document dual-run rule: legacy `api` stays until each slice is migrated; generated options used only in migrated files.
+3. Add a small `#/lib/generated-api-client.ts` (or extend bootstrap) — keep auth stores outside `@repo/api-client`.
+4. Optional hygiene (non-blocking): eslint ignore for `packages/api-client/src/generated/`; fix `@repo/auth` ↔ `@repo/database` turbo cycle so root `pnpm typecheck` passes.
+
+**Acceptance criteria:**
+
+- PWA boots with both legacy and generated clients configured.
+- A smoke test can call `getApiV1ClientsOptions()` successfully when authenticated.
+- No existing screens changed yet (zero behavior change).
+
+---
+
+### Phase 8: Clients (pilot slice)
+
+**Goal:** First end-to-end proof — OpenAPI already exists; replace both legacy and data-client client flows.
+
+**OpenAPI:** ✅ already in `apps/api/src/openapi/routes/clients.ts`.
+
+**App scope:**
+
+| Area | Current | Target |
+|------|---------|--------|
+| List | `useManagerClientsQuery` + IndexedDB | `getApiV1ClientsOptions` |
+| Detail/summary | `api.clients.summary` | `getApiV1ClientsByIdSummaryOptions` |
+| Drawer CRUD | data-client mutations | `postApiV1ClientsMutation`, `patchApiV1ClientsByIdMutation` |
+| Follow-ups | legacy `api.clients` | `postApiV1ClientsByIdFollowUpsMutation` |
+| Retention sidebar on clients page | `api.retention` | defer to Phase 15 or keep legacy call temporarily |
+
+**Key files:** `clients.tsx`, `clients.$id.tsx`, `client-drawer.tsx`, `manager-data-queries.ts` (clients hook), `use-clients-indexeddb.ts`, `query-keys.ts`.
+
+**Acceptance criteria:**
+
+- Clients list/detail/CRUD/follow-ups work online-only (no IndexedDB fallback for clients).
+- Query invalidation uses generated query keys.
+- `grep api.clients` and `useManagerClientsQuery` show zero consumers (except retention if deferred).
+- No `assertOnlineForWrite`, `useNetworkStatus`, or offline UI on clients screens / `clients-queries.ts`; `client.save` removed from `manager-write-policy.ts`.
+- E2E or manual: create, edit, search, open detail, add follow-up.
+
+---
+
+### Phase 9: Staff
+
+**Goal:** Staff management off data-client and legacy staff API.
+
+**OpenAPI:** add `apps/api/src/openapi/routes/staff.ts` (+ schemas) — list, create, update, delete, password, schedule bundle, booking availability, service assignments.
+
+**App scope:**
+
+- `staff.index.tsx`, `staff.$id.tsx`, staff drawers/modals, `use-staff-page-controller`
+- `useManagerStaffQuery`, schedule bundle query
+- Onboarding staff step (`onboarding/staff.tsx`) — partial legacy today
+- `api.staff.*` in staff-password-drawer, staff-drawer
+
+**Acceptance criteria:**
+
+- Staff list, CRUD, schedule, password, services assignment on generated options.
+- No `dc.staff.*` or `api.staff.*` in migrated files.
+- Offline cleanup per slice: no `useManagerWriteMutation` for staff on migrated screens; remove `staff.create` / `staff.update` / `staff.updatePassword` / `staff.delete` from write policy when migrated; no `assertOnlineForWrite` or offline UI on staff screens.
+
+---
+
+### Phase 10: Services catalog
+
+**Goal:** Services, categories, families, addons off data-client.
+
+**OpenAPI:** `services`, `service-categories`, `service-families`, `service-addons` route groups.
+
+**App scope:**
+
+- `services.tsx`, `service-catalog-manager`, all service drawers (service, category, family, addon)
+- `useManagerServicesQuery`, `useManagerServiceCatalogQuery`, `useManagerAddonsQuery`
+- `use-service-addons.ts` (`api.services.addons`)
+- Onboarding services step, `catalog-preset-picker`
+
+**Acceptance criteria:**
+
+- Full catalog CRUD on generated options.
+- Starter template import works (OpenAPI for `import-starter-templates` if used).
+
+---
+
+### Phase 11: Appointments & calendar
+
+**Goal:** Calendar and appointment flows off data-client + legacy appointments API.
+
+**OpenAPI:** `appointments` (+ `availability` sub-routes).
+
+**App scope:**
+
+- `calendar.tsx`, `availability-drawer.tsx`, appointment detail drawer/hooks
+- `use-appointment-intake-mutations`, `appointment-intake`, `client-picker`
+- data-client `appointments-module`, today IndexedDB hooks tied to calendar
+
+**Acceptance criteria:**
+
+- Create/edit/cancel/complete appointments via generated mutations.
+- Availability queries use generated options.
+- Calendar renders without offline projection for appointments.
+
+**Note:** Highest complexity slice — do after staff/services/clients are stable (shared pickers depend on them).
+
+---
+
+### Phase 12: Appointment requests
+
+**Goal:** Manager requests inbox off legacy API.
+
+**OpenAPI:** `appointment-requests` route group.
+
+**App scope:** `routes/_authed/requests.tsx` (approve/reject/list).
+
+**Acceptance criteria:**
+
+- Requests page fully on generated query/mutation options.
+
+---
+
+### Phase 13: Settings & public page
+
+**Goal:** Business settings, salon profile, public page settings off legacy + data-client.
+
+**OpenAPI:** `settings/business`, `salon-profile`, `salon-public-settings`.
+
+**App scope:**
+
+- `settings.tsx` (business settings via data-client today)
+- `public-page.tsx`, `slug-editor`, `presence-form`
+- `useManagerBusinessSettingsQuery`
+
+**Acceptance criteria:**
+
+- Settings and public page save/load via generated options.
+
+---
+
+### Phase 14: Onboarding
+
+**Goal:** Onboarding wizard off legacy onboarding API.
+
+**OpenAPI:** `onboarding` route group (status + step actions).
+
+**App scope:**
+
+- `_authed/onboarding.tsx`, `-steps.ts`, all step routes (`hours`, `staff`, `services`, `public`, `notifications`, `done`)
+- `_authed.tsx` onboarding gate query
+
+**Acceptance criteria:**
+
+- Full onboarding flow on generated options.
+- Step transitions and completion work; staff/services steps already migrated in Phases 9–10 reuse generated calls.
+
+**Note:** Cross-cuts other slices — best done after Phases 9–10 so step screens don't call legacy APIs.
+
+---
+
+### Phase 15: Dashboard, today & retention
+
+**Goal:** Read-heavy aggregates and today views off legacy API.
+
+**OpenAPI:** `dashboard`, `today`, `retention`.
+
+**App scope:**
+
+- `dashboard.tsx`, `retention.tsx`, `clients.tsx` retention query
+- `manager-today-provider`, `staff-today-provider`, `manager-today-screen`
+- `use-staff-today-status-mutation`, `bottom-nav` notification badge (if not done in Phase 16)
+
+**Acceptance criteria:**
+
+- Dashboard, today, retention on generated query options.
+- Today views no longer depend on data-client `today-module`.
+
+---
+
+### Phase 16: Messaging & notifications
+
+**Goal:** Messaging connect and notification preferences off legacy API.
+
+**OpenAPI:** `messaging`, `notifications`, `notification-preferences`.
+
+**App scope:**
+
+- `use-messaging-connect.ts`, `messaging-accounts-section.tsx`
+- Onboarding notifications step
+- Any remaining `api.notifications.*` usage
+
+**Acceptance criteria:**
+
+- Connect/disconnect messaging, list accounts, notification prefs on generated options.
+
+---
+
+### Phase 17: Remove `@repo/data-client`
+
+**Goal:** Delete offline layer after Phases 8–16 migrated all data-client domains.
+
+**Prerequisite:** Zero imports from `@repo/data-client` in PWA (grep clean).
+
+**Tasks:**
+
+1. Remove `ManagerDataClientProvider`, `manager-data-client.tsx`.
+2. Remove `use-manager-collection`, `use-manager-mutation`, offline hooks, IndexedDB adapters usage.
+3. Remove offline UX: `manager-sync-bar`, `offline-state`, `clearOfflineDatabase` from auth/signup/login.
+4. Delete `packages/data-client` and portability package.
+5. Remove data-client from PWA `package.json`, turbo pipeline, any CI references.
+
+**Acceptance criteria:**
+
+- PWA has no offline/sync code paths.
+- `packages/data-client` deleted.
+- Manager app is online-only with generated client.
+
+---
+
+### Phase 18: Web public booking API
+
+**Goal:** Astro public site uses generated SDK instead of raw fetch.
+
+**OpenAPI:** `public` route group (`/api/v1/public/*`).
+
+**App scope:** `apps/web/src/lib/public-api.ts` → `@repo/api-client/sdk`.
+
+**Acceptance criteria:**
+
+- Public salon view, availability, appointment request flows use generated SDK.
+- Server-side Astro loaders use `@repo/api-client/sdk` with `configureGeneratedApiClient` or per-request client config.
+
+---
+
+### Phase 19: Native app (when scoped)
+
+**Goal:** Native app on generated client — only when native is in prod scope.
+
+**OpenAPI:** reuse route groups from Phases 8–16; auth stays legacy (`createAuthApi` / Better Auth passthrough).
+
+**App scope:** `apps/native/lib/api.ts` and ~20 component files using legacy types/errors.
+
+**Acceptance criteria:**
+
+- Native uses `configureGeneratedApiClient({ getAccessToken })` + generated options.
+- Auth/signup/login remain legacy until Saluna-owned auth wrappers are OpenAPI-documented.
+
+---
+
+### Phase 20: Legacy cleanup
+
+**Goal:** Remove hand-written client after all apps migrated.
+
+**Tasks:**
+
+1. Grep monorepo for `@repo/api-client` legacy imports (`createApiClient`, `createXApi`, legacy subpaths).
+2. Remove unused `src/legacy/*` modules one at a time.
+3. Switch root `@repo/api-client` barrel to re-export generated surface (or keep explicit `./legacy` export temporarily).
+4. Remove legacy subpath exports when unused.
+5. Update README to generated-first.
+
+**Acceptance criteria:**
+
+- `src/legacy/` deleted (except auth if still required).
+- Root export documents generated API as primary.
+- `pnpm generate:api-contract` + `pnpm generate:api-client` remain the source of truth.
+
+---
+
+## Recommended execution order
+
+```txt
+Phase 7   App foundation (dual-run generated + legacy)
+Phase 8   Clients          ← pilot; OpenAPI ready
+Phase 9   Staff
+Phase 10  Services catalog
+Phase 11  Appointments     ← highest complexity; after 8–10
+Phase 12  Appointment requests
+Phase 13  Settings & public page
+Phase 14  Onboarding       ← after 9–10 (step screens)
+Phase 15  Dashboard, today, retention
+Phase 16  Messaging & notifications
+Phase 17  data-client removal
+Phase 18  Web public API
+Phase 19  Native (when scoped)
+Phase 20  Legacy cleanup
+```
+
+**Parallelism:** OpenAPI for Phase N+1 can be drafted while Phase N app migration is in review. Do not migrate app screens before their OpenAPI contract exists.
+
+**Auth stays legacy through Phase 20** unless Saluna adds stable OpenAPI wrappers for `/api/v1/auth/*`.
+
+---
+
+## Implementation order
+
+### Phases 1–6 (complete)
 
 ```txt
  ✅ 1. Phase 1: Move api-client src → src/legacy/; wire all exports; add src/errors.ts
@@ -515,14 +888,23 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
  ⚠️ 10. Root generate:api-client script (done); full root typecheck/lint pass blocked by turbo cycle
 ```
 
-### Suggested Phase 7 order (when starting app migration)
+### Phases 7–20 (app migration — start here)
 
 ```txt
- 1. Wire configureGeneratedApiClient() in PWA startup (alongside legacy apiClient)
- 2. Pick first vertical slice (e.g. clients list/detail) — avoid data-client manager screens initially
- 3. Replace legacy calls with generated query/mutation options + invalidation in that slice
- 4. Expand OpenAPI contract for the next route group before migrating its app screens
- 5. Repeat per slice; remove legacy module usage only when no consumers remain
+ ✅ 7.  Wire configureGeneratedApiClient() in PWA (dual-run; no screen changes)
+ ✅ 8.  Clients slice (OpenAPI ✅) — replace legacy + data-client
+ → 9.  OpenAPI staff → migrate staff screens
+ → 10. OpenAPI services → migrate catalog
+ → 11. OpenAPI appointments → migrate calendar
+ → 12. OpenAPI appointment-requests → migrate requests inbox
+ → 13. OpenAPI settings/public → migrate settings + public page
+ → 14. OpenAPI onboarding → migrate wizard
+ → 15. OpenAPI dashboard/today/retention → migrate aggregates
+ → 16. OpenAPI messaging/notifications → migrate connect + prefs
+ → 17. Remove @repo/data-client + offline UX
+ → 18. OpenAPI public → migrate apps/web
+ → 19. Native (when scoped)
+ → 20. Delete src/legacy/
 ```
 
 ---
@@ -548,13 +930,27 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 - [ ] Root `pnpm typecheck` passes — blocked by `@repo/auth` ↔ `@repo/database` turbo cycle
 - [ ] Root `pnpm lint` passes — same turbo cycle; plus generated-file eslint noise in api-client
 
-### Phase 7 (when starting)
+### Phases 7–20 (app migration)
 
-- [ ] Wire `configureGeneratedApiClient()` per app at startup
-- [ ] Migrate one vertical slice at a time (query + mutation + invalidation + auth)
+- [x] Phase 7: Wire `configureGeneratedApiClient()` in PWA (dual-run with legacy)
+- [x] Phase 8: Clients slice — generated query/mutation + invalidation; drop clients data-client path
+- [ ] Phase 9: OpenAPI staff + migrate staff screens
+- [ ] Phase 10: OpenAPI services catalog + migrate services screens
+- [ ] Phase 11: OpenAPI appointments + migrate calendar
+- [ ] Phase 12: OpenAPI appointment-requests + migrate requests
+- [ ] Phase 13: OpenAPI settings/public + migrate settings & public page
+- [ ] Phase 14: OpenAPI onboarding + migrate wizard
+- [ ] Phase 15: OpenAPI dashboard/today/retention + migrate reads
+- [ ] Phase 16: OpenAPI messaging/notifications + migrate connect/prefs
+- [ ] Phase 17: Remove `@repo/data-client` and offline UX
+- [ ] Phase 18: OpenAPI public + migrate `apps/web`
+- [ ] Phase 19: Native (when scoped)
+- [ ] Phase 20: Delete `src/legacy/` when grep clean
 - [ ] Prefer generated query options over endpoint wrapper hooks
-- [ ] Expand OpenAPI contract before migrating screens for new route groups
-- [ ] Do not touch data-client manager screens until removal is planned
+- [ ] Expand OpenAPI contract **before** migrating screens for each route group
+- [ ] Migrate query keys + invalidation together per slice
+- [ ] Per slice: remove offline guards (`assertOnlineForWrite`, `useNetworkStatus` gating, offline UI, write-policy entries) — see “Offline cleanup per slice”
+- [ ] Keep auth on legacy until OpenAPI wrappers exist
 
 ---
 
@@ -565,7 +961,10 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 | Query key changes (Phase 7) | Migrate query + invalidation together per slice |
 | Error shape changes | Normalize to `ApiError` / `NetworkError` in generated client config |
 | Duplicate types (salon-core vs generated) | Generated DTOs at boundary; mappers only when needed |
-| data-client parallel HTTP layer | Leave untouched until explicit removal effort |
+| data-client parallel HTTP layer | Migrate domain-by-domain in Phases 8–16; remove package in Phase 17 |
+| Clients uses both legacy + data-client | Phase 8 replaces both paths together (pilot slice) |
+| Onboarding cross-cuts staff/services | Phase 14 after Phases 9–10 |
+| Calendar depends on clients/staff/services | Phase 11 after Phases 8–10 |
 | Better Auth passthrough | Keep legacy `createAuthApi`; exclude from first OpenAPI pass |
 
 ---
@@ -597,11 +996,14 @@ Apps                 → compose behavior locally with generated options
 - [x] Phase 2 did **not** rewrite all salon-core schemas.
 - [x] No app migration occurred.
 
-### Hard constraints (still apply for Phase 7+)
+### Hard constraints (Phases 7–20)
 
-- App migration is Phase 7 — by vertical slice, not big-bang.
+- Migrate by vertical slice — not big-bang.
+- OpenAPI before app screens for each route group.
 - Better Auth passthrough stays legacy until Saluna-owned wrapper routes have stable OpenAPI schemas.
-- Public booking, push, messaging webhooks, and health excluded until later OpenAPI passes.
+- Public booking (Phase 18), push, messaging webhooks, and health excluded until their phases.
 - Prefer generated query options directly; custom hooks only for shared domain behavior.
-- `@repo/data-client` removal is a separate later effort.
-- Native app out of scope until Phase 7 planning includes it.
+- Migrated slices are online-only: no `assertOnlineForWrite` / `useNetworkStatus` in generated `*-queries.ts` hooks; remove write-policy entries per domain as each slice lands.
+- `@repo/data-client` removal is Phase 17 — after CRUD domains are on generated client.
+- Native is Phase 19 — only when in prod scope.
+- Dual-run legacy + generated during migration; remove legacy per slice when grep clean.

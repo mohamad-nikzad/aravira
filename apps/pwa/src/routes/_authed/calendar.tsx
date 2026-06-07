@@ -19,12 +19,14 @@ import { api } from '#/lib/api-client'
 import { useAuth } from '#/lib/auth'
 import { useManagerDataClient } from '#/lib/manager-data-client'
 import {
-  useManagerClientsQuery,
   useManagerServicesQuery,
   useManagerStaffQuery,
 } from '#/lib/manager-data-queries'
+import {
+  clientsListQueryOptions,
+  getApiV1ClientsQueryKey,
+} from '#/lib/clients-queries'
 import { useNetworkStatus } from '#/lib/network-status'
-import { managerClientsQueryKey } from '#/lib/query-keys'
 import { useCalendarIndexedDbSources } from '#/lib/use-calendar-indexeddb-sources'
 import { CalendarHeader } from '#/components/calendar/calendar-header'
 import { SalonFullCalendar } from '#/components/calendar/salon-full-calendar'
@@ -132,7 +134,10 @@ function CalendarPage() {
   const staffQuery = useManagerStaffQuery(!!dc)
   const servicesQuery = useManagerServicesQuery(!!dc)
 
-  const clientsQuery = useManagerClientsQuery(Boolean(dc && isManager))
+  const clientsQuery = useQuery({
+    ...clientsListQueryOptions(),
+    enabled: isManager,
+  })
 
   const businessQuery = useQuery<BusinessResponse>({
     queryKey: ['settings', 'business'],
@@ -737,7 +742,7 @@ function CalendarPage() {
         onDetailChange={handleDetailChange}
         onClientsChanged={() => {
           void queryClient.invalidateQueries({
-            queryKey: managerClientsQueryKey,
+            queryKey: getApiV1ClientsQueryKey(),
           })
         }}
         detailReadOnly={!isManager}

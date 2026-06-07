@@ -9,13 +9,11 @@ export const messagingAccountsQueryKey = ['messaging', 'accounts'] as const
 
 export const managerStaffQueryKey = ['manager', 'staff'] as const
 export const managerServicesQueryKey = ['manager', 'services'] as const
-export const managerClientsQueryKey = ['manager', 'clients'] as const
 
-/** Shared React Query keys for manager staff/clients/services list reads. */
+/** Shared React Query keys for manager staff/services list reads. */
 export const managerReadQueryKeys = {
   staff: managerStaffQueryKey,
   services: managerServicesQueryKey,
-  clients: managerClientsQueryKey,
 } as const
 export const managerServiceCatalogQueryKey = [
   'manager',

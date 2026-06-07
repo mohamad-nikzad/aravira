@@ -14,11 +14,11 @@ import type { Client } from '@repo/salon-core/types'
 import type { RetentionQueueResponse } from '@repo/api-client'
 
 import { api } from '#/lib/api-client'
-import { useManagerClientsQuery } from '#/lib/manager-data-queries'
-import { useNetworkStatus } from '#/lib/network-status'
+import {
+  clientsListQueryOptions,
+  getApiV1ClientsQueryKey,
+} from '#/lib/clients-queries'
 import { HEAVY_QUERY_STALE_TIME_MS } from '#/lib/query-client'
-import { managerClientsQueryKey } from '#/lib/query-keys'
-import { useClientsListIndexedDbSources } from '#/lib/use-clients-indexeddb'
 import { ClientDrawer } from '#/components/clients/client-drawer'
 import {
   ClientAvatar,
@@ -27,10 +27,6 @@ import {
   tagTone,
 } from '#/components/clients/client-visuals'
 import { ClientsSkeleton } from '#/components/clients/clients-skeleton'
-import {
-  NetworkStatusBanner,
-  OfflineStateCard,
-} from '#/components/offline-state'
 
 type FilterId = 'all' | 'vip' | 'followup'
 
@@ -97,34 +93,19 @@ function InsightCard({
 
 function ClientsPage() {
   const queryClient = useQueryClient()
-  const isOnline = useNetworkStatus()
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterId>('all')
   const [showDrawer, setShowDrawer] = useState(false)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
 
-  const {
-    data: clientsList,
-    error,
-    refetch,
-  } = useManagerClientsQuery(true)
-
-  const liveData = useMemo(
-    () =>
-      clientsList !== undefined ? { clients: clientsList } : undefined,
-    [clientsList],
-  )
+  const { data: clients = [], isPending } = useQuery(clientsListQueryOptions())
 
   const { data: retentionData } = useQuery({
     queryKey: retentionQueryKey,
     queryFn: ({ signal }) => api.retention.list({ signal }),
     staleTime: HEAVY_QUERY_STALE_TIME_MS,
   }) as { data: RetentionQueueResponse | undefined }
-
-  const idb = useClientsListIndexedDbSources(true, isOnline, liveData)
-  const data = idb.data ?? liveData
-  const clients: Client[] = data?.clients ?? []
 
   const followUpIds = useMemo(
     () => new Set((retentionData?.items ?? []).map((item) => item.client.id)),
@@ -183,38 +164,11 @@ function ClientsPage() {
   const handleSuccess = () => {
     setShowDrawer(false)
     setSelectedClient(null)
-    void queryClient.invalidateQueries({ queryKey: managerClientsQueryKey })
+    void queryClient.invalidateQueries({ queryKey: getApiV1ClientsQueryKey() })
   }
 
-  if (idb.idbLoading && !idb.hasSnapshot && !isOnline) {
+  if (isPending) {
     return <ClientsSkeleton />
-  }
-
-  if (!idb.hasSnapshot && !isOnline && !idb.idbLoading) {
-    return (
-      <div className="flex h-full flex-col bg-background">
-        <header className="border-b border-line-soft bg-card px-5 pt-3.5 pb-4">
-          <h1 className="text-[22px] font-extrabold tracking-tight text-foreground">
-            مشتریان
-          </h1>
-        </header>
-
-        <NetworkStatusBanner
-          routeLabel="فهرست مشتریان"
-          isOnline={isOnline}
-          hasSnapshot={idb.hasSnapshot}
-          snapshotUpdatedAt={idb.snapshotUpdatedAt}
-          hasError={Boolean(error)}
-          onRetry={() => void refetch()}
-        />
-
-        <OfflineStateCard
-          title="فهرست مشتریان فعلا بارگذاری نشده است"
-          description="برای اولین بارگذاری مشتریان باید دوباره به اینترنت متصل شوید."
-          onAction={() => void refetch()}
-        />
-      </div>
-    )
   }
 
   return (
@@ -278,15 +232,6 @@ function ClientsPage() {
           })}
         </div>
       </header>
-
-      <NetworkStatusBanner
-        routeLabel="فهرست مشتریان"
-        isOnline={isOnline}
-        hasSnapshot={idb.hasSnapshot}
-        snapshotUpdatedAt={idb.snapshotUpdatedAt}
-        hasError={Boolean(error)}
-        onRetry={() => void refetch()}
-      />
 
       <div className="flex-1 overflow-auto pb-24">
         <div className="flex gap-2.5 overflow-x-auto px-5 pt-4 pb-1 scrollbar-hide">

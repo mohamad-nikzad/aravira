@@ -1,5 +1,8 @@
 import { useEffect } from 'react'
-import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
+import {
+  useCreateClientMutation,
+  useUpdateClientMutation,
+} from '#/lib/clients-queries'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@repo/ui/button'
@@ -94,20 +97,16 @@ export function ClientDrawer({
     requestClose(false)
   }
 
-  const saveClient = useManagerWriteMutation('client.save', {
-    dataClientFn: async (dc, values: ClientFormInput) => {
-      if (isEditing) {
-        await dc.clients.update(client.id, values)
-      } else {
-        await dc.clients.create(values)
-      }
-    },
-    meta: { errorMessage: 'ذخیره اطلاعات مشتری انجام نشد' },
-  })
+  const createClient = useCreateClientMutation()
+  const updateClient = useUpdateClientMutation(client?.id ?? '')
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await saveClient.mutateAsync(values)
+      if (client) {
+        await updateClient.mutateAsync(values)
+      } else {
+        await createClient.mutateAsync(values)
+      }
       onSuccess()
     } catch {
       // Toast handled by mutation cache.

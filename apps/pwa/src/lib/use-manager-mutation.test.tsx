@@ -121,7 +121,7 @@ describe('useManagerMutation', () => {
     )
 
     const { result } = renderHook(
-      () => useManagerMutation('client.save', mutationFn),
+      () => useManagerMutation('appointment.update', mutationFn),
       { wrapper },
     )
 

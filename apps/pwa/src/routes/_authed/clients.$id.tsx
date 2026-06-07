@@ -1,10 +1,5 @@
 import { useState } from 'react'
-import {
-  createFileRoute,
-  Link,
-  redirect,
-  useNavigate,
-} from '@tanstack/react-router'
+import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowRight,
@@ -34,11 +29,11 @@ import {
   toPersianDigits,
 } from '@repo/salon-core/persian-digits'
 
-import { api } from '#/lib/api-client'
-import { HEAVY_QUERY_STALE_TIME_MS } from '#/lib/query-client'
-import { useNetworkStatus } from '#/lib/network-status'
-import { managerClientsQueryKey } from '#/lib/query-keys'
-import { useClientSummaryIndexedDbSources } from '#/lib/use-clients-indexeddb'
+import {
+  clientSummaryQueryOptions,
+  getApiV1ClientsByIdSummaryQueryKey,
+  getApiV1ClientsQueryKey,
+} from '#/lib/clients-queries'
 import { ClientDrawer } from '#/components/clients/client-drawer'
 import {
   ClientAvatar,
@@ -46,12 +41,6 @@ import {
   tagTone,
 } from '#/components/clients/client-visuals'
 import { ClientSummarySkeleton } from '#/components/clients/client-summary-skeleton'
-import {
-  NetworkStatusBanner,
-  OfflineStateCard,
-} from '#/components/offline-state'
-
-const clientSummaryKey = (id: string) => ['clients', id, 'summary'] as const
 
 export const Route = createFileRoute('/_authed/clients/$id')({
   beforeLoad: ({ context }) => {
@@ -59,11 +48,8 @@ export const Route = createFileRoute('/_authed/clients/$id')({
       throw redirect({ to: '/today' })
     }
   },
-  loader: ({ context, params }) =>
-    context.queryClient.ensureQueryData<ClientSummary>({
-      queryKey: clientSummaryKey(params.id),
-      queryFn: ({ signal }) => api.clients.summary(params.id, { signal }),
-    }),
+  loader: async ({ context, params }): Promise<ClientSummary> =>
+    context.queryClient.fetchQuery(clientSummaryQueryOptions(params.id)),
   component: ClientDetailPage,
   pendingComponent: ClientSummarySkeleton,
   errorComponent: ClientDetailError,
@@ -142,66 +128,25 @@ function ClientStat({
 
 function ClientDetailPage() {
   const { id } = Route.useParams()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const initial = Route.useLoaderData()
-  const isOnline = useNetworkStatus()
   const [editOpen, setEditOpen] = useState(false)
 
-  const {
-    data: liveData,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: clientSummaryKey(id),
-    queryFn: ({ signal }) => api.clients.summary(id, { signal }),
+  const summaryQuery = clientSummaryQueryOptions(id)
+
+  const { data, isPending } = useQuery({
+    queryKey: summaryQuery.queryKey,
+    queryFn: summaryQuery.queryFn,
+    staleTime: summaryQuery.staleTime,
     initialData: initial,
-    staleTime: HEAVY_QUERY_STALE_TIME_MS,
   })
 
-  const idb = useClientSummaryIndexedDbSources(true, isOnline, id, liveData)
-  const data = idb.data ?? liveData
-
-  if (idb.idbLoading && !idb.hasSnapshot && !isOnline) {
+  if (isPending && !data) {
     return <ClientSummarySkeleton />
   }
 
-  if (!idb.hasSnapshot && !isOnline && !idb.idbLoading) {
-    return (
-      <div className="flex h-full flex-col bg-background">
-        <header className="flex items-center gap-3 border-b border-line-soft bg-card px-3 py-3">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="shrink-0 touch-manipulation"
-            asChild
-          >
-            <Link to="/clients" aria-label="بازگشت">
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg font-bold">پروفایل مشتری</h1>
-          </div>
-        </header>
-
-        <NetworkStatusBanner
-          routeLabel="پروفایل مشتری"
-          isOnline={isOnline}
-          hasSnapshot={idb.hasSnapshot}
-          snapshotUpdatedAt={idb.snapshotUpdatedAt}
-          hasError={Boolean(error)}
-          onRetry={() => void refetch()}
-        />
-
-        <OfflineStateCard
-          title="پروفایل مشتری فعلا در دسترس نیست"
-          description="برای باز کردن این پروفایل باید قبلا یک بار آن را با اینترنت دیده باشید."
-          actionLabel="بازگشت به فهرست"
-          onAction={() => navigate({ to: '/clients' })}
-        />
-      </div>
-    )
+  if (!data) {
+    return <ClientSummarySkeleton />
   }
 
   const { client, tags, stats, upcomingAppointment, history, openFollowUps } =
@@ -242,15 +187,6 @@ function ClientDetailPage() {
         </Button>
       </header>
 
-      <NetworkStatusBanner
-        routeLabel="پروفایل مشتری"
-        isOnline={isOnline}
-        hasSnapshot={idb.hasSnapshot}
-        snapshotUpdatedAt={idb.snapshotUpdatedAt}
-        hasError={Boolean(error)}
-        onRetry={() => void refetch()}
-      />
-
       <div className="flex-1 space-y-4 overflow-auto p-4">
         <div className="flex gap-2">
           {client.phone ? (
@@ -261,27 +197,16 @@ function ClientDetailPage() {
               </a>
             </Button>
           ) : null}
-          {isOnline ? (
-            <Button
-              variant="secondary"
-              className="flex-1 touch-manipulation gap-1.5"
-              asChild
-            >
-              <a href={`/calendar?clientId=${client.id}`}>
-                <CalendarPlus className="h-4 w-4" />
-                نوبت جدید
-              </a>
-            </Button>
-          ) : (
-            <Button
-              variant="secondary"
-              className="flex-1 touch-manipulation gap-1.5"
-              disabled
-            >
+          <Button
+            variant="secondary"
+            className="flex-1 touch-manipulation gap-1.5"
+            asChild
+          >
+            <a href={`/calendar?clientId=${client.id}`}>
               <CalendarPlus className="h-4 w-4" />
               نوبت جدید
-            </Button>
-          )}
+            </a>
+          </Button>
         </div>
 
         <div className="flex gap-2">
@@ -475,8 +400,10 @@ function ClientDetailPage() {
         client={client}
         onSuccess={() => {
           setEditOpen(false)
-          void queryClient.invalidateQueries({ queryKey: clientSummaryKey(id) })
-          void queryClient.invalidateQueries({ queryKey: managerClientsQueryKey })
+          void queryClient.invalidateQueries({
+            queryKey: getApiV1ClientsByIdSummaryQueryKey({ path: { id } }),
+          })
+          void queryClient.invalidateQueries({ queryKey: getApiV1ClientsQueryKey() })
         }}
       />
     </div>

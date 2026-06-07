@@ -71,4 +71,5 @@ describe('manager-write-policy', () => {
       OFFLINE_WRITE_BLOCKED_MESSAGE,
     )
   })
+
 })

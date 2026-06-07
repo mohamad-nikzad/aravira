@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { useManagerWriteMutation } from '#/lib/use-manager-mutation'
+import { useCreateClientMutation } from '#/lib/clients-queries'
 import {
   Check,
   ChevronDown,
@@ -148,14 +148,11 @@ export function ClientPicker({
     reset({ name: '', phone: '', notes: '', tags: [] })
   }
 
-  const saveClient = useManagerWriteMutation('client.save', {
-    dataClientFn: async (dc, values: ClientFormInput) => dc.clients.create(values),
-    meta: { errorMessage: 'ذخیره مشتری انجام نشد' },
-  })
+  const createClient = useCreateClientMutation()
 
   const handleSaveNew = handleSubmit(async (values) => {
     try {
-      const created = await saveClient.mutateAsync(values)
+      const created = await createClient.mutateAsync(values)
 
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur()
