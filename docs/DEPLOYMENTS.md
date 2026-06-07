@@ -50,6 +50,11 @@ when their `rules:changes` match.
 
 The CI file is [`.gitlab-ci.yml`](../.gitlab-ci.yml).
 
+If HamGit shared runner minutes are exhausted, Saluna can temporarily use the
+locked-down VPS runner documented in
+[`docs/SELF_HOSTED_GITLAB_RUNNER.md`](SELF_HOSTED_GITLAB_RUNNER.md). Keep that
+runner tagged, protected, unprivileged, and limited to one job at a time.
+
 Build jobs:
 
 | Job | Builds | Image tag |

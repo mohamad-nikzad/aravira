@@ -1,0 +1,14 @@
+services:
+  gitlab-runner:
+    image: hub.hamdocker.ir/gitlab/gitlab-runner:alpine
+    container_name: saluna-gitlab-runner
+    restart: unless-stopped
+    cpus: "0.75"
+    mem_limit: 768m
+    memswap_limit: 768m
+    pids_limit: 256
+    volumes:
+      - ./config:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      TZ: Asia/Tehran

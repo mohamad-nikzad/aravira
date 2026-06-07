@@ -11,6 +11,8 @@ variables:
   SALUNA_PNPM_VERSION: 9.15.9
 
 .kaniko-build:
+  tags:
+    - saluna-vps
   image:
     name: gcr.hamdocker.ir/kaniko-project/executor:v1.23.2-debug
     entrypoint: [""]
@@ -24,6 +26,8 @@ variables:
       printf '{"auths":{"registry.hamdocker.ir":{"auth":"%s"}}}\n' "$auth" > /kaniko/.docker/config.json
 
 .deploy:
+  tags:
+    - saluna-vps
   image: hub.hamdocker.ir/library/alpine:3.20
   before_script:
     - sed -i "s#https://dl-cdn.alpinelinux.org/alpine#${SALUNA_ALPINE_MIRROR}#g" /etc/apk/repositories

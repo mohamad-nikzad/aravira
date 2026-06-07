@@ -6,7 +6,7 @@ export const SEEDED_STAFF = { phone: '09120000001', password: 'admin123' }
 
 export async function login(page: Page, phone: string, password: string) {
   await page.goto('/login')
-  await expect(page.getByRole('heading', { name: 'آراویرا' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /سالونا|آراویرا/ })).toBeVisible()
   const phoneBox = page.getByRole('textbox', { name: 'شماره موبایل' })
   const passBox = page.getByRole('textbox', { name: 'رمز عبور' })
   await phoneBox.click()
@@ -15,7 +15,9 @@ export async function login(page: Page, phone: string, password: string) {
   await passBox.fill(password)
   const [loginRes] = await Promise.all([
     page.waitForResponse(
-      (r) => r.url().includes('/api/auth/login') && r.request().method() === 'POST'
+      (r) =>
+        r.url().includes('/api/v1/auth/sign-in/username') &&
+        r.request().method() === 'POST',
     ),
     page.getByRole('button', { name: 'ورود' }).click(),
   ])
