@@ -30,7 +30,7 @@ export async function login(page: Page, phone: string, password: string) {
 export async function loginManagerExpectsToday(page: Page) {
   await login(page, SEEDED_MANAGER.phone, SEEDED_MANAGER.password)
   await expect(page).toHaveURL(/\/today/)
-  await expect(page.getByRole('heading', { name: 'امروز' })).toBeVisible()
+  await expect(page.getByText('نوبت‌های امروز').first()).toBeVisible()
 }
 
 export async function loginManagerExpectsCalendar(page: Page) {
@@ -43,7 +43,7 @@ export async function loginManagerExpectsCalendar(page: Page) {
 export async function loginStaffExpectsToday(page: Page) {
   await login(page, SEEDED_STAFF.phone, SEEDED_STAFF.password)
   await expect(page).toHaveURL(/\/today/)
-  await expect(page.getByRole('heading', { name: 'امروز من' })).toBeVisible()
+  await expect(page.getByText('الان و بعدی')).toBeVisible()
 }
 
 export async function logoutFromSettings(page: Page) {

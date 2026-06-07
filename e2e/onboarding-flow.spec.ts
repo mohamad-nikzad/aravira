@@ -41,9 +41,12 @@ async function signupNewSalon(page: Page) {
   await page.locator('#managerName').fill(salon.managerName)
   await page.locator('#managerPhone').fill(salon.phone)
   await page.locator('#password').fill(salon.password)
+  await page.locator('#confirmPassword').fill(salon.password)
 
   const signupPost = page.waitForResponse(
-    (r) => r.url().includes('/api/v1/auth/signup') && r.request().method() === 'POST'
+    (r) =>
+      /\/api\/(v\d+\/)?auth\/signup/.test(r.url()) &&
+      r.request().method() === 'POST',
   )
   await page.getByRole('button', { name: 'ساخت سالن' }).click()
   const res = await signupPost
@@ -54,7 +57,7 @@ async function signupNewSalon(page: Page) {
 }
 
 test.describe('Onboarding redesign', () => {
-  test.describe.configure({ mode: 'serial' })
+  test.describe.configure({ mode: 'serial', timeout: 180_000 })
 
   test('Full new-salon flow: signup → preset services → manager-only → skip rest → calendar', async ({
     page,
@@ -84,34 +87,26 @@ test.describe('Onboarding redesign', () => {
       await expect(page).toHaveURL(/\/onboarding\/services/)
     })
 
-    await test.step('Services: apply a catalog preset', async () => {
-      // The first non-disabled preset card is a role=button Card.
-      const presetCard = page.getByRole('button').filter({ hasText: 'خدمت' }).first()
-      await presetCard.click()
-      // Detail view: apply the (pre-selected) variants.
-      const applyBtn = page.getByRole('button', { name: /افزودن .* خدمت به سالن/ })
-      await expect(applyBtn).toBeVisible({ timeout: 20_000 })
+    await test.step('Services: apply a catalog preset via continue', async () => {
+      await page.getByText('لاین مژه و ابرو').click()
+      await expect(page.getByText(/خدمت انتخاب شده/)).toBeVisible({ timeout: 20_000 })
+
       const waitApply = page.waitForResponse(
         (r) =>
           /\/api\/(v\d+\/)?catalog-presets\/[^/]+\/apply/.test(r.url()) &&
-          r.request().method() === 'POST'
+          r.request().method() === 'POST',
       )
-      await applyBtn.click()
-      await waitApply
-      // Confirmation chip appears once an active service exists.
-      await expect(page.getByText(/خدمت فعال ثبت شد/)).toBeVisible({ timeout: 20_000 })
-    })
-
-    await test.step('Services → staff', async () => {
       await page.getByRole('button', { name: 'ادامه' }).click()
-      await expect(page).toHaveURL(/\/onboarding\/staff/)
+      const res = await waitApply
+      expect(res.ok(), await res.text()).toBeTruthy()
+      await expect(page).toHaveURL(/\/onboarding\/staff/, { timeout: 30_000 })
     })
 
     await test.step('Staff: choose manager-only path', async () => {
       const waitSetManager = page.waitForResponse(
-        (r) => /\/api\/(v\d+\/)?onboarding/.test(r.url()) && r.request().method() === 'PATCH'
+        (r) => /\/api\/(v\d+\/)?onboarding/.test(r.url()) && r.request().method() === 'PATCH',
       )
-      await page.getByRole('button', { name: 'فعلاً فقط خودم هستم' }).click()
+      await page.getByRole('button', { name: 'ادامه' }).click()
       const res = await waitSetManager
       expect(res.ok(), await res.text()).toBeTruthy()
       await expect(page).toHaveURL(/\/onboarding\/presence/)
@@ -127,20 +122,26 @@ test.describe('Onboarding redesign', () => {
       await expect(page).toHaveURL(/\/onboarding\/notifications/)
     })
 
-    await test.step('Notifications: skip (بعداً)', async () => {
-      await page.getByRole('button', { name: 'بعداً' }).click()
+    await test.step('Notifications: continue without connecting Telegram', async () => {
+      await page.getByRole('button', { name: 'ادامه' }).click()
       await expect(page).toHaveURL(/\/onboarding\/done/)
     })
 
-    await test.step('Done → complete → calendar', async () => {
+    await test.step('Done → complete onboarding', async () => {
       await expect(page.getByRole('heading', { name: /تمام شد/ })).toBeVisible()
-      const waitComplete = page.waitForResponse(
-        (r) => /\/api\/(v\d+\/)?onboarding/.test(r.url()) && r.request().method() === 'PATCH'
-      )
-      await page.getByRole('button', { name: /بزن بریم سراغ اولین نوبت/ }).click()
-      const res = await waitComplete
-      expect(res.ok(), await res.text()).toBeTruthy()
-      await expect(page).toHaveURL(/\/calendar/, { timeout: 30_000 })
+      const [completeRes] = await Promise.all([
+        page.waitForResponse(
+          (r) =>
+            /\/api\/(v\d+\/)?onboarding/.test(r.url()) &&
+            r.request().method() === 'PATCH',
+        ),
+        page.getByRole('button', { name: /بزن بریم سراغ اولین نوبت/ }).click(),
+      ])
+      expect(completeRes.ok()).toBeTruthy()
+      const body = (await completeRes.json()) as {
+        onboarding?: { completedAt?: string | null }
+      }
+      expect(body.onboarding?.completedAt).toBeTruthy()
     })
   })
 

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { apiPathPattern } from './helpers/api'
 import {
   loginManagerExpectsCalendar,
   loginManagerExpectsToday,
@@ -16,23 +17,28 @@ import { LoginPage } from './pages/login.page'
 test.describe('Critical salon journeys', () => {
   test.describe.configure({ mode: 'serial' })
 
-  test('01 — Landing page exposes auth entry points', async ({ page }) => {
-    await test.step('Open marketing home', async () => {
+  test('01 — Unauthenticated home redirects to login with auth entry points', async ({
+    page,
+  }) => {
+    await test.step('Root redirects to login', async () => {
       await page.goto('/')
-      await expect(page.getByRole('link', { name: 'ورود' }).first()).toBeVisible()
+      await expect(page).toHaveURL(/\/login/)
     })
-    await test.step('Signup CTA', async () => {
-      await expect(page.getByRole('link', { name: 'ساخت حساب مدیر' }).first()).toBeVisible()
+    await test.step('Login form and signup CTA', async () => {
+      await expect(page.getByRole('button', { name: 'ورود' })).toBeVisible()
+      await expect(page.getByRole('link', { name: 'ساخت حساب مدیر' })).toBeVisible()
     })
   })
 
   test('02 — Login rejects invalid credentials', async ({ page }) => {
     const loginPage = new LoginPage(page)
-    await test.step('POST /api/auth/login returns 401 and UI shows error', async () => {
+    await test.step('POST /api/v1/auth/sign-in/username returns 401 and UI shows error', async () => {
       await loginPage.goto()
       const [res] = await Promise.all([
         page.waitForResponse(
-          (r) => r.url().includes('/api/auth/login') && r.request().method() === 'POST'
+          (r) =>
+            apiPathPattern('auth/sign-in/username').test(r.url()) &&
+            r.request().method() === 'POST',
         ),
         loginPage.submit(SEEDED_MANAGER.phone, 'wrong-password-xyz'),
       ])
@@ -46,7 +52,7 @@ test.describe('Critical salon journeys', () => {
       await loginManagerExpectsToday(page)
     })
     await test.step('Today operations load', async () => {
-      await expect(page.getByText('صف فعال امروز')).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'صف امروز' })).toBeVisible()
     })
     await test.step('Calendar chrome', async () => {
       await page.getByRole('navigation').getByRole('link', { name: 'تقویم' }).click()
@@ -79,7 +85,7 @@ test.describe('Critical salon journeys', () => {
       await loginManagerExpectsToday(page)
     })
     await test.step('Today', async () => {
-      await expect(page.getByRole('heading', { name: 'امروز' })).toBeVisible()
+      await expect(page.getByText('نوبت‌های امروز').first()).toBeVisible()
     })
     await test.step('Clients', async () => {
       await page.getByRole('link', { name: 'مشتریان' }).click()
@@ -92,7 +98,7 @@ test.describe('Critical salon journeys', () => {
     })
     await test.step('More hub', async () => {
       await page.getByRole('link', { name: 'بیشتر' }).click()
-      await expect(page.getByRole('heading', { name: 'بیشتر' })).toBeVisible()
+      await expect(page.getByText('مدیریت، گزارش‌ها و تنظیمات سالن')).toBeVisible()
     })
     await test.step('Dashboard from more hub', async () => {
       await page.getByRole('link', { name: 'داشبورد و آمار' }).click()
@@ -108,7 +114,7 @@ test.describe('Critical salon journeys', () => {
     await loginManagerExpectsCalendar(page)
     await page.getByRole('link', { name: 'مشتریان' }).click()
     await test.step('Type search query', async () => {
-      await page.getByPlaceholder('جستجوی مشتری…').fill('دمو')
+      await page.getByPlaceholder('جستجوی نام یا شماره…').fill('دمو')
     })
     await test.step('Still see demo rows', async () => {
       await expect(page.getByText('دمو VIP امروز')).toBeVisible()
@@ -179,11 +185,13 @@ test.describe('Critical salon journeys', () => {
       await page.getByText(/دمو VIP امروز/).first().click()
     })
     await test.step('Detail drawer shows service', async () => {
-      await expect(page.getByRole('heading', { name: 'دمو VIP امروز' })).toBeVisible()
-      await expect(page.getByText('رنگ مو', { exact: true })).toBeVisible()
+      const drawer = page.getByRole('dialog', { name: 'جزئیات نوبت' })
+      await expect(drawer.getByRole('heading', { name: 'جزئیات نوبت' })).toBeVisible()
+      await expect(drawer.getByText('دمو VIP امروز')).toBeVisible()
+      await expect(drawer.getByText('رنگ کامل مو', { exact: true })).toBeVisible()
     })
     await test.step('Close drawer', async () => {
-      await page.getByRole('button', { name: 'بستن' }).click()
+      await page.getByRole('dialog', { name: 'جزئیات نوبت' }).getByRole('button', { name: 'بستن' }).first().click()
     })
   })
 
@@ -195,7 +203,7 @@ test.describe('Critical salon journeys', () => {
       const confirm = page.getByRole('button', { name: 'تایید نوبت' })
       if (await confirm.isVisible()) {
         await confirm.click()
-        await expect(page.getByRole('heading', { name: 'دمو VIP امروز' })).not.toBeVisible()
+        await expect(page.getByRole('heading', { name: 'جزئیات نوبت' })).not.toBeVisible()
       }
     })
   })
@@ -235,20 +243,19 @@ test.describe('Critical salon journeys', () => {
       await page.getByRole('button', { name: /۰۹۱۲۹۹۰۰۱۰۲/ }).click()
     })
 
-    await test.step('Select service then staff (ماساژ + سارا — seed has fewer massage rows for Sara than busy hair slots)', async () => {
-      const drawer = page.getByRole('dialog', { name: 'نوبت جدید' })
-      const staffServiceTriggers = drawer.locator('[data-slot="select-trigger"]')
-      await staffServiceTriggers.nth(1).click()
-      await page.getByRole('option', { name: /ماساژ سوئدی/ }).first().click()
-      await staffServiceTriggers.nth(0).click()
-      await page.getByRole('option', { name: /^سارا محمودی$/ }).click()
+    await test.step('Select service (staff auto-fills when eligible)', async () => {
+      await page.getByRole('combobox').filter({ hasText: 'انتخاب خدمت' }).click()
+      await page.getByRole('option', { name: /پاکسازی پوست/ }).first().click()
+      await expect(page.getByRole('combobox').filter({ hasText: 'سارا محمودی' })).toBeVisible()
     })
 
     await test.step('Submit and wait for API', async () => {
       const submit = page.getByRole('button', { name: 'ثبت نوبت' })
       await expect(submit).toBeEnabled({ timeout: 25_000 })
       const waitCreate = page.waitForResponse(
-        (r) => r.url().includes('/api/appointments') && r.request().method() === 'POST'
+        (r) =>
+          apiPathPattern('appointments').test(r.url()) &&
+          r.request().method() === 'POST',
       )
       await submit.click()
       const res = await waitCreate
@@ -264,8 +271,8 @@ test.describe('Critical salon journeys', () => {
     await loginManagerExpectsCalendar(page)
     await page.getByRole('link', { name: 'امروز' }).click()
     await test.step('Header + stats strip', async () => {
-      await expect(page.getByRole('heading', { name: 'امروز' })).toBeVisible()
-      await expect(page.locator('.grid.grid-cols-2').first()).toBeVisible()
+      await expect(page.getByText('نوبت‌های امروز').first()).toBeVisible()
+      await expect(page.locator('.hero-surface').first()).toBeVisible()
     })
   })
 
@@ -276,7 +283,9 @@ test.describe('Critical salon journeys', () => {
     await test.step('Tap انجام شد when present', async () => {
       if (await done.isVisible().catch(() => false)) {
         const waitPatch = page.waitForResponse(
-          (r) => r.url().includes('/api/appointments/') && r.request().method() === 'PATCH'
+          (r) =>
+            apiPathPattern('appointments/').test(r.url()) &&
+            r.request().method() === 'PATCH',
         )
         await done.click()
         await waitPatch
@@ -295,7 +304,9 @@ test.describe('Critical salon journeys', () => {
         await expect(empty).toBeVisible()
       } else if (await card.isVisible().catch(() => false)) {
         const waitPatch = page.waitForResponse(
-          (r) => r.url().includes('/api/retention/') && r.request().method() === 'PATCH'
+          (r) =>
+            apiPathPattern('retention/').test(r.url()) &&
+            r.request().method() === 'PATCH',
         )
         await card.click()
         await waitPatch
@@ -326,7 +337,9 @@ test.describe('Critical salon journeys', () => {
     await page.getByRole('link', { name: 'بیشتر' }).click()
     await test.step('PATCH business hours', async () => {
       const waitSave = page.waitForResponse(
-        (r) => r.url().includes('/api/settings/business') && r.request().method() === 'PATCH'
+        (r) =>
+          apiPathPattern('settings/business').test(r.url()) &&
+          r.request().method() === 'PATCH',
       )
       await page.getByRole('button', { name: 'ذخیره ساعات کاری' }).click()
       const res = await waitSave
@@ -341,10 +354,12 @@ test.describe('Critical salon journeys', () => {
     await loginManagerExpectsCalendar(page)
     await page.getByRole('link', { name: 'بیشتر' }).click()
     await page.getByRole('link', { name: 'پرسنل و نقش‌ها' }).click()
-    await expect(page.getByRole('heading', { name: 'پرسنل' })).toBeVisible()
-    await test.step('Open schedule for first staff row', async () => {
-      const scheduleBtn = page.getByRole('button', { name: /تنظیم ساعت کاری/ }).first()
-      await scheduleBtn.click()
+    await expect(page.getByRole('heading', { name: 'پرسنل و نقش‌ها' })).toBeVisible()
+    await test.step('Open schedule from staff row menu', async () => {
+      await page
+        .getByRole('button', { name: /گزینه‌های بیشتر برای سارا محمودی/ })
+        .click()
+      await page.getByRole('menuitem', { name: 'روزها و ساعات کاری' }).click()
     })
     await test.step('Drawer title', async () => {
       await expect(page.getByRole('heading', { name: /برنامه کاری/ })).toBeVisible()
@@ -353,10 +368,9 @@ test.describe('Critical salon journeys', () => {
 
   test('20 — Signup creates salon and lands on onboarding', async ({ page }) => {
     await page.context().clearCookies()
-    const slug = `e2e-${Date.now()}`
     const phone = `0913${Date.now().toString().slice(-7)}`
     /** ASCII salon name: controlled Persian input occasionally failed to update React state in headless runs. */
-    const salonLabel = `E2E Salon ${slug}`
+    const salonLabel = `E2E Salon ${Date.now()}`
 
     await test.step('Submit signup', async () => {
       await page.goto('/signup', { waitUntil: 'domcontentloaded' })
@@ -365,12 +379,14 @@ test.describe('Critical salon journeys', () => {
       await nameBox.click()
       await nameBox.pressSequentially(salonLabel, { delay: 15 })
       await expect(nameBox).toHaveValue(salonLabel)
-      await page.locator('#slug').fill(slug)
       await page.locator('#managerName').fill('مدیر E2E')
       await page.locator('#managerPhone').fill(phone)
       await page.locator('#password').fill('Salon1234')
+      await page.locator('#confirmPassword').fill('Salon1234')
       const signupPost = page.waitForResponse(
-        (r) => r.url().includes('/api/auth/signup') && r.request().method() === 'POST'
+        (r) =>
+          apiPathPattern('auth/signup').test(r.url()) &&
+          r.request().method() === 'POST',
       )
       await page.getByRole('button', { name: 'ساخت سالن' }).click()
       const res = await signupPost
@@ -378,8 +394,10 @@ test.describe('Critical salon journeys', () => {
     })
 
     await test.step('Redirected to onboarding', async () => {
-      await expect(page).toHaveURL(/\/onboarding/)
-      await expect(page.getByRole('heading', { name: 'راه‌اندازی سالن' })).toBeVisible({ timeout: 30_000 })
+      await expect(page).toHaveURL(/\/onboarding\/welcome/)
+      await expect(page.getByRole('button', { name: 'بزن بریم' })).toBeVisible({
+        timeout: 30_000,
+      })
     })
   })
 })
