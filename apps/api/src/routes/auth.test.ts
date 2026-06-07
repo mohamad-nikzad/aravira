@@ -15,6 +15,10 @@ vi.mock('@repo/database/members', () => ({
   getMemberForUser: vi.fn(),
 }))
 
+vi.mock('@repo/database/onboarding', () => ({
+  getManagerOnboardingFlags: vi.fn(),
+}))
+
 vi.mock('@repo/database/staff', () => ({
   getUserWithServiceIds: vi.fn(),
 }))
@@ -39,6 +43,7 @@ vi.mock('@repo/database/client', () => {
 })
 
 import { auth as authServer } from '@repo/auth/server'
+import { getManagerOnboardingFlags } from '@repo/database/onboarding'
 import { getMemberForUser } from '@repo/database/members'
 import { getUserWithServiceIds } from '@repo/database/staff'
 
@@ -208,13 +213,28 @@ describe('auth /me shim', () => {
       serviceIds: null,
     }
     vi.mocked(getUserWithServiceIds).mockResolvedValue(fullUser)
+    vi.mocked(getManagerOnboardingFlags).mockResolvedValue({
+      needsOnboarding: false,
+      onboardingCompleted: true,
+    })
 
     const res = await app.request('/api/v1/auth/me')
     expect(res.status).toBe(200)
-    const body = (await res.json()) as { user: { id: string; salonId: string; role: string } }
+    const body = (await res.json()) as {
+      user: {
+        id: string
+        salonId: string
+        role: string
+        needsOnboarding?: boolean
+        onboardingCompleted?: boolean
+      }
+    }
     expect(body.user.id).toBe('u1')
     expect(body.user.salonId).toBe('s1')
     expect(body.user.role).toBe('manager')
+    expect(body.user.needsOnboarding).toBe(false)
+    expect(body.user.onboardingCompleted).toBe(true)
     expect(getUserWithServiceIds).toHaveBeenCalledWith('u1', 's1')
+    expect(getManagerOnboardingFlags).toHaveBeenCalledWith('s1')
   })
 })

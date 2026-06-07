@@ -20,6 +20,10 @@ export interface User {
    * When a non-empty array, only those services apply.
    */
   serviceIds?: string[] | null
+  /** Manager-only: minimum setup (services + staff) is still incomplete. */
+  needsOnboarding?: boolean
+  /** Manager-only: finished the one-time onboarding flow. */
+  onboardingCompleted?: boolean
 }
 
 export interface Service {

@@ -40,6 +40,44 @@ export type OnboardingAction =
 // Better Auth members with manager-level access; staff use `'member'`.
 const MANAGER_ROLES = ['owner', 'admin']
 
+export async function getManagerOnboardingFlags(salonId: string): Promise<{
+  needsOnboarding: boolean
+  onboardingCompleted: boolean
+}> {
+  const db = getDb()
+
+  const [onboardingRows, serviceCount, staffCount] = await Promise.all([
+    db
+      .select({
+        managerIsStaff: salonOnboarding.managerIsStaff,
+        completedAt: salonOnboarding.completedAt,
+      })
+      .from(salonOnboarding)
+      .where(eq(salonOnboarding.salonId, salonId))
+      .limit(1),
+
+    db
+      .select({ value: count() })
+      .from(services)
+      .where(and(eq(services.salonId, salonId), eq(services.active, true))),
+
+    db
+      .select({ value: count() })
+      .from(member)
+      .where(and(eq(member.organizationId, salonId), eq(member.role, 'member'))),
+  ])
+
+  const onboarding = onboardingRows[0]
+  const servicesAdded = (serviceCount[0]?.value ?? 0) > 0
+  const staffAdded =
+    (staffCount[0]?.value ?? 0) > 0 || onboarding?.managerIsStaff === true
+
+  return {
+    needsOnboarding: !servicesAdded || !staffAdded,
+    onboardingCompleted: onboarding?.completedAt != null,
+  }
+}
+
 export async function getOnboardingStatus(salonId: string): Promise<OnboardingStatus> {
   const db = getDb()
 

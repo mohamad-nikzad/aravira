@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Copy } from 'lucide-react'
 import { cn } from '@repo/ui/utils'
 
+import { useAuth } from '#/lib/auth'
 import {
   getApiV1OnboardingQueryKey,
   onboardingQueryOptions,
@@ -28,6 +29,7 @@ function DoneScreen() {
   const navigate = useNavigate()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const { refresh: refreshAuth } = useAuth()
   const [copied, setCopied] = useState(false)
 
   const onboardingQuery = useQuery(onboardingQueryOptions())
@@ -58,6 +60,7 @@ function DoneScreen() {
           getApiV1OnboardingQueryKey(),
           data,
         )
+        await refreshAuth()
         await navigate({ to: '/calendar' })
         await router.invalidate()
       },

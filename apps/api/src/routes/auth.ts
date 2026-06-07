@@ -11,6 +11,7 @@ import {
 import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { STAFF_COLORS } from '@repo/salon-core/types'
 import { signupSchema } from '@repo/salon-core/forms/auth'
+import { getManagerOnboardingFlags } from '@repo/database/onboarding'
 import { getUserWithServiceIds } from '@repo/database/staff'
 import type { AppEnv } from '../factory'
 import { requireTenant } from '../middleware/auth'
@@ -83,6 +84,18 @@ export const authRoute = new Hono<AppEnv>()
     const { userId, salonId } = c.var.tenant
     const user = await getUserWithServiceIds(userId, salonId)
     if (!user) return error(c, 'وارد نشده‌اید', 401)
+
+    if (user.role === 'manager') {
+      const flags = await getManagerOnboardingFlags(salonId)
+      return ok(c, {
+        user: {
+          ...user,
+          needsOnboarding: flags.needsOnboarding,
+          onboardingCompleted: flags.onboardingCompleted,
+        },
+      })
+    }
+
     return ok(c, { user })
   })
   .post(

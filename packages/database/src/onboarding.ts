@@ -1,4 +1,5 @@
 export {
+  getManagerOnboardingFlags,
   getOnboardingStatus,
   updateOnboardingState,
   type OnboardingAction,

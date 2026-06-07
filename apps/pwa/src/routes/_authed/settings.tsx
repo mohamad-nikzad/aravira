@@ -8,7 +8,6 @@ import {
   Bell,
   Globe,
   LayoutDashboard,
-  ListChecks,
   LogOut,
   Moon,
   Pencil,
@@ -361,12 +360,6 @@ function SettingsPage() {
                 label="صفحه عمومی سالن"
                 hint="لینک نوبت‌گیری برای مشتریان"
                 to="/public-page"
-              />
-              <SettingsRow
-                icon={ListChecks}
-                label="راه‌اندازی سالن"
-                hint="مراحل آماده‌سازی"
-                to="/onboarding"
               />
             </SettingsGroup>
           ) : null}

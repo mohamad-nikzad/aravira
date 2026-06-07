@@ -13,6 +13,7 @@ import { staffCreateSchema } from '@repo/salon-core/forms/staff'
 import type { StaffCreateFormInput } from '@repo/salon-core/forms/staff'
 
 import { PasswordInput } from '#/components/password-input'
+import { useAuth } from '#/lib/auth'
 import { getMutationErrorMessage } from '#/lib/query-client'
 import {
   getApiV1OnboardingQueryKey,
@@ -33,6 +34,7 @@ function StaffScreen() {
   const step = ONBOARDING_STEP_BY_ID.staff
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { refresh: refreshAuth } = useAuth()
   const [soloPending, setSoloPending] = useState(false)
 
   const {
@@ -76,6 +78,7 @@ function StaffScreen() {
       },
       onSuccess: async () => {
         await queryClient.fetchQuery(onboardingQueryOptions())
+        await refreshAuth()
         await navigate({ to: '/onboarding/presence' })
       },
     })
@@ -89,12 +92,13 @@ function StaffScreen() {
           message: getMutationErrorMessage(err, 'ثبت انجام نشد'),
         })
       },
-      onSuccess: (data) => {
+      onSuccess: async (data) => {
         queryClient.setQueryData<OnboardingResponse>(
           getApiV1OnboardingQueryKey(),
           data,
         )
-        void navigate({ to: '/onboarding/presence' })
+        await refreshAuth()
+        await navigate({ to: '/onboarding/presence' })
       },
       onSettled: () => {
         setSoloPending(false)
