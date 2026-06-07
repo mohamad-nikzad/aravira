@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
 import { ChevronRight, Globe, Layers, MapPin } from 'lucide-react'
 import { Button } from '@repo/ui/button'
@@ -8,8 +8,8 @@ import { Switch } from '@repo/ui/switch'
 import { cn } from '@repo/ui/utils'
 import type {
   ManagerPublicSettingsResult,
-  ManagerServiceVisibilityView,
-} from '@repo/api-client'
+  ManagerServiceVisibility,
+} from '@repo/api-client/types'
 import {
   DEFAULT_PUBLIC_THEME_ID,
   resolvePublicTheme,
@@ -22,6 +22,7 @@ import { PUBLIC_BIO_MAX_LENGTH } from '@repo/salon-core/forms/public'
 import { presenceToInput } from '@repo/salon-core/forms/presence'
 import { serviceCategoryName } from '@repo/salon-core/service-catalog'
 import { toPersianDigits } from '@repo/salon-core/persian-digits'
+import type { Service } from '@repo/salon-core/types'
 
 import { BottomDrawer } from '#/components/public-page/bottom-drawer'
 import { PublicBioCard } from '#/components/public-page/public-page-basics'
@@ -34,11 +35,15 @@ import { ServicesPanel } from '#/components/public-page/services-panel'
 import { SlugEditor } from '#/components/public-page/slug-editor'
 import { ThemeStrip } from '#/components/public-page/theme-strip'
 import type { ServiceRow } from '#/components/public-page/types'
-import { api } from '#/lib/api-client'
 import {
-  salonPresenceQueryKey,
-  salonPublicSettingsQueryKey,
-} from '#/lib/query-keys'
+  getApiV1SalonPublicSettingsQueryKey,
+  salonPublicSettingsQueryOptions,
+  useUpdateSalonPublicSettingsMutation,
+} from '#/lib/salon-public-settings-queries'
+import {
+  getApiV1SalonProfilePresenceQueryKey,
+  salonPresenceQueryOptions,
+} from '#/lib/salon-profile-queries'
 
 export const Route = createFileRoute('/_authed/public-page')({
   beforeLoad: ({ context }) => {
@@ -73,26 +78,20 @@ function PublicPageRoute() {
     setThemeId(result.settings.themeId)
     setLayoutId(result.settings.layoutId)
     setServices(
-      result.services.map((row: ManagerServiceVisibilityView) => ({
+      result.services.map((row: ManagerServiceVisibility) => ({
         serviceId: row.service.id,
         name: row.service.name,
-        category: serviceCategoryName(row.service),
-        price: row.service.price,
+        category: serviceCategoryName(row.service as unknown as Service),
+        price: row.service.price ?? 0,
         visible: row.visible,
       })),
     )
     setDirty(false)
   }
 
-  const { data: serverData, isPending } = useQuery({
-    queryKey: salonPublicSettingsQueryKey,
-    queryFn: ({ signal }) => api.salonPublicSettings.get({ signal }),
-  })
+  const { data: serverData, isPending } = useQuery(salonPublicSettingsQueryOptions())
 
-  const presenceQuery = useQuery({
-    queryKey: salonPresenceQueryKey,
-    queryFn: ({ signal }) => api.salonProfile.getPresence({ signal }),
-  })
+  const presenceQuery = useQuery(salonPresenceQueryOptions())
 
   const presenceFilledCount = useMemo(() => {
     const p = presenceQuery.data?.presence
@@ -100,25 +99,7 @@ function PublicPageRoute() {
     return countFilledPresenceFields(presenceToInput(p))
   }, [presenceQuery.data])
 
-  const savePublicSettings = useMutation({
-    mutationFn: () =>
-      api.salonPublicSettings.update({
-        enabled,
-        appointmentRequestsEnabled: requests,
-        bioText: bio.trim() || undefined,
-        themeId,
-        layoutId,
-        services: services.map((s) => ({
-          serviceId: s.serviceId,
-          visible: s.visible,
-        })),
-      }),
-    meta: {
-      errorMessage: 'ذخیره تنظیمات انجام نشد',
-      invalidatesQuery: salonPublicSettingsQueryKey,
-    },
-    onSuccess: (result) => applyData(result),
-  })
+  const savePublicSettings = useUpdateSalonPublicSettingsMutation()
 
   useEffect(() => {
     if (!serverData || initializedRef.current) return
@@ -162,7 +143,20 @@ function PublicPageRoute() {
 
   const save = () => {
     setCopyErrMsg(null)
-    savePublicSettings.mutate()
+    savePublicSettings.mutate(
+      {
+        enabled,
+        appointmentRequestsEnabled: requests,
+        bioText: bio.trim() || undefined,
+        themeId,
+        layoutId,
+        services: services.map((s) => ({
+          serviceId: s.serviceId,
+          visible: s.visible,
+        })),
+      },
+      { onSuccess: (result) => applyData(result) },
+    )
   }
 
   if (isPending || !data) {
@@ -289,7 +283,7 @@ function PublicPageRoute() {
               onSaved={(result) => {
                 applyData(result)
                 void queryClient.invalidateQueries({
-                  queryKey: salonPublicSettingsQueryKey,
+                  queryKey: getApiV1SalonPublicSettingsQueryKey(),
                 })
               }}
             />
@@ -388,7 +382,7 @@ function PublicPageRoute() {
           <PresenceEditor
             onSaved={() =>
               void queryClient.invalidateQueries({
-                queryKey: salonPresenceQueryKey,
+                queryKey: getApiV1SalonProfilePresenceQueryKey(),
               })
             }
           />

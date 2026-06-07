@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import type { QueryKey } from '@tanstack/react-query'
 import { useForm, type FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   EMPTY_PRESENCE_INPUT,
   presenceSchema,
-  presenceToInput
-  
+  presenceToInput,
 } from '@repo/salon-core/forms/presence'
 import type {
   PresenceInput,
@@ -17,9 +16,12 @@ import { Button } from '@repo/ui/button'
 import { FormRootError } from '@repo/ui/form'
 import { Spinner } from '@repo/ui/spinner'
 
-import { api } from '#/lib/api-client'
 import { getMutationErrorMessage } from '#/lib/query-client'
-import { salonPresenceQueryKey } from '#/lib/query-keys'
+import {
+  getApiV1SalonProfilePresenceQueryKey,
+  salonPresenceQueryOptions,
+  useUpdateSalonPresenceMutation,
+} from '#/lib/salon-profile-queries'
 
 import { PresenceFields } from './presence-fields'
 import {
@@ -35,10 +37,7 @@ export type UsePresenceFormOptions = {
 export function usePresenceForm(options: UsePresenceFormOptions = {}) {
   const [open, setOpen] = useState<keyof PresenceInput | null>(null)
 
-  const presenceQuery = useQuery({
-    queryKey: salonPresenceQueryKey,
-    queryFn: ({ signal }) => api.salonProfile.getPresence({ signal }),
-  })
+  const presenceQuery = useQuery(salonPresenceQueryOptions())
 
   const {
     register,
@@ -62,15 +61,9 @@ export function usePresenceForm(options: UsePresenceFormOptions = {}) {
     }
   }, [presenceQuery.data, reset])
 
-  const savePresence = useMutation({
-    mutationFn: (formValues: PresencePayload) =>
-      api.salonProfile.updatePresence(formValues),
-    meta: {
-      skipToast: true,
-      invalidatesQuery: options.invalidatesQuery ?? salonPresenceQueryKey,
-    },
-    onSuccess: () => options.onSuccess?.(),
-  })
+  const savePresence = useUpdateSalonPresenceMutation(
+    options.invalidatesQuery ?? getApiV1SalonProfilePresenceQueryKey(),
+  )
 
   const onInvalid = (fieldErrors: FieldErrors<PresenceInput>) => {
     const firstInvalidField = getFirstInvalidPresenceField(fieldErrors)
@@ -81,6 +74,7 @@ export function usePresenceForm(options: UsePresenceFormOptions = {}) {
   const onSubmit = handleSubmit(
     (formValues) => {
       savePresence.mutate(formValues, {
+        onSuccess: () => options.onSuccess?.(),
         onError: (err) => {
           setError('root', {
             message: getMutationErrorMessage(err, 'ذخیره اطلاعات انجام نشد'),

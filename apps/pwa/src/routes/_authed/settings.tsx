@@ -37,14 +37,14 @@ import type {
 } from '@repo/salon-core/forms/settings'
 
 import { useAuth } from '#/lib/auth'
-import {
-  useBumpOfflineData,
-  useManagerDataClient,
-} from '#/lib/manager-data-client'
+import { useManagerDataClient } from '#/lib/manager-data-client'
 import { useTheme } from '#/lib/theme'
 import { api } from '#/lib/api-client'
 import { HEAVY_QUERY_STALE_TIME_MS } from '#/lib/query-client'
-import { useManagerBusinessSettingsQuery } from '#/lib/manager-data-queries'
+import {
+  businessSettingsQueryOptions,
+  useUpdateBusinessSettingsMutation,
+} from '#/lib/settings-queries'
 import {
   dashboardQueryKey,
   notificationPreferencesQueryKey,
@@ -157,15 +157,15 @@ function SettingsPage() {
   const navigate = useNavigate()
   const { theme, setTheme } = useTheme()
   const dc = useManagerDataClient()
-  const bumpOfflineData = useBumpOfflineData()
   const [loggingOut, setLoggingOut] = useState(false)
   const [localAlerts, setLocalAlerts] = useState<boolean | null>(null)
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
   const isManager = user?.role === 'manager'
 
-  const businessSettingsQuery = useManagerBusinessSettingsQuery(
-    isManager && !!dc,
-  )
+  const businessSettingsQuery = useQuery({
+    ...businessSettingsQueryOptions(),
+    enabled: isManager,
+  })
   const notificationPrefsQuery = useQuery({
     queryKey: notificationPreferencesQueryKey,
     queryFn: ({ signal }) => api.notificationPreferences.get({ signal }),
@@ -186,12 +186,7 @@ function SettingsPage() {
     },
   })
 
-  const saveBusinessHoursMutation = useMutation({
-    mutationFn: (values: BusinessSettingsPayload) =>
-      dc!.businessSettings.update(values),
-    meta: { errorMessage: 'ذخیره ساعات کاری انجام نشد' },
-    onSuccess: () => bumpOfflineData(),
-  })
+  const saveBusinessHoursMutation = useUpdateBusinessSettingsMutation()
 
   const {
     handleSubmit: handleBusinessHoursSubmit,
@@ -246,7 +241,6 @@ function SettingsPage() {
   }
 
   const saveBusinessHours = handleBusinessHoursSubmit(async (values) => {
-    if (!dc) return
     try {
       await saveBusinessHoursMutation.mutateAsync(values)
     } catch {
@@ -254,8 +248,7 @@ function SettingsPage() {
     }
   })
 
-  const settingsDataLoading =
-    isManager && !!dc && businessSettingsQuery.isPending
+  const settingsDataLoading = isManager && businessSettingsQuery.isPending
   if (settingsDataLoading) {
     return <SettingsSkeleton />
   }

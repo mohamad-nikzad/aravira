@@ -24,7 +24,8 @@ Saluna monorepo — shared `@repo/api-client` migration using HeyAPI-generated S
 | 10. Services catalog | ✅ Done | OpenAPI services/categories/families/addons/catalog-presets; PWA catalog on generated options |
 | 11. Appointments & calendar | ✅ Done | OpenAPI appointments + availability; PWA calendar on generated options |
 | 12. Appointment requests | ✅ Done | OpenAPI appointment-requests; PWA requests inbox on generated options |
-| 13–16. Vertical slices | ⏳ Planned | OpenAPI + app migration per route group (see below) |
+| 13. Settings & public page | ✅ Done | OpenAPI settings/salon-profile/salon-public-settings; PWA settings + public page on generated options |
+| 14–16. Vertical slices | ⏳ Planned | OpenAPI + app migration per route group (see below) |
 | 17. data-client removal | ⏳ Planned | Drop offline layer after CRUD slices proven |
 | 18. Web public API | ⏳ Planned | `apps/web` raw fetch → generated SDK |
 | 19. Native app | ⏳ Deferred | Not in prod — migrate when scoped |
@@ -526,8 +527,8 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 | services (+ categories, families, addons) | ✅ | `legacy/services.ts` | `services-module` |
 | appointments (+ availability) | ✅ | `legacy/appointments.ts` | `appointments-module` |
 | appointment-requests | ✅ | `legacy/appointment-requests.ts` | — |
-| business-settings | ❌ | `legacy/business-settings.ts` | `business-settings-module` |
-| salon-profile / salon-public-settings | ❌ | `legacy/salon-profile.ts`, `salon-public-settings.ts` | — |
+| business-settings | ✅ | `legacy/business-settings.ts` | `business-settings-module` |
+| salon-profile / salon-public-settings | ✅ | `legacy/salon-profile.ts`, `salon-public-settings.ts` | — |
 | onboarding | ❌ | `legacy/onboarding.ts` | — |
 | dashboard / today / retention | ❌ | `legacy/dashboard.ts`, `today.ts`, `retention.ts` | `today-module` |
 | messaging / notifications | ❌ | `legacy/messaging.ts`, `notifications.ts` | — |
@@ -578,6 +579,8 @@ Migrated domains are **online-only**. When a slice moves to the generated client
 **Phase 11 (appointments) done:** no `appointment.*` or `staffToday.appointment.updateStatus` in write policy; calendar/availability/intake use `appointments-queries.ts`; calendar no longer uses IndexedDB projection.
 
 **Phase 12 (appointment requests) done:** no `appointmentRequest.*` in write policy; requests inbox and bottom-nav badge use `appointment-requests-queries.ts`.
+
+**Phase 13 (settings & public page) done:** settings page business hours use `settings-queries.ts` (no data-client); public page, slug editor, and presence form use `salon-public-settings-queries.ts` and `salon-profile-queries.ts`; `useManagerBusinessSettingsQuery` removed.
 
 ---
 
@@ -709,7 +712,7 @@ Migrated domains are **online-only**. When a slice moves to the generated client
 
 ---
 
-### Phase 13: Settings & public page
+### Phase 13: Settings & public page ✅
 
 **Goal:** Business settings, salon profile, public page settings off legacy + data-client.
 
@@ -907,7 +910,7 @@ Phase 20  Legacy cleanup
  ✅ 10. OpenAPI services → migrate catalog
  ✅ 11. OpenAPI appointments → migrate calendar
  ✅ 12. OpenAPI appointment-requests → migrate requests inbox
- → 13. OpenAPI settings/public → migrate settings + public page
+ ✅ 13. OpenAPI settings/public → migrate settings + public page
  → 14. OpenAPI onboarding → migrate wizard
  → 15. OpenAPI dashboard/today/retention → migrate aggregates
  → 16. OpenAPI messaging/notifications → migrate connect + prefs
@@ -948,7 +951,7 @@ Phase 20  Legacy cleanup
 - [x] Phase 10: OpenAPI services catalog + migrate services screens
 - [x] Phase 11: OpenAPI appointments + migrate calendar
 - [x] Phase 12: OpenAPI appointment-requests + migrate requests
-- [ ] Phase 13: OpenAPI settings/public + migrate settings & public page
+- [x] Phase 13: OpenAPI settings/public + migrate settings & public page
 - [ ] Phase 14: OpenAPI onboarding + migrate wizard
 - [ ] Phase 15: OpenAPI dashboard/today/retention + migrate reads
 - [ ] Phase 16: OpenAPI messaging/notifications + migrate connect/prefs

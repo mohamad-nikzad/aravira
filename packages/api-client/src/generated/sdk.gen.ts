@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteApiV1AppointmentsByIdData, DeleteApiV1AppointmentsByIdErrors, DeleteApiV1AppointmentsByIdResponses, DeleteApiV1StaffByIdData, DeleteApiV1StaffByIdErrors, DeleteApiV1StaffByIdResponses, GetApiV1AppointmentRequestsData, GetApiV1AppointmentRequestsErrors, GetApiV1AppointmentRequestsResponses, GetApiV1AppointmentsAvailabilityData, GetApiV1AppointmentsAvailabilityErrors, GetApiV1AppointmentsAvailabilityResponses, GetApiV1AppointmentsByIdData, GetApiV1AppointmentsByIdErrors, GetApiV1AppointmentsByIdResponses, GetApiV1AppointmentsData, GetApiV1AppointmentsErrors, GetApiV1AppointmentsResponses, GetApiV1CatalogPresetsData, GetApiV1CatalogPresetsErrors, GetApiV1CatalogPresetsResponses, GetApiV1ClientsByIdData, GetApiV1ClientsByIdErrors, GetApiV1ClientsByIdResponses, GetApiV1ClientsByIdSummaryData, GetApiV1ClientsByIdSummaryErrors, GetApiV1ClientsByIdSummaryResponses, GetApiV1ClientsData, GetApiV1ClientsErrors, GetApiV1ClientsResponses, GetApiV1ServiceAddonsData, GetApiV1ServiceAddonsErrors, GetApiV1ServiceAddonsResponses, GetApiV1ServiceCategoriesData, GetApiV1ServiceCategoriesErrors, GetApiV1ServiceCategoriesResponses, GetApiV1ServiceFamiliesData, GetApiV1ServiceFamiliesErrors, GetApiV1ServiceFamiliesResponses, GetApiV1ServicesByIdAddonsData, GetApiV1ServicesByIdAddonsErrors, GetApiV1ServicesByIdAddonsResponses, GetApiV1ServicesByIdComboComponentsData, GetApiV1ServicesByIdComboComponentsErrors, GetApiV1ServicesByIdComboComponentsResponses, GetApiV1ServicesByIdData, GetApiV1ServicesByIdErrors, GetApiV1ServicesByIdResponses, GetApiV1ServicesData, GetApiV1ServicesErrors, GetApiV1ServicesResponses, GetApiV1StaffBookingAvailabilityData, GetApiV1StaffBookingAvailabilityErrors, GetApiV1StaffBookingAvailabilityResponses, GetApiV1StaffByIdScheduleData, GetApiV1StaffByIdScheduleErrors, GetApiV1StaffByIdScheduleResponses, GetApiV1StaffData, GetApiV1StaffErrors, GetApiV1StaffResponses, PatchApiV1AppointmentsByIdData, PatchApiV1AppointmentsByIdErrors, PatchApiV1AppointmentsByIdResponses, PatchApiV1ClientsByIdData, PatchApiV1ClientsByIdErrors, PatchApiV1ClientsByIdResponses, PatchApiV1ServiceAddonsByIdData, PatchApiV1ServiceAddonsByIdErrors, PatchApiV1ServiceAddonsByIdResponses, PatchApiV1ServiceCategoriesByIdData, PatchApiV1ServiceCategoriesByIdErrors, PatchApiV1ServiceCategoriesByIdResponses, PatchApiV1ServiceFamiliesByIdData, PatchApiV1ServiceFamiliesByIdErrors, PatchApiV1ServiceFamiliesByIdResponses, PatchApiV1ServicesByIdData, PatchApiV1ServicesByIdErrors, PatchApiV1ServicesByIdResponses, PatchApiV1StaffByIdData, PatchApiV1StaffByIdErrors, PatchApiV1StaffByIdPasswordData, PatchApiV1StaffByIdPasswordErrors, PatchApiV1StaffByIdPasswordResponses, PatchApiV1StaffByIdResponses, PatchApiV1StaffByIdServicesData, PatchApiV1StaffByIdServicesErrors, PatchApiV1StaffByIdServicesResponses, PostApiV1AppointmentRequestsByIdApproveData, PostApiV1AppointmentRequestsByIdApproveErrors, PostApiV1AppointmentRequestsByIdApproveResponses, PostApiV1AppointmentRequestsByIdRejectData, PostApiV1AppointmentRequestsByIdRejectErrors, PostApiV1AppointmentRequestsByIdRejectResponses, PostApiV1AppointmentsByIdCompleteClientData, PostApiV1AppointmentsByIdCompleteClientErrors, PostApiV1AppointmentsByIdCompleteClientResponses, PostApiV1AppointmentsData, PostApiV1AppointmentsErrors, PostApiV1AppointmentsResponses, PostApiV1CatalogPresetsByIdApplyData, PostApiV1CatalogPresetsByIdApplyErrors, PostApiV1CatalogPresetsByIdApplyResponses, PostApiV1ClientsByIdFollowUpsData, PostApiV1ClientsByIdFollowUpsErrors, PostApiV1ClientsByIdFollowUpsResponses, PostApiV1ClientsData, PostApiV1ClientsErrors, PostApiV1ClientsResponses, PostApiV1ServiceAddonsData, PostApiV1ServiceAddonsErrors, PostApiV1ServiceAddonsResponses, PostApiV1ServiceCategoriesData, PostApiV1ServiceCategoriesErrors, PostApiV1ServiceCategoriesResponses, PostApiV1ServiceFamiliesData, PostApiV1ServiceFamiliesErrors, PostApiV1ServiceFamiliesResponses, PostApiV1ServicesData, PostApiV1ServicesErrors, PostApiV1ServicesImportStarterTemplatesData, PostApiV1ServicesImportStarterTemplatesErrors, PostApiV1ServicesImportStarterTemplatesResponses, PostApiV1ServicesResponses, PostApiV1StaffData, PostApiV1StaffErrors, PostApiV1StaffResponses, PutApiV1ServicesByIdComboComponentsData, PutApiV1ServicesByIdComboComponentsErrors, PutApiV1ServicesByIdComboComponentsResponses, PutApiV1StaffByIdScheduleData, PutApiV1StaffByIdScheduleErrors, PutApiV1StaffByIdScheduleResponses } from './types.gen';
+import type { DeleteApiV1AppointmentsByIdData, DeleteApiV1AppointmentsByIdErrors, DeleteApiV1AppointmentsByIdResponses, DeleteApiV1StaffByIdData, DeleteApiV1StaffByIdErrors, DeleteApiV1StaffByIdResponses, GetApiV1AppointmentRequestsData, GetApiV1AppointmentRequestsErrors, GetApiV1AppointmentRequestsResponses, GetApiV1AppointmentsAvailabilityData, GetApiV1AppointmentsAvailabilityErrors, GetApiV1AppointmentsAvailabilityResponses, GetApiV1AppointmentsByIdData, GetApiV1AppointmentsByIdErrors, GetApiV1AppointmentsByIdResponses, GetApiV1AppointmentsData, GetApiV1AppointmentsErrors, GetApiV1AppointmentsResponses, GetApiV1CatalogPresetsData, GetApiV1CatalogPresetsErrors, GetApiV1CatalogPresetsResponses, GetApiV1ClientsByIdData, GetApiV1ClientsByIdErrors, GetApiV1ClientsByIdResponses, GetApiV1ClientsByIdSummaryData, GetApiV1ClientsByIdSummaryErrors, GetApiV1ClientsByIdSummaryResponses, GetApiV1ClientsData, GetApiV1ClientsErrors, GetApiV1ClientsResponses, GetApiV1SalonProfilePresenceData, GetApiV1SalonProfilePresenceErrors, GetApiV1SalonProfilePresenceResponses, GetApiV1SalonPublicSettingsData, GetApiV1SalonPublicSettingsErrors, GetApiV1SalonPublicSettingsResponses, GetApiV1ServiceAddonsData, GetApiV1ServiceAddonsErrors, GetApiV1ServiceAddonsResponses, GetApiV1ServiceCategoriesData, GetApiV1ServiceCategoriesErrors, GetApiV1ServiceCategoriesResponses, GetApiV1ServiceFamiliesData, GetApiV1ServiceFamiliesErrors, GetApiV1ServiceFamiliesResponses, GetApiV1ServicesByIdAddonsData, GetApiV1ServicesByIdAddonsErrors, GetApiV1ServicesByIdAddonsResponses, GetApiV1ServicesByIdComboComponentsData, GetApiV1ServicesByIdComboComponentsErrors, GetApiV1ServicesByIdComboComponentsResponses, GetApiV1ServicesByIdData, GetApiV1ServicesByIdErrors, GetApiV1ServicesByIdResponses, GetApiV1ServicesData, GetApiV1ServicesErrors, GetApiV1ServicesResponses, GetApiV1SettingsBusinessData, GetApiV1SettingsBusinessErrors, GetApiV1SettingsBusinessResponses, GetApiV1StaffBookingAvailabilityData, GetApiV1StaffBookingAvailabilityErrors, GetApiV1StaffBookingAvailabilityResponses, GetApiV1StaffByIdScheduleData, GetApiV1StaffByIdScheduleErrors, GetApiV1StaffByIdScheduleResponses, GetApiV1StaffData, GetApiV1StaffErrors, GetApiV1StaffResponses, PatchApiV1AppointmentsByIdData, PatchApiV1AppointmentsByIdErrors, PatchApiV1AppointmentsByIdResponses, PatchApiV1ClientsByIdData, PatchApiV1ClientsByIdErrors, PatchApiV1ClientsByIdResponses, PatchApiV1SalonProfilePresenceData, PatchApiV1SalonProfilePresenceErrors, PatchApiV1SalonProfilePresenceResponses, PatchApiV1SalonPublicSettingsSlugData, PatchApiV1SalonPublicSettingsSlugErrors, PatchApiV1SalonPublicSettingsSlugResponses, PatchApiV1ServiceAddonsByIdData, PatchApiV1ServiceAddonsByIdErrors, PatchApiV1ServiceAddonsByIdResponses, PatchApiV1ServiceCategoriesByIdData, PatchApiV1ServiceCategoriesByIdErrors, PatchApiV1ServiceCategoriesByIdResponses, PatchApiV1ServiceFamiliesByIdData, PatchApiV1ServiceFamiliesByIdErrors, PatchApiV1ServiceFamiliesByIdResponses, PatchApiV1ServicesByIdData, PatchApiV1ServicesByIdErrors, PatchApiV1ServicesByIdResponses, PatchApiV1SettingsBusinessData, PatchApiV1SettingsBusinessErrors, PatchApiV1SettingsBusinessResponses, PatchApiV1StaffByIdData, PatchApiV1StaffByIdErrors, PatchApiV1StaffByIdPasswordData, PatchApiV1StaffByIdPasswordErrors, PatchApiV1StaffByIdPasswordResponses, PatchApiV1StaffByIdResponses, PatchApiV1StaffByIdServicesData, PatchApiV1StaffByIdServicesErrors, PatchApiV1StaffByIdServicesResponses, PostApiV1AppointmentRequestsByIdApproveData, PostApiV1AppointmentRequestsByIdApproveErrors, PostApiV1AppointmentRequestsByIdApproveResponses, PostApiV1AppointmentRequestsByIdRejectData, PostApiV1AppointmentRequestsByIdRejectErrors, PostApiV1AppointmentRequestsByIdRejectResponses, PostApiV1AppointmentsByIdCompleteClientData, PostApiV1AppointmentsByIdCompleteClientErrors, PostApiV1AppointmentsByIdCompleteClientResponses, PostApiV1AppointmentsData, PostApiV1AppointmentsErrors, PostApiV1AppointmentsResponses, PostApiV1CatalogPresetsByIdApplyData, PostApiV1CatalogPresetsByIdApplyErrors, PostApiV1CatalogPresetsByIdApplyResponses, PostApiV1ClientsByIdFollowUpsData, PostApiV1ClientsByIdFollowUpsErrors, PostApiV1ClientsByIdFollowUpsResponses, PostApiV1ClientsData, PostApiV1ClientsErrors, PostApiV1ClientsResponses, PostApiV1ServiceAddonsData, PostApiV1ServiceAddonsErrors, PostApiV1ServiceAddonsResponses, PostApiV1ServiceCategoriesData, PostApiV1ServiceCategoriesErrors, PostApiV1ServiceCategoriesResponses, PostApiV1ServiceFamiliesData, PostApiV1ServiceFamiliesErrors, PostApiV1ServiceFamiliesResponses, PostApiV1ServicesData, PostApiV1ServicesErrors, PostApiV1ServicesImportStarterTemplatesData, PostApiV1ServicesImportStarterTemplatesErrors, PostApiV1ServicesImportStarterTemplatesResponses, PostApiV1ServicesResponses, PostApiV1StaffData, PostApiV1StaffErrors, PostApiV1StaffResponses, PutApiV1SalonPublicSettingsData, PutApiV1SalonPublicSettingsErrors, PutApiV1SalonPublicSettingsResponses, PutApiV1ServicesByIdComboComponentsData, PutApiV1ServicesByIdComboComponentsErrors, PutApiV1ServicesByIdComboComponentsResponses, PutApiV1StaffByIdScheduleData, PutApiV1StaffByIdScheduleErrors, PutApiV1StaffByIdScheduleResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -400,6 +400,73 @@ export const postApiV1AppointmentRequestsByIdApprove = <ThrowOnError extends boo
  */
 export const postApiV1AppointmentRequestsByIdReject = <ThrowOnError extends boolean = false>(options: Options<PostApiV1AppointmentRequestsByIdRejectData, ThrowOnError>): RequestResult<PostApiV1AppointmentRequestsByIdRejectResponses, PostApiV1AppointmentRequestsByIdRejectErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1AppointmentRequestsByIdRejectResponses, PostApiV1AppointmentRequestsByIdRejectErrors, ThrowOnError>({
     url: '/api/v1/appointment-requests/{id}/reject',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get business settings
+ *
+ * Salon working hours and slot duration. Readable by any tenant member.
+ */
+export const getApiV1SettingsBusiness = <ThrowOnError extends boolean = false>(options?: Options<GetApiV1SettingsBusinessData, ThrowOnError>): RequestResult<GetApiV1SettingsBusinessResponses, GetApiV1SettingsBusinessErrors, ThrowOnError> => (options?.client ?? client).get<GetApiV1SettingsBusinessResponses, GetApiV1SettingsBusinessErrors, ThrowOnError>({ url: '/api/v1/settings/business', ...options });
+
+/**
+ * Update business settings
+ */
+export const patchApiV1SettingsBusiness = <ThrowOnError extends boolean = false>(options: Options<PatchApiV1SettingsBusinessData, ThrowOnError>): RequestResult<PatchApiV1SettingsBusinessResponses, PatchApiV1SettingsBusinessErrors, ThrowOnError> => (options.client ?? client).patch<PatchApiV1SettingsBusinessResponses, PatchApiV1SettingsBusinessErrors, ThrowOnError>({
+    url: '/api/v1/settings/business',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get salon presence
+ *
+ * Address, maps, social links, and website shown on the public page.
+ */
+export const getApiV1SalonProfilePresence = <ThrowOnError extends boolean = false>(options?: Options<GetApiV1SalonProfilePresenceData, ThrowOnError>): RequestResult<GetApiV1SalonProfilePresenceResponses, GetApiV1SalonProfilePresenceErrors, ThrowOnError> => (options?.client ?? client).get<GetApiV1SalonProfilePresenceResponses, GetApiV1SalonProfilePresenceErrors, ThrowOnError>({ url: '/api/v1/salon-profile/presence', ...options });
+
+/**
+ * Update salon presence
+ */
+export const patchApiV1SalonProfilePresence = <ThrowOnError extends boolean = false>(options: Options<PatchApiV1SalonProfilePresenceData, ThrowOnError>): RequestResult<PatchApiV1SalonProfilePresenceResponses, PatchApiV1SalonProfilePresenceErrors, ThrowOnError> => (options.client ?? client).patch<PatchApiV1SalonProfilePresenceResponses, PatchApiV1SalonProfilePresenceErrors, ThrowOnError>({
+    url: '/api/v1/salon-profile/presence',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get manager public page settings
+ */
+export const getApiV1SalonPublicSettings = <ThrowOnError extends boolean = false>(options?: Options<GetApiV1SalonPublicSettingsData, ThrowOnError>): RequestResult<GetApiV1SalonPublicSettingsResponses, GetApiV1SalonPublicSettingsErrors, ThrowOnError> => (options?.client ?? client).get<GetApiV1SalonPublicSettingsResponses, GetApiV1SalonPublicSettingsErrors, ThrowOnError>({ url: '/api/v1/salon-public-settings', ...options });
+
+/**
+ * Update manager public page settings
+ */
+export const putApiV1SalonPublicSettings = <ThrowOnError extends boolean = false>(options: Options<PutApiV1SalonPublicSettingsData, ThrowOnError>): RequestResult<PutApiV1SalonPublicSettingsResponses, PutApiV1SalonPublicSettingsErrors, ThrowOnError> => (options.client ?? client).put<PutApiV1SalonPublicSettingsResponses, PutApiV1SalonPublicSettingsErrors, ThrowOnError>({
+    url: '/api/v1/salon-public-settings',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Update public page slug
+ */
+export const patchApiV1SalonPublicSettingsSlug = <ThrowOnError extends boolean = false>(options: Options<PatchApiV1SalonPublicSettingsSlugData, ThrowOnError>): RequestResult<PatchApiV1SalonPublicSettingsSlugResponses, PatchApiV1SalonPublicSettingsSlugErrors, ThrowOnError> => (options.client ?? client).patch<PatchApiV1SalonPublicSettingsSlugResponses, PatchApiV1SalonPublicSettingsSlugErrors, ThrowOnError>({
+    url: '/api/v1/salon-public-settings/slug',
     ...options,
     headers: {
         'Content-Type': 'application/json',

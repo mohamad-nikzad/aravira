@@ -51,6 +51,19 @@ import {
   rejectAppointmentRequestRoute,
 } from './routes/appointment-requests'
 import {
+  getBusinessSettingsRoute,
+  updateBusinessSettingsRoute,
+} from './routes/settings'
+import {
+  getSalonPresenceRoute,
+  updateSalonPresenceRoute,
+} from './routes/salon-profile'
+import {
+  getSalonPublicSettingsRoute,
+  updateSalonPublicSettingsRoute,
+  updateSalonSlugRoute,
+} from './routes/salon-public-settings'
+import {
   createStaffRoute,
   deleteStaffRoute,
   getStaffBookingAvailabilityRoute,
@@ -396,6 +409,54 @@ const rejectAppointmentRequestStub: RouteHandler<
   typeof rejectAppointmentRequestRoute
 > = (c) => c.json({ ok: true as const }, 200)
 
+const stubSalonPresence = {
+  address: null,
+  mapGoogle: null,
+  mapNeshan: null,
+  mapBalad: null,
+  socialInstagram: null,
+  socialTelegram: null,
+  socialWhatsapp: null,
+  website: null,
+}
+
+const stubManagerPublicSettings = {
+  slug: 'stub-salon',
+  salonName: 'stub',
+  settings: {
+    enabled: false,
+    bioText: null,
+    themeId: 'rose',
+    layoutId: 'agenda',
+    appointmentRequestsEnabled: true,
+  },
+  services: [] as Array<{ service: typeof stubService; visible: boolean }>,
+}
+
+const getBusinessSettingsStub: RouteHandler<typeof getBusinessSettingsRoute> = (c) =>
+  c.json({ settings: stubBusinessHours }, 200)
+
+const updateBusinessSettingsStub: RouteHandler<
+  typeof updateBusinessSettingsRoute
+> = (c) => c.json({ settings: stubBusinessHours }, 200)
+
+const getSalonPresenceStub: RouteHandler<typeof getSalonPresenceRoute> = (c) =>
+  c.json({ presence: stubSalonPresence }, 200)
+
+const updateSalonPresenceStub: RouteHandler<typeof updateSalonPresenceRoute> = (c) =>
+  c.json({ presence: stubSalonPresence }, 200)
+
+const getSalonPublicSettingsStub: RouteHandler<
+  typeof getSalonPublicSettingsRoute
+> = (c) => c.json(stubManagerPublicSettings, 200)
+
+const updateSalonPublicSettingsStub: RouteHandler<
+  typeof updateSalonPublicSettingsRoute
+> = (c) => c.json(stubManagerPublicSettings, 200)
+
+const updateSalonSlugStub: RouteHandler<typeof updateSalonSlugRoute> = (c) =>
+  c.json(stubManagerPublicSettings, 200)
+
 /**
  * Minimal OpenAPI app used only for contract generation.
  * Stub handlers avoid loading auth/database modules at generate time.
@@ -481,6 +542,25 @@ export const contractApp = new OpenAPIHono()
       .openapi(approveAppointmentRequestRoute, approveAppointmentRequestStub)
       .openapi(rejectAppointmentRequestRoute, rejectAppointmentRequestStub),
   )
+  .route(
+    '/api/v1/settings',
+    new OpenAPIHono()
+      .openapi(getBusinessSettingsRoute, getBusinessSettingsStub)
+      .openapi(updateBusinessSettingsRoute, updateBusinessSettingsStub),
+  )
+  .route(
+    '/api/v1/salon-profile',
+    new OpenAPIHono()
+      .openapi(getSalonPresenceRoute, getSalonPresenceStub)
+      .openapi(updateSalonPresenceRoute, updateSalonPresenceStub),
+  )
+  .route(
+    '/api/v1/salon-public-settings',
+    new OpenAPIHono()
+      .openapi(getSalonPublicSettingsRoute, getSalonPublicSettingsStub)
+      .openapi(updateSalonPublicSettingsRoute, updateSalonPublicSettingsStub)
+      .openapi(updateSalonSlugRoute, updateSalonSlugStub),
+  )
 
 export const openApiDocumentConfig = {
   openapi: '3.0.0' as const,
@@ -489,7 +569,7 @@ export const openApiDocumentConfig = {
     version: '0.7.0',
     description:
       'Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. ' +
-      'This contract is expanded incrementally; clients, staff, services catalog, appointments, and appointment-requests route groups are documented.',
+      'This contract is expanded incrementally; clients, staff, services catalog, appointments, appointment-requests, settings, salon-profile, and salon-public-settings route groups are documented.',
   },
   servers: [{ url: '', description: 'Saluna API (paths include /api/v1 prefix)' }],
   tags: [
@@ -507,6 +587,15 @@ export const openApiDocumentConfig = {
     {
       name: 'Appointment requests',
       description: 'Public booking request inbox (approve / reject)',
+    },
+    { name: 'Settings', description: 'Salon business hours and slot duration' },
+    {
+      name: 'Salon profile',
+      description: 'Salon presence (address, maps, social links)',
+    },
+    {
+      name: 'Salon public settings',
+      description: 'Public booking page settings and slug',
     },
   ],
   components: {

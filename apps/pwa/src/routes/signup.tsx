@@ -31,12 +31,10 @@ import { homePathForRole } from '#/lib/navigation'
 import { getApiV1ClientsQueryKey } from '#/lib/clients-queries'
 import { getApiV1ServicesQueryKey } from '#/lib/services-queries'
 import { getApiV1StaffQueryKey } from '#/lib/staff-queries'
-import {
-  managerBusinessSettingsQueryKey,
-  onboardingQueryKey,
-  salonPresenceQueryKey,
-  salonPublicSettingsQueryKey,
-} from '#/lib/query-keys'
+import { getApiV1SettingsBusinessQueryKey } from '#/lib/settings-queries'
+import { getApiV1SalonProfilePresenceQueryKey } from '#/lib/salon-profile-queries'
+import { getApiV1SalonPublicSettingsQueryKey } from '#/lib/salon-public-settings-queries'
+import { onboardingQueryKey } from '#/lib/query-keys'
 
 // The booking-page slug is minted server-side (Persian salon names can't form a
 // Latin URL); the owner picks a friendly one later in onboarding. The confirm
@@ -106,13 +104,17 @@ function SignupPage() {
       setUser(data.user)
       await queryClient.removeQueries({ queryKey: onboardingQueryKey })
       await queryClient.removeQueries({
-        queryKey: managerBusinessSettingsQueryKey,
+        queryKey: getApiV1SettingsBusinessQueryKey(),
       })
       await queryClient.removeQueries({ queryKey: getApiV1ServicesQueryKey() })
       await queryClient.removeQueries({ queryKey: getApiV1StaffQueryKey() })
       await queryClient.removeQueries({ queryKey: getApiV1ClientsQueryKey() })
-      await queryClient.removeQueries({ queryKey: salonPresenceQueryKey })
-      await queryClient.removeQueries({ queryKey: salonPublicSettingsQueryKey })
+      await queryClient.removeQueries({
+        queryKey: getApiV1SalonProfilePresenceQueryKey(),
+      })
+      await queryClient.removeQueries({
+        queryKey: getApiV1SalonPublicSettingsQueryKey(),
+      })
       await navigate({ to: '/onboarding/welcome' })
     },
   })

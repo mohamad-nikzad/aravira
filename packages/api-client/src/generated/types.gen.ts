@@ -678,6 +678,82 @@ export type RejectAppointmentRequestRequest = {
     reason?: string;
 };
 
+export type BusinessSettingsResponse = {
+    settings: BusinessHours;
+};
+
+export type BusinessSettingsUpdateRequest = {
+    workingStart?: string;
+    workingEnd?: string;
+    slotDurationMinutes?: number;
+    workingDays?: number;
+};
+
+export type SalonPresenceResponse = {
+    presence: SalonPresence;
+};
+
+export type SalonPresence = {
+    address: string | null;
+    mapGoogle: string | null;
+    mapNeshan: string | null;
+    mapBalad: string | null;
+    socialInstagram: string | null;
+    socialTelegram: string | null;
+    socialWhatsapp: string | null;
+    website: string | null;
+    [key: string]: unknown;
+};
+
+export type SalonPresencePatchRequest = {
+    address?: string;
+    mapGoogle?: string;
+    mapNeshan?: string;
+    mapBalad?: string;
+    socialInstagram?: string;
+    socialTelegram?: string;
+    socialWhatsapp?: string;
+    website?: string;
+};
+
+export type ManagerPublicSettingsResult = {
+    slug: string;
+    salonName: string;
+    settings: ManagerPublicSettingsView;
+    services: Array<ManagerServiceVisibility>;
+};
+
+export type ManagerPublicSettingsView = {
+    enabled: boolean;
+    bioText: string | null;
+    themeId: string;
+    layoutId: string;
+    appointmentRequestsEnabled: boolean;
+};
+
+export type ManagerServiceVisibility = {
+    service: Service;
+    visible: boolean;
+};
+
+export type PublicSettingsUpdateRequest = {
+    enabled?: boolean;
+    bioText?: string | null;
+    themeId?: 'rose' | 'sage' | 'ocean' | 'sand' | 'plum' | 'charcoal';
+    layoutId?: 'agenda' | 'inline';
+    appointmentRequestsEnabled?: boolean;
+    services?: Array<ServiceVisibilityInput>;
+};
+
+export type ServiceVisibilityInput = {
+    serviceId: string;
+    visible: boolean;
+};
+
+export type SlugUpdateRequest = {
+    slug: string;
+};
+
 export type GetApiV1ClientsData = {
     body?: never;
     path?: never;
@@ -2308,3 +2384,222 @@ export type PostApiV1AppointmentRequestsByIdRejectResponses = {
 };
 
 export type PostApiV1AppointmentRequestsByIdRejectResponse = PostApiV1AppointmentRequestsByIdRejectResponses[keyof PostApiV1AppointmentRequestsByIdRejectResponses];
+
+export type GetApiV1SettingsBusinessData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/settings/business';
+};
+
+export type GetApiV1SettingsBusinessErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+};
+
+export type GetApiV1SettingsBusinessError = GetApiV1SettingsBusinessErrors[keyof GetApiV1SettingsBusinessErrors];
+
+export type GetApiV1SettingsBusinessResponses = {
+    /**
+     * Business settings for the authenticated salon
+     */
+    200: BusinessSettingsResponse;
+};
+
+export type GetApiV1SettingsBusinessResponse = GetApiV1SettingsBusinessResponses[keyof GetApiV1SettingsBusinessResponses];
+
+export type PatchApiV1SettingsBusinessData = {
+    body: BusinessSettingsUpdateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/settings/business';
+};
+
+export type PatchApiV1SettingsBusinessErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_settings permission
+     */
+    403: ApiError;
+};
+
+export type PatchApiV1SettingsBusinessError = PatchApiV1SettingsBusinessErrors[keyof PatchApiV1SettingsBusinessErrors];
+
+export type PatchApiV1SettingsBusinessResponses = {
+    /**
+     * Updated business settings
+     */
+    200: BusinessSettingsResponse;
+};
+
+export type PatchApiV1SettingsBusinessResponse = PatchApiV1SettingsBusinessResponses[keyof PatchApiV1SettingsBusinessResponses];
+
+export type GetApiV1SalonProfilePresenceData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/salon-profile/presence';
+};
+
+export type GetApiV1SalonProfilePresenceErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_settings permission
+     */
+    403: ApiError;
+};
+
+export type GetApiV1SalonProfilePresenceError = GetApiV1SalonProfilePresenceErrors[keyof GetApiV1SalonProfilePresenceErrors];
+
+export type GetApiV1SalonProfilePresenceResponses = {
+    /**
+     * Salon presence fields
+     */
+    200: SalonPresenceResponse;
+};
+
+export type GetApiV1SalonProfilePresenceResponse = GetApiV1SalonProfilePresenceResponses[keyof GetApiV1SalonProfilePresenceResponses];
+
+export type PatchApiV1SalonProfilePresenceData = {
+    body: SalonPresencePatchRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/salon-profile/presence';
+};
+
+export type PatchApiV1SalonProfilePresenceErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_settings permission
+     */
+    403: ApiError;
+};
+
+export type PatchApiV1SalonProfilePresenceError = PatchApiV1SalonProfilePresenceErrors[keyof PatchApiV1SalonProfilePresenceErrors];
+
+export type PatchApiV1SalonProfilePresenceResponses = {
+    /**
+     * Updated salon presence
+     */
+    200: SalonPresenceResponse;
+};
+
+export type PatchApiV1SalonProfilePresenceResponse = PatchApiV1SalonProfilePresenceResponses[keyof PatchApiV1SalonProfilePresenceResponses];
+
+export type GetApiV1SalonPublicSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/salon-public-settings';
+};
+
+export type GetApiV1SalonPublicSettingsErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_settings permission
+     */
+    403: ApiError;
+};
+
+export type GetApiV1SalonPublicSettingsError = GetApiV1SalonPublicSettingsErrors[keyof GetApiV1SalonPublicSettingsErrors];
+
+export type GetApiV1SalonPublicSettingsResponses = {
+    /**
+     * Public page settings, slug, and service visibility
+     */
+    200: ManagerPublicSettingsResult;
+};
+
+export type GetApiV1SalonPublicSettingsResponse = GetApiV1SalonPublicSettingsResponses[keyof GetApiV1SalonPublicSettingsResponses];
+
+export type PutApiV1SalonPublicSettingsData = {
+    body: PublicSettingsUpdateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/salon-public-settings';
+};
+
+export type PutApiV1SalonPublicSettingsErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_settings permission
+     */
+    403: ApiError;
+};
+
+export type PutApiV1SalonPublicSettingsError = PutApiV1SalonPublicSettingsErrors[keyof PutApiV1SalonPublicSettingsErrors];
+
+export type PutApiV1SalonPublicSettingsResponses = {
+    /**
+     * Updated public page settings
+     */
+    200: ManagerPublicSettingsResult;
+};
+
+export type PutApiV1SalonPublicSettingsResponse = PutApiV1SalonPublicSettingsResponses[keyof PutApiV1SalonPublicSettingsResponses];
+
+export type PatchApiV1SalonPublicSettingsSlugData = {
+    body: SlugUpdateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/salon-public-settings/slug';
+};
+
+export type PatchApiV1SalonPublicSettingsSlugErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_settings permission
+     */
+    403: ApiError;
+    /**
+     * Slug already taken by another salon
+     */
+    409: ApiError;
+};
+
+export type PatchApiV1SalonPublicSettingsSlugError = PatchApiV1SalonPublicSettingsSlugErrors[keyof PatchApiV1SalonPublicSettingsSlugErrors];
+
+export type PatchApiV1SalonPublicSettingsSlugResponses = {
+    /**
+     * Updated slug and refreshed public page settings
+     */
+    200: ManagerPublicSettingsResult;
+};
+
+export type PatchApiV1SalonPublicSettingsSlugResponse = PatchApiV1SalonPublicSettingsSlugResponses[keyof PatchApiV1SalonPublicSettingsSlugResponses];

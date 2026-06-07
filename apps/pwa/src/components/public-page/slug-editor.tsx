@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { Check, Copy, Link2 } from 'lucide-react'
 import { ApiError } from '@repo/api-client'
-import type { ManagerPublicSettingsResult } from '@repo/api-client'
+import type { ManagerPublicSettingsResult } from '@repo/api-client/types'
 import { Button } from '@repo/ui/button'
 import { FieldError } from '@repo/ui/field'
 import { Input } from '@repo/ui/input'
 import { slugSchema } from '@repo/salon-core/forms/slug'
 
-import { api } from '#/lib/api-client'
+import { useUpdateSalonSlugMutation } from '#/lib/salon-public-settings-queries'
 
 import { publicSlugPrefix } from './public-url'
 
@@ -35,20 +34,7 @@ export function SlugEditor({
     setSaveError(null)
   }, [currentSlug])
 
-  const saveSlug = useMutation({
-    mutationFn: (slug: string) => api.salonPublicSettings.updateSlug({ slug }),
-    onSuccess: (result) => {
-      setSaveError(null)
-      onSaved(result)
-    },
-    onError: (err) => {
-      if (err instanceof ApiError && err.status === 409) {
-        setSaveError(err.message || 'این آدرس سالن قبلاً ثبت شده است')
-        return
-      }
-      setSaveError(err instanceof Error ? err.message : 'ذخیره آدرس انجام نشد')
-    },
-  })
+  const saveSlug = useUpdateSalonSlugMutation()
 
   const handleSaveSlug = () => {
     setSaveError(null)
@@ -59,7 +45,21 @@ export function SlugEditor({
     }
     setFormatError(null)
     if (parsed.data === currentSlug) return
-    saveSlug.mutate(parsed.data)
+    saveSlug.mutate(parsed.data, {
+      onSuccess: (result) => {
+        setSaveError(null)
+        onSaved(result)
+      },
+      onError: (err) => {
+        if (err instanceof ApiError && err.status === 409) {
+          setSaveError(err.message || 'این آدرس سالن قبلاً ثبت شده است')
+          return
+        }
+        setSaveError(
+          err instanceof Error ? err.message : 'ذخیره آدرس انجام نشد',
+        )
+      },
+    })
   }
 
   const prefix = publicSlugPrefix()

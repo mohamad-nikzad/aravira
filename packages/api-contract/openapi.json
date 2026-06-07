@@ -3,7 +3,7 @@
   "info": {
     "title": "Saluna API",
     "version": "0.7.0",
-    "description": "Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. This contract is expanded incrementally; clients, staff, services catalog, appointments, and appointment-requests route groups are documented."
+    "description": "Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. This contract is expanded incrementally; clients, staff, services catalog, appointments, appointment-requests, settings, salon-profile, and salon-public-settings route groups are documented."
   },
   "servers": [
     {
@@ -47,6 +47,18 @@
     {
       "name": "Appointment requests",
       "description": "Public booking request inbox (approve / reject)"
+    },
+    {
+      "name": "Settings",
+      "description": "Salon business hours and slot duration"
+    },
+    {
+      "name": "Salon profile",
+      "description": "Salon presence (address, maps, social links)"
+    },
+    {
+      "name": "Salon public settings",
+      "description": "Public booking page settings and slug"
     }
   ],
   "components": {
@@ -2652,6 +2664,263 @@
             "description": "Optional rejection reason shown to salon staff"
           }
         }
+      },
+      "BusinessSettingsResponse": {
+        "type": "object",
+        "properties": {
+          "settings": {
+            "$ref": "#/components/schemas/BusinessHours"
+          }
+        },
+        "required": [
+          "settings"
+        ]
+      },
+      "BusinessSettingsUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "workingStart": {
+            "type": "string",
+            "example": "09:00"
+          },
+          "workingEnd": {
+            "type": "string",
+            "example": "19:00"
+          },
+          "slotDurationMinutes": {
+            "type": "integer",
+            "example": 30
+          },
+          "workingDays": {
+            "type": "integer",
+            "example": 126
+          }
+        }
+      },
+      "SalonPresenceResponse": {
+        "type": "object",
+        "properties": {
+          "presence": {
+            "$ref": "#/components/schemas/SalonPresence"
+          }
+        },
+        "required": [
+          "presence"
+        ]
+      },
+      "SalonPresence": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "mapGoogle": {
+            "type": "string",
+            "nullable": true
+          },
+          "mapNeshan": {
+            "type": "string",
+            "nullable": true
+          },
+          "mapBalad": {
+            "type": "string",
+            "nullable": true
+          },
+          "socialInstagram": {
+            "type": "string",
+            "nullable": true
+          },
+          "socialTelegram": {
+            "type": "string",
+            "nullable": true
+          },
+          "socialWhatsapp": {
+            "type": "string",
+            "nullable": true
+          },
+          "website": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "address",
+          "mapGoogle",
+          "mapNeshan",
+          "mapBalad",
+          "socialInstagram",
+          "socialTelegram",
+          "socialWhatsapp",
+          "website"
+        ],
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "SalonPresencePatchRequest": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "mapGoogle": {
+            "type": "string"
+          },
+          "mapNeshan": {
+            "type": "string"
+          },
+          "mapBalad": {
+            "type": "string"
+          },
+          "socialInstagram": {
+            "type": "string"
+          },
+          "socialTelegram": {
+            "type": "string"
+          },
+          "socialWhatsapp": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          }
+        }
+      },
+      "ManagerPublicSettingsResult": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "salonName": {
+            "type": "string"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/ManagerPublicSettingsView"
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagerServiceVisibility"
+            }
+          }
+        },
+        "required": [
+          "slug",
+          "salonName",
+          "settings",
+          "services"
+        ]
+      },
+      "ManagerPublicSettingsView": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "bioText": {
+            "type": "string",
+            "nullable": true
+          },
+          "themeId": {
+            "type": "string"
+          },
+          "layoutId": {
+            "type": "string"
+          },
+          "appointmentRequestsEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "bioText",
+          "themeId",
+          "layoutId",
+          "appointmentRequestsEnabled"
+        ]
+      },
+      "ManagerServiceVisibility": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "$ref": "#/components/schemas/Service"
+          },
+          "visible": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "service",
+          "visible"
+        ]
+      },
+      "PublicSettingsUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "bioText": {
+            "type": "string",
+            "nullable": true
+          },
+          "themeId": {
+            "type": "string",
+            "enum": [
+              "rose",
+              "sage",
+              "ocean",
+              "sand",
+              "plum",
+              "charcoal"
+            ]
+          },
+          "layoutId": {
+            "type": "string",
+            "enum": [
+              "agenda",
+              "inline"
+            ]
+          },
+          "appointmentRequestsEnabled": {
+            "type": "boolean"
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceVisibilityInput"
+            }
+          }
+        }
+      },
+      "ServiceVisibilityInput": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string"
+          },
+          "visible": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "serviceId",
+          "visible"
+        ]
+      },
+      "SlugUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "example": "my-salon"
+          }
+        },
+        "required": [
+          "slug"
+        ]
       }
     },
     "parameters": {}
@@ -6132,6 +6401,418 @@
           },
           "404": {
             "description": "Appointment request not found or no longer pending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/settings/business": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Get business settings",
+        "description": "Salon working hours and slot duration. Readable by any tenant member.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Business settings for the authenticated salon",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessSettingsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Update business settings",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusinessSettingsUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated business settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing manage_settings permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/salon-profile/presence": {
+      "get": {
+        "tags": [
+          "Salon profile"
+        ],
+        "summary": "Get salon presence",
+        "description": "Address, maps, social links, and website shown on the public page.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Salon presence fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalonPresenceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing manage_settings permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Salon profile"
+        ],
+        "summary": "Update salon presence",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalonPresencePatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated salon presence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalonPresenceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing manage_settings permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/salon-public-settings": {
+      "get": {
+        "tags": [
+          "Salon public settings"
+        ],
+        "summary": "Get manager public page settings",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public page settings, slug, and service visibility",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerPublicSettingsResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing manage_settings permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Salon public settings"
+        ],
+        "summary": "Update manager public page settings",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicSettingsUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated public page settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerPublicSettingsResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing manage_settings permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/salon-public-settings/slug": {
+      "patch": {
+        "tags": [
+          "Salon public settings"
+        ],
+        "summary": "Update public page slug",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlugUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated slug and refreshed public page settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerPublicSettingsResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing manage_settings permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Slug already taken by another salon",
             "content": {
               "application/json": {
                 "schema": {
