@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  staffCreateRequestSchema,
   staffCreateSchema,
   staffScheduleDaySchema,
   staffScheduleRequestSchema,
@@ -146,6 +147,23 @@ describe('staffScheduleSchema', () => {
     }))
     const result = staffScheduleSchema.parse(rows)
     expect(result).toHaveLength(7)
+  })
+})
+
+describe('staffCreateRequestSchema', () => {
+  it('accepts API payloads without confirm password', () => {
+    const result = staffCreateRequestSchema.parse({
+      name: 'Ali',
+      phone: '09121234567',
+      password: 'secret123',
+      role: 'staff',
+    })
+    expect(result).toEqual({
+      name: 'Ali',
+      phone: '09121234567',
+      password: 'secret123',
+      role: 'staff',
+    })
   })
 })
 

@@ -22,7 +22,7 @@ import { STAFF_COLORS } from '@repo/salon-core/types'
 import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { validateAppointmentWindow } from '@repo/salon-core/appointment-time'
 import {
-  staffCreateSchema,
+  staffCreateRequestSchema,
   staffPasswordRequestSchema,
   staffScheduleRequestSchema,
   staffServiceIdsSchema,
@@ -74,7 +74,7 @@ export const staff = new Hono<AppEnv>()
   .post(
     '/',
     requireTenant('manage_settings'),
-    zValidator('json', staffCreateSchema),
+    zValidator('json', staffCreateRequestSchema),
     async (c) => {
       const { salonId } = c.var.tenant
       const { password, name, phone } = c.req.valid('json')

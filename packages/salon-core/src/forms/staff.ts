@@ -23,13 +23,21 @@ const passwordSchema = z
   .string({ error: formMessages.required })
   .min(MIN_PASSWORD_LENGTH, formMessages.passwordTooShort)
 
-export const staffCreateSchema = z
-  .object({
-    name: requiredTextSchema,
-    phone: phoneSchema,
-    password: passwordSchema,
+/** API / data-client payload — confirm-password is form-only UX. */
+export const staffCreateRequestSchema = z.object({
+  name: requiredTextSchema,
+  phone: phoneSchema,
+  password: passwordSchema,
+  role: staffRoleSchema.default('staff'),
+})
+
+export type StaffCreateRequestPayload = z.output<
+  typeof staffCreateRequestSchema
+>
+
+export const staffCreateSchema = staffCreateRequestSchema
+  .extend({
     confirmPassword: z.string({ error: formMessages.required }),
-    role: staffRoleSchema.default('staff'),
   })
   .superRefine((value, ctx) => {
     if (value.password !== value.confirmPassword) {
@@ -43,7 +51,8 @@ export const staffCreateSchema = z
   .transform(({ confirmPassword: _confirmPassword, ...payload }) => payload)
 
 export type StaffCreateFormInput = z.input<typeof staffCreateSchema>
-export type StaffCreateFormPayload = z.output<typeof staffCreateSchema>
+/** Parsed form output — same shape as {@link StaffCreateRequestPayload}. */
+export type StaffCreateFormPayload = StaffCreateRequestPayload
 
 export const staffUpdateSchema = z.object({
   name: requiredTextSchema,

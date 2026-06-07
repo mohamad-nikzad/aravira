@@ -1,6 +1,6 @@
 import type { BusinessHours, StaffSchedule, User } from '@repo/salon-core/types'
 import type {
-  StaffCreateFormPayload,
+  StaffCreateRequestPayload,
   StaffPasswordRequestPayload,
   StaffScheduleRequestPayload,
   StaffServiceIdsPayload,
@@ -13,7 +13,7 @@ export type StaffResponse = {
   staff: User[]
 }
 
-export type CreateStaffInput = StaffCreateFormPayload
+export type CreateStaffInput = StaffCreateRequestPayload
 
 export type CreateStaffResponse = {
   user: User
