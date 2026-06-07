@@ -19,9 +19,13 @@
     "./services": "./src/legacy/services.ts",
     "./appointments": "./src/legacy/appointments.ts",
     "./errors": "./src/errors.ts",
-    "./endpoints": "./src/legacy/endpoints.ts"
+    "./endpoints": "./src/legacy/endpoints.ts",
+    "./sdk": "./src/generated/sdk.gen.ts",
+    "./query": "./src/generated/@tanstack/react-query.gen.ts",
+    "./types": "./src/generated/types.gen.ts"
   },
   "scripts": {
+    "generate": "openapi-ts",
     "lint": "eslint .",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "test": "vitest run"
@@ -31,7 +35,9 @@
     "@repo/salon-core": "workspace:*"
   },
   "devDependencies": {
+    "@hey-api/openapi-ts": "^0.98.1",
     "@repo/typescript-config": "workspace:*",
+    "@tanstack/react-query": "^5.62.7",
     "typescript": "5.7.3",
     "vitest": "^3.0.5"
   }

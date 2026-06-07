@@ -56,7 +56,8 @@
     "bench:prod": "BASE_URL=https://saluna.vercel.app ./benchmarks/run.sh",
     "bench:summary": "node benchmarks/summarize.mjs",
     "bench:compare": "node benchmarks/compare.mjs",
-    "generate:api-contract": "pnpm --filter @repo/api generate:openapi"
+    "generate:api-contract": "pnpm --filter @repo/api generate:openapi",
+    "generate:api-client": "pnpm --filter @repo/api-client generate"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
