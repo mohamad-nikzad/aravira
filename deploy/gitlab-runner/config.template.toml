@@ -18,9 +18,9 @@ shutdown_timeout = 30
     disable_cache = false
     volumes = ["/cache"]
     shm_size = 0
-    cpus = "1"
-    memory = "1100m"
-    memory_swap = "1100m"
+    cpus = "1.75"
+    memory = "3400m"
+    memory_swap = "3400m"
     allowed_pull_policies = ["if-not-present", "always"]
     allowed_images = [
       "gcr.hamdocker.ir/kaniko-project/executor:*",

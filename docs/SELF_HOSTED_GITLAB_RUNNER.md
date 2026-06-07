@@ -13,7 +13,7 @@ keep it project-scoped, protected, tagged, and low-concurrency.
 - Executor: Docker
 - Concurrency: `1`
 - Runner container limit: `0.75` CPU, `768m` RAM
-- Job container limit: `1` CPU, `1100m` RAM
+- Job container limit: `1.75` CPU, `3400m` RAM
 - Allowed job images: Kaniko and mirrored Alpine only
 - Helper image: `hub.hamdocker.ir/gitlab/gitlab-runner-helper:x86_64-v19.0.1`
 
