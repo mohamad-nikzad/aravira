@@ -2,16 +2,45 @@
 
 Saluna monorepo — shared `@repo/api-client` migration using HeyAPI-generated SDK, types, and TanStack Query options.
 
-**Status:** Approved for Phases 1–6. App migration (Phase 7) and `@repo/data-client` removal are deferred.
+**Status:** Phases 1–6 **complete**. App migration (Phase 7) and `@repo/data-client` removal are deferred.
+
+**Docs:** `packages/api-client/README.md` (usage) · `packages/api-contract/README.md` (contract generation)
+
+---
+
+## Progress
+
+| Phase | Status | Deliverables |
+|-------|--------|--------------|
+| 1. Legacy preservation | ✅ Done | `src/legacy/`, root re-exports legacy only, `./errors`, all 13 legacy subpaths |
+| 2. OpenAPI contract | ✅ Done | `packages/api-contract/`, clients routes in `apps/api/src/openapi/`, `pnpm generate:api-contract` |
+| 3. HeyAPI generated client | ✅ Done | `src/generated/`, `./sdk` / `./query` / `./types`, `pnpm generate:api-client` |
+| 4. Generated client config | ✅ Done | `configureGeneratedApiClient()` in `src/client.ts`, exported via `./generated-client`, error normalization + tests |
+| 5. React scaffold | ✅ Done | `src/react/index.ts` (empty), `./react` export |
+| 6. Documentation | ✅ Done | `packages/api-client/README.md` |
+| 7. App migration | ⏳ Deferred | — |
+| data-client removal | ⏳ Deferred | — |
+
+**Known gaps (non-blocking for Phase 7 start):**
+
+- Root `pnpm typecheck` / `pnpm lint` fail on a pre-existing turbo cyclic dependency (`@repo/auth` ↔ `@repo/database`).
+- `packages/api-client` lint reports `@typescript-eslint/no-explicit-any` in generated files; consider eslint ignore for `src/generated/` if needed.
 
 ---
 
 ## Goals
 
-- Introduce a generated API client beside the existing hand-written client.
-- Preserve all current app behavior during the transition.
-- Use OpenAPI as the contract source of truth, generated from Hono route definitions.
-- Stop at infrastructure and documentation (Phase 6). Do not migrate app code yet.
+**Achieved (Phases 1–6):**
+
+- Generated API client lives beside the legacy hand-written client.
+- All app behavior preserved — no app import changes.
+- OpenAPI contract generated from Hono route definitions (clients route group first).
+- Infrastructure and documentation complete (`packages/api-client/README.md`).
+
+**Next (Phase 7+):**
+
+- Migrate apps by vertical slice to generated query options / SDK.
+- Expand OpenAPI coverage route group by route group.
 
 ---
 
@@ -30,34 +59,42 @@ Phase 1 must change **zero app imports**.
 
 ---
 
-## Current codebase (baseline)
+## Current codebase (after Phases 1–6)
 
-### `@repo/api-client` (today)
+### `@repo/api-client`
 
 - Location: `packages/api-client/`
-- Pattern: `createApiClient()` + `createXApi()` factories
-- Apps wire it locally:
+- **Legacy (apps today):** `createApiClient()` + `createXApi()` factories under `src/legacy/`; root barrel re-exports legacy only
+- **Generated (ready, unused in apps):** HeyAPI output under `src/generated/`; configure via `@repo/api-client/generated-client`
+- Apps still wire legacy locally (unchanged imports):
   - PWA: `apps/pwa/src/lib/api-client.ts` (`credentials: 'include'`)
   - Native: `apps/native/lib/api.ts` (`getToken`, `credentials: 'omit'`) — not in prod; out of scope for now
-- Package exports 13 subpaths (`./auth`, `./clients`, etc.) but apps import only the root barrel
-- Types for domain models come from `@repo/salon-core`; api-client defines API response shapes inline
+- Package exports legacy subpaths + `./generated-client`, `./sdk`, `./query`, `./types`, `./react`, `./errors`
+- Types: domain models from `@repo/salon-core`; API DTOs from `@repo/api-client/types` (generated, clients only so far)
+
+### `@repo/api-contract`
+
+- `packages/api-contract/openapi.json` — generated, not hand-maintained
+- Scope: **clients** route group (`/api/v1/clients/*`)
+- Source: `apps/api/src/openapi/` (`contract-app.ts`, `routes/clients.ts`, `schemas/clients.ts`)
+- Command: `pnpm generate:api-contract`
 
 ### `@repo/data-client` (to be removed later)
 
 - PWA manager screens use offline IndexedDB via `createDataClient()` (`apps/pwa/src/lib/manager-data-client.tsx`)
 - `useManagerCollection` combines React Query + data-client subscribe/sync
-- **Decision:** offline support is going away; data-client will be removed in a separate effort after the generated client is proven. Not part of Phases 1–6.
+- **Decision:** offline support is going away; data-client will be removed in a separate effort after the generated client is proven on tenant CRUD APIs. Untouched in Phases 1–6.
 
-### Hono API (today)
+### Hono API
 
-- Plain Hono + Zod validators (`zValidator` + `@repo/salon-core/forms/*`)
-- No OpenAPI generation today
-- ~25 route groups in `apps/api/src/app.ts`
+- Runtime routes: plain Hono + Zod validators (`zValidator` + `@repo/salon-core/forms/*`) — unchanged behavior
+- OpenAPI: `@hono/zod-openapi` contract for clients; ~25 other route groups still legacy
+- Generation: `apps/api/src/openapi/generate-openapi.ts` → `packages/api-contract/openapi.json`
 
-### Web (today)
+### Web
 
 - `apps/web/src/lib/public-api.ts` uses raw `fetch`, not `@repo/api-client`
-- Public booking API migration is a later pass
+- Public booking API migration is a later pass (Phase 7+)
 
 ---
 
@@ -75,10 +112,11 @@ packages/
         errors.ts               # ApiError, NetworkError (legacy copy)
         auth.ts, clients.ts, …
         index.ts
-      generated/                # HeyAPI output — do not edit manually
+      generated/                # HeyAPI output — do not edit manually (cleared on regen)
         types.gen.ts
         sdk.gen.ts
-        query.gen.ts
+        @tanstack/react-query.gen.ts
+        client.gen.ts, client/, core/   # HeyAPI client runtime (generator-owned)
       errors.ts                 # stable app-facing re-export of ApiError / NetworkError
       client.ts                 # configureGeneratedApiClient() — exported via ./generated-client only
       react/
@@ -90,7 +128,7 @@ packages/
 
 ## Package exports
 
-### During migration (Phases 1–6)
+### Current exports (legacy + generated; root = legacy only)
 
 ```json
 {
@@ -114,7 +152,7 @@ packages/
     "./errors": "./src/errors.ts",
     "./generated-client": "./src/client.ts",
     "./sdk": "./src/generated/sdk.gen.ts",
-    "./query": "./src/generated/query.gen.ts",
+    "./query": "./src/generated/@tanstack/react-query.gen.ts",
     "./types": "./src/generated/types.gen.ts",
     "./react": "./src/react/index.ts"
   }
@@ -123,7 +161,7 @@ packages/
 
 Keep all 13 existing legacy subpath exports even if grep shows apps do not currently import them.
 
-Root `@repo/api-client` re-exports the **legacy barrel only** during Phases 1–6. Apps keep working without import changes.
+Root `@repo/api-client` re-exports the **legacy barrel only** (until Phase 7 migrates consumers). Apps keep working without import changes.
 
 ```ts
 // Legacy — unchanged
@@ -133,13 +171,13 @@ import { createApiClient } from '@repo/api-client'
 import { configureGeneratedApiClient } from '@repo/api-client/generated-client'
 ```
 
-Do **not** export `configureGeneratedApiClient()` from the root `@repo/api-client` barrel during Phases 1–6. That would create ambiguity with legacy `createApiClient()`.
+Do **not** export `configureGeneratedApiClient()` from the root `@repo/api-client` barrel. That would create ambiguity with legacy `createApiClient()`.
 
 ### Entrypoint purposes
 
 | Entrypoint | Purpose |
 |------------|---------|
-| `@repo/api-client` | Legacy public API only (`createApiClient`, `createXApi`, etc.) — unchanged during Phases 1–6 |
+| `@repo/api-client` | Legacy public API only (`createApiClient`, `createXApi`, etc.) — unchanged since Phase 1 |
 | `@repo/api-client/legacy` | Explicit legacy access during migration |
 | `@repo/api-client/generated-client` | Generated client setup only (`configureGeneratedApiClient`). Does not replace legacy `createApiClient()` |
 | `@repo/api-client/sdk` | Generated non-React SDK (Astro server, scripts) |
@@ -231,11 +269,11 @@ Per migrated slice (Phase 7, later):
 Prefer generated query options directly:
 
 ```ts
-import { getClientByIdOptions } from '@repo/api-client/query'
+import { getApiV1ClientsByIdOptions } from '@repo/api-client/query'
 import { useQuery } from '@tanstack/react-query'
 
 const query = useQuery({
-  ...getClientByIdOptions({ path: { id } }),
+  ...getApiV1ClientsByIdOptions({ path: { id } }),
   enabled: !!id,
 })
 ```
@@ -261,9 +299,11 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 
 ## Phases
 
-### Phase 1: Preserve existing API client under legacy
+### Phase 1: Preserve existing API client under legacy ✅
 
 **Goal:** Pure file-organization compatibility move. Repo behaves as if nothing changed externally.
+
+**Completed:** Legacy code under `src/legacy/`; root `src/index.ts` re-exports legacy; `src/errors.ts` added; all subpath exports wired; zero app import changes.
 
 **Tasks:**
 
@@ -291,9 +331,11 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 
 ---
 
-### Phase 2: Introduce OpenAPI contract (clients first)
+### Phase 2: Introduce OpenAPI contract (clients first) ✅
 
 **Goal:** Hono API generates a reliable OpenAPI document for the clients route group.
+
+**Completed:** `packages/api-contract/`; OpenAPI routes in `apps/api/src/openapi/`; `pnpm generate:api-contract`; documented in `packages/api-contract/README.md`. Runtime `apps/api/src/routes/clients.ts` behavior unchanged.
 
 **Tasks:**
 
@@ -329,9 +371,11 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 
 ---
 
-### Phase 3: Add HeyAPI generated client beside legacy
+### Phase 3: Add HeyAPI generated client beside legacy ✅
 
 **Goal:** Generated SDK, types, and query options exist alongside legacy client.
+
+**Completed:** `openapi-ts.config.ts`; HeyAPI generates `sdk.gen.ts`, `types.gen.ts`, `@tanstack/react-query.gen.ts`; exports `./sdk`, `./query`, `./types`; `pnpm generate:api-client`. Generated-folder rule in `packages/api-client/README.md` (HeyAPI clears output; no `src/generated/README.md`).
 
 **Tasks:**
 
@@ -342,7 +386,7 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 5. Add `src/generated/README.md` only if HeyAPI preserves non-generated files in the output directory; otherwise document the rule in `packages/api-client/README.md`.
 6. Add package exports for `./sdk`, `./query`, `./types`.
 7. Add scripts:
-   - `packages/api-client/package.json`: `"generate": "heyapi"`
+   - `packages/api-client/package.json`: `"generate": "openapi-ts"`
    - Root `package.json`: `"generate:api-client": "pnpm --filter @repo/api-client generate"`
 
 **Acceptance criteria:**
@@ -354,9 +398,11 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 
 ---
 
-### Phase 4: Add shared generated client configuration
+### Phase 4: Add shared generated client configuration ✅
 
 **Goal:** Apps can configure the generated client without hardcoding env or auth internals.
+
+**Completed:** `configureGeneratedApiClient()` in `src/client.ts`; supports `baseUrl`, `getAccessToken`, `credentials`; normalizes to `ApiError` / `NetworkError`; exported via `./generated-client` only; `src/client.test.ts`.
 
 **Tasks:**
 
@@ -377,9 +423,11 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 
 ---
 
-### Phase 5: React layer scaffold (no domain hooks)
+### Phase 5: React layer scaffold (no domain hooks) ✅
 
 **Goal:** Export structure exists for future shared hooks. No wrapper-hook layer.
+
+**Completed:** `src/react/index.ts` (empty scaffold with guidance comment); `./react` export wired.
 
 **Tasks:**
 
@@ -398,9 +446,11 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 
 ---
 
-### Phase 6: Document legacy and new usage
+### Phase 6: Document legacy and new usage ✅
 
 **Goal:** Developers understand both APIs before any app migration.
+
+**Completed:** `packages/api-client/README.md` — legacy vs generated usage, entrypoints, types, errors, generation commands, migration rules.
 
 **Tasks:**
 
@@ -426,7 +476,7 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 
 ---
 
-## Deferred (not in Phases 1–6)
+## Next up (deferred)
 
 ### Phase 7: App migration
 
@@ -450,52 +500,61 @@ Phase 5: create `src/react/index.ts` only. **No `useCurrentUser()` or other doma
 
 ---
 
-## Suggested implementation order
-
-Phase 1 is the **first** implementation step. Do not clean or restructure `src/generated/` placeholders before Phase 1 compatibility is confirmed.
+## Implementation order (Phases 1–6 — complete)
 
 ```txt
- 1. Phase 1: Move api-client src → src/legacy/; wire all exports; add src/errors.ts
- 2. Typecheck — confirm zero app import changes needed
- 3. Clean empty packages/api-client/src/generated/ placeholders
- 4. Phase 2: Create packages/api-contract/; add @hono/zod-openapi; migrate clients routes
- 5. Phase 2: Add API script → packages/api-contract/openapi.json
- 6. Phase 3: HeyAPI config; generate sdk / query / types
- 7. Phase 4: configureGeneratedApiClient() + error normalization; export via ./generated-client
- 8. Phase 5: src/react/index.ts scaffold
- 9. Phase 6: packages/api-client/README.md
-10. Root generate:api-client script; full typecheck/lint pass
+ ✅ 1. Phase 1: Move api-client src → src/legacy/; wire all exports; add src/errors.ts
+ ✅ 2. Typecheck — confirm zero app import changes needed
+ ✅ 3. Clean empty packages/api-client/src/generated/ placeholders
+ ✅ 4. Phase 2: Create packages/api-contract/; add @hono/zod-openapi; migrate clients routes
+ ✅ 5. Phase 2: Add API script → packages/api-contract/openapi.json
+ ✅ 6. Phase 3: HeyAPI config; generate sdk / query / types
+ ✅ 7. Phase 4: configureGeneratedApiClient() + error normalization; export via ./generated-client
+ ✅ 8. Phase 5: src/react/index.ts scaffold
+ ✅ 9. Phase 6: packages/api-client/README.md
+ ⚠️ 10. Root generate:api-client script (done); full root typecheck/lint pass blocked by turbo cycle
+```
+
+### Suggested Phase 7 order (when starting app migration)
+
+```txt
+ 1. Wire configureGeneratedApiClient() in PWA startup (alongside legacy apiClient)
+ 2. Pick first vertical slice (e.g. clients list/detail) — avoid data-client manager screens initially
+ 3. Replace legacy calls with generated query/mutation options + invalidation in that slice
+ 4. Expand OpenAPI contract for the next route group before migrating its app screens
+ 5. Repeat per slice; remove legacy module usage only when no consumers remain
 ```
 
 ---
 
 ## Agent checklist
 
-### Before coding
+### Phases 1–6 (complete)
 
-- [ ] Confirm monorepo uses `pnpm@9.15.9`
-- [ ] List all `packages/api-client` public exports and subpaths
-- [ ] Grep app imports from `@repo/api-client` (expect root barrel only)
-- [ ] Note PWA dual path: `api-client` vs `data-client` (do not touch data-client in Phases 1–6)
+- [x] Confirm monorepo uses `pnpm@9.15.9`
+- [x] List all `packages/api-client` public exports and subpaths
+- [x] Grep app imports from `@repo/api-client` (root barrel only; no generated imports in apps)
+- [x] Note PWA dual path: `api-client` vs `data-client` (data-client untouched)
+- [x] Preserve legacy behavior first
+- [x] Do not edit generated files manually
+- [x] Keep app-specific auth outside `@repo/api-client`
+- [x] No app migration (Phase 7 deferred)
+- [x] `packages/api-client` typecheck passes
+- [x] Legacy imports work (`createApiClient` from `@repo/api-client`)
+- [x] Generated config importable from `@repo/api-client/generated-client` (not root barrel)
+- [x] Generated imports work (`sdk`, `query`, `types`)
+- [x] `pnpm generate:api-client` reproduces generated output
+- [x] No app files changed for migration
+- [ ] Root `pnpm typecheck` passes — blocked by `@repo/auth` ↔ `@repo/database` turbo cycle
+- [ ] Root `pnpm lint` passes — same turbo cycle; plus generated-file eslint noise in api-client
 
-### While coding
+### Phase 7 (when starting)
 
-- [ ] Preserve legacy behavior first
-- [ ] Do not edit generated files manually
-- [ ] Keep app-specific auth outside `@repo/api-client`
-- [ ] Do not migrate app code before Phase 7
-- [ ] Prefer generated query options over endpoint wrapper hooks (when migration begins)
-
-### After Phases 1–6
-
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] Legacy imports still work from all apps (`createApiClient` from `@repo/api-client`)
-- [ ] Generated config importable from `@repo/api-client/generated-client` (not root barrel)
-- [ ] Generated imports work (`sdk`, `query`, `types`)
-- [ ] `pnpm generate:api-client` reproduces generated output
-- [ ] No app files changed (except if build tooling requires it)
-- [ ] No app migration occurred (Phase 7 deferred)
+- [ ] Wire `configureGeneratedApiClient()` per app at startup
+- [ ] Migrate one vertical slice at a time (query + mutation + invalidation + auth)
+- [ ] Prefer generated query options over endpoint wrapper hooks
+- [ ] Expand OpenAPI contract before migrating screens for new route groups
+- [ ] Do not touch data-client manager screens until removal is planned
 
 ---
 
@@ -524,27 +583,25 @@ Apps                 → compose behavior locally with generated options
 
 ---
 
-## Plan acceptance criteria (pre-implementation)
+## Plan acceptance criteria
 
-Before starting code changes, this plan must clearly state:
+### Phases 1–6 (verified)
 
-- [x] Phase 1 happens **before** generated folder cleanup.
+- [x] Phase 1 happened **before** generated folder cleanup.
 - [x] `./generated-client` exists as the generated config entrypoint.
-- [x] Root `@repo/api-client` exports **legacy only** during Phases 1–6.
+- [x] Root `@repo/api-client` exports **legacy only**.
 - [x] Generated config is imported from `@repo/api-client/generated-client`.
 - [x] Existing `createApiClient()` remains available from `@repo/api-client`.
 - [x] HeyAPI owns `src/generated/`.
-- [x] `src/generated/README.md` is **conditional** (fallback: `packages/api-client/README.md`).
-- [x] Phase 2 does **not** rewrite all salon-core schemas.
-- [x] No app migration occurs in Phases 1–6.
+- [x] Generated-folder rule documented in `packages/api-client/README.md` (no `src/generated/README.md` — HeyAPI clears output).
+- [x] Phase 2 did **not** rewrite all salon-core schemas.
+- [x] No app migration occurred.
 
-### Hard constraints (do not weaken)
+### Hard constraints (still apply for Phase 7+)
 
-- Phases 1–6 are infrastructure only; app migration is Phase 7 (later).
-- Phase 1 requires zero app import changes.
-- Better Auth passthrough stays legacy and excluded from first OpenAPI contract.
-- Public booking, push, messaging webhooks, and health excluded from first OpenAPI pass.
-- No `useCurrentUser()` or domain hooks in Phase 5.
-- Apps should eventually use generated query options directly.
-- `@repo/data-client` removal deferred to a separate later effort.
-- Native app out of scope for investment during Phases 1–6.
+- App migration is Phase 7 — by vertical slice, not big-bang.
+- Better Auth passthrough stays legacy until Saluna-owned wrapper routes have stable OpenAPI schemas.
+- Public booking, push, messaging webhooks, and health excluded until later OpenAPI passes.
+- Prefer generated query options directly; custom hooks only for shared domain behavior.
+- `@repo/data-client` removal is a separate later effort.
+- Native app out of scope until Phase 7 planning includes it.

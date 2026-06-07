@@ -23,7 +23,8 @@
     "./endpoints": "./src/legacy/endpoints.ts",
     "./sdk": "./src/generated/sdk.gen.ts",
     "./query": "./src/generated/@tanstack/react-query.gen.ts",
-    "./types": "./src/generated/types.gen.ts"
+    "./types": "./src/generated/types.gen.ts",
+    "./react": "./src/react/index.ts"
   },
   "scripts": {
     "generate": "openapi-ts",
