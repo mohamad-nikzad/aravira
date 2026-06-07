@@ -4,7 +4,7 @@
     "baseUrl": ".",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "types": ["node", "@cloudflare/workers-types"],
+    "types": ["node"],
     "paths": {
       "@repo/salon-core": ["../../packages/salon-core/src/index.ts"],
       "@repo/salon-core/*": ["../../packages/salon-core/src/*"],

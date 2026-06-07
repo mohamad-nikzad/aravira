@@ -51,8 +51,7 @@ export function loadDatabaseEnvFiles() {
   if (envLoaded) return
   envLoaded = true
 
-  // Skip filesystem env-file loading when no workspace root is resolvable
-  // (e.g. Cloudflare Workers — env arrives via bindings, not .env files).
+  // Skip filesystem env-file loading when no workspace root is resolvable.
   if (!getWorkspaceRoot()) return
 
   loadLocalEnvFile('.env')

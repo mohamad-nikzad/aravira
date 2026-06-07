@@ -188,7 +188,6 @@ const notable = new Set([
   'grammy',
   'react',
   'react-dom',
-  'wrangler',
   '@playwright/test',
   'vitest',
   'nginx',

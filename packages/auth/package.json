@@ -7,12 +7,9 @@
     "./server": "./src/server.ts",
     "./permissions": "./src/permissions.ts",
     "./auth": "./src/auth.ts",
-    "./auth-next": "./src/auth-next.ts",
-    "./authz": "./src/authz.ts",
     "./keys": "./src/keys.ts",
     "./signup": "./src/signup.ts",
-    "./tenant": "./src/tenant.ts",
-    "./tenant-next": "./src/tenant-next.ts"
+    "./tenant": "./src/tenant.ts"
   },
   "scripts": {
     "lint": "eslint .",
@@ -27,9 +24,6 @@
     "bcryptjs": "^3.0.3",
     "better-auth": "^1.6.11",
     "jose": "^6.2.2",
-    "next": "16.2.0",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

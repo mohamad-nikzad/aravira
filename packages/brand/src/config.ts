@@ -50,7 +50,6 @@ export const brand = {
   project: {
     packageName: 'saluna',
     dockerPostgresContainer: 'saluna-postgres',
-    wranglerServiceName: 'saluna-api',
   },
 } as const
 

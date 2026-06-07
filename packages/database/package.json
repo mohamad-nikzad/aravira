@@ -43,7 +43,6 @@
   },
   "dependencies": {
     "@repo/salon-core": "workspace:*",
-    "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.39.3",
     "postgres": "^3.4.5",
     "zod": "^4.4.3"
