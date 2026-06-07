@@ -7,7 +7,10 @@ import {
   listAccountsForUser,
   setAccountEnabled,
 } from '@repo/database/messaging'
-import { getMessagingProvider } from '@repo/notifications'
+import {
+  getMessagingProvider,
+  listConfiguredMessagingProviders,
+} from '@repo/notifications'
 import { getEnv } from '../env'
 import type { AppEnv } from '../factory'
 import { requireTenant } from '../middleware/auth'
@@ -53,6 +56,10 @@ export const messagingRoute = new Hono<AppEnv>()
     const { userId } = c.var.tenant
     const accounts = await listAccountsForUser(userId)
     return ok(c, {
+      providers: listConfiguredMessagingProviders().map((provider) => ({
+        id: provider.id,
+        displayName: provider.displayName,
+      })),
       accounts: accounts.map((a) => ({
         id: a.id,
         provider: a.provider,

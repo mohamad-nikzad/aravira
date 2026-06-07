@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@repo/notifications', () => ({
   getMessagingProvider: vi.fn(),
+  listConfiguredMessagingProviders: vi.fn(),
+  getBaleConfig: vi.fn(),
   getTelegramConfig: vi.fn(),
   listNotificationsForUser: vi.fn(),
   markAllNotificationsRead: vi.fn(),
@@ -24,6 +26,17 @@ vi.mock('@repo/notifications', () => ({
   answerTelegramCallback: vi.fn(),
   editTelegramMessageText: vi.fn(),
   editTelegramMessageReplyMarkup: vi.fn(),
+  sendBaleMessage: vi.fn(),
+  answerBaleCallback: vi.fn(),
+  editBaleMessageText: vi.fn(),
+  editBaleMessageReplyMarkup: vi.fn(),
+  renderBaleBotHtml: vi.fn((html: string) =>
+    html
+      .replace(/<[^>]*>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&'),
+  ),
   persistentReplyKeyboard: vi.fn(() => ({
     keyboard: [[{ text: '📋' }]],
     is_persistent: true,
@@ -74,7 +87,9 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(authServer.api.getSession).mockImplementation(
     async (args: any) =>
-      (args?.headers?.get?.('Authorization') ? { user: { id: 'u1' } } : null) as never
+      (args?.headers?.get?.('Authorization')
+        ? { user: { id: 'u1' } }
+        : null) as never,
   )
   vi.mocked(getMemberForUser).mockResolvedValue({
     userId: 'u1',
@@ -83,8 +98,12 @@ beforeEach(() => {
     name: 'Manager',
     username: '09120000000',
   } as never)
-  vi.mocked(messagingDb.checkMessagingLinkRateLimit).mockResolvedValue({ allowed: true })
+  vi.mocked(messagingDb.checkMessagingLinkRateLimit).mockResolvedValue({
+    allowed: true,
+  })
+  vi.mocked(notif.getBaleConfig).mockReturnValue(null)
   vi.mocked(notif.getTelegramConfig).mockReturnValue(null)
+  vi.mocked(notif.listConfiguredMessagingProviders).mockReturnValue([])
 })
 
 describe('messaging router', () => {
@@ -101,7 +120,9 @@ describe('messaging router', () => {
       name: 'Staff',
       username: '09121111111',
     } as never)
-    const res = await app.request('/api/v1/messaging/accounts', { headers: authHeaders })
+    const res = await app.request('/api/v1/messaging/accounts', {
+      headers: authHeaders,
+    })
     expect(res.status).toBe(403)
   })
 
@@ -112,7 +133,8 @@ describe('messaging router', () => {
       supportsInlineButtons: true,
       supportsInbound: true,
       isConfigured: () => true,
-      buildAccountLinkUrl: (token: string) => `https://t.me/TestBot?start=${token}`,
+      buildAccountLinkUrl: (token: string) =>
+        `https://t.me/TestBot?start=${token}`,
       send: vi.fn(),
     } as never)
     const expiresAt = new Date(Date.now() + 60000)
@@ -162,6 +184,26 @@ describe('messaging router', () => {
   })
 
   it('GET /accounts returns the user accounts', async () => {
+    vi.mocked(notif.listConfiguredMessagingProviders).mockReturnValue([
+      {
+        id: 'telegram',
+        displayName: 'Telegram',
+        supportsInlineButtons: true,
+        supportsInbound: true,
+        isConfigured: () => true,
+        buildAccountLinkUrl: vi.fn(),
+        send: vi.fn(),
+      },
+      {
+        id: 'bale',
+        displayName: 'Bale',
+        supportsInlineButtons: true,
+        supportsInbound: true,
+        isConfigured: () => true,
+        buildAccountLinkUrl: vi.fn(),
+        send: vi.fn(),
+      },
+    ] as never)
     vi.mocked(messagingDb.listAccountsForUser).mockResolvedValue([
       {
         id: 'acc-1',
@@ -174,9 +216,18 @@ describe('messaging router', () => {
         updatedAt: new Date(),
       },
     ] as never)
-    const res = await app.request('/api/v1/messaging/accounts', { headers: authHeaders })
+    const res = await app.request('/api/v1/messaging/accounts', {
+      headers: authHeaders,
+    })
     expect(res.status).toBe(200)
-    const body = (await res.json()) as { accounts: Array<{ id: string }> }
+    const body = (await res.json()) as {
+      providers: Array<{ id: string; displayName: string }>
+      accounts: Array<{ id: string }>
+    }
+    expect(body.providers).toEqual([
+      { id: 'telegram', displayName: 'Telegram' },
+      { id: 'bale', displayName: 'Bale' },
+    ])
     expect(body.accounts).toHaveLength(1)
     expect(body.accounts[0]!.id).toBe('acc-1')
   })
@@ -185,12 +236,12 @@ describe('messaging router', () => {
     vi.mocked(messagingDb.deleteAccount).mockResolvedValue(true as never)
     const res = await app.request(
       '/api/v1/messaging/accounts/11111111-1111-1111-1111-111111111111',
-      { method: 'DELETE', headers: authHeaders }
+      { method: 'DELETE', headers: authHeaders },
     )
     expect(res.status).toBe(200)
     expect(messagingDb.deleteAccount).toHaveBeenCalledWith(
       '11111111-1111-1111-1111-111111111111',
-      'u1'
+      'u1',
     )
   })
 
@@ -211,7 +262,7 @@ describe('messaging router', () => {
         method: 'PATCH',
         headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: false }),
-      }
+      },
     )
     expect(res.status).toBe(200)
   })
@@ -260,7 +311,9 @@ describe('messaging telegram webhook', () => {
       status: 'ok',
       message: 'متصل شد',
     } as never)
-    vi.mocked(notif.sendTelegramMessage).mockResolvedValue({ status: 'sent' } as never)
+    vi.mocked(notif.sendTelegramMessage).mockResolvedValue({
+      status: 'sent',
+    } as never)
 
     const res = await app.request('/api/v1/messaging/telegram/webhook', {
       method: 'POST',
@@ -290,7 +343,7 @@ describe('messaging telegram webhook', () => {
         chatId: '42',
         text: 'متصل شد',
         replyMarkup: expect.objectContaining({ is_persistent: true }),
-      })
+      }),
     )
   })
 
@@ -300,11 +353,13 @@ describe('messaging telegram webhook', () => {
       botUsername: 'TestBot',
       webhookSecret: 'real-secret',
     })
-    vi.mocked(notif.messagingCommands.handleApprovalCallback).mockResolvedValue({
-      messageHtml: '✅ تأیید شد',
-      replacementKeyboard: null,
-      toast: 'تأیید شد',
-    } as never)
+    vi.mocked(notif.messagingCommands.handleApprovalCallback).mockResolvedValue(
+      {
+        messageHtml: '✅ تأیید شد',
+        replacementKeyboard: null,
+        toast: 'تأیید شد',
+      } as never,
+    )
 
     const res = await app.request('/api/v1/messaging/telegram/webhook', {
       method: 'POST',
@@ -328,7 +383,7 @@ describe('messaging telegram webhook', () => {
         provider: 'telegram',
         externalId: '42',
         requestId: '11111111-1111-1111-1111-111111111111',
-      })
+      }),
     )
     expect(notif.answerTelegramCallback).toHaveBeenCalledWith({
       callbackQueryId: 'cb-1',
@@ -348,7 +403,9 @@ describe('messaging telegram webhook', () => {
       botUsername: 'TestBot',
       webhookSecret: 'real-secret',
     })
-    vi.mocked(notif.messagingCommands.handleRejectionCallback).mockResolvedValue({
+    vi.mocked(
+      notif.messagingCommands.handleRejectionCallback,
+    ).mockResolvedValue({
       messageHtml: '❌ رد شد',
       replacementKeyboard: null,
       toast: 'رد شد',
@@ -372,7 +429,9 @@ describe('messaging telegram webhook', () => {
     })
     expect(res.status).toBe(200)
     expect(notif.messagingCommands.handleRejectionCallback).toHaveBeenCalled()
-    expect(notif.messagingCommands.handleApprovalCallback).not.toHaveBeenCalled()
+    expect(
+      notif.messagingCommands.handleApprovalCallback,
+    ).not.toHaveBeenCalled()
   })
 
   it('ignores unknown callback data with a silent ack', async () => {
@@ -399,9 +458,15 @@ describe('messaging telegram webhook', () => {
       }),
     })
     expect(res.status).toBe(200)
-    expect(notif.messagingCommands.handleApprovalCallback).not.toHaveBeenCalled()
-    expect(notif.messagingCommands.handleRejectionCallback).not.toHaveBeenCalled()
-    expect(notif.answerTelegramCallback).toHaveBeenCalledWith({ callbackQueryId: 'cb-3' })
+    expect(
+      notif.messagingCommands.handleApprovalCallback,
+    ).not.toHaveBeenCalled()
+    expect(
+      notif.messagingCommands.handleRejectionCallback,
+    ).not.toHaveBeenCalled()
+    expect(notif.answerTelegramCallback).toHaveBeenCalledWith({
+      callbackQueryId: 'cb-3',
+    })
     expect(notif.editTelegramMessageText).not.toHaveBeenCalled()
   })
 
@@ -439,10 +504,10 @@ describe('messaging telegram webhook', () => {
       expect.objectContaining({
         provider: 'telegram',
         externalId: '42',
-      })
+      }),
     )
     expect(notif.sendTelegramMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ chatId: '42', text: '✅ ندارد' })
+      expect.objectContaining({ chatId: '42', text: '✅ ندارد' }),
     )
   })
 
@@ -488,5 +553,236 @@ describe('messaging telegram webhook', () => {
     const res = await postMessage('/help')
     expect(res.status).toBe(200)
     expect(notif.messagingCommands.handleHelpCommand).toHaveBeenCalled()
+  })
+})
+
+describe('messaging bale webhook', () => {
+  const baleConfig = {
+    botToken: 'token',
+    botUsername: 'TestBaleBot',
+    webhookSecret: 'real-secret',
+  }
+
+  it('200 no-op when bale is not configured', async () => {
+    vi.mocked(notif.getBaleConfig).mockReturnValue(null)
+    const res = await app.request('/api/v1/messaging/bale/webhook/any', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ update_id: 1 }),
+    })
+    expect(res.status).toBe(200)
+    expect(notif.messagingCommands.handleLinkStart).not.toHaveBeenCalled()
+  })
+
+  it('200 no-op when path secret does not match', async () => {
+    vi.mocked(notif.getBaleConfig).mockReturnValue(baleConfig)
+    const res = await app.request('/api/v1/messaging/bale/webhook/wrong', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ update_id: 1 }),
+    })
+    expect(res.status).toBe(200)
+    expect(notif.messagingCommands.handleLinkStart).not.toHaveBeenCalled()
+  })
+
+  it('invalid JSON returns 200 after secret verification', async () => {
+    vi.mocked(notif.getBaleConfig).mockReturnValue(baleConfig)
+    const res = await app.request(
+      '/api/v1/messaging/bale/webhook/real-secret',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{not json',
+      },
+    )
+    expect(res.status).toBe(200)
+  })
+
+  it('routes /start <token> to handleLinkStart with provider bale', async () => {
+    vi.mocked(notif.getBaleConfig).mockReturnValue(baleConfig)
+    vi.mocked(notif.messagingCommands.handleLinkStart).mockResolvedValue({
+      status: 'ok',
+      message: 'متصل شد',
+    } as never)
+    vi.mocked(notif.sendBaleMessage).mockResolvedValue({
+      status: 'sent',
+    } as never)
+
+    const res = await app.request(
+      '/api/v1/messaging/bale/webhook/real-secret',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          update_id: 1,
+          message: {
+            message_id: 99,
+            from: { id: 42, username: 'mo', first_name: 'Mo' },
+            chat: { id: 42, type: 'private' },
+            text: '/start abc-123',
+          },
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+    expect(notif.messagingCommands.handleLinkStart).toHaveBeenCalledWith({
+      provider: 'bale',
+      token: 'abc-123',
+      externalId: '42',
+      displayName: '@mo',
+    })
+    expect(notif.sendBaleMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chatId: '42',
+        text: 'متصل شد',
+        replyMarkup: expect.objectContaining({ is_persistent: true }),
+      }),
+    )
+  })
+
+  it('routes /pending text to handlePendingCommand and sends sanitized Bale text', async () => {
+    vi.mocked(notif.getBaleConfig).mockReturnValue(baleConfig)
+    vi.mocked(notif.messagingCommands.handlePendingCommand).mockResolvedValue({
+      messages: [{ messageHtml: '<b>✅ ندارد</b>' }],
+    } as never)
+    const res = await app.request(
+      '/api/v1/messaging/bale/webhook/real-secret',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          update_id: 2,
+          message: {
+            message_id: 1,
+            from: { id: 42, first_name: 'Mo' },
+            chat: { id: 42, type: 'private' },
+            text: '/pending',
+          },
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+    expect(notif.messagingCommands.handlePendingCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'bale',
+        externalId: '42',
+      }),
+    )
+    expect(notif.renderBaleBotHtml).toHaveBeenCalledWith('<b>✅ ندارد</b>')
+    expect(notif.sendBaleMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ chatId: '42', text: '✅ ندارد' }),
+    )
+  })
+
+  it('routes approve callback to handleApprovalCallback and edits the Bale message', async () => {
+    vi.mocked(notif.getBaleConfig).mockReturnValue(baleConfig)
+    vi.mocked(notif.messagingCommands.handleApprovalCallback).mockResolvedValue(
+      {
+        messageHtml: '<b>✅ تأیید شد</b>',
+        replacementKeyboard: null,
+        toast: 'تأیید شد',
+      } as never,
+    )
+
+    const res = await app.request(
+      '/api/v1/messaging/bale/webhook/real-secret',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          update_id: 3,
+          callback_query: {
+            id: 'cb-1',
+            from: { id: 42, username: 'mo', first_name: 'Mo' },
+            message: { message_id: 99, chat: { id: 42, type: 'private' } },
+            data: 'approve:11111111-1111-1111-1111-111111111111',
+          },
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+    expect(notif.messagingCommands.handleApprovalCallback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'bale',
+        externalId: '42',
+        requestId: '11111111-1111-1111-1111-111111111111',
+      }),
+    )
+    expect(notif.answerBaleCallback).toHaveBeenCalledWith({
+      callbackQueryId: 'cb-1',
+      text: 'تأیید شد',
+    })
+    expect(notif.editBaleMessageText).toHaveBeenCalledWith({
+      chatId: '42',
+      messageId: 99,
+      text: '✅ تأیید شد',
+      buttons: null,
+    })
+  })
+
+  it('routes staff-picker callbacks to handleAssignCallback', async () => {
+    vi.mocked(notif.getBaleConfig).mockReturnValue(baleConfig)
+    vi.mocked(notif.messagingCommands.handleAssignCallback).mockResolvedValue({
+      messageHtml: '✅ تأیید شد',
+      replacementKeyboard: null,
+      toast: 'تأیید شد',
+    } as never)
+
+    const res = await app.request(
+      '/api/v1/messaging/bale/webhook/real-secret',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          update_id: 4,
+          callback_query: {
+            id: 'cb-2',
+            from: { id: 42 },
+            message: { message_id: 100, chat: { id: 42 } },
+            data: 'asg:22222222-2222-2222-2222-222222222222:3',
+          },
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+    expect(notif.messagingCommands.handleAssignCallback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'bale',
+        requestId: '22222222-2222-2222-2222-222222222222',
+        staffIndex: 3,
+      }),
+    )
+  })
+
+  it('ignores unknown Bale callback data with a silent ack', async () => {
+    vi.mocked(notif.getBaleConfig).mockReturnValue(baleConfig)
+
+    const res = await app.request(
+      '/api/v1/messaging/bale/webhook/real-secret',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          update_id: 5,
+          callback_query: {
+            id: 'cb-3',
+            from: { id: 42 },
+            message: { message_id: 101, chat: { id: 42 } },
+            data: 'gibberish',
+          },
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+    expect(
+      notif.messagingCommands.handleApprovalCallback,
+    ).not.toHaveBeenCalled()
+    expect(
+      notif.messagingCommands.handleRejectionCallback,
+    ).not.toHaveBeenCalled()
+    expect(notif.answerBaleCallback).toHaveBeenCalledWith({
+      callbackQueryId: 'cb-3',
+    })
+    expect(notif.editBaleMessageText).not.toHaveBeenCalled()
   })
 })

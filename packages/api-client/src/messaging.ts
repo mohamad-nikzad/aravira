@@ -12,7 +12,13 @@ export type MessagingAccount = {
   linkedAt: string
 }
 
+export type MessagingProviderSummary = {
+  id: MessagingProviderId
+  displayName: string
+}
+
 export type ListMessagingAccountsResponse = {
+  providers: MessagingProviderSummary[]
   accounts: MessagingAccount[]
 }
 

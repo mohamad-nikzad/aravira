@@ -32,6 +32,7 @@ import { auth as authServer } from '@repo/auth/server'
 import { publicRoutes } from './routes/public'
 import { appointmentRequestsRoute } from './routes/appointment-requests'
 import { messagingRoute } from './routes/messaging'
+import { messagingBaleRoute } from './routes/messaging-bale'
 import { messagingTelegramRoute } from './routes/messaging-telegram'
 const env = getEnv()
 
@@ -87,6 +88,7 @@ const app = new Hono<AppEnv>()
   .route('/api/v1/appointments', appointments)
   .route('/api/v1/public', publicRoutes)
   .route('/api/v1/appointment-requests', appointmentRequestsRoute)
+  .route('/api/v1/messaging/bale', messagingBaleRoute)
   .route('/api/v1/messaging/telegram', messagingTelegramRoute)
   .route('/api/v1/messaging', messagingRoute)
   .onError(errorHandler)
