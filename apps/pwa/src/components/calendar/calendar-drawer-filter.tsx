@@ -10,6 +10,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '@repo/ui/drawer'
+import { useIsTouch } from '@repo/ui/use-mobile'
 import { cn } from '@repo/ui/utils'
 
 export interface CalendarFilterOption {
@@ -57,6 +58,7 @@ export function CalendarDrawerFilter({
   const [draftSelectedIds, setDraftSelectedIds] =
     useState<string[]>(selectedIds)
   const searchRef = useRef<HTMLInputElement>(null)
+  const isTouch = useIsTouch()
 
   const selectedCount = selectedIds.length
   const draftAllActive = draftSelectedIds.length === 0
@@ -76,8 +78,10 @@ export function CalendarDrawerFilter({
       return
     }
     setDraftSelectedIds(selectedIds)
-    requestAnimationFrame(() => searchRef.current?.focus())
-  }, [open, selectedIds])
+    if (!isTouch) {
+      requestAnimationFrame(() => searchRef.current?.focus())
+    }
+  }, [open, selectedIds, isTouch])
 
   const toggleDraftOption = (id: string) => {
     setDraftSelectedIds((prev) =>

@@ -105,7 +105,7 @@ export function ServiceDrawer({
   const [initialComponentIds, setInitialComponentIds] = useState<string[]>([])
   const isComboService = service?.kind === 'combo'
   const comboQuery = useQuery({
-    ...comboComponentsQueryOptions(service!.id),
+    ...comboComponentsQueryOptions(service?.id ?? ''),
     enabled: open && !!service?.id && isComboService,
   })
   const loadingComponents = comboQuery.isFetching
