@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Crown, Phone, Plus, Search, Sparkles } from 'lucide-react'
 import { Badge } from '@repo/ui/badge'
@@ -17,7 +17,11 @@ import {
   getApiV1ClientsQueryKey,
 } from '#/lib/clients-queries'
 import { retentionListQueryOptions } from '#/lib/retention-queries'
+import { BulkClientAddSourceDialog } from '#/components/clients/bulk-client-add-source-dialog'
 import { ClientDrawer } from '#/components/clients/client-drawer'
+import { pickDeviceContactsForImport } from '#/lib/client-import-device'
+import { stashClientImportPreview } from '#/lib/client-import-pending-preview'
+import { isDeviceContactPickerSupported } from '#/lib/device-contacts'
 import {
   ClientAvatar,
   clientAccent,
@@ -84,12 +88,15 @@ function InsightCard({
 }
 
 function ClientsPage() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const devicePickerSupported = isDeviceContactPickerSupported()
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterId>('all')
   const [showDrawer, setShowDrawer] = useState(false)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [showBulkAddSource, setShowBulkAddSource] = useState(false)
 
   const { data: clients = [], isPending } = useQuery(clientsListQueryOptions())
 
@@ -155,6 +162,37 @@ function ClientsPage() {
     void queryClient.invalidateQueries({ queryKey: getApiV1ClientsQueryKey() })
   }
 
+  const existingPhones = useMemo(
+    () =>
+      new Set(
+        clients
+          .map((client) => client.phone)
+          .filter((phone): phone is string => Boolean(phone)),
+      ),
+    [clients],
+  )
+
+  const handleBulkAddClick = () => {
+    if (devicePickerSupported) {
+      setShowBulkAddSource(true)
+      return
+    }
+    void navigate({ to: '/clients/import' })
+  }
+
+  const handleBulkAddFromContacts = () => {
+    void (async () => {
+      const preview = await pickDeviceContactsForImport(existingPhones)
+      if (!preview) return
+      stashClientImportPreview(preview)
+      void navigate({ to: '/clients/import' })
+    })()
+  }
+
+  const handleBulkAddFromFile = () => {
+    void navigate({ to: '/clients/import' })
+  }
+
   if (isPending) {
     return <ClientsSkeleton />
   }
@@ -178,9 +216,9 @@ function ClientsPage() {
             variant="outline"
             size="sm"
             className="shrink-0"
-            asChild
+            onClick={handleBulkAddClick}
           >
-            <Link to="/clients/import">افزودن گروهی با فایل</Link>
+            افزودن گروهی
           </Button>
         </div>
 
@@ -353,6 +391,14 @@ function ClientsPage() {
         onSuccess={handleSuccess}
       />
 
+      {devicePickerSupported ? (
+        <BulkClientAddSourceDialog
+          open={showBulkAddSource}
+          onOpenChange={setShowBulkAddSource}
+          onPickFromContacts={handleBulkAddFromContacts}
+          onPickFromFile={handleBulkAddFromFile}
+        />
+      ) : null}
     </div>
   )
 }

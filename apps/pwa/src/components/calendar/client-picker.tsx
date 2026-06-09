@@ -4,6 +4,7 @@ import {
   Check,
   ChevronDown,
   ChevronLeft,
+  Contact,
   Plus,
   Search,
   UserPlus,
@@ -28,12 +29,21 @@ import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
 import { clientFormSchema } from '@repo/salon-core/forms/client'
 import type { ClientFormInput } from '@repo/salon-core/forms/client'
 import { useKeyboardInset } from '#/lib/use-keyboard-inset'
+import { findClientByCanonicalPhone } from '@repo/salon-core/device-contacts'
+import { isDeviceContactPickerSupported } from '#/lib/device-contacts'
+import { DeviceContactPickButton } from '#/components/clients/device-contact-pick-button'
+import { DeviceContactPhoneSheet } from '#/components/clients/device-contact-phone-sheet'
+import { useSingleDeviceContactPick } from '#/lib/use-single-device-contact-pick'
 
 interface ClientPickerProps {
   clients: Client[]
   value: string
   onChange: (clientId: string) => void
   onClientCreated: (client: Client) => void
+  /** When false, in-flight device picks are discarded (e.g. parent drawer closed). */
+  hostActive?: boolean
+  /** Show device contact action beside the trigger instead of inside the list. */
+  contactActionPlacement?: 'list' | 'beside'
 }
 
 type PickerMode = 'closed' | 'searching' | 'adding'
@@ -43,6 +53,8 @@ export function ClientPicker({
   value,
   onChange,
   onClientCreated,
+  hostActive = true,
+  contactActionPlacement = 'list',
 }: ClientPickerProps) {
   const isTouch = useIsTouch()
   const [mode, setMode] = useState<PickerMode>('closed')
@@ -59,6 +71,7 @@ export function ClientPicker({
   })
   const searchRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const modeRef = useRef<PickerMode>(mode)
   const newName = watch('name')
   const newPhone = watch('phone')
 
@@ -89,10 +102,68 @@ export function ClientPicker({
   }, [clients, query])
 
   useEffect(() => {
+    modeRef.current = mode
+  }, [mode])
+
+  useEffect(() => {
     if (mode === 'searching' && !isTouch) {
       requestAnimationFrame(() => searchRef.current?.focus())
     }
   }, [mode, isTouch])
+
+  const openSearch = () => {
+    setQuery('')
+    reset({ name: '', phone: '', notes: '', tags: [] })
+    setMode('searching')
+  }
+
+  const continueWithDeviceContactRef = useRef<
+    (name: string, phone: string) => void
+  >(() => {})
+
+  const { pickFromDevice, phoneSheetProps, resetPhoneSheet } =
+    useSingleDeviceContactPick({
+      isActive: () => hostActive && modeRef.current !== 'closed',
+      onReady: (name, phone) => continueWithDeviceContactRef.current(name, phone),
+      onChoosePhone: () => {},
+    })
+
+  const selectClient = (id: string) => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+    resetPhoneSheet()
+    onChange(id)
+    setMode('closed')
+    setQuery('')
+  }
+
+  const continueWithDeviceContact = (name: string, phone: string) => {
+    const existing = findClientByCanonicalPhone(clients, phone)
+    if (existing) {
+      selectClient(existing.id)
+      return
+    }
+
+    reset({
+      name,
+      phone,
+      notes: '',
+      tags: [],
+    })
+    setMode('adding')
+  }
+
+  useEffect(() => {
+    continueWithDeviceContactRef.current = continueWithDeviceContact
+  })
+
+  useEffect(() => {
+    if (hostActive) return
+    setMode('closed')
+    setQuery('')
+    resetPhoneSheet()
+  }, [hostActive, resetPhoneSheet])
 
   useEffect(() => {
     if (isTouch || mode === 'closed') return
@@ -106,6 +177,7 @@ export function ClientPicker({
         }
         setMode('closed')
         setQuery('')
+        resetPhoneSheet()
       }
     }
     document.addEventListener('mousedown', handleClick)
@@ -114,22 +186,7 @@ export function ClientPicker({
       document.removeEventListener('mousedown', handleClick)
       document.removeEventListener('touchstart', handleClick)
     }
-  }, [mode, isTouch])
-
-  const openSearch = () => {
-    setQuery('')
-    reset({ name: '', phone: '', notes: '', tags: [] })
-    setMode('searching')
-  }
-
-  const selectClient = (id: string) => {
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur()
-    }
-    onChange(id)
-    setMode('closed')
-    setQuery('')
-  }
+  }, [mode, isTouch, resetPhoneSheet])
 
   const startAdding = () => {
     const q = query.trim()
@@ -257,6 +314,15 @@ export function ClientPicker({
         )}
       </div>
 
+      {isDeviceContactPickerSupported() && (
+        <div className="border-t border-border/60">
+          <DeviceContactPickButton
+            variant="list-item"
+            onClick={() => void pickFromDevice()}
+          />
+        </div>
+      )}
+
       <div className="border-t border-border/60">
         {!hasExactMatch && query.trim() ? (
           <button
@@ -352,50 +418,96 @@ export function ClientPicker({
     </div>
   )
 
+  const phoneSheet = (
+    <DeviceContactPhoneSheet nested={isTouch} {...phoneSheetProps} />
+  )
+
+  const showBesideContactAction =
+    contactActionPlacement === 'beside' && isDeviceContactPickerSupported()
+
+  const besideContactAction = showBesideContactAction ? (
+    <Button
+      type="button"
+      variant="outline"
+      size="icon"
+      aria-label="افزودن از مخاطبین"
+      className="h-9 w-9 touch:h-11 touch:w-11 shrink-0 bg-blush-soft hover:bg-secondary/60"
+      onClick={() => void pickFromDevice()}
+    >
+      <Contact aria-hidden="true" className="size-4" />
+    </Button>
+  ) : null
+
+  const wrapWithContactAction = (node: React.ReactNode) => {
+    if (!showBesideContactAction) return node
+    return (
+      <div className="flex w-full min-w-0 gap-2">
+        <div className="min-w-0 flex-1">{node}</div>
+        {besideContactAction}
+      </div>
+    )
+  }
+
   if (isTouch) {
     return (
-      <DrawerNested
-        open={mode !== 'closed'}
-        onOpenChange={(next) => {
-          if (next) {
-            if (mode === 'closed') openSearch()
-          } else {
-            setMode('closed')
-            setQuery('')
-            reset({ name: '', phone: '', notes: '', tags: [] })
-          }
-        }}
-        repositionInputs={false}
-      >
-        <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
-        <DrawerContent
-          showClose={false}
-          className="max-h-[88lvh] pb-[var(--keyboard-inset,0px)] transition-[padding-bottom] duration-150"
-        >
-          <DrawerHeader>
-            <DrawerTitle>
-              {mode === 'adding' ? 'مشتری جدید' : 'انتخاب مشتری'}
-            </DrawerTitle>
-          </DrawerHeader>
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {mode === 'adding' ? addingBody : searchingBody}
-          </div>
-        </DrawerContent>
-      </DrawerNested>
+      <>
+        {wrapWithContactAction(
+          <DrawerNested
+            open={mode !== 'closed'}
+            onOpenChange={(next) => {
+              if (next) {
+                if (mode === 'closed') openSearch()
+              } else {
+                setMode('closed')
+                setQuery('')
+                reset({ name: '', phone: '', notes: '', tags: [] })
+                resetPhoneSheet()
+              }
+            }}
+            repositionInputs={false}
+          >
+            <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
+            <DrawerContent
+              showClose={false}
+              className="max-h-[88lvh] pb-[var(--keyboard-inset,0px)] transition-[padding-bottom] duration-150"
+            >
+              <DrawerHeader>
+                <DrawerTitle>
+                  {mode === 'adding' ? 'مشتری جدید' : 'انتخاب مشتری'}
+                </DrawerTitle>
+              </DrawerHeader>
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                {mode === 'adding' ? addingBody : searchingBody}
+              </div>
+            </DrawerContent>
+            {phoneSheet}
+          </DrawerNested>,
+        )}
+      </>
     )
   }
 
   if (mode === 'closed') {
-    return triggerButton
+    return (
+      <>
+        {wrapWithContactAction(triggerButton)}
+        {phoneSheet}
+      </>
+    )
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="rounded-xl border border-primary/30 bg-card shadow-sm overflow-hidden"
-    >
-      {mode === 'searching' && searchingBody}
-      {mode === 'adding' && addingBody}
-    </div>
+    <>
+      {wrapWithContactAction(
+        <div
+          ref={containerRef}
+          className="rounded-xl border border-primary/30 bg-card shadow-sm overflow-hidden"
+        >
+          {mode === 'searching' && searchingBody}
+          {mode === 'adding' && addingBody}
+        </div>,
+      )}
+      {phoneSheet}
+    </>
   )
 }

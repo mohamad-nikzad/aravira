@@ -18,6 +18,8 @@ import {
   getBulkImportSubmitClients,
   type ImportPreviewFilter,
 } from '#/lib/client-import'
+import { pickDeviceContactsForImport } from '#/lib/client-import-device'
+import { takeClientImportPreview } from '#/lib/client-import-pending-preview'
 import { formatBulkImportToast } from '#/lib/client-import-toast'
 import { useBulkCreateClientsMutation } from '#/lib/clients-queries'
 
@@ -76,6 +78,28 @@ export function useClientImport({
   const pickFile = useCallback(() => {
     fileInputRef.current?.click()
   }, [])
+
+  const applyPreview = useCallback((nextPreview: ClientImportPreview) => {
+    setPreview(nextPreview)
+    setSearch('')
+    setFilter(defaultImportPreviewFilter(nextPreview.counts))
+  }, [])
+
+  const pendingPreviewTaken = useRef(false)
+
+  useEffect(() => {
+    if (pendingPreviewTaken.current) return
+    const pending = takeClientImportPreview()
+    if (!pending) return
+    pendingPreviewTaken.current = true
+    applyPreview(pending)
+  }, [applyPreview])
+
+  const pickFromDevice = useCallback(async () => {
+    const nextPreview = await pickDeviceContactsForImport(existingPhones)
+    if (!nextPreview) return
+    applyPreview(nextPreview)
+  }, [applyPreview, existingPhones])
 
   useEffect(() => {
     if (!counts) return
@@ -222,6 +246,7 @@ export function useClientImport({
   return {
     fileInputRef,
     pickFile,
+    pickFromDevice,
     handleFileChange,
     step,
     preview,

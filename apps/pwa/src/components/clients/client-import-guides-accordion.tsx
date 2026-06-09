@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { AlertTriangle, ChevronLeft, FileUp, Search } from 'lucide-react'
 import { Badge } from '@repo/ui/badge'
 import { Button } from '@repo/ui/button'
@@ -13,7 +13,6 @@ import {
   type ImportGuidePlatform,
 } from '#/components/clients/client-import-guides'
 import { GuideText } from '#/lib/guide-text'
-
 function GuidePitfalls({ guide }: { guide: ImportGuidePlatform }) {
   if (guide.pitfalls.length === 0) return null
   return (
@@ -171,6 +170,8 @@ export function ClientImportGuidesAccordion({
 }) {
   const [query, setQuery] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const guidesRef = useRef<HTMLDivElement>(null)
+  const fileFooterRef = useRef<HTMLDivElement>(null)
 
   const filtered = IMPORT_GUIDE_PLATFORMS.filter((g) => {
     const q = query.trim().toLowerCase()
@@ -189,7 +190,10 @@ export function ClientImportGuidesAccordion({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <GuideSearchHeader query={query} onQueryChange={setQuery} />
-      <div className="flex-1 space-y-2 overflow-auto px-4 py-3">
+      <div
+        ref={guidesRef}
+        className="flex-1 space-y-2 overflow-auto px-4 py-3"
+      >
         {filtered.map((g) => {
           const open = expandedId === g.id
           return (
@@ -210,7 +214,9 @@ export function ClientImportGuidesAccordion({
           )
         })}
       </div>
-      <PickFileFooter onPick={onPickFile} />
+      <div ref={fileFooterRef}>
+        <PickFileFooter onPick={onPickFile} />
+      </div>
     </div>
   )
 }

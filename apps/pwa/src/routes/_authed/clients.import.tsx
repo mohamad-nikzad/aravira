@@ -51,7 +51,7 @@ function ClientImportPage() {
         />
         <div className="min-w-0">
           <h1 className="text-lg font-extrabold text-foreground">
-            ورود از فایل مخاطبین
+            افزودن گروهی مشتریان
           </h1>
           <p className="text-[12px] text-muted-foreground">
             {showPreview

@@ -42,7 +42,7 @@ describe('formatImportCounts', () => {
           duplicateInFile: 1,
         }),
       ),
-    ).toBe('۱۲ مخاطب در فایل · ۸ قابل افزودن · ۲ تکراری · ۲ نامعتبر')
+    ).toBe('۱۲ مخاطب · ۸ قابل افزودن · ۲ تکراری · ۲ نامعتبر')
   })
 
   it('formats all-eligible summary', () => {
@@ -77,7 +77,7 @@ describe('formatImportCounts', () => {
           duplicateExisting: 2,
         }),
       ),
-    ).toBe('هیچ مخاطب قابل افزودنی در فایل نیست')
+    ).toBe('هیچ مخاطب قابل افزودنی نیست')
   })
 })
 

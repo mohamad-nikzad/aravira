@@ -14,13 +14,13 @@ const COUNT_MESSAGES: Record<
   (counts: ClientImportCounts) => string
 > = {
   [ImportCountSummary.EmptyEligible]: () =>
-    'هیچ مخاطب قابل افزودنی در فایل نیست',
+    'هیچ مخاطب قابل افزودنی نیست',
   [ImportCountSummary.AllEligible]: (counts) =>
     `${toPersianDigits(counts.totalInFile)} مخاطب · همه قابل افزودن${counts.truncated ? TRUNCATED_SUFFIX : ''}`,
   [ImportCountSummary.Mixed]: (counts) => {
     const duplicates = counts.duplicateExisting + counts.duplicateInFile
     const parts = [
-      `${toPersianDigits(counts.totalInFile)} مخاطب در فایل`,
+      `${toPersianDigits(counts.totalInFile)} مخاطب`,
       `${toPersianDigits(counts.eligible)} قابل افزودن`,
     ]
     if (duplicates > 0) {
