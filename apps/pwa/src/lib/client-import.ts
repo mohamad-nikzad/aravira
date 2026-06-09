@@ -51,3 +51,20 @@ export function getBulkImportSubmitClients(
 ): Array<{ name: string; phone: string }> {
   return validateBulkImportItems(rows.filter((row) => row.selected))
 }
+
+export type ImportPreviewFilter =
+  | 'eligible'
+  | 'invalid'
+  | 'duplicate'
+  | 'all-skipped'
+
+export function defaultImportPreviewFilter(
+  counts: ClientImportCounts,
+): ImportPreviewFilter {
+  if (counts.eligible > 0) return 'eligible'
+  if (counts.invalid > 0) return 'invalid'
+  if (counts.duplicateExisting + counts.duplicateInFile > 0) {
+    return 'duplicate'
+  }
+  return 'all-skipped'
+}

@@ -17,11 +17,7 @@ import {
 import { displayPhone, normalizePhone } from '@repo/salon-core/phone'
 import { toPersianDigits } from '@repo/salon-core/persian-digits'
 
-export type ImportPreviewFilter =
-  | 'eligible'
-  | 'invalid'
-  | 'duplicate'
-  | 'all-skipped'
+import type { ImportPreviewFilter } from '#/lib/client-import'
 
 type ClientImportPreviewListProps = {
   counts: ClientImportCounts
@@ -296,13 +292,3 @@ function SkippedImportRow({ row }: { row: ClientImportSkippedRow }) {
   )
 }
 
-export function defaultImportPreviewFilter(
-  counts: ClientImportCounts,
-): ImportPreviewFilter {
-  if (counts.eligible > 0) return 'eligible'
-  if (counts.invalid > 0) return 'invalid'
-  if (counts.duplicateExisting + counts.duplicateInFile > 0) {
-    return 'duplicate'
-  }
-  return 'all-skipped'
-}

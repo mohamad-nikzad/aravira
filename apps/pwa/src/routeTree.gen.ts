@@ -36,6 +36,7 @@ import { Route as AuthedOnboardingPresenceRouteImport } from './routes/_authed/o
 import { Route as AuthedOnboardingNotificationsRouteImport } from './routes/_authed/onboarding/notifications'
 import { Route as AuthedOnboardingHoursRouteImport } from './routes/_authed/onboarding/hours'
 import { Route as AuthedOnboardingDoneRouteImport } from './routes/_authed/onboarding/done'
+import { Route as AuthedClientsImportRouteImport } from './routes/_authed/clients.import'
 import { Route as AuthedClientsIdRouteImport } from './routes/_authed/clients.$id'
 
 const SignupRoute = SignupRouteImport.update({
@@ -175,6 +176,11 @@ const AuthedOnboardingDoneRoute = AuthedOnboardingDoneRouteImport.update({
   path: '/done',
   getParentRoute: () => AuthedOnboardingRoute,
 } as any)
+const AuthedClientsImportRoute = AuthedClientsImportRouteImport.update({
+  id: '/import',
+  path: '/import',
+  getParentRoute: () => AuthedClientsRoute,
+} as any)
 const AuthedClientsIdRoute = AuthedClientsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -197,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/staff': typeof AuthedStaffRouteWithChildren
   '/today': typeof AuthedTodayRoute
   '/clients/$id': typeof AuthedClientsIdRoute
+  '/clients/import': typeof AuthedClientsImportRoute
   '/onboarding/done': typeof AuthedOnboardingDoneRoute
   '/onboarding/hours': typeof AuthedOnboardingHoursRoute
   '/onboarding/notifications': typeof AuthedOnboardingNotificationsRoute
@@ -223,6 +230,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthedSettingsRoute
   '/today': typeof AuthedTodayRoute
   '/clients/$id': typeof AuthedClientsIdRoute
+  '/clients/import': typeof AuthedClientsImportRoute
   '/onboarding/done': typeof AuthedOnboardingDoneRoute
   '/onboarding/hours': typeof AuthedOnboardingHoursRoute
   '/onboarding/notifications': typeof AuthedOnboardingNotificationsRoute
@@ -254,6 +262,7 @@ export interface FileRoutesById {
   '/_authed/staff': typeof AuthedStaffRouteWithChildren
   '/_authed/today': typeof AuthedTodayRoute
   '/_authed/clients/$id': typeof AuthedClientsIdRoute
+  '/_authed/clients/import': typeof AuthedClientsImportRoute
   '/_authed/onboarding/done': typeof AuthedOnboardingDoneRoute
   '/_authed/onboarding/hours': typeof AuthedOnboardingHoursRoute
   '/_authed/onboarding/notifications': typeof AuthedOnboardingNotificationsRoute
@@ -285,6 +294,7 @@ export interface FileRouteTypes {
     | '/staff'
     | '/today'
     | '/clients/$id'
+    | '/clients/import'
     | '/onboarding/done'
     | '/onboarding/hours'
     | '/onboarding/notifications'
@@ -311,6 +321,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/today'
     | '/clients/$id'
+    | '/clients/import'
     | '/onboarding/done'
     | '/onboarding/hours'
     | '/onboarding/notifications'
@@ -341,6 +352,7 @@ export interface FileRouteTypes {
     | '/_authed/staff'
     | '/_authed/today'
     | '/_authed/clients/$id'
+    | '/_authed/clients/import'
     | '/_authed/onboarding/done'
     | '/_authed/onboarding/hours'
     | '/_authed/onboarding/notifications'
@@ -553,6 +565,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedOnboardingDoneRouteImport
       parentRoute: typeof AuthedOnboardingRoute
     }
+    '/_authed/clients/import': {
+      id: '/_authed/clients/import'
+      path: '/import'
+      fullPath: '/clients/import'
+      preLoaderRoute: typeof AuthedClientsImportRouteImport
+      parentRoute: typeof AuthedClientsRoute
+    }
     '/_authed/clients/$id': {
       id: '/_authed/clients/$id'
       path: '/$id'
@@ -565,11 +584,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthedClientsRouteChildren {
   AuthedClientsIdRoute: typeof AuthedClientsIdRoute
+  AuthedClientsImportRoute: typeof AuthedClientsImportRoute
   AuthedClientsIndexRoute: typeof AuthedClientsIndexRoute
 }
 
 const AuthedClientsRouteChildren: AuthedClientsRouteChildren = {
   AuthedClientsIdRoute: AuthedClientsIdRoute,
+  AuthedClientsImportRoute: AuthedClientsImportRoute,
   AuthedClientsIndexRoute: AuthedClientsIndexRoute,
 }
 

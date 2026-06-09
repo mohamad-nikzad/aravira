@@ -18,7 +18,6 @@ import {
 } from '#/lib/clients-queries'
 import { retentionListQueryOptions } from '#/lib/retention-queries'
 import { ClientDrawer } from '#/components/clients/client-drawer'
-import { ClientImportSheet } from '#/components/clients/client-import-sheet'
 import {
   ClientAvatar,
   clientAccent,
@@ -90,8 +89,6 @@ function ClientsPage() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterId>('all')
   const [showDrawer, setShowDrawer] = useState(false)
-  const [importSheetOpen, setImportSheetOpen] = useState(false)
-  const [importPickOnOpen, setImportPickOnOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
 
   const { data: clients = [], isPending } = useQuery(clientsListQueryOptions())
@@ -158,10 +155,6 @@ function ClientsPage() {
     void queryClient.invalidateQueries({ queryKey: getApiV1ClientsQueryKey() })
   }
 
-  const handleImportSuccess = () => {
-    void queryClient.invalidateQueries({ queryKey: getApiV1ClientsQueryKey() })
-  }
-
   if (isPending) {
     return <ClientsSkeleton />
   }
@@ -182,16 +175,12 @@ function ClientsPage() {
             </p>
           </div>
           <Button
-            type="button"
             variant="outline"
             size="sm"
             className="shrink-0"
-            onClick={() => {
-              setImportPickOnOpen(true)
-              setImportSheetOpen(true)
-            }}
+            asChild
           >
-            افزودن گروهی با فایل
+            <Link to="/clients/import">افزودن گروهی با فایل</Link>
           </Button>
         </div>
 
@@ -364,14 +353,6 @@ function ClientsPage() {
         onSuccess={handleSuccess}
       />
 
-      <ClientImportSheet
-        open={importSheetOpen}
-        onOpenChange={setImportSheetOpen}
-        pickFileOnOpen={importPickOnOpen}
-        onPickFileConsumed={() => setImportPickOnOpen(false)}
-        existingClients={clients}
-        onSuccess={handleImportSuccess}
-      />
     </div>
   )
 }
