@@ -1,6 +1,6 @@
 # Saluna deployments
 
-Last updated: **2026-06-07**
+Last updated: **2026-06-10**
 
 This is the current production deployment model for Saluna. The normal path is
 registry-first CI/CD through HamGit/Hamravesh-style GitLab CI jobs. The old
@@ -109,7 +109,7 @@ Each deployable app owns its version:
 | --- | --- | ---: |
 | API | `apps/api/package.json` | `0.8.0` |
 | Public web | `apps/web/package.json` | `0.4.0` |
-| Manager PWA | `apps/pwa/package.json` | `0.8.0` |
+| Manager PWA | `apps/pwa/package.json` | `0.9.0` |
 
 Image tags are:
 
