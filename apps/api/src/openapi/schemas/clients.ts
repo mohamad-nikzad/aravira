@@ -1,5 +1,7 @@
 import { z } from '@hono/zod-openapi'
 import {
+  clientBulkCreateItemSchema,
+  clientBulkCreateSchema,
   clientCreateSchema,
   clientUpdateSchema,
 } from '@repo/salon-core/forms/client'
@@ -53,6 +55,37 @@ export const clientUpdateBodySchema = bodyFromCoreSchema(
   clientUpdateSchema,
 )
 
+const clientBulkCreateItemShape = {
+  name: z.string().openapi({ example: 'علی رضایی' }),
+  phone: z.string().openapi({ example: '09121234567' }),
+}
+
+export const clientBulkCreateItemSchemaOpenApi = bodyFromCoreSchema(
+  'ClientBulkCreateItem',
+  clientBulkCreateItemShape,
+  clientBulkCreateItemSchema,
+)
+
+export const clientBulkCreateBodySchemaOpenApi = bodyFromCoreSchema(
+  'ClientBulkCreateRequest',
+  {
+    clients: z
+      .array(z.object(clientBulkCreateItemShape))
+      .min(1)
+      .openapi({
+        example: [{ name: 'علی رضایی', phone: '09121234567' }],
+      }),
+  },
+  clientBulkCreateSchema,
+)
+
+export const clientBulkSkippedSchema = z
+  .object({
+    phone: z.string().openapi({ example: '09121234567' }),
+    reason: z.enum(['duplicate-phone', 'invalid']).openapi({ example: 'duplicate-phone' }),
+  })
+  .openapi('ClientBulkCreateSkipped')
+
 export const followUpReasonSchema = z
   .enum(['inactive', 'no-show', 'new-client', 'vip', 'manual'])
   .openapi('FollowUpReason')
@@ -91,6 +124,13 @@ export const clientSchema = z
     tags: z.array(clientTagSchema).optional(),
   })
   .openapi('Client')
+
+export const clientBulkCreateResponseSchema = z
+  .object({
+    created: z.array(clientSchema),
+    skipped: z.array(clientBulkSkippedSchema),
+  })
+  .openapi('ClientBulkCreateResponse')
 
 export const clientsListResponseSchema = z
   .object({

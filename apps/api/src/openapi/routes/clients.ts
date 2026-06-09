@@ -1,6 +1,8 @@
 import { createRoute } from '@hono/zod-openapi'
 import { apiErrorSchema, idParamSchema, tenantSecurity } from '../schemas/common'
 import {
+  clientBulkCreateBodySchemaOpenApi,
+  clientBulkCreateResponseSchema,
   clientCreateBodySchema,
   clientFollowUpResponseSchema,
   clientResponseSchema,
@@ -82,6 +84,31 @@ export const createClientRoute = createRoute({
     401: unauthorizedResponse,
     403: forbiddenResponse,
     409: duplicatePhoneResponse,
+  },
+})
+
+export const bulkCreateClientsRoute = createRoute({
+  method: 'post',
+  path: '/bulk',
+  tags: ['Clients'],
+  summary: 'Bulk create clients',
+  description:
+    'Creates up to 200 clients in one request. Partial success is allowed; duplicates and invalid rows are returned in skipped.',
+  security: tenantSecurity,
+  request: {
+    body: {
+      required: true,
+      content: { 'application/json': { schema: clientBulkCreateBodySchemaOpenApi } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Partial or full success',
+      content: { 'application/json': { schema: clientBulkCreateResponseSchema } },
+    },
+    400: validationErrorResponse,
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
   },
 })
 

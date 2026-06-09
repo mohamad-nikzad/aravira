@@ -47,6 +47,23 @@ export type ClientCreateRequest = {
     id?: string;
 };
 
+export type ClientBulkCreateResponse = {
+    created: Array<Client>;
+    skipped: Array<ClientBulkCreateSkipped>;
+};
+
+export type ClientBulkCreateSkipped = {
+    phone: string;
+    reason: 'duplicate-phone' | 'invalid';
+};
+
+export type ClientBulkCreateRequest = {
+    clients: Array<{
+        name: string;
+        phone: string;
+    }>;
+};
+
 export type ClientUpdateRequest = {
     name?: string;
     phone?: string;
@@ -1132,6 +1149,39 @@ export type PostApiV1ClientsResponses = {
 };
 
 export type PostApiV1ClientsResponse = PostApiV1ClientsResponses[keyof PostApiV1ClientsResponses];
+
+export type PostApiV1ClientsBulkData = {
+    body: ClientBulkCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/clients/bulk';
+};
+
+export type PostApiV1ClientsBulkErrors = {
+    /**
+     * Invalid request body or parameters
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated but missing manage_clients permission
+     */
+    403: ApiError;
+};
+
+export type PostApiV1ClientsBulkError = PostApiV1ClientsBulkErrors[keyof PostApiV1ClientsBulkErrors];
+
+export type PostApiV1ClientsBulkResponses = {
+    /**
+     * Partial or full success
+     */
+    200: ClientBulkCreateResponse;
+};
+
+export type PostApiV1ClientsBulkResponse = PostApiV1ClientsBulkResponses[keyof PostApiV1ClientsBulkResponses];
 
 export type GetApiV1ClientsByIdData = {
     body?: never;

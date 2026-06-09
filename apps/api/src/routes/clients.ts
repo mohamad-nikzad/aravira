@@ -2,17 +2,20 @@ import { OpenAPIHono, type RouteHandler } from '@hono/zod-openapi'
 import {
   createClient,
   createClientFollowUp,
+  createClientsBulk,
   getAllClients,
   getClientById,
   getClientSummary,
   getClientTags,
   isClientProvidedEntityId,
+  isDuplicatePhoneError,
   setClientTags,
   updateClient,
 } from '@repo/database/clients'
 import type { FollowUpReason } from '@repo/salon-core/types'
 import type { AppEnv } from '../factory'
 import {
+  bulkCreateClientsRoute,
   createClientFollowUpRoute,
   createClientRoute,
   getClientRoute,
@@ -29,11 +32,6 @@ const allowedReasons = new Set<FollowUpReason>([
   'vip',
   'manual',
 ])
-
-function isDuplicatePhoneError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : ''
-  return msg.includes('unique') || msg.includes('duplicate')
-}
 
 function validationErrorHook(
   result: { success: boolean; error?: { issues: Array<{ message?: string }> } },
@@ -119,6 +117,13 @@ const getClientSummaryHandler: RouteHandler<typeof getClientSummaryRoute, AppEnv
   return c.json(jsonSerialized(summary), 200)
 }
 
+const bulkCreateClientsHandler: RouteHandler<typeof bulkCreateClientsRoute, AppEnv> = async (c) => {
+  const { salonId } = c.var.tenant
+  const { clients: clientRows } = c.req.valid('json')
+  const result = await createClientsBulk(salonId, clientRows)
+  return c.json(jsonSerialized(result), 200)
+}
+
 const createClientFollowUpHandler: RouteHandler<typeof createClientFollowUpRoute, AppEnv> = async (
   c,
 ) => {
@@ -139,6 +144,7 @@ export const clients = new OpenAPIHono<AppEnv>({
 })
   .openapi(listClientsRoute, listClientsHandler)
   .openapi(createClientRoute, createClientHandler)
+  .openapi(bulkCreateClientsRoute, bulkCreateClientsHandler)
   .openapi(getClientRoute, getClientHandler)
   .openapi(updateClientRoute, updateClientHandler)
   .openapi(getClientSummaryRoute, getClientSummaryHandler)

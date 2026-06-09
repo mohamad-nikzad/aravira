@@ -255,6 +255,83 @@
           "phone"
         ]
       },
+      "ClientBulkCreateResponse": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Client"
+            }
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClientBulkCreateSkipped"
+            }
+          }
+        },
+        "required": [
+          "created",
+          "skipped"
+        ]
+      },
+      "ClientBulkCreateSkipped": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "09121234567"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "duplicate-phone",
+              "invalid"
+            ],
+            "example": "duplicate-phone"
+          }
+        },
+        "required": [
+          "phone",
+          "reason"
+        ]
+      },
+      "ClientBulkCreateRequest": {
+        "type": "object",
+        "properties": {
+          "clients": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "example": "علی رضایی"
+                },
+                "phone": {
+                  "type": "string",
+                  "example": "09121234567"
+                }
+              },
+              "required": [
+                "name",
+                "phone"
+              ]
+            },
+            "minItems": 1,
+            "example": [
+              {
+                "name": "علی رضایی",
+                "phone": "09121234567"
+              }
+            ]
+          }
+        },
+        "required": [
+          "clients"
+        ]
+      },
       "ClientUpdateRequest": {
         "type": "object",
         "properties": {
@@ -4276,6 +4353,75 @@
                       }
                     }
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clients/bulk": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Bulk create clients",
+        "description": "Creates up to 200 clients in one request. Partial success is allowed; duplicates and invalid rows are returned in skipped.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientBulkCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partial or full success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBulkCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing manage_clients permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }

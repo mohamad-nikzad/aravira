@@ -1,5 +1,6 @@
 import { OpenAPIHono, type RouteHandler } from '@hono/zod-openapi'
 import {
+  bulkCreateClientsRoute,
   createClientFollowUpRoute,
   createClientRoute,
   getClientRoute,
@@ -151,6 +152,9 @@ const listClientsStub: RouteHandler<typeof listClientsRoute> = (c) => c.json({ c
 
 const createClientStub: RouteHandler<typeof createClientRoute> = (c) =>
   c.json({ client: stubClient }, 200)
+
+const bulkCreateClientsStub: RouteHandler<typeof bulkCreateClientsRoute> = (c) =>
+  c.json({ created: [stubClient], skipped: [] }, 200)
 
 const getClientStub: RouteHandler<typeof getClientRoute> = (c) => c.json({ client: stubClient }, 200)
 
@@ -729,6 +733,7 @@ export const contractApp = new OpenAPIHono()
     new OpenAPIHono()
       .openapi(listClientsRoute, listClientsStub)
       .openapi(createClientRoute, createClientStub)
+      .openapi(bulkCreateClientsRoute, bulkCreateClientsStub)
       .openapi(getClientRoute, getClientStub)
       .openapi(updateClientRoute, updateClientStub)
       .openapi(getClientSummaryRoute, getClientSummaryStub)

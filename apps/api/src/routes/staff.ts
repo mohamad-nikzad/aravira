@@ -17,6 +17,7 @@ import {
 } from '@repo/database/staff'
 import { auth } from '@repo/auth/server'
 import { getDb } from '@repo/database/client'
+import { isDuplicatePhoneError } from '@repo/database/clients'
 import { salonMember } from '@repo/database/schema'
 import { STAFF_COLORS } from '@repo/salon-core/types'
 import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
@@ -42,16 +43,6 @@ const bookingAvailabilityQuerySchema = z.object({
   startTime: z.string().optional(),
   endTime: z.string().optional(),
 })
-
-function isDuplicatePhoneError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message.toLowerCase() : ''
-  return (
-    msg.includes('unique') ||
-    msg.includes('duplicate') ||
-    msg.includes('already') ||
-    msg.includes('exists')
-  )
-}
 
 function isBetterAuthBadRequest(
   err: unknown,
