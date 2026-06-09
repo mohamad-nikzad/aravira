@@ -37,6 +37,9 @@ playwright/.cache/
 # Local Claude worktrees
 .claude/worktrees/
 
+# Superpowers brainstorm session files (local mockups, dev servers)
+.superpowers/
+
 # Wrangler local dev cache (legacy — keep ignored if folder reappears)
 .wrangler/
 

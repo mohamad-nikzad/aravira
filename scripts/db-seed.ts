@@ -1,7 +1,7 @@
 /**
  * Fresh DB seed. Run after schema exists:
  *   pnpm db:push
- *   pnpm db:seed
+ *   pnpm db:seed  (scripts/db-seed.ts)
  */
 import { and, count, eq, inArray, like } from 'drizzle-orm'
 import {
@@ -12,7 +12,7 @@ import {
 import { auth } from '@repo/auth/server'
 import { mapRole } from '@repo/auth/permissions'
 import type { UserRole } from '@repo/salon-core/types'
-import { getDb } from './client'
+import { getDb } from '@repo/database/client'
 import {
   appointments,
   businessSettings,
@@ -36,8 +36,8 @@ import {
   staffSchedules,
   staffServices,
   user,
-} from './schema'
-import { seedCatalogPresets } from './seed/catalog-presets'
+} from '@repo/database/schema'
+import { seedCatalogPresets } from '@repo/database/seed/catalog-presets'
 
 const db = getDb()
 
