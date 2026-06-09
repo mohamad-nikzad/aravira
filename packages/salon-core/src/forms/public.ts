@@ -10,13 +10,13 @@
 import { z } from 'zod'
 
 import { addDaysYmd, salonTodayYmd } from '../salon-local-time'
-import { normalizePhone } from '../phone'
 import { PUBLIC_THEMES } from '../public-themes'
 import { PUBLIC_LAYOUTS } from '../public-layouts'
 import { formMessages } from './messages'
 import {
   gregorianDateSchema,
   optionalTrimmedTextSchema,
+  phoneSchema,
   requiredTextSchema,
   timeOfDaySchema,
 } from './primitives'
@@ -25,16 +25,8 @@ export const PUBLIC_BIO_MAX_LENGTH = 200
 
 export const PUBLIC_REQUEST_WINDOW_DAYS = 30
 
-/**
- * Iranian mobile phone in canonical `09XXXXXXXXX` form (11 digits, leading `09`).
- * Accepts Persian/Arabic digits and assorted separators.
- */
-export const iranianMobilePhoneSchema = z
-  .string({ error: formMessages.required })
-  .trim()
-  .min(1, formMessages.required)
-  .transform((value) => normalizePhone(value))
-  .pipe(z.string().regex(/^09\d{9}$/, formMessages.phoneInvalid))
+/** Iranian mobile phone — same rules as `phoneSchema`. */
+export const iranianMobilePhoneSchema = phoneSchema
 
 const idSchema = z.string().trim().min(1)
 

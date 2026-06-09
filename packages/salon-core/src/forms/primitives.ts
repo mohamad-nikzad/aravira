@@ -6,30 +6,22 @@ import { z } from 'zod'
 import { format, isValid, parseISO } from 'date-fns'
 
 import { toLatinDigits } from '../persian-digits'
-import { normalizePhone } from '../phone'
+import { canonicalSalonPhone, IRANIAN_MOBILE_PHONE_RE } from '../phone'
 import { jalaliMonthLength, parseGregorianToJalali } from '../jalali'
 import { formMessages } from './messages'
 
-const MIN_PHONE_DIGITS = 10
-const MAX_PHONE_DIGITS = 15
-
 /**
  * Phone schema: accepts Persian/Arabic/Latin digits and assorted separators,
- * normalizes to digit-only Latin via `normalizePhone`, then validates length.
+ * normalizes to canonical salon form via `canonicalSalonPhone`, then validates
+ * Iranian mobile format (`09XXXXXXXXX`). Landlines and other formats are rejected.
  * Input (z.input) is the raw string; output (z.output) is the canonical form.
  */
 export const phoneSchema = z
   .string({ error: formMessages.required })
   .trim()
   .min(1, formMessages.required)
-  .transform((value) => normalizePhone(value))
-  .pipe(
-    z
-      .string()
-      .min(MIN_PHONE_DIGITS, formMessages.phoneTooShort)
-      .max(MAX_PHONE_DIGITS, formMessages.phoneInvalid)
-      .regex(/^\d+$/, formMessages.phoneInvalid),
-  )
+  .transform((value) => canonicalSalonPhone(value))
+  .pipe(z.string().regex(IRANIAN_MOBILE_PHONE_RE, formMessages.phoneInvalid))
 
 /**
  * Optional phone — empty string / null / undefined become `null`.
@@ -40,12 +32,12 @@ export const optionalPhoneSchema = z
     if (value == null) return ''
     return value
   })
-  .transform((value) => normalizePhone(value))
+  .transform((value) => canonicalSalonPhone(value))
   .transform((value) => (value.length === 0 ? null : value))
   .pipe(
     z.union([
       z.null(),
-      z.string().min(MIN_PHONE_DIGITS, formMessages.phoneTooShort),
+      z.string().regex(IRANIAN_MOBILE_PHONE_RE, formMessages.phoneInvalid),
     ]),
   )
 

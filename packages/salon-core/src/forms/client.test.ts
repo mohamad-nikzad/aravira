@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { clientCreateSchema, clientFormSchema, clientUpdateSchema } from './client'
+import { MAX_BULK_CLIENTS } from './limits'
+import {
+  clientBulkCreateSchema,
+  clientCreateSchema,
+  clientFormSchema,
+  clientUpdateSchema,
+} from './client'
 
 describe('clientFormSchema', () => {
   it('normalizes phone and trims notes', () => {
@@ -82,5 +88,33 @@ describe('client server schemas', () => {
       phone: '09123456789',
       tags: ['VIP'],
     })
+  })
+})
+
+describe('clientBulkCreateSchema', () => {
+  it('rejects an empty clients array', () => {
+    const result = clientBulkCreateSchema.safeParse({ clients: [] })
+    expect(result.success).toBe(false)
+  })
+
+  it(`rejects more than ${MAX_BULK_CLIENTS} clients`, () => {
+    const clients = Array.from({ length: MAX_BULK_CLIENTS + 1 }, (_, index) => ({
+      name: `Client ${index}`,
+      phone: '09123456789',
+    }))
+    const result = clientBulkCreateSchema.safeParse({ clients })
+    expect(result.success).toBe(false)
+  })
+
+  it(`accepts up to ${MAX_BULK_CLIENTS} clients`, () => {
+    const clients = Array.from({ length: MAX_BULK_CLIENTS }, (_, index) => ({
+      name: `Client ${index}`,
+      phone: `0912${String(index).padStart(7, '0')}`,
+    }))
+    const result = clientBulkCreateSchema.safeParse({ clients })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.clients).toHaveLength(MAX_BULK_CLIENTS)
+    }
   })
 })

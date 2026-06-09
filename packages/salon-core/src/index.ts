@@ -1,3 +1,4 @@
+export * from "./client-import";
 export * from "./appointment-conflict";
 export * from "./appointment-time";
 export * from "./availability";
@@ -13,3 +14,4 @@ export * from "./staff-availability";
 export * from "./staff-service-autofill";
 export * from "./starter-service-templates";
 export * from "./types";
+export * from "./vcf";

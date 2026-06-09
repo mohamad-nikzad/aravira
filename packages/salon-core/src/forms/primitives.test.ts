@@ -18,6 +18,11 @@ describe('phoneSchema', () => {
     expect(phoneSchema.parse('09123456789')).toBe('09123456789')
   })
 
+  it('canonicalizes +98 international prefix to 09', () => {
+    expect(phoneSchema.parse('+989123456789')).toBe('09123456789')
+    expect(phoneSchema.parse('989123456789')).toBe('09123456789')
+  })
+
   it('rejects empty', () => {
     expect(() => phoneSchema.parse('')).toThrow()
   })
@@ -28,6 +33,12 @@ describe('phoneSchema', () => {
 
   it('rejects non-digit garbage (post-normalization length zero)', () => {
     expect(() => phoneSchema.parse('abc')).toThrow()
+  })
+
+  it('rejects Iranian landline numbers', () => {
+    expect(() => phoneSchema.parse('+98 21 5669 8841')).toThrow()
+    expect(() => phoneSchema.parse('02156698841')).toThrow()
+    expect(() => phoneSchema.parse('02112345678')).toThrow()
   })
 })
 

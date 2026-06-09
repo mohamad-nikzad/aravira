@@ -4,6 +4,7 @@
  */
 import { z } from 'zod'
 
+import { MAX_BULK_CLIENTS } from './limits'
 import { formMessages } from './messages'
 import { phoneSchema, requiredTextSchema } from './primitives'
 
@@ -37,6 +38,18 @@ export const clientCreateSchema = clientFormSchema.extend({
   id: z.string().optional(),
 })
 
+export const clientBulkCreateItemSchema = z.object({
+  name: requiredTextSchema,
+  phone: phoneSchema,
+})
+
+export const clientBulkCreateSchema = z.object({
+  clients: z
+    .array(clientBulkCreateItemSchema)
+    .min(1, 'حداقل یک مشتری لازم است')
+    .max(MAX_BULK_CLIENTS, `حداکثر ${MAX_BULK_CLIENTS} مشتری در هر درخواست`),
+})
+
 export const clientUpdateSchema = z.object({
   name: requiredTextSchema.optional(),
   phone: phoneSchema.optional(),
@@ -58,6 +71,10 @@ export type ClientCreateInput = z.input<typeof clientCreateSchema>
 export type ClientCreatePayload = z.output<typeof clientCreateSchema>
 export type ClientUpdateInput = z.input<typeof clientUpdateSchema>
 export type ClientUpdatePayload = z.output<typeof clientUpdateSchema>
+export type ClientBulkCreateItemInput = z.input<typeof clientBulkCreateItemSchema>
+export type ClientBulkCreateItemPayload = z.output<typeof clientBulkCreateItemSchema>
+export type ClientBulkCreateInput = z.input<typeof clientBulkCreateSchema>
+export type ClientBulkCreatePayload = z.output<typeof clientBulkCreateSchema>
 
 export { MAX_TAGS as MAX_CLIENT_TAGS }
 export { formMessages }
