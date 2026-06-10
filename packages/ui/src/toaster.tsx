@@ -16,7 +16,7 @@ export function Toaster() {
   const { toasts } = useToast()
 
   return (
-    <ToastProvider>
+    <ToastProvider swipeThreshold={120}>
       {toasts.map(function ({
         id,
         title,

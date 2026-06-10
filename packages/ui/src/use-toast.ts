@@ -137,7 +137,7 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, 'id'>
 
-function toast({ ...props }: Toast) {
+function toast({ onOpenChange, ...props }: Toast) {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -154,6 +154,7 @@ function toast({ ...props }: Toast) {
       id,
       open: true,
       onOpenChange: (open) => {
+        onOpenChange?.(open)
         if (!open) dismiss()
       },
     },
@@ -164,6 +165,10 @@ function toast({ ...props }: Toast) {
     dismiss,
     update,
   }
+}
+
+function getActiveToasts() {
+  return memoryState.toasts
 }
 
 function useToast() {
@@ -177,7 +182,7 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, [])
 
   return {
     ...state,
@@ -186,4 +191,4 @@ function useToast() {
   }
 }
 
-export { useToast, toast }
+export { useToast, toast, getActiveToasts }

@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { ToastAction } from '@repo/ui/toast'
-import { toast } from '@repo/ui/use-toast'
+import { getActiveToasts, toast } from '@repo/ui/use-toast'
 
 import { withPwaAssetVersion } from '#/lib/pwa-assets'
+
+const RELOAD_FALLBACK_MS = 3_000
 
 const ASSET_SCRIPT_PATTERN = /\/assets\/[a-zA-Z0-9_-]+\.js/
 
@@ -51,26 +53,56 @@ export function ServiceWorkerRegister() {
     }
 
     let registrationCleanup = () => {}
+    let reloadFallbackTimer: number | null = null
+
+    const cancelReloadFallback = () => {
+      if (reloadFallbackTimer !== null) {
+        window.clearTimeout(reloadFallbackTimer)
+        reloadFallbackTimer = null
+      }
+    }
+
+    const scheduleReloadFallback = () => {
+      cancelReloadFallback()
+      reloadFallbackTimer = window.setTimeout(() => {
+        reloadFallbackTimer = null
+        window.location.reload()
+      }, RELOAD_FALLBACK_MS)
+    }
+
+    const releaseUpdatePrompt = (id: string) => {
+      if (updateToastIdRef.current === id) {
+        updateToastIdRef.current = null
+      }
+    }
 
     const promptForUpdate = (onUpdate: () => void) => {
-      if (updateToastIdRef.current) {
-        return
+      const activePromptId = updateToastIdRef.current
+      if (activePromptId) {
+        const stillVisible = getActiveToasts().some(
+          (entry) => entry.id === activePromptId && entry.open !== false,
+        )
+        if (stillVisible) {
+          return
+        }
+        updateToastIdRef.current = null
       }
 
-      let toastId = ''
       const updateToast = toast({
         duration: Infinity,
         title: 'نسخه جدید آماده است',
         description: 'برای دریافت آخرین تغییرات، برنامه را به روز کنید.',
+        style: { touchAction: 'manipulation' },
         onOpenChange: (open) => {
-          if (!open && updateToastIdRef.current === toastId) {
-            updateToastIdRef.current = null
+          if (!open) {
+            releaseUpdatePrompt(updateToast.id)
           }
         },
         action: (
           <ToastAction
             altText="Update app"
             onClick={() => {
+              releaseUpdatePrompt(updateToast.id)
               updateToast.dismiss()
               onUpdate()
             }}
@@ -80,8 +112,7 @@ export function ServiceWorkerRegister() {
         ),
       })
 
-      toastId = updateToast.id
-      updateToastIdRef.current = toastId
+      updateToastIdRef.current = updateToast.id
     }
 
     const promptForServiceWorkerUpdate = (
@@ -92,6 +123,7 @@ export function ServiceWorkerRegister() {
       }
 
       promptForUpdate(() => {
+        scheduleReloadFallback()
         registration.waiting?.postMessage({ type: 'SKIP_WAITING' })
       })
     }
@@ -152,6 +184,7 @@ export function ServiceWorkerRegister() {
       }
 
       refreshingRef.current = true
+      cancelReloadFallback()
       window.location.reload()
     }
 
@@ -226,6 +259,7 @@ export function ServiceWorkerRegister() {
       .catch(() => {})
 
     return () => {
+      cancelReloadFallback()
       registrationCleanup()
       navigator.serviceWorker.removeEventListener(
         'controllerchange',
