@@ -19,9 +19,9 @@ import {
 import { retentionListQueryOptions } from '#/lib/retention-queries'
 import { BulkClientAddSourceDialog } from '#/components/clients/bulk-client-add-source-dialog'
 import { ClientDrawer } from '#/components/clients/client-drawer'
-import { pickDeviceContactsForImport } from '#/lib/client-import-device'
-import { stashClientImportPreview } from '#/lib/client-import-pending-preview'
+import { ClientImportPreviewSheetHost } from '#/components/clients/client-import-preview-sheet-host'
 import { isDeviceContactPickerSupported } from '#/lib/device-contacts'
+import { useClientImport } from '#/lib/use-client-import'
 import {
   ClientAvatar,
   clientAccent,
@@ -162,15 +162,12 @@ function ClientsPage() {
     void queryClient.invalidateQueries({ queryKey: getApiV1ClientsQueryKey() })
   }
 
-  const existingPhones = useMemo(
-    () =>
-      new Set(
-        clients
-          .map((client) => client.phone)
-          .filter((phone): phone is string => Boolean(phone)),
-      ),
-    [clients],
-  )
+  const importFlow = useClientImport({
+    existingClients: clients,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: getApiV1ClientsQueryKey() })
+    },
+  })
 
   const handleBulkAddClick = () => {
     if (devicePickerSupported) {
@@ -181,12 +178,7 @@ function ClientsPage() {
   }
 
   const handleBulkAddFromContacts = () => {
-    void (async () => {
-      const preview = await pickDeviceContactsForImport(existingPhones)
-      if (!preview) return
-      stashClientImportPreview(preview)
-      void navigate({ to: '/clients/import' })
-    })()
+    void importFlow.pickFromDevice()
   }
 
   const handleBulkAddFromFile = () => {
@@ -399,6 +391,8 @@ function ClientsPage() {
           onPickFromFile={handleBulkAddFromFile}
         />
       ) : null}
+
+      <ClientImportPreviewSheetHost importFlow={importFlow} />
     </div>
   )
 }

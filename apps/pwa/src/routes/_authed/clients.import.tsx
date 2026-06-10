@@ -1,12 +1,9 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Button } from '@repo/ui/button'
 import { PageHeaderBackButton } from '#/components/page-header-back-button'
-import { Spinner } from '@repo/ui/spinner'
-import { toPersianDigits } from '@repo/salon-core/persian-digits'
 
 import { ClientImportGuidesAccordion } from '#/components/clients/client-import-guides-accordion'
-import { ClientImportPreviewList } from '#/components/clients/client-import-preview-list'
+import { ClientImportPreviewSheetHost } from '#/components/clients/client-import-preview-sheet-host'
 import {
   clientsListQueryOptions,
   getApiV1ClientsQueryKey,
@@ -32,14 +29,8 @@ function ClientImportPage() {
     },
   })
 
-  const showPreview = importFlow.step === 'preview'
-
   const handleBack = () => {
     if (importFlow.bulkCreate.isPending) return
-    if (showPreview) {
-      importFlow.resetPreview()
-      return
-    }
     navigate({ to: '/clients' })
   }
 
@@ -56,9 +47,7 @@ function ClientImportPage() {
             افزودن گروهی مشتریان
           </h1>
           <p className="text-[12px] text-muted-foreground">
-            {showPreview
-              ? 'پیش‌نمایش و انتخاب مشتریان'
-              : 'اول راهنما، بعد انتخاب فایل'}
+            اول راهنما، بعد انتخاب فایل
           </p>
         </div>
       </header>
@@ -71,51 +60,9 @@ function ClientImportPage() {
         onChange={importFlow.handleFileChange}
       />
 
-      {showPreview && importFlow.counts ? (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-1 pt-3">
-            <ClientImportPreviewList
-              counts={importFlow.counts}
-              rows={importFlow.rows}
-              skippedRows={importFlow.skippedRows}
-              search={importFlow.search}
-              onSearchChange={importFlow.setSearch}
-              filter={importFlow.filter}
-              onFilterChange={importFlow.setFilter}
-              onUpdateRow={importFlow.updateRow}
-              onRowBlur={importFlow.handleRowBlur}
-              onToggleSelectAll={importFlow.toggleSelectAll}
-              selectAllState={importFlow.selectAllState}
-            />
-          </div>
+      <ClientImportGuidesAccordion onPickFile={importFlow.pickFile} />
 
-          <div className="shrink-0 space-y-2 border-t border-line-soft bg-card px-4 py-3 pb-safe">
-            <Button
-              onClick={() => void importFlow.handleSubmit()}
-              disabled={
-                importFlow.bulkCreate.isPending || importFlow.submitCount === 0
-              }
-              className="w-full touch-manipulation"
-            >
-              {importFlow.bulkCreate.isPending && <Spinner className="ml-2" />}
-              {importFlow.bulkCreate.isPending
-                ? 'در حال افزودن…'
-                : `افزودن ${toPersianDigits(importFlow.submitCount)} مشتری`}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={importFlow.resetPreview}
-              disabled={importFlow.bulkCreate.isPending}
-            >
-              بازگشت به راهنما
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <ClientImportGuidesAccordion onPickFile={importFlow.pickFile} />
-      )}
+      <ClientImportPreviewSheetHost importFlow={importFlow} />
     </div>
   )
 }

@@ -119,15 +119,25 @@ export function ClientImportPreviewList({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="shrink-0 space-y-3 border-b border-line-soft bg-card pt-4 pb-3">
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="shrink-0 space-y-2 border-b border-line-soft px-4 py-3">
+      <div className="relative px-1 py-1.5">
+          <Input
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="جستجو نام یا شماره…"
+            className="ps-9"
+            type="search"
+          />
+          <Search className="pointer-events-none absolute top-1/2 start-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        </div>
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {pills.map((pill) => (
             <button
               key={pill.id}
               type="button"
               onClick={() => onFilterChange(pill.id)}
               className={cn(
-                'flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold transition-colors',
+                'inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors',
                 filter === pill.id
                   ? 'border-primary bg-primary text-primary-foreground'
                   : 'border-line-soft bg-card text-foreground',
@@ -137,7 +147,7 @@ export function ClientImportPreviewList({
               <Badge
                 variant={filter === pill.id ? 'ghost' : pill.tone}
                 className={cn(
-                  'text-[10px]',
+                  'h-4 min-w-4 px-1 text-[9px] leading-none',
                   filter === pill.id && 'text-primary-foreground',
                 )}
               >
@@ -147,25 +157,16 @@ export function ClientImportPreviewList({
           ))}
         </div>
 
-        <div className="relative px-1 py-1.5">
-          <Search className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="جستجو نام یا شماره…"
-            className="pr-9"
-            dir="auto"
-          />
-        </div>
+
 
         {isEligibleView ? (
-          <label className="flex min-h-11 items-center justify-end gap-2 text-sm">
-            <span>انتخاب همه</span>
+          <label className="flex min-h-8 items-center justify-start gap-2 text-sm">
             <Checkbox
               checked={selectAllState}
               onCheckedChange={onToggleSelectAll}
               aria-label="انتخاب همه"
             />
+            <span>انتخاب همه</span>
           </label>
         ) : null}
 
@@ -177,7 +178,7 @@ export function ClientImportPreviewList({
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto pt-3 pb-5">
+      <div className="min-h-0 flex-1 overflow-auto px-4 pt-3">
         <Card className="gap-0 overflow-hidden py-0">
           {isEligibleView ? (
             visibleEligible.length === 0 ? (

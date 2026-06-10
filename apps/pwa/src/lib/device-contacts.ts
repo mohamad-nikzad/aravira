@@ -1,11 +1,36 @@
 export type { DeviceContactPickerRow } from '@repo/salon-core/device-contacts'
 
 import type { DeviceContactPickerRow } from '@repo/salon-core/device-contacts'
+import { toast } from '@repo/ui/use-toast'
+
+export const CONTACT_PICK_BLOCKED_TOAST = {
+  variant: 'destructive' as const,
+  title: 'دسترسی به مخاطبین فعال نیست',
+  description:
+    'برای انتخاب مخاطب، در تنظیمات گوشی به برنامه سالونا بروید و دسترسی مخاطبین را روشن کنید.',
+}
 
 export function isDeviceContactPickerSupported(): boolean {
   return (
     'contacts' in navigator && typeof navigator.contacts?.select === 'function'
   )
+}
+
+async function isContactsPermissionDenied(): Promise<boolean> {
+  if (!('permissions' in navigator)) return false
+
+  try {
+    const status = await navigator.permissions.query({
+      name: 'contacts' as PermissionName,
+    })
+    return status.state === 'denied'
+  } catch {
+    return false
+  }
+}
+
+function notifyContactPickBlocked() {
+  toast(CONTACT_PICK_BLOCKED_TOAST)
 }
 
 function mapPickerRows(
@@ -25,13 +50,24 @@ export async function pickDeviceContacts(options: {
   const contacts = navigator.contacts
   if (!contacts) return null
 
+  if (await isContactsPermissionDenied()) {
+    notifyContactPickBlocked()
+    return null
+  }
+
   try {
     const rows = await contacts.select(['name', 'tel'], {
       multiple: options.multiple,
     })
-    if (!rows || rows.length === 0) return null
+    if (!rows || rows.length === 0) {
+      if (await isContactsPermissionDenied()) {
+        notifyContactPickBlocked()
+      }
+      return null
+    }
     return mapPickerRows(rows)
   } catch {
+    notifyContactPickBlocked()
     return null
   }
 }

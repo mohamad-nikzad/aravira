@@ -123,7 +123,9 @@ export function ClientPicker({
 
   const { pickFromDevice, phoneSheetProps, resetPhoneSheet } =
     useSingleDeviceContactPick({
-      isActive: () => hostActive && modeRef.current !== 'closed',
+      isActive: () =>
+        hostActive &&
+        (contactActionPlacement === 'beside' || modeRef.current !== 'closed'),
       onReady: (name, phone) =>
         continueWithDeviceContactRef.current(name, phone),
       onChoosePhone: () => {},

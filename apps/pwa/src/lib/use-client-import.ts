@@ -19,7 +19,6 @@ import {
   type ImportPreviewFilter,
 } from '#/lib/client-import'
 import { pickDeviceContactsForImport } from '#/lib/client-import-device'
-import { takeClientImportPreview } from '#/lib/client-import-pending-preview'
 import { formatBulkImportToast } from '#/lib/client-import-toast'
 import { useBulkCreateClientsMutation } from '#/lib/clients-queries'
 
@@ -32,6 +31,9 @@ export function useClientImport({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<ClientImportPreview | null>(null)
+  const [previewSource, setPreviewSource] = useState<'file' | 'device' | null>(
+    null,
+  )
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<ImportPreviewFilter>('eligible')
 
@@ -71,6 +73,7 @@ export function useClientImport({
 
   const resetPreview = useCallback(() => {
     setPreview(null)
+    setPreviewSource(null)
     setSearch('')
     setFilter('eligible')
   }, [])
@@ -79,26 +82,20 @@ export function useClientImport({
     fileInputRef.current?.click()
   }, [])
 
-  const applyPreview = useCallback((nextPreview: ClientImportPreview) => {
-    setPreview(nextPreview)
-    setSearch('')
-    setFilter(defaultImportPreviewFilter(nextPreview.counts))
-  }, [])
-
-  const pendingPreviewTaken = useRef(false)
-
-  useEffect(() => {
-    if (pendingPreviewTaken.current) return
-    const pending = takeClientImportPreview()
-    if (!pending) return
-    pendingPreviewTaken.current = true
-    applyPreview(pending)
-  }, [applyPreview])
+  const applyPreview = useCallback(
+    (nextPreview: ClientImportPreview, source: 'file' | 'device') => {
+      setPreview(nextPreview)
+      setPreviewSource(source)
+      setSearch('')
+      setFilter(defaultImportPreviewFilter(nextPreview.counts))
+    },
+    [],
+  )
 
   const pickFromDevice = useCallback(async () => {
     const nextPreview = await pickDeviceContactsForImport(existingPhones)
     if (!nextPreview) return
-    applyPreview(nextPreview)
+    applyPreview(nextPreview, 'device')
   }, [applyPreview, existingPhones])
 
   useEffect(() => {
@@ -133,6 +130,7 @@ export function useClientImport({
 
       const nextPreview = buildClientImportPreview(drafts, existingPhones)
       setPreview(nextPreview)
+      setPreviewSource('file')
       setSearch('')
       setFilter(defaultImportPreviewFilter(nextPreview.counts))
     },
@@ -256,9 +254,11 @@ export function useClientImport({
     fileInputRef,
     pickFile,
     pickFromDevice,
+    applyPreview,
     handleFileChange,
     step,
     preview,
+    previewSource,
     resetPreview,
     search,
     setSearch,
