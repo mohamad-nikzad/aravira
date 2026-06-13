@@ -1,7 +1,7 @@
 ---
 id: BL-0001
 title: Improve landing page
-status: now
+status: done
 type: improvement
 priority: high
 size: medium
@@ -19,10 +19,10 @@ Review the current page, improve the main message, update primary calls to actio
 
 ## Acceptance Criteria
 
-- [ ] First viewport names Saluna and explains the salon manager value.
-- [ ] Primary call to action is visible without scrolling.
-- [ ] Copy reflects the current product, not future-only features.
-- [ ] Mobile and desktop layouts remain readable.
+- [x] First viewport names Saluna and explains the salon manager value.
+- [x] Primary call to action is visible without scrolling.
+- [x] Copy reflects the current product, not future-only features.
+- [x] Mobile and desktop layouts remain readable.
 
 ## Notes
 
