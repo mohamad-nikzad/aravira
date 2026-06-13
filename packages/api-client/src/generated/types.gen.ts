@@ -719,7 +719,6 @@ export type SalonPresence = {
     socialTelegram: string | null;
     socialWhatsapp: string | null;
     website: string | null;
-    [key: string]: unknown;
 };
 
 export type SalonPresencePatchRequest = {
@@ -1026,6 +1025,7 @@ export type UpdateNotificationPreferencesRequest = {
 export type PublicSalonView = {
     salon: PublicSalonInfo;
     publicSettings: PublicSalonSettings;
+    presence: SalonPresence;
     services: Array<Service>;
 };
 

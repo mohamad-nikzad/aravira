@@ -687,6 +687,7 @@ const stubPublicSalonView = {
     layoutId: 'agenda',
     appointmentRequestsEnabled: true,
   },
+  presence: stubSalonPresence,
   services: [] as Array<typeof stubService>,
 }
 

@@ -2862,10 +2862,7 @@
           "socialTelegram",
           "socialWhatsapp",
           "website"
-        ],
-        "additionalProperties": {
-          "nullable": true
-        }
+        ]
       },
       "SalonPresencePatchRequest": {
         "type": "object",
@@ -3998,6 +3995,9 @@
           "publicSettings": {
             "$ref": "#/components/schemas/PublicSalonSettings"
           },
+          "presence": {
+            "$ref": "#/components/schemas/SalonPresence"
+          },
           "services": {
             "type": "array",
             "items": {
@@ -4008,6 +4008,7 @@
         "required": [
           "salon",
           "publicSettings",
+          "presence",
           "services"
         ]
       },
