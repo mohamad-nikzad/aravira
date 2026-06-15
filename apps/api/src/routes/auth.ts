@@ -14,8 +14,9 @@ import { STAFF_COLORS } from '@repo/salon-core/types'
 import { signupSchema } from '@repo/salon-core/forms/auth'
 import { getManagerOnboardingFlags } from '@repo/database/onboarding'
 import { getUserWithServiceIds } from '@repo/database/staff'
+import { getMemberForUser } from '@repo/database/members'
+import { mapRole } from '@repo/auth/permissions'
 import type { AppEnv } from '../factory'
-import { requireTenant } from '../middleware/auth'
 import { zValidator } from '../lib/validate'
 import { brand } from '@repo/brand'
 import { error, ok } from '../lib/responses'
@@ -76,19 +77,37 @@ function isConflict(err: unknown): boolean {
  * Login / logout / get-session are served directly by the mounted Better Auth
  * handler at /api/v1/auth/sign-in/*, /sign-out, /get-session.
  *
- * `/me` is a shim that resolves the Better Auth session into the legacy `User`
- * shape (role mapped, salonId + color from the member/sidecar rows) so the PWA
- * auth layer stays unchanged.
+ * `/me` first resolves the Better Auth session, then optionally resolves salon
+ * membership. OTP-created users can be authenticated before workspace creation,
+ * so the route returns `needs_workspace` when no membership exists yet.
  */
 export const authRoute = new Hono<AppEnv>()
-  .get('/me', requireTenant(), async (c) => {
-    const { userId, salonId } = c.var.tenant
+  .get('/me', async (c) => {
+    const session = await auth.api.getSession({ headers: c.req.raw.headers })
+    if (!session?.user) return error(c, 'وارد نشده‌اید', 401)
+
+    const member = await getMemberForUser(session.user.id)
+    if (!member) {
+      return ok(c, {
+        status: 'needs_workspace',
+        user: {
+          id: session.user.id,
+          name: session.user.name,
+          phone: session.user.phoneNumber ?? session.user.username ?? '',
+        },
+      })
+    }
+
+    const role = mapRole(member.role)
+    const userId = member.userId
+    const salonId = member.organizationId
     const user = await getUserWithServiceIds(userId, salonId)
     if (!user) return error(c, 'وارد نشده‌اید', 401)
 
     if (user.role === 'manager') {
       const flags = await getManagerOnboardingFlags(salonId)
       return ok(c, {
+        status: 'ready',
         user: {
           ...user,
           needsOnboarding: flags.needsOnboarding,
@@ -97,7 +116,7 @@ export const authRoute = new Hono<AppEnv>()
       })
     }
 
-    return ok(c, { user })
+    return ok(c, { status: 'ready', user: { ...user, role } })
   })
   .post(
   '/signup',

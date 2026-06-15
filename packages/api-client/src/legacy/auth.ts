@@ -5,11 +5,14 @@ import { endpoints } from './endpoints'
 
 export type LoginInput = LoginFormPayload
 
-export type MeResponse = {
-  user: User
-}
+export type MeResponse =
+  | { status?: 'ready'; user: User }
+  | {
+      status: 'needs_workspace'
+      user: { id: string; name: string; phone: string }
+    }
 
-export type LoginResponse = MeResponse
+export type LoginResponse = { user: User }
 
 export type SignupInput = SignupFormPayload
 
@@ -33,7 +36,11 @@ export function createAuthApi(client: ApiClient) {
         method: 'POST',
         body: { username: input.phone, password: input.password },
       })
-      return me()
+      const response = await me()
+      if (response.status === 'needs_workspace') {
+        throw new Error('authenticated user has no workspace')
+      }
+      return { user: response.user }
     },
     // The signup wrapper creates the org + sidecars and sets the session cookie;
     // `/me` then yields the full `User` (role/salonId resolved server-side).
@@ -42,7 +49,11 @@ export function createAuthApi(client: ApiClient) {
         salon: { id: string; name: string; slug: string }
         redirectTo?: string
       }>(endpoints.auth.signup, { method: 'POST', body: input })
-      const { user } = await me()
+      const response = await me()
+      if (response.status === 'needs_workspace') {
+        throw new Error('signup did not create a workspace')
+      }
+      const { user } = response
       return { user, salon: created.salon, redirectTo: created.redirectTo }
     },
     logout() {

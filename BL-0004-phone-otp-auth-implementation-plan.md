@@ -139,7 +139,7 @@ References:
          ad-hoc password hashing for staff password updates.
 
 3. **API State + Workspace**
-   - [ ] Rework `/me` to resolve Better Auth session first, then optional
+   - [x] Rework `/me` to resolve Better Auth session first, then optional
          membership, so `needs_workspace` can be returned.
    - [ ] Add session-only account/password and workspace creation endpoints.
 
@@ -238,7 +238,41 @@ Verified locally:
 - `pnpm --filter @repo/api test -- env.test.ts src/cli/messaging-set-webhook.test.ts`
 - `pnpm --filter @repo/api typecheck`
 
+### 2026-06-15 API `/me` pre-workspace state slice
+
+Completed:
+
+- Reworked `GET /api/v1/auth/me` so it reads the Better Auth session directly
+  before attempting salon membership resolution.
+- Added the authenticated pre-workspace response:
+  - `status: "needs_workspace"`
+  - minimal session user payload `{ id, name, phone }`
+- Kept existing ready tenant users compatible by continuing to return the full
+  legacy `user` shape, now with `status: "ready"`.
+- Updated the legacy API client type for the new discriminated `/me` response.
+- Kept current PWA auth behavior stable by treating `needs_workspace` as no
+  tenant user until the pre-workspace route guard/onboarding UI slice is built.
+- Added route tests for unauthenticated, `needs_workspace`, and `ready` `/me`
+  states.
+
+Verified locally:
+
+- `pnpm --filter @repo/api test -- auth.test.ts`
+- `pnpm --filter @repo/api typecheck`
+- `pnpm --filter @repo/api-client typecheck`
+- `pnpm --filter @repo/pwa typecheck`
+
 Remaining notes for the next agent:
+
+- The session-only account/password endpoint and idempotent workspace creation
+  endpoint are still open.
+- PWA route guards do not yet send `needs_workspace` users through the
+  pre-workspace onboarding flow; they are temporarily treated as having no
+  tenant user to avoid rendering tenant screens with an incomplete user shape.
+- Generated OpenAPI/API contracts were not regenerated in this slice; do that
+  when the new pre-workspace endpoints and PWA flow settle.
+
+Additional remaining notes from the OTP foundation slice:
 
 - OTP send endpoint throttling still needs a deliberate pass before exposing the
   OTP UI broadly. The plugin now enforces verification attempt limits, but send

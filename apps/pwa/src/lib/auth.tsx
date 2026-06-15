@@ -14,6 +14,7 @@ async function fetchSessionUser({
 }: { signal?: AbortSignal } = {}): Promise<User | null> {
   try {
     const res = await api.auth.me({ signal })
+    if (res.status === 'needs_workspace') return null
     return res.user
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) {

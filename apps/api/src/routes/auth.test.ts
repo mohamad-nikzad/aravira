@@ -193,6 +193,30 @@ describe('auth /me shim', () => {
     expect(res.status).toBe(401)
   })
 
+  it('returns needs_workspace when the session user has no salon membership', async () => {
+    vi.mocked(authServer.api.getSession).mockResolvedValue({
+      user: {
+        id: 'u1',
+        name: 'Ali',
+        phoneNumber: '09121234567',
+        username: '09121234567',
+      },
+    } as never)
+    vi.mocked(getMemberForUser).mockResolvedValue(undefined)
+
+    const res = await app.request('/api/v1/auth/me')
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      status: 'needs_workspace',
+      user: {
+        id: 'u1',
+        name: 'Ali',
+        phone: '09121234567',
+      },
+    })
+    expect(getUserWithServiceIds).not.toHaveBeenCalled()
+  })
+
   it('resolves the Better Auth session into the legacy User shape', async () => {
     vi.mocked(authServer.api.getSession).mockResolvedValue({
       user: { id: 'u1' },
@@ -223,6 +247,7 @@ describe('auth /me shim', () => {
     const res = await app.request('/api/v1/auth/me')
     expect(res.status).toBe(200)
     const body = (await res.json()) as {
+      status: string
       user: {
         id: string
         salonId: string
@@ -232,6 +257,7 @@ describe('auth /me shim', () => {
       }
     }
     expect(body.user.id).toBe('u1')
+    expect(body.status).toBe('ready')
     expect(body.user.salonId).toBe('s1')
     expect(body.user.role).toBe('manager')
     expect(body.user.needsOnboarding).toBe(false)
