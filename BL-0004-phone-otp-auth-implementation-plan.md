@@ -1,0 +1,261 @@
+# BL-0004 Phone OTP Auth Implementation Plan
+
+## Summary
+
+Build phone-first auth with Better Auth's `phoneNumber` plugin, while keeping
+password login as the default low-cost sign-in path. Signup becomes: phone OTP
+-> authenticated minimal user -> required password/name step -> salon-name step
+creates workspace -> existing onboarding continues.
+
+This ticket is also the compatibility bridge from the current
+`username-as-phone` model to Better Auth's `phoneNumber` model. During rollout,
+writes must keep both fields in sync and reads must prefer `phoneNumber` with a
+`username` fallback until all clients and prod data are verified.
+
+Decisions locked:
+
+- OTP length: `6` digits.
+- Dev/test bypass: `AUTH_OTP_BYPASS_ENABLED=true` disables real SMS and accepts
+  `AUTH_OTP_BYPASS_CODE`, default `123456`.
+- Scope: PWA/API only; native is deprecated and out of scope for this ticket.
+  Do not change native code, add native compatibility wrappers, or spend test
+  effort on native auth in this plan.
+- Production safety: existing prod/test salons must keep working throughout
+  rollout.
+- Staff policy: manager-created staff accounts are treated as
+  manager-attested phone numbers for this ticket, so their `phoneNumberVerified`
+  value is `true` when the manager creates or changes the staff phone. A
+  self-service staff invite/OTP verification flow is a separate ticket.
+
+References:
+
+- Better Auth phone plugin: https://better-auth.com/docs/plugins/phone-number
+- Better Auth users/accounts: https://better-auth.com/docs/concepts/users-accounts
+- shadcn Input OTP: https://ui.shadcn.com/docs/components/radix/input-otp
+- sms.ir REST API docs: https://sms.ir/rest-api/
+
+## Key Changes
+
+- Add Better Auth `phoneNumber` plugin:
+  - `otpLength: 6`, `expiresIn: 300`, `allowedAttempts: 3`.
+  - Real mode sends through `sendSmsOtp`.
+  - Bypass mode skips SMS and verifies only the configured bypass code.
+  - Configure `signUpOnVerification` with `getTempEmail(phoneNumber)` and a
+    temporary name so OTP signup can create the minimal pre-workspace user.
+  - Keep `emailAndPassword.enabled` because phone + password login still relies
+    on Better Auth credential accounts.
+  - Use Better Auth `sign-in/phone-number` for the new PWA password login.
+  - Keep placeholder email internally; phone becomes the user-facing identity.
+  - Keep the username plugin and `/sign-in/username` endpoint during rollout for
+    web rollback compatibility and existing production data only.
+  - Do not hand-roll password hashes. Any new or changed credential password
+    must be created through Better Auth APIs or a single Better Auth-configured
+    password hasher/verifier shared by all credential writes.
+
+- Add schema/migration support:
+  - Add `user.phone_number` and `user.phone_number_verified`.
+  - Backfill existing prod users from valid `user.username` phone values and set
+    `phone_number_verified=true` for existing loginable users because their
+    phone is already the production username.
+  - Keep `username` fields/plugin during this ticket for compatibility.
+  - Update all legacy user shape readers to prefer `user.phone_number` and fall
+    back to `user.username` until the compatibility path is removed.
+  - Staff create/update, legacy signup, seed scripts, and test fixtures must
+    populate both `username/displayUsername` and
+    `phone_number/phone_number_verified`.
+
+- SMS/template setup:
+  - Production sms.ir requires an approved Verify template/pattern in the panel.
+  - Configure `SMS_IR_OTP_TEMPLATE_ID`, plus optional purpose-specific IDs.
+  - Recommended OTP template should include the code placeholder and, if sms.ir
+    allows, WebOTP-friendly domain text for autofill.
+  - Sandbox can use sms.ir template id `123456`; bypass mode needs no sms.ir
+    template.
+
+- Replace PWA auth UX:
+  - Login defaults to phone + password via Better Auth phone-number sign-in.
+  - Add secondary "ورود با کد پیامکی".
+  - Signup becomes phone OTP first.
+  - OTP UI uses existing `@repo/ui/input-otp`: 6 slots, digit-only,
+    `autocomplete="one-time-code"`, `inputMode="numeric"`, `dir="ltr"`,
+    paste/autofill support, mobile-first touch sizing.
+  - Add resend countdown: 60 seconds client cooldown; server also rate-limits
+    OTP sends.
+
+- Update auth state:
+  - `/api/v1/auth/me` must not use `requireTenant()` directly. It first reads
+    the Better Auth session, then tries to resolve a salon membership.
+  - `/api/v1/auth/me` returns either `needs_workspace` or `ready`.
+  - `needs_workspace`: verified user has no salon membership.
+  - `ready`: current tenant user shape plus onboarding flags.
+  - Unauthenticated users still receive `401`.
+  - PWA route guards route `needs_workspace` users into pre-workspace onboarding.
+
+- Add pre-workspace onboarding:
+  - Account step collects manager name and required password using Better Auth
+    server `setPassword`.
+  - Workspace step collects salon name and creates organization, owner
+    membership, `salon_profile`, `salon_member`, default `business_settings`,
+    and onboarding row.
+  - Workspace creation must be idempotent for a session that already has a
+    membership: return the existing workspace state instead of creating a second
+    organization.
+  - Existing tenant-protected onboarding continues after workspace creation.
+
+- Update staff auth compatibility:
+  - `POST /api/v1/staff` continues to create login-capable staff accounts.
+    Create the Better Auth user with placeholder email, credential password,
+    `username`, `displayUsername`, `phoneNumber`, and
+    `phoneNumberVerified=true`, then add the salon membership and
+    `salon_member` sidecar.
+  - `PATCH /api/v1/staff/:id` keeps `username/displayUsername`,
+    placeholder email, `phoneNumber`, and `phoneNumberVerified=true` in sync
+    when a manager changes a staff phone.
+  - `PATCH /api/v1/staff/:id/password` must stop writing a local password hash
+    directly unless the app configures Better Auth to use exactly that shared
+    hasher. Prefer a server-side Better Auth password-setting helper for the
+    target user or a small internal credential writer built from Better Auth's
+    configured password hash function.
+  - Staff login must work through both the old username/password endpoint during
+    rollout and the new phone-number/password endpoint after backfill.
+  - Deactivated staff remain unable to access tenant routes because membership
+    resolution continues to exclude inactive `salon_member` rows.
+
+## Phased Rollout
+
+1. **Database First**
+   - [x] Deploy additive phone columns and backfill existing users.
+   - [x] Add temporary read fallbacks so `phoneNumber ?? username` is the displayed
+     and tenant phone everywhere.
+   - [ ] Verify prod/test salon users still log in with current password flow.
+
+2. **Auth Foundation**
+   - [ ] Add phone plugin, `signUpOnVerification`, bypass envs, sms.ir send hook,
+     phone validation, and rate limits.
+   - [x] Keep old username/password endpoint operational during transition.
+   - [ ] Add a single credential password-writing strategy; remove or replace local
+     ad-hoc password hashing for staff password updates.
+
+3. **API State + Workspace**
+   - [ ] Rework `/me` to resolve Better Auth session first, then optional
+     membership, so `needs_workspace` can be returned.
+   - [ ] Add session-only account/password and workspace creation endpoints.
+
+4. **Staff + Legacy Compatibility**
+   - [ ] Update staff create/update/password flows to sync phone fields and keep
+     staff loginable.
+   - [x] Update legacy signup, seed scripts, tests, row mappers, tenant context, and
+     generated API/OpenAPI contracts as needed.
+   - [x] Do not update native callers; native is deprecated and excluded from this
+     rollout.
+
+5. **PWA UI**
+   - Add phone/password default login, OTP secondary login, and phone-first
+     signup.
+   - Add OTP resend timer and mobile-first OTP screen.
+
+6. **Compatibility Pass**
+   - Update e2e helpers to prefer phone-number password login.
+   - Confirm rollback path: existing username/password login still works.
+
+7. **Production Enablement**
+   - Create/approve sms.ir OTP template.
+   - Set production `SMS_IR_OTP_TEMPLATE_ID`.
+   - Smoke test existing prod/test salons before enabling OTP UI broadly.
+
+## Progress Log
+
+### 2026-06-15 backend compatibility slice
+
+Completed:
+
+- Added `user.phone_number` and `user.phone_number_verified` to the Drizzle
+  schema.
+- Added migration `0007_phone_number_auth_columns.sql`:
+  - Adds the two phone-number columns.
+  - Backfills `phone_number` from valid legacy `username` values matching
+    `^09[0-9]{9}$`.
+  - Marks those backfilled phone numbers verified.
+  - Adds a unique index on `phone_number`.
+- Updated legacy user row mapping and tenant member lookup to read
+  `phoneNumber ?? username`.
+- Updated legacy signup, staff creation, staff phone updates, and seed helpers
+  to keep `username`, `displayUsername`, `phoneNumber`, and
+  `phoneNumberVerified` in sync.
+- Left existing username/password auth paths operational. No PWA or native auth
+  UX was changed in this slice.
+
+Verified locally:
+
+- `pnpm --filter @repo/database typecheck`
+- `pnpm --filter @repo/auth typecheck`
+- `pnpm --filter @repo/api typecheck`
+- `pnpm --filter @repo/api test -- auth.test.ts staff.test.ts`
+
+Remaining notes for the next agent:
+
+- Staff create/update now sync phone fields, but staff password updates still
+  use the existing local scrypt writer in `packages/database/src/internal/staff-queries.ts`.
+  Replace it with a Better Auth-compatible credential password strategy before
+  relying on phone-number/password sign-in for staff.
+- The Better Auth `phoneNumber` plugin is not configured yet. Add it in the
+  Auth Foundation phase with OTP bypass, sms.ir delivery, phone validation, and
+  rate limits.
+- `/api/v1/auth/me` still uses tenant middleware directly and does not yet
+  return `needs_workspace`.
+- OpenAPI/generated API contracts were not regenerated because this slice did
+  not change external API response shapes.
+
+## Test Plan
+
+- Unit/API:
+  - Env parsing for bypass code and sms.ir template config.
+  - Real mode calls `sendSmsOtp`; bypass mode does not.
+  - Wrong OTP fails; too many attempts fail.
+  - `/me` returns `needs_workspace` for phone-verified users without membership.
+  - `/me` returns `401` for no session and `ready` for users with active salon
+    membership.
+  - Workspace creation is idempotent and waits for salon name.
+  - Existing users backfilled from username can log in by phone/password.
+  - Legacy signup still works and populates phone fields.
+  - Staff creation populates username, displayUsername, phoneNumber, and
+    phoneNumberVerified, then staff can log in with phone/password.
+  - Staff phone update keeps username/email/phoneNumber in sync.
+  - Staff password update produces a credential account accepted by Better Auth
+    phone-number sign-in.
+  - Deactivated staff cannot access tenant routes after login/session refresh.
+  - Legacy username/password endpoint remains operational during rollout.
+
+- PWA:
+  - Existing password login works after migration.
+  - New OTP signup with bypass code lands in account/password step.
+  - User cannot complete onboarding without password and workspace.
+  - OTP input is LTR, 6 digits, paste/autofill friendly, invalid-state aware.
+  - Resend timer disables/enables correctly.
+  - Route guards send `needs_workspace` users to pre-workspace onboarding and
+    `ready` users to their role-based home/onboarding route.
+
+- Local stack:
+  - Run migration/seed locally.
+  - Start with:
+
+    ```sh
+    AUTH_OTP_BYPASS_ENABLED=true AUTH_OTP_BYPASS_CODE=123456 pnpm dev:local
+    ```
+
+  - Verify new signup, existing password login, OTP login, refresh/resume,
+    resend timer.
+  - Run targeted unit tests and relevant e2e against local stack.
+
+## Assumptions
+
+- Production sms.ir OTP will use an approved Verify template; sandbox/bypass
+  cover local testing.
+- Bypass is intentionally env-controlled and should log a loud startup warning
+  when enabled.
+- Existing prod/test salons are protected by additive migrations, backfill, and
+  keeping old auth paths until new phone login is verified.
+- Native is deprecated and out of scope for this ticket; no native refresh or
+  compatibility work is planned.
+- Staff invite/self-verification is a separate ticket; this one preserves the
+  current manager-created staff account model.
