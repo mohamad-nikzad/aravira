@@ -7,6 +7,7 @@ import {
   organization,
   salonMember,
   salonProfile,
+  user,
 } from '@repo/database/schema'
 import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { STAFF_COLORS } from '@repo/salon-core/types'
@@ -155,6 +156,15 @@ export const authRoute = new Hono<AppEnv>()
       user: { id: string }
     }
     const userId = signUpBody.user.id
+    await db
+      .update(user)
+      .set({
+        phoneNumber: managerPhone,
+        phoneNumberVerified: true,
+        displayUsername: managerPhone,
+        updatedAt: new Date(),
+      })
+      .where(eq(user.id, userId))
 
     let orgId: string
     try {

@@ -27,12 +27,14 @@ vi.mock('@repo/database/client', () => {
   const stub: {
     transaction: (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>
     insert: () => { values: () => Promise<void> }
+    update: () => { set: () => { where: () => Promise<void> } }
     select: () => {
       from: () => { leftJoin?: unknown; where: () => { limit: () => Promise<unknown[]> } }
     }
   } = {
     transaction: async (fn) => fn(stub),
     insert: () => ({ values: async () => undefined }),
+    update: () => ({ set: () => ({ where: async () => undefined }) }),
     select: () => ({
       from: () => ({
         where: () => ({ limit: async () => [] as unknown[] }),
