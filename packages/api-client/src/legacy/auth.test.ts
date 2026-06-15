@@ -74,4 +74,136 @@ describe('legacy auth API wrapper', () => {
   it('keeps the rollout username/password endpoint defined for rollback callers', () => {
     expect(endpoints.auth.signIn).toBe('/api/v1/auth/sign-in/username')
   })
+
+  it('maps phone OTP send and verify calls to Better Auth phone-number endpoints', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: 'OTP sent' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: true,
+            user: {
+              id: 'u1',
+              phoneNumber: '09121234567',
+              phoneNumberVerified: true,
+            },
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+
+    const auth = createAuthApi(
+      createApiClient({
+        baseUrl: 'https://api.example.test',
+        credentials: 'include',
+        fetchImpl: fetchMock,
+      }),
+    )
+
+    await auth.sendPhoneOtp({ phone: '09121234567' })
+    const response = await auth.verifyPhoneOtp({
+      phone: '09121234567',
+      code: '123456',
+    })
+
+    expect(response.user?.phoneNumberVerified).toBe(true)
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://api.example.test/api/v1/auth/phone-number/send-otp',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify({ phoneNumber: '09121234567' }),
+      }),
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api.example.test/api/v1/auth/phone-number/verify',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify({
+          phoneNumber: '09121234567',
+          code: '123456',
+        }),
+      }),
+    )
+  })
+
+  it('maps pre-workspace account and workspace calls to the signup continuation endpoints', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            user: { id: 'u1', name: 'Ali Manager', phone: '09121234567' },
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            user: { id: 'u1', name: 'Ali Manager', phone: '09121234567' },
+            salon: { id: 's1', name: 'Salon One', slug: 'salon-one' },
+            redirectTo: '/onboarding/welcome',
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+
+    const auth = createAuthApi(
+      createApiClient({
+        baseUrl: 'https://api.example.test',
+        credentials: 'include',
+        fetchImpl: fetchMock,
+      }),
+    )
+
+    await auth.completeSignupAccount({
+      managerName: 'Ali Manager',
+      password: 'secret123',
+    })
+    const response = await auth.createSignupWorkspace({
+      salonName: 'Salon One',
+    })
+
+    expect(response.salon.slug).toBe('salon-one')
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://api.example.test/api/v1/auth/signup/account',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify({
+          managerName: 'Ali Manager',
+          password: 'secret123',
+        }),
+      }),
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api.example.test/api/v1/auth/signup/workspace',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify({ salonName: 'Salon One' }),
+      }),
+    )
+  })
 })

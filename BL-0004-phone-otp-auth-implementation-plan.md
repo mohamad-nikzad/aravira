@@ -478,6 +478,33 @@ Remaining notes for the next agent:
 - Production enablement remains open: sms.ir template approval/env setup and
   smoke testing existing prod/test salons before broad OTP UI enablement.
 
+### 2026-06-15 OTP signup wrapper coverage slice
+
+Completed:
+
+- Added focused coverage for the legacy PWA API auth wrapper methods used by
+  the phone-first signup flow:
+  - `sendPhoneOtp` posts `{ phoneNumber }` to Better Auth's
+    `/api/v1/auth/phone-number/send-otp` endpoint.
+  - `verifyPhoneOtp` posts `{ phoneNumber, code }` to
+    `/api/v1/auth/phone-number/verify`.
+  - `completeSignupAccount` posts manager name/password to
+    `/api/v1/auth/signup/account`.
+  - `createSignupWorkspace` posts salon name to
+    `/api/v1/auth/signup/workspace`.
+- This is a test-only slice; no runtime auth behavior changed.
+
+Verified locally:
+
+- `pnpm --filter @repo/api-client test -- src/legacy/auth.test.ts`
+
+Remaining notes for the next agent:
+
+- Production enablement remains open: sms.ir template approval/env setup and
+  smoke testing existing prod/test salons before broad OTP UI enablement.
+- A full local-stack smoke of OTP signup/password login is still useful if the
+  next agent has the API/PWA stack already running.
+
 ## Test Plan
 
 - Unit/API:
