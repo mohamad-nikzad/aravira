@@ -4,8 +4,7 @@ Last organized: 2026-06-13
 
 ## Now
 
-- [BL-0001 Improve landing page](now/BL-0001-improve-landing-page.md)
-- [BL-0002 Improve salons landing pages](now/BL-0002-improve-salons-landing-pages.md)
+No active backlog items.
 
 ## Ready
 
@@ -35,7 +34,8 @@ Last organized: 2026-06-13
 
 ## Done
 
-No completed backlog items yet.
+- [BL-0001 Improve landing page](done/BL-0001-improve-landing-page.md)
+- [BL-0002 Improve salons landing pages](done/BL-0002-improve-salons-landing-pages.md)
 
 ## Archive
 
