@@ -1,5 +1,10 @@
 import type { User } from '@repo/salon-core/types'
-import type { LoginFormPayload, SignupFormPayload } from '@repo/salon-core/forms/auth'
+import type {
+  LoginFormPayload,
+  PreWorkspaceAccountPayload,
+  PreWorkspacePayload,
+  SignupFormPayload,
+} from '@repo/salon-core/forms/auth'
 import type { ApiClient } from './client'
 import { endpoints } from './endpoints'
 
@@ -22,25 +27,84 @@ export type SignupResponse = {
   redirectTo?: string
 }
 
+export type PreWorkspaceUser = {
+  id: string
+  name: string
+  phone: string
+}
+
+export type VerifyPhoneOtpResponse = {
+  status: boolean
+  token?: string | null
+  user?: {
+    id: string
+    phoneNumber: string
+    phoneNumberVerified: boolean
+  } | null
+}
+
+export type PreWorkspaceAccountResponse = { user: PreWorkspaceUser }
+
+export type PreWorkspaceResponse = {
+  user: PreWorkspaceUser
+  salon: { id: string; name: string; slug: string }
+  redirectTo?: string
+}
+
 export function createAuthApi(client: ApiClient) {
   function me(opts: { signal?: AbortSignal } = {}) {
-    return client.request<MeResponse>(endpoints.auth.me, { signal: opts.signal })
+    return client.request<MeResponse>(endpoints.auth.me, {
+      signal: opts.signal,
+    })
   }
 
   return {
     me,
-    // Better Auth username sign-in sets the session cookie; we then resolve the
+    // Better Auth phone sign-in sets the session cookie; we then resolve the
     // full legacy `User` via the `/me` shim so callers keep the old contract.
     async login(input: LoginInput): Promise<LoginResponse> {
-      await client.request(endpoints.auth.signIn, {
+      await client.request(endpoints.auth.signInPhoneNumber, {
         method: 'POST',
-        body: { username: input.phone, password: input.password },
+        body: { phoneNumber: input.phone, password: input.password },
       })
       const response = await me()
       if (response.status === 'needs_workspace') {
         throw new Error('authenticated user has no workspace')
       }
       return { user: response.user }
+    },
+    sendPhoneOtp(input: { phone: string }) {
+      return client.request<{ message: string }>(endpoints.auth.sendPhoneOtp, {
+        method: 'POST',
+        body: { phoneNumber: input.phone },
+      })
+    },
+    verifyPhoneOtp(input: { phone: string; code: string }) {
+      return client.request<VerifyPhoneOtpResponse>(
+        endpoints.auth.verifyPhoneOtp,
+        {
+          method: 'POST',
+          body: { phoneNumber: input.phone, code: input.code },
+        },
+      )
+    },
+    completeSignupAccount(input: PreWorkspaceAccountPayload) {
+      return client.request<PreWorkspaceAccountResponse>(
+        endpoints.auth.signupAccount,
+        {
+          method: 'POST',
+          body: input,
+        },
+      )
+    },
+    createSignupWorkspace(input: PreWorkspacePayload) {
+      return client.request<PreWorkspaceResponse>(
+        endpoints.auth.signupWorkspace,
+        {
+          method: 'POST',
+          body: input,
+        },
+      )
     },
     // The signup wrapper creates the org + sidecars and sets the session cookie;
     // `/me` then yields the full `User` (role/salonId resolved server-side).

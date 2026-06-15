@@ -17,13 +17,13 @@ import { ApiError } from '@repo/api-client'
 import { displayPhone } from '@repo/salon-core/phone'
 import { loginSchema } from '@repo/salon-core/forms/auth'
 import type { LoginFormInput } from '@repo/salon-core/forms/auth'
-import type { User } from '@repo/salon-core/types'
 
 import { brand } from '@repo/brand'
 import { PasswordInput } from '#/components/password-input'
 import { api } from '#/lib/api-client'
 import { getMutationErrorMessage } from '#/lib/query-client'
 import { authQueryKey, useAuth } from '#/lib/auth'
+import type { AuthSession } from '#/lib/auth'
 import { homePathForRole } from '#/lib/navigation'
 
 const searchSchema = z.object({
@@ -38,10 +38,14 @@ function safeInternalRedirect(value: string | undefined): string | null {
 export const Route = createFileRoute('/login')({
   validateSearch: searchSchema,
   beforeLoad: async ({ context, search }) => {
-    const user = await context.queryClient.ensureQueryData<User | null>({
+    const session = await context.queryClient.ensureQueryData<AuthSession>({
       queryKey: authQueryKey,
     })
-    if (user) {
+    if (session?.status === 'needs_workspace') {
+      throw redirect({ to: '/signup' })
+    }
+    if (session) {
+      const { user } = session
       const safe = safeInternalRedirect(search.redirect)
       if (safe) throw redirect({ href: safe })
       throw redirect({ to: homePathForRole(user.role) })
@@ -53,7 +57,7 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const navigate = useNavigate()
   const { redirect: redirectTo } = Route.useSearch()
-  const { setUser } = useAuth()
+  const { refresh, setUser } = useAuth()
   const showDemoCredentials = import.meta.env.DEV
 
   const {
@@ -83,7 +87,15 @@ function LoginPage() {
 
   const onSubmit = handleSubmit((values) => {
     login.mutate(values, {
-      onError: (err) => {
+      onError: async (err) => {
+        if (
+          err instanceof Error &&
+          err.message === 'authenticated user has no workspace'
+        ) {
+          await refresh()
+          await navigate({ to: '/signup' })
+          return
+        }
         const message =
           err instanceof ApiError
             ? err.status === 401

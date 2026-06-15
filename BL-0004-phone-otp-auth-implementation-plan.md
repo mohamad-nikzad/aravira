@@ -152,9 +152,11 @@ References:
          rollout.
 
 5. **PWA UI**
-   - Add phone/password default login, OTP secondary login, and phone-first
-     signup.
-   - Add OTP resend timer and mobile-first OTP screen.
+   - [x] Add phone/password default login via Better Auth phone-number sign-in.
+   - [x] Add phone-first OTP signup.
+   - [ ] Add secondary OTP-only login for existing users.
+   - [x] Add OTP resend timer and mobile-first OTP screen.
+   - [x] Route `needs_workspace` users through the pre-workspace signup flow.
 
 6. **Compatibility Pass**
    - Update e2e helpers to prefer phone-number password login.
@@ -349,6 +351,48 @@ Remaining notes for the next agent:
   traffic patterns require it.
 - The test emits Better Auth's expected warning about missing
   `BETTER_AUTH_URL` in the mocked unit-test environment.
+
+### 2026-06-15 PWA phone-first signup slice
+
+Completed:
+
+- Updated the legacy PWA API client auth wrapper to call Better Auth's
+  `/sign-in/phone-number` endpoint for phone/password login instead of the
+  rollout-only username sign-in endpoint.
+- Added client wrapper methods for:
+  - sending phone OTPs,
+  - verifying phone OTPs,
+  - completing the pre-workspace account/password step,
+  - creating the signup workspace.
+- Updated the shared API client error parsing so Better Auth `{ message }`
+  responses surface in PWA forms.
+- Changed PWA auth state from `User | null` to the `/me` discriminated session
+  shape while preserving the existing `user` convenience value for the rest of
+  the app.
+- Updated root/login/authed route guards so authenticated
+  `needs_workspace` users are sent to `/signup` instead of being treated as
+  logged out.
+- Replaced the PWA signup form with a phone-first flow:
+  - phone number step sends the OTP,
+  - 6-slot mobile OTP input verifies the code,
+  - account step sets manager name and required password,
+  - workspace step creates the salon and continues to existing onboarding.
+- Added a 60-second client resend countdown matching the server OTP send
+  cooldown.
+- Kept the existing legacy one-shot `/api/v1/auth/signup` endpoint available
+  for compatibility; the PWA no longer uses it for signup.
+
+Verified locally:
+
+- `pnpm --filter @repo/pwa typecheck`
+- `pnpm --filter @repo/api-client typecheck`
+
+Remaining notes for the next agent:
+
+- Secondary OTP-only login for existing users is still open. The signup flow now
+  uses OTP, but `/login` does not yet expose "ورود با کد پیامکی".
+- This slice did not run browser or e2e verification against a live API. A local
+  stack smoke with `AUTH_OTP_BYPASS_ENABLED=true` is still needed.
 
 ## Test Plan
 
