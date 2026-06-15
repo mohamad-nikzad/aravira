@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   Link,
   createFileRoute,
@@ -17,10 +18,19 @@ import { ApiError } from '@repo/api-client'
 import { displayPhone } from '@repo/salon-core/phone'
 import { loginSchema } from '@repo/salon-core/forms/auth'
 import type { LoginFormInput } from '@repo/salon-core/forms/auth'
+import { phoneSchema } from '@repo/salon-core/forms/primitives'
 
 import { brand } from '@repo/brand'
+import { OtpCodeInput } from '#/components/auth/otp-code-input'
 import { PasswordInput } from '#/components/password-input'
 import { api } from '#/lib/api-client'
+import {
+  AUTH_OTP_CODE_LENGTH,
+  AUTH_OTP_RESEND_SECONDS,
+  getOtpErrorMessage,
+  normalizeOtpCode,
+  useResendCountdown,
+} from '#/lib/auth-otp'
 import { getMutationErrorMessage } from '#/lib/query-client'
 import { authQueryKey, useAuth } from '#/lib/auth'
 import type { AuthSession } from '#/lib/auth'
@@ -29,6 +39,8 @@ import { homePathForRole } from '#/lib/navigation'
 const searchSchema = z.object({
   redirect: z.string().optional(),
 })
+
+type LoginMode = 'password' | 'otp'
 
 /** Only honor internal relative paths to avoid open-redirect. */
 function safeInternalRedirect(value: string | undefined): string | null {
@@ -59,11 +71,20 @@ function LoginPage() {
   const { redirect: redirectTo } = Route.useSearch()
   const { refresh, setUser } = useAuth()
   const showDemoCredentials = import.meta.env.DEV
+  const [mode, setMode] = useState<LoginMode>('password')
+  const [otpPhone, setOtpPhone] = useState('')
+  const [otp, setOtp] = useState('')
+  const [otpError, setOtpError] = useState<string | null>(null)
+  const [resendAvailableAt, setResendAvailableAt] = useState<number | null>(
+    null,
+  )
+  const resendRemaining = useResendCountdown(resendAvailableAt)
 
   const {
     register,
     handleSubmit,
     setError,
+    clearErrors,
     watch,
     setValue,
     formState: { errors },
@@ -73,6 +94,7 @@ function LoginPage() {
   })
 
   const phoneValue = watch('phone')
+  const isPasswordMode = mode === 'password'
 
   const login = useMutation({
     mutationFn: (values: LoginFormInput) => api.auth.login(values),
@@ -82,6 +104,41 @@ function LoginPage() {
       const safe = safeInternalRedirect(redirectTo)
       if (safe) await navigate({ href: safe })
       else await navigate({ to: homePathForRole(data.user.role) })
+    },
+  })
+
+  const sendOtp = useMutation({
+    mutationFn: ({ phone }: { phone: string }) =>
+      api.auth.sendPhoneOtp({ phone }),
+    meta: { skipToast: true },
+    onSuccess: (_, values) => {
+      setOtpPhone(values.phone)
+      setOtp('')
+      setOtpError(null)
+      setResendAvailableAt(Date.now() + AUTH_OTP_RESEND_SECONDS * 1000)
+      setMode('otp')
+    },
+  })
+
+  const verifyOtp = useMutation({
+    mutationFn: (code: string) =>
+      api.auth.verifyPhoneOtp({ phone: otpPhone, code }),
+    meta: { skipToast: true },
+    onSuccess: async () => {
+      setOtpError(null)
+      const session = await refresh()
+      const safe = safeInternalRedirect(redirectTo)
+      if (session?.status === 'needs_workspace') {
+        await navigate({ to: '/signup' })
+        return
+      }
+      if (session?.user) {
+        setUser(session.user)
+        if (safe) await navigate({ href: safe })
+        else await navigate({ to: homePathForRole(session.user.role) })
+        return
+      }
+      setOtpError('ورود انجام نشد. دوباره تلاش کنید.')
     },
   })
 
@@ -110,7 +167,50 @@ function LoginPage() {
     })
   })
 
+  const startOtpLogin = () => {
+    const parsedPhone = phoneSchema.safeParse(phoneValue)
+    if (!parsedPhone.success) {
+      setError('phone', { message: parsedPhone.error.issues[0]?.message })
+      return
+    }
+    clearErrors()
+    sendOtp.mutate(
+      { phone: parsedPhone.data },
+      {
+        onError: (err) => {
+          const message =
+            err instanceof ApiError
+              ? err.status === 429
+                ? 'برای دریافت کد جدید کمی صبر کنید.'
+                : err.message || 'ارسال کد ورود انجام نشد.'
+              : getMutationErrorMessage(err, 'ارسال کد ورود انجام نشد.')
+          setError('root', { message })
+        },
+      },
+    )
+  }
+
+  const submitOtp = () => {
+    const code = normalizeOtpCode(otp)
+    if (code.length !== AUTH_OTP_CODE_LENGTH) {
+      setOtpError(`کد ${AUTH_OTP_CODE_LENGTH} رقمی را کامل وارد کنید`)
+      return
+    }
+    verifyOtp.mutate(code, {
+      onError: (err) => setOtpError(getOtpErrorMessage(err)),
+    })
+  }
+
+  const resendOtp = () => {
+    if (!otpPhone || resendRemaining > 0) return
+    sendOtp.mutate(
+      { phone: otpPhone },
+      { onError: (err) => setOtpError(getOtpErrorMessage(err)) },
+    )
+  }
+
   const passwordField = register('password')
+  const isBusy = login.isPending || sendOtp.isPending || verifyOtp.isPending
 
   return (
     <main className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-background p-4">
@@ -150,7 +250,7 @@ function LoginPage() {
                   placeholder="مثلاً ۰۹۱۲۰۰۰۰۰۰۰"
                   autoComplete="username"
                   inputMode="numeric"
-                  disabled={login.isPending}
+                  disabled={isBusy || !isPasswordMode}
                   className="h-12 rounded-xl bg-muted/40 border-border/50 text-base text-left tabular-nums"
                   dir="ltr"
                 />
@@ -159,31 +259,100 @@ function LoginPage() {
                 )}
               </Field>
 
-              <Field>
-                <FieldLabel htmlFor="password">رمز عبور</FieldLabel>
-                <PasswordInput
-                  id="password"
-                  placeholder="رمز عبور را وارد کنید"
-                  autoComplete="current-password"
-                  disabled={login.isPending}
-                  className="h-12 rounded-xl bg-muted/40 border-border/50"
-                  {...passwordField}
-                />
-                {errors.password && (
-                  <FieldError>{errors.password.message}</FieldError>
-                )}
-              </Field>
+              {isPasswordMode ? (
+                <Field>
+                  <FieldLabel htmlFor="password">رمز عبور</FieldLabel>
+                  <PasswordInput
+                    id="password"
+                    placeholder="رمز عبور را وارد کنید"
+                    autoComplete="current-password"
+                    disabled={isBusy}
+                    className="h-12 rounded-xl bg-muted/40 border-border/50"
+                    {...passwordField}
+                  />
+                  {errors.password && (
+                    <FieldError>{errors.password.message}</FieldError>
+                  )}
+                </Field>
+              ) : (
+                <Field>
+                  <FieldLabel htmlFor="otp">کد پیامکی</FieldLabel>
+                  <OtpCodeInput
+                    value={otp}
+                    onValueChange={(value) => {
+                      setOtp(value)
+                      setOtpError(null)
+                    }}
+                    disabled={verifyOtp.isPending}
+                    invalid={Boolean(otpError)}
+                    slotClassName="h-11 w-10 bg-muted/40"
+                  />
+                  {otpError ? <FieldError>{otpError}</FieldError> : null}
+                </Field>
+              )}
 
               <FormRootError message={errors.root?.message} />
 
-              <Button
-                type="submit"
-                className="w-full h-12 rounded-xl text-base font-semibold touch-manipulation shadow-sm"
-                disabled={login.isPending}
-              >
-                {login.isPending ? <Spinner className="ml-2" /> : null}
-                {login.isPending ? 'در حال ورود…' : 'ورود'}
-              </Button>
+              {isPasswordMode ? (
+                <>
+                  <Button
+                    type="submit"
+                    className="w-full h-12 rounded-xl text-base font-semibold touch-manipulation shadow-sm"
+                    disabled={isBusy}
+                  >
+                    {login.isPending ? <Spinner className="ml-2" /> : null}
+                    {login.isPending ? 'در حال ورود…' : 'ورود'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-12 rounded-xl text-base font-semibold touch-manipulation"
+                    disabled={isBusy}
+                    onClick={startOtpLogin}
+                  >
+                    {sendOtp.isPending ? <Spinner className="ml-2" /> : null}
+                    ورود با کد پیامکی
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    className="w-full h-12 rounded-xl text-base font-semibold touch-manipulation shadow-sm"
+                    disabled={verifyOtp.isPending}
+                    onClick={submitOtp}
+                  >
+                    {verifyOtp.isPending ? <Spinner className="ml-2" /> : null}
+                    تایید و ورود
+                  </Button>
+
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <button
+                      type="button"
+                      className="font-semibold text-primary disabled:text-muted-foreground"
+                      disabled={sendOtp.isPending || resendRemaining > 0}
+                      onClick={resendOtp}
+                    >
+                      ارسال دوباره کد
+                    </button>
+                    <span>
+                      {resendRemaining > 0 ? `${resendRemaining} ثانیه` : null}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-muted-foreground"
+                    onClick={() => {
+                      setMode('password')
+                      setOtp('')
+                      setOtpError(null)
+                    }}
+                  >
+                    ورود با رمز عبور یا تغییر شماره
+                  </button>
+                </>
+              )}
             </FieldGroup>
           </form>
         </div>

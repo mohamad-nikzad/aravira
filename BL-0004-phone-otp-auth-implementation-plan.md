@@ -154,7 +154,7 @@ References:
 5. **PWA UI**
    - [x] Add phone/password default login via Better Auth phone-number sign-in.
    - [x] Add phone-first OTP signup.
-   - [ ] Add secondary OTP-only login for existing users.
+   - [x] Add secondary OTP-only login for existing users.
    - [x] Add OTP resend timer and mobile-first OTP screen.
    - [x] Route `needs_workspace` users through the pre-workspace signup flow.
 
@@ -389,10 +389,68 @@ Verified locally:
 
 Remaining notes for the next agent:
 
-- Secondary OTP-only login for existing users is still open. The signup flow now
-  uses OTP, but `/login` does not yet expose "ورود با کد پیامکی".
+- Superseded by the later PWA OTP-only login slice: `/login` now exposes
+  "ورود با کد پیامکی".
 - This slice did not run browser or e2e verification against a live API. A local
   stack smoke with `AUTH_OTP_BYPASS_ENABLED=true` is still needed.
+
+### 2026-06-15 PWA OTP-only login slice
+
+Completed:
+
+- Added a secondary "ورود با کد پیامکی" path to the PWA `/login` screen while
+  keeping phone/password as the default login path.
+- Reused the Better Auth phone-number OTP endpoints already exposed by the
+  legacy PWA API wrapper:
+  - validates and normalizes the entered phone number before sending OTP,
+  - verifies the 6-digit OTP with digit-only, LTR, `one-time-code` input,
+  - refreshes `/api/v1/auth/me` after verification and routes ready users to
+    their role home or `redirect`,
+  - routes verified users without a workspace to `/signup` so they continue the
+    existing pre-workspace flow.
+- Added resend support with the existing 60-second client cooldown policy and
+  localized OTP error messages for invalid, expired, missing, rate-limited, and
+  too-many-attempt states.
+- Fixed the shared resend countdown hook pattern in `/login` and `/signup` so
+  the countdown resets immediately from the current time when a new resend
+  target is set.
+- Fixed the PWA auth `refresh()` helper to force a fresh `/me` request instead
+  of returning a recent cached unauthenticated result after OTP verification.
+
+Verified locally:
+
+- `pnpm --filter @repo/pwa typecheck`
+- `pnpm db:migrate:local`
+- Browser smoke with PWA on `http://localhost:3000`, API on
+  `http://localhost:3002`, and `AUTH_OTP_BYPASS_ENABLED=true`: `/login` renders
+  phone/password controls, the secondary OTP button switches to the OTP screen,
+  resend starts disabled at 60 seconds, OTP `123456` verifies, and the demo
+  staff user routes to `/today`.
+
+Remaining notes for the next agent:
+
+- The PWA UI checklist is now complete. Compatibility/local-stack verification
+  is still open for password login, OTP signup, e2e helper updates, and rollback
+  confirmation. OTP login itself has been smoked against the local API with
+  `AUTH_OTP_BYPASS_ENABLED=true`.
+
+### 2026-06-15 PWA OTP shared UI cleanup
+
+Completed:
+
+- Extracted shared PWA OTP helpers into `apps/pwa/src/lib/auth-otp.ts`:
+  - OTP code length and resend cooldown constants,
+  - digit normalization for Persian/Latin input,
+  - localized Better Auth OTP error mapping,
+  - resend countdown hook.
+- Extracted the shared 6-slot OTP field into
+  `apps/pwa/src/components/auth/otp-code-input.tsx`.
+- Updated `/login` and `/signup` to use the shared OTP helpers/component while
+  keeping their flow-specific mutation and navigation behavior local.
+
+Verified locally:
+
+- `pnpm --filter @repo/pwa typecheck`
 
 ## Test Plan
 

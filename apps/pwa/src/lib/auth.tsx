@@ -79,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.fetchQuery({
         queryKey: authQueryKey,
         queryFn: ({ signal }) => fetchSessionUser({ signal }),
+        staleTime: 0,
       }),
     [queryClient],
   )

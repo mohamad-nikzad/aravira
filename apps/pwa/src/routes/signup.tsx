@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Link,
   createFileRoute,
@@ -12,7 +12,6 @@ import { z } from 'zod'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@repo/ui/button'
 import { Input } from '@repo/ui/input'
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@repo/ui/input-otp'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@repo/ui/field'
 import { FormRootError } from '@repo/ui/form'
 import { Spinner } from '@repo/ui/spinner'
@@ -25,12 +24,19 @@ import {
 } from '@repo/salon-core/forms/auth'
 import { phoneSchema } from '@repo/salon-core/forms/primitives'
 import { formMessages } from '@repo/salon-core/forms/messages'
-import { toLatinDigits } from '@repo/salon-core/persian-digits'
 
 import { brand } from '@repo/brand'
+import { OtpCodeInput } from '#/components/auth/otp-code-input'
 import { SalooraMark } from '#/components/brand/saloora-mark'
 import { PasswordInput } from '#/components/password-input'
 import { api } from '#/lib/api-client'
+import {
+  AUTH_OTP_CODE_LENGTH,
+  AUTH_OTP_RESEND_SECONDS,
+  getOtpErrorMessage,
+  normalizeOtpCode,
+  useResendCountdown,
+} from '#/lib/auth-otp'
 import { getMutationErrorMessage } from '#/lib/query-client'
 import { authQueryKey, useAuth } from '#/lib/auth'
 import type { AuthSession } from '#/lib/auth'
@@ -42,8 +48,6 @@ import { getApiV1SettingsBusinessQueryKey } from '#/lib/settings-queries'
 import { getApiV1SalonProfilePresenceQueryKey } from '#/lib/salon-profile-queries'
 import { getApiV1SalonPublicSettingsQueryKey } from '#/lib/salon-public-settings-queries'
 import { getApiV1OnboardingQueryKey } from '#/lib/onboarding-queries'
-
-const RESEND_SECONDS = 60
 
 const phoneStepSchema = z.object({ phone: phoneSchema })
 type PhoneStepInput = z.input<typeof phoneStepSchema>
@@ -75,42 +79,6 @@ export const Route = createFileRoute('/signup')({
   },
   component: SignupPage,
 })
-
-function getApiErrorCode(err: unknown): string | null {
-  if (!(err instanceof ApiError)) return null
-  const payload = err.payload
-  if (!payload || typeof payload !== 'object' || !('code' in payload)) {
-    return null
-  }
-  const code = (payload as { code: unknown }).code
-  return typeof code === 'string' ? code : null
-}
-
-function getOtpErrorMessage(err: unknown): string {
-  const code = getApiErrorCode(err)
-  if (code === 'INVALID_OTP') return 'کد واردشده درست نیست'
-  if (code === 'OTP_EXPIRED') return 'کد منقضی شده است. دوباره کد بگیرید.'
-  if (code === 'TOO_MANY_ATTEMPTS') {
-    return 'تعداد تلاش‌ها زیاد شد. دوباره کد بگیرید.'
-  }
-  if (code === 'OTP_NOT_FOUND') return 'ابتدا کد جدید دریافت کنید.'
-  if (err instanceof ApiError && err.status === 429) {
-    return 'برای دریافت کد جدید کمی صبر کنید.'
-  }
-  return getMutationErrorMessage(err, 'کد تایید بررسی نشد. دوباره تلاش کنید.')
-}
-
-function useResendCountdown(targetTime: number | null) {
-  const [now, setNow] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (!targetTime) return
-    const interval = window.setInterval(() => setNow(Date.now()), 500)
-    return () => window.clearInterval(interval)
-  }, [targetTime])
-
-  return targetTime ? Math.max(0, Math.ceil((targetTime - now) / 1000)) : 0
-}
 
 function SignupPage() {
   const navigate = useNavigate()
@@ -187,7 +155,7 @@ function SignupPage() {
       setVerifiedPhone(values.phone)
       setOtp('')
       setOtpError(null)
-      setResendAvailableAt(Date.now() + RESEND_SECONDS * 1000)
+      setResendAvailableAt(Date.now() + AUTH_OTP_RESEND_SECONDS * 1000)
       setStep('otp')
     },
   })
@@ -243,9 +211,9 @@ function SignupPage() {
   })
 
   const submitOtp = () => {
-    const code = toLatinDigits(otp).replace(/\D/g, '')
-    if (code.length !== 6) {
-      setOtpError('کد ۶ رقمی را کامل وارد کنید')
+    const code = normalizeOtpCode(otp)
+    if (code.length !== AUTH_OTP_CODE_LENGTH) {
+      setOtpError(`کد ${AUTH_OTP_CODE_LENGTH} رقمی را کامل وارد کنید`)
       return
     }
     verifyOtp.mutate(code, {
@@ -364,32 +332,16 @@ function SignupPage() {
             <FieldGroup className="gap-5">
               <Field>
                 <FieldLabel htmlFor="otp">کد پیامکی</FieldLabel>
-                <div dir="ltr" className="flex justify-center">
-                  <InputOTP
-                    id="otp"
-                    maxLength={6}
-                    value={otp}
-                    onChange={(value) => {
-                      setOtp(toLatinDigits(value).replace(/\D/g, ''))
-                      setOtpError(null)
-                    }}
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    disabled={verifyOtp.isPending}
-                    containerClassName="justify-center gap-2"
-                  >
-                    <InputOTPGroup className="gap-2">
-                      {Array.from({ length: 6 }, (_, index) => (
-                        <InputOTPSlot
-                          key={index}
-                          index={index}
-                          aria-invalid={Boolean(otpError)}
-                          className="h-12 w-11 rounded-xl border bg-card text-lg font-bold"
-                        />
-                      ))}
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
+                <OtpCodeInput
+                  value={otp}
+                  onValueChange={(value) => {
+                    setOtp(value)
+                    setOtpError(null)
+                  }}
+                  disabled={verifyOtp.isPending}
+                  invalid={Boolean(otpError)}
+                  slotClassName="h-12 w-11 bg-card"
+                />
                 {otpError && <FieldError>{otpError}</FieldError>}
               </Field>
 
