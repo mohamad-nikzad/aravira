@@ -109,6 +109,30 @@ import {
   getPublicAvailabilityRoute,
   getPublicSalonRoute,
 } from './routes/public'
+import {
+  createAdminCatalogPresetRoute,
+  createAdminSalonNoteRoute,
+  createAdminUserNoteRoute,
+  createPlatformAdminRoute,
+  getAdminMeRoute,
+  getAdminMessagingHealthRoute,
+  getAdminOverviewRoute,
+  getAdminSalonRoute,
+  getAdminUserRoute,
+  listAdminAuditLogRoute,
+  listAdminCatalogPresetsRoute,
+  listAdminNotificationDeliveriesRoute,
+  listAdminSalonNotesRoute,
+  listAdminSalonsRoute,
+  listAdminSupportAppointmentRequestsRoute,
+  listAdminSupportAppointmentsRoute,
+  listAdminUserNotesRoute,
+  listAdminUsersRoute,
+  listPlatformAdminsRoute,
+  updateAdminCatalogPresetRoute,
+  updateAdminSalonStatusRoute,
+  updatePlatformAdminRoute,
+} from './routes/admin'
 
 const stubClient = {
   id: 'stub',
@@ -354,6 +378,104 @@ const listCatalogPresetsStub: RouteHandler<typeof listCatalogPresetsRoute> = (c)
 
 const applyCatalogPresetStub: RouteHandler<typeof applyCatalogPresetRoute> = (c) =>
   c.json({ importedCategoryIds: [], importedVariantIds: [] }, 200)
+
+const adminListStub = {
+  items: [],
+  pagination: { page: 1, pageSize: 25, total: 0 },
+}
+
+const stubPlatformAdmin = {
+  id: 'stub',
+  userId: '00000000-0000-0000-0000-000000000000',
+  role: 'platform_owner' as const,
+  active: true,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+}
+
+const getAdminMeStub: RouteHandler<typeof getAdminMeRoute> = (c) =>
+  c.json({
+    user: {
+      userId: '00000000-0000-0000-0000-000000000000',
+      name: 'stub',
+      email: 'stub@example.com',
+      phoneNumber: null,
+      username: null,
+      role: 'platform_owner',
+      active: true,
+    },
+  }, 200)
+
+const getAdminOverviewStub: RouteHandler<typeof getAdminOverviewRoute> = (c) =>
+  c.json({
+    salonsByStatus: { active: 0, suspended: 0, archived: 0 },
+    failedDeliveries: 0,
+    messagingAccounts: [],
+    recentAuditEvents: [],
+  }, 200)
+
+const listAdminSalonsStub: RouteHandler<typeof listAdminSalonsRoute> = (c) =>
+  c.json(adminListStub, 200)
+
+const getAdminSalonStub: RouteHandler<typeof getAdminSalonRoute> = (c) =>
+  c.json({ salon: {}, members: [], stats: {} }, 200)
+
+const updateAdminSalonStatusStub: RouteHandler<typeof updateAdminSalonStatusRoute> = (c) =>
+  c.json({ salon: { salonId: 'stub', status: 'active' } }, 200)
+
+const listAdminSalonNotesStub: RouteHandler<typeof listAdminSalonNotesRoute> = (c) =>
+  c.json({ notes: [] }, 200)
+
+const createAdminSalonNoteStub: RouteHandler<typeof createAdminSalonNoteRoute> = (c) =>
+  c.json({ note: {} }, 201)
+
+const listAdminUsersStub: RouteHandler<typeof listAdminUsersRoute> = (c) =>
+  c.json(adminListStub, 200)
+
+const getAdminUserStub: RouteHandler<typeof getAdminUserRoute> = (c) =>
+  c.json({ user: {}, memberships: [], messagingAccounts: [] }, 200)
+
+const listAdminUserNotesStub: RouteHandler<typeof listAdminUserNotesRoute> = (c) =>
+  c.json({ notes: [] }, 200)
+
+const createAdminUserNoteStub: RouteHandler<typeof createAdminUserNoteRoute> = (c) =>
+  c.json({ note: {} }, 201)
+
+const listAdminCatalogPresetsStub: RouteHandler<typeof listAdminCatalogPresetsRoute> = (c) =>
+  c.json(adminListStub, 200)
+
+const createAdminCatalogPresetStub: RouteHandler<typeof createAdminCatalogPresetRoute> = (c) =>
+  c.json({ preset: stubCatalogPreset }, 201)
+
+const updateAdminCatalogPresetStub: RouteHandler<typeof updateAdminCatalogPresetRoute> = (c) =>
+  c.json({ preset: stubCatalogPreset }, 200)
+
+const getAdminMessagingHealthStub: RouteHandler<typeof getAdminMessagingHealthRoute> = (c) =>
+  c.json({ accounts: [], failedNotifications: [], failedFollowUps: [] }, 200)
+
+const listAdminNotificationDeliveriesStub: RouteHandler<
+  typeof listAdminNotificationDeliveriesRoute
+> = (c) => c.json(adminListStub, 200)
+
+const listAdminSupportAppointmentsStub: RouteHandler<
+  typeof listAdminSupportAppointmentsRoute
+> = (c) => c.json(adminListStub, 200)
+
+const listAdminSupportAppointmentRequestsStub: RouteHandler<
+  typeof listAdminSupportAppointmentRequestsRoute
+> = (c) => c.json(adminListStub, 200)
+
+const listAdminAuditLogStub: RouteHandler<typeof listAdminAuditLogRoute> = (c) =>
+  c.json(adminListStub, 200)
+
+const listPlatformAdminsStub: RouteHandler<typeof listPlatformAdminsRoute> = (c) =>
+  c.json(adminListStub, 200)
+
+const createPlatformAdminStub: RouteHandler<typeof createPlatformAdminRoute> = (c) =>
+  c.json({ admin: stubPlatformAdmin }, 201)
+
+const updatePlatformAdminStub: RouteHandler<typeof updatePlatformAdminRoute> = (c) =>
+  c.json({ admin: stubPlatformAdmin }, 200)
 
 const stubAppointment = {
   id: 'stub',
@@ -730,6 +852,35 @@ const cancelPublicAppointmentRequestStub: RouteHandler<
  */
 export const contractApp = new OpenAPIHono()
   .route(
+    '/api/v1/admin',
+    new OpenAPIHono()
+      .openapi(getAdminMeRoute, getAdminMeStub)
+      .openapi(getAdminOverviewRoute, getAdminOverviewStub)
+      .openapi(listAdminSalonsRoute, listAdminSalonsStub)
+      .openapi(getAdminSalonRoute, getAdminSalonStub)
+      .openapi(updateAdminSalonStatusRoute, updateAdminSalonStatusStub)
+      .openapi(listAdminSalonNotesRoute, listAdminSalonNotesStub)
+      .openapi(createAdminSalonNoteRoute, createAdminSalonNoteStub)
+      .openapi(listAdminUsersRoute, listAdminUsersStub)
+      .openapi(getAdminUserRoute, getAdminUserStub)
+      .openapi(listAdminUserNotesRoute, listAdminUserNotesStub)
+      .openapi(createAdminUserNoteRoute, createAdminUserNoteStub)
+      .openapi(listAdminCatalogPresetsRoute, listAdminCatalogPresetsStub)
+      .openapi(createAdminCatalogPresetRoute, createAdminCatalogPresetStub)
+      .openapi(updateAdminCatalogPresetRoute, updateAdminCatalogPresetStub)
+      .openapi(getAdminMessagingHealthRoute, getAdminMessagingHealthStub)
+      .openapi(listAdminNotificationDeliveriesRoute, listAdminNotificationDeliveriesStub)
+      .openapi(listAdminSupportAppointmentsRoute, listAdminSupportAppointmentsStub)
+      .openapi(
+        listAdminSupportAppointmentRequestsRoute,
+        listAdminSupportAppointmentRequestsStub,
+      )
+      .openapi(listAdminAuditLogRoute, listAdminAuditLogStub)
+      .openapi(listPlatformAdminsRoute, listPlatformAdminsStub)
+      .openapi(createPlatformAdminRoute, createPlatformAdminStub)
+      .openapi(updatePlatformAdminRoute, updatePlatformAdminStub),
+  )
+  .route(
     '/api/v1/clients',
     new OpenAPIHono()
       .openapi(listClientsRoute, listClientsStub)
@@ -886,7 +1037,7 @@ export const openApiDocumentConfig = {
     version: '0.8.0',
     description:
       'Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. ' +
-      'This contract is expanded incrementally; clients, staff, services catalog, appointments, appointment-requests, settings, salon-profile, salon-public-settings, onboarding, dashboard, today, retention, messaging, notifications, notification-preferences, and public booking route groups are documented.',
+      'This contract is expanded incrementally; admin, clients, staff, services catalog, appointments, appointment-requests, settings, salon-profile, salon-public-settings, onboarding, dashboard, today, retention, messaging, notifications, notification-preferences, and public booking route groups are documented.',
   },
   servers: [{ url: '', description: 'Saluna API (paths include /api/v1 prefix)' }],
   tags: [
@@ -945,6 +1096,10 @@ export const openApiDocumentConfig = {
     {
       name: 'Public booking',
       description: 'Unauthenticated public salon page and appointment request flows',
+    },
+    {
+      name: 'Admin',
+      description: 'Internal Saluna platform admin APIs',
     },
   ],
   components: {
