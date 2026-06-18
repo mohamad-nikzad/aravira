@@ -32,9 +32,11 @@ import {
   verifyBypassAuthPhoneOtp,
 } from './phone-otp'
 
-const trustedOrigins = [process.env.PWA_ORIGIN].filter(
-  (origin): origin is string => Boolean(origin),
-)
+const trustedOrigins = [
+  process.env.PWA_ORIGIN,
+  process.env.ADMIN_ORIGIN,
+  process.env.NODE_ENV !== 'production' ? 'http://localhost:3003' : undefined,
+].filter((origin): origin is string => Boolean(origin))
 const otpConfig = readAuthOtpConfig()
 
 export const auth = betterAuth({

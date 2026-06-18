@@ -7,11 +7,12 @@ import { LayoutProvider } from '#/context/layout-provider'
 import { SearchProvider } from '#/context/search-provider'
 import { ThemeProvider } from '#/context/theme-provider'
 import { queryClient } from '#/lib/query-client'
-import { router } from '#/router'
+import { getRouter } from '#/router'
 
 import './styles/index.css'
 
 const rootElement = document.getElementById('app')!
+const router = getRouter({ queryClient })
 
 if (!rootElement.innerHTML) {
   ReactDOM.createRoot(rootElement).render(

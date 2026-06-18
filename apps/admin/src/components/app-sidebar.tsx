@@ -1,14 +1,7 @@
-import {
-  GalleryVerticalEnd,
-  LifeBuoy,
-  ScrollText,
-  Send,
-  ShieldCheck,
-} from 'lucide-react'
+import { GalleryVerticalEnd } from 'lucide-react'
 
 import { adminNavGroups } from '#/components/layout/nav-items'
 import { NavMain } from '#/components/nav-main'
-import { NavProjects } from '#/components/nav-projects'
 import { NavUser } from '#/components/nav-user'
 import { TeamSwitcher } from '#/components/team-switcher'
 import {
@@ -18,46 +11,27 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '#/components/ui/sidebar'
+import { useAdminAuth } from '#/context/admin-auth-provider'
 
 const data = {
   user: {
-    name: 'Platform Admin',
+    name: 'ادمین پلتفرم',
     email: 'owner@saluna.ir',
     avatar: '',
   },
   teams: [
     {
-      name: 'Saluna Admin',
+      name: 'ادمین سالونا',
       logo: GalleryVerticalEnd,
-      plan: 'Internal Operations',
+      plan: 'عملیات داخلی',
     },
   ],
   navMain: adminNavGroups,
-  projects: [
-    {
-      name: 'Audit Log',
-      url: '/audit-log',
-      icon: ScrollText,
-    },
-    {
-      name: 'Platform Admins',
-      url: '/platform-admins',
-      icon: ShieldCheck,
-    },
-    {
-      name: 'Support Lookup',
-      url: '/support-lookup',
-      icon: LifeBuoy,
-    },
-    {
-      name: 'Messaging Health',
-      url: '/messaging-health',
-      icon: Send,
-    },
-  ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { me } = useAdminAuth()
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -65,10 +39,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser
+          user={{
+            name: me.name || data.user.name,
+            email: me.email || me.phoneNumber || me.username || data.user.email,
+            avatar: '',
+          }}
+        />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
