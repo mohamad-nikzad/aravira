@@ -64,7 +64,7 @@ const authHeaders = { Authorization: 'Bearer testtoken' }
 const salonId = '11111111-1111-4111-8111-111111111111'
 
 beforeEach(() => {
-  vi.clearAllMocks()
+  vi.resetAllMocks()
   vi.mocked(authServer.api.getSession).mockResolvedValue({
     user: { id: 'admin-user-1' },
   } as never)
@@ -183,6 +183,11 @@ describe('admin runtime data source', () => {
   })
 
   it('lists and creates internal salon notes with a reason', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: { id: salonId, name: 'Aftab', status: 'active' },
+      members: [],
+      stats: { services: 0, appointments: 0 },
+    } as never)
     vi.mocked(listAdminInternalNotes).mockResolvedValue([
       {
         id: 'note-1',
@@ -247,5 +252,23 @@ describe('admin runtime data source', () => {
         reason: 'Support context',
       }),
     )
+  })
+
+  it('does not create internal salon notes for a missing salon', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue(undefined)
+
+    const res = await app.request(`/api/v1/admin/salons/${salonId}/notes`, {
+      method: 'POST',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        body: 'Follow up',
+        reason: 'Support context',
+      }),
+    })
+
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: 'سالن یافت نشد' })
+    expect(createAdminInternalNote).not.toHaveBeenCalled()
+    expect(createAdminAuditEvent).not.toHaveBeenCalled()
   })
 })

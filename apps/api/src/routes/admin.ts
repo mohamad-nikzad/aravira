@@ -149,6 +149,15 @@ async function writeAudit(input: {
   })
 }
 
+async function requireExistingSalon(
+  c: Parameters<typeof error>[0],
+  id: string,
+) {
+  const salon = await getAdminSalon(id)
+  if (salon) return null
+  return error(c, 'سالن یافت نشد', 404)
+}
+
 export const adminRoute = new Hono<AppEnv>()
   .use('*', requirePlatformAdmin('view_admin'))
   .get('/auth/me', async (c) => {
@@ -214,6 +223,8 @@ export const adminRoute = new Hono<AppEnv>()
     zValidator('param', idParamSchema),
     async (c) => {
       const { id } = c.req.valid('param')
+      const missingSalon = await requireExistingSalon(c, id)
+      if (missingSalon) return missingSalon
       return ok(c, {
         notes: await listAdminInternalNotes({
           subjectType: 'salon',
@@ -230,6 +241,8 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
+      const missingSalon = await requireExistingSalon(c, id)
+      if (missingSalon) return missingSalon
       const note = await createAdminInternalNote({
         subjectType: 'salon',
         subjectId: id,

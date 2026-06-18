@@ -66,6 +66,10 @@ type AdminListQueryOptions = UseQueryOptions<
   readonly unknown[]
 >
 
+type MutationSubmitOptions = {
+  onSuccess?: () => void
+}
+
 export function SalonsListPage() {
   return (
     <>
@@ -193,6 +197,12 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
         queryKey: getApiV1AdminSalonsByIdNotesQueryKey({
           path: { id: salonId },
         }),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: getApiV1AdminSalonsByIdQueryKey({ path: { id: salonId } }),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: getApiV1AdminOverviewQueryKey(),
       })
     },
   })
@@ -341,20 +351,30 @@ function StatusForm({
   error: unknown
   isLiveData: boolean
   pending: boolean
-  onSubmit: (input: AdminSalonStatusUpdateRequest) => void
+  onSubmit: (
+    input: AdminSalonStatusUpdateRequest,
+    options?: MutationSubmitOptions,
+  ) => void
 }) {
   const [open, setOpen] = useState(false)
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const formElement = event.currentTarget
     const form = new FormData(event.currentTarget)
-    onSubmit({
-      status: normalizeStatus(form.get('status')),
-      reason: String(form.get('reason') ?? ''),
-      liveConfirmation: liveConfirmationFromForm(form, isLiveData),
-    })
-    event.currentTarget.reset()
-    setOpen(false)
+    onSubmit(
+      {
+        status: normalizeStatus(form.get('status')),
+        reason: String(form.get('reason') ?? ''),
+        liveConfirmation: liveConfirmationFromForm(form, isLiveData),
+      },
+      {
+        onSuccess: () => {
+          formElement.reset()
+          setOpen(false)
+        },
+      },
+    )
   }
 
   return (
@@ -379,7 +399,11 @@ function StatusForm({
                 برای ثبت تغییر وضعیت، دلیل ممیزی را وارد کنید.
               </DialogDescription>
             </DialogHeader>
-            <form className="space-y-3" onSubmit={submit}>
+            <form
+              aria-label="تغییر وضعیت سالن"
+              className="space-y-3"
+              onSubmit={submit}
+            >
               <LiveDataWarning show={isLiveData} />
               <SelectField
                 label="وضعیت"
@@ -424,16 +448,26 @@ function NotesPanel({
   isLoading: boolean
   notes: AdminNotesResponse['notes']
   pending: boolean
-  onSubmit: (input: AdminNoteCreateRequest) => void
+  onSubmit: (
+    input: AdminNoteCreateRequest,
+    options?: MutationSubmitOptions,
+  ) => void
 }) {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const formElement = event.currentTarget
     const form = new FormData(event.currentTarget)
-    onSubmit({
-      body: String(form.get('body') ?? ''),
-      reason: String(form.get('reason') ?? ''),
-    })
-    event.currentTarget.reset()
+    onSubmit(
+      {
+        body: String(form.get('body') ?? ''),
+        reason: String(form.get('reason') ?? ''),
+      },
+      {
+        onSuccess: () => {
+          formElement.reset()
+        },
+      },
+    )
   }
 
   return (
