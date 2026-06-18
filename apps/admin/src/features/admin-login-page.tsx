@@ -1,3 +1,5 @@
+import { ApiError } from '@repo/api-client/errors'
+import { getApiV1AdminAuthMe } from '@repo/api-client/sdk'
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { LogIn, ShieldAlert } from 'lucide-react'
@@ -6,7 +8,6 @@ import { useState, type FormEvent } from 'react'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent } from '#/components/ui/card'
 import { Input } from '#/components/ui/input'
-import { AdminApiError, adminApi } from '#/lib/admin-api'
 
 async function signIn(input: { phoneNumber: string; password: string }) {
   const response = await fetch('/api/v1/auth/sign-in/phone-number', {
@@ -34,13 +35,13 @@ export function AdminLoginPage() {
   const loginMutation = useMutation({
     mutationFn: async (input: { phoneNumber: string; password: string }) => {
       await signIn(input)
-      await adminApi.me()
+      await getApiV1AdminAuthMe({ throwOnError: true })
     },
     onSuccess: async () => {
       await navigate({ to: '/overview', replace: true })
     },
     onError: (caught) => {
-      if (caught instanceof AdminApiError && caught.status === 403) {
+      if (caught instanceof ApiError && caught.status === 403) {
         setError('این حساب وارد شده، اما ادمین فعال پلتفرم نیست.')
         return
       }

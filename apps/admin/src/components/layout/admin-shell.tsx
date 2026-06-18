@@ -1,3 +1,5 @@
+import { ApiError } from '@repo/api-client/errors'
+import { getApiV1AdminAuthMeOptions } from '@repo/api-client/query'
 import { Outlet } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { LogIn, ShieldAlert } from 'lucide-react'
@@ -11,12 +13,10 @@ import { Card, CardContent } from '#/components/ui/card'
 import { SidebarInset, SidebarProvider } from '#/components/ui/sidebar'
 import { Skeleton } from '#/components/ui/skeleton'
 import { AdminAuthProvider } from '#/context/admin-auth-provider'
-import { AdminApiError, adminApi } from '#/lib/admin-api'
 
 export function AdminShell({ children }: { children?: ReactNode }) {
   const meQuery = useQuery({
-    queryKey: ['admin', 'me'],
-    queryFn: adminApi.me,
+    ...getApiV1AdminAuthMeOptions(),
     retry: false,
   })
 
@@ -35,8 +35,7 @@ export function AdminShell({ children }: { children?: ReactNode }) {
   }
 
   if (meQuery.isError) {
-    const status =
-      meQuery.error instanceof AdminApiError ? meQuery.error.status : 500
+    const status = meQuery.error instanceof ApiError ? meQuery.error.status : 500
     const isUnauthenticated = status === 401
     return (
       <main className="grid min-h-svh place-items-center bg-sidebar p-4">

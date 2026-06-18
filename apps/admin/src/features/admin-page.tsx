@@ -1,6 +1,39 @@
-import type { AdminSalonStatus, PlatformRole } from '@repo/api-client/types'
+import {
+  getApiV1AdminAuditLogOptions,
+  getApiV1AdminCatalogPresetsOptions,
+  getApiV1AdminCatalogPresetsQueryKey,
+  getApiV1AdminMessagingHealthOptions,
+  getApiV1AdminNotificationsDeliveriesOptions,
+  getApiV1AdminOverviewOptions,
+  getApiV1AdminOverviewQueryKey,
+  getApiV1AdminPlatformAdminsOptions,
+  getApiV1AdminPlatformAdminsQueryKey,
+  getApiV1AdminSalonsByIdNotesOptions,
+  getApiV1AdminSalonsByIdNotesQueryKey,
+  getApiV1AdminSalonsByIdOptions,
+  getApiV1AdminSalonsByIdQueryKey,
+  getApiV1AdminSalonsOptions,
+  getApiV1AdminSalonsQueryKey,
+  getApiV1AdminSupportAppointmentRequestsOptions,
+  getApiV1AdminSupportAppointmentsOptions,
+  getApiV1AdminUsersByIdNotesOptions,
+  getApiV1AdminUsersByIdOptions,
+  getApiV1AdminUsersOptions,
+  patchApiV1AdminCatalogPresetsByIdMutation,
+  patchApiV1AdminPlatformAdminsByIdMutation,
+  patchApiV1AdminSalonsByIdStatusMutation,
+  postApiV1AdminCatalogPresetsMutation,
+  postApiV1AdminPlatformAdminsMutation,
+  postApiV1AdminSalonsByIdNotesMutation,
+  postApiV1AdminUsersByIdNotesMutation,
+} from '@repo/api-client/query'
+import type {
+  AdminSalonStatus,
+  PlatformRole,
+} from '@repo/api-client/types'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { UseQueryOptions } from '@tanstack/react-query'
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import {
   Activity,
@@ -36,7 +69,6 @@ import {
 import { Skeleton } from '#/components/ui/skeleton'
 import { useAdminAuth } from '#/context/admin-auth-provider'
 import { useTableUrlState } from '#/hooks/use-table-url-state'
-import { adminApi } from '#/lib/admin-api'
 import { cn } from '#/lib/utils'
 
 type AdminPageId =
@@ -52,6 +84,12 @@ type AdminPageId =
 
 type RecordRow = Record<string, unknown>
 
+type ListParams = {
+  page: number
+  pageSize: number
+  search?: string
+}
+
 type ListResult = {
   items: RecordRow[]
   pagination: {
@@ -60,6 +98,13 @@ type ListResult = {
     total: number
   }
 }
+
+type AdminListQueryOptions = UseQueryOptions<
+  ListResult,
+  unknown,
+  ListResult,
+  readonly unknown[]
+>
 
 type PageConfig = {
   title: string
@@ -140,10 +185,7 @@ function HeaderAction({ pageId }: { pageId: AdminPageId }) {
 }
 
 function OverviewScreen() {
-  const overviewQuery = useQuery({
-    queryKey: ['admin', 'overview'],
-    queryFn: adminApi.overview,
-  })
+  const overviewQuery = useQuery(getApiV1AdminOverviewOptions())
   const data = overviewQuery.data
   const cards = [
     {
@@ -283,9 +325,10 @@ function SalonsScreen() {
   return (
     <>
       <AdminListTable
-        queryKey="salons"
         columns={columns}
-        fetcher={adminApi.salons}
+        queryOptionsFor={(params) =>
+          getApiV1AdminSalonsOptions({ query: params })
+        }
         searchPlaceholder="جستجو بر اساس نام سالن، اسلاگ یا شماره موبایل..."
       />
       <SalonSheet
@@ -308,33 +351,32 @@ function SalonSheet({
   const isLiveData = runtime.dataSource === 'live'
   const id = text(row?.id)
   const detailQuery = useQuery({
-    queryKey: ['admin', 'salon', id],
-    queryFn: () => adminApi.salon(id),
+    ...getApiV1AdminSalonsByIdOptions({ path: { id } }),
     enabled: Boolean(id),
   })
   const notesQuery = useQuery({
-    queryKey: ['admin', 'salon-notes', id],
-    queryFn: () => adminApi.salonNotes(id),
+    ...getApiV1AdminSalonsByIdNotesOptions({ path: { id } }),
     enabled: Boolean(id),
   })
   const statusMutation = useMutation({
-    mutationFn: (input: {
-      status: AdminSalonStatus
-      reason: string
-      liveConfirmation?: string
-    }) => adminApi.updateSalonStatus(id, input),
+    ...patchApiV1AdminSalonsByIdStatusMutation(),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'salons'] })
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'salon', id] })
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] })
+      void queryClient.invalidateQueries({
+        queryKey: getApiV1AdminSalonsQueryKey(),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: getApiV1AdminSalonsByIdQueryKey({ path: { id } }),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: getApiV1AdminOverviewQueryKey(),
+      })
     },
   })
   const noteMutation = useMutation({
-    mutationFn: (input: { body: string; reason: string }) =>
-      adminApi.createSalonNote(id, input),
+    ...postApiV1AdminSalonsByIdNotesMutation(),
     onSuccess: () =>
       void queryClient.invalidateQueries({
-        queryKey: ['admin', 'salon-notes', id],
+        queryKey: getApiV1AdminSalonsByIdNotesQueryKey({ path: { id } }),
       }),
   })
   const salon = detailQuery.data?.salon ?? row ?? {}
@@ -367,7 +409,9 @@ function SalonSheet({
             current={text(salon.status) as AdminSalonStatus}
             isLiveData={isLiveData}
             pending={statusMutation.isPending}
-            onSubmit={(input) => statusMutation.mutate(input)}
+            onSubmit={(input) =>
+              statusMutation.mutate({ path: { id }, body: input })
+            }
           />
           <Panel title="اعضا">
             <CompactRows
@@ -382,7 +426,9 @@ function SalonSheet({
           <NotesPanel
             notes={notesQuery.data?.notes ?? []}
             pending={noteMutation.isPending}
-            onSubmit={(input) => noteMutation.mutate(input)}
+            onSubmit={(input) =>
+              noteMutation.mutate({ path: { id }, body: input })
+            }
           />
         </div>
       </SheetContent>
@@ -439,9 +485,10 @@ function UsersScreen() {
   return (
     <>
       <AdminListTable
-        queryKey="users"
         columns={columns}
-        fetcher={adminApi.users}
+        queryOptionsFor={(params) =>
+          getApiV1AdminUsersOptions({ query: params })
+        }
         searchPlaceholder="جستجو بر اساس نام، ایمیل، موبایل یا نام کاربری..."
       />
       <UserSheet
@@ -462,21 +509,19 @@ function UserSheet({
   const queryClient = useQueryClient()
   const id = text(row?.id)
   const detailQuery = useQuery({
-    queryKey: ['admin', 'user', id],
-    queryFn: () => adminApi.user(id),
+    ...getApiV1AdminUsersByIdOptions({ path: { id } }),
     enabled: Boolean(id),
   })
   const notesQuery = useQuery({
-    queryKey: ['admin', 'user-notes', id],
-    queryFn: () => adminApi.userNotes(id),
+    ...getApiV1AdminUsersByIdNotesOptions({ path: { id } }),
     enabled: Boolean(id),
   })
   const noteMutation = useMutation({
-    mutationFn: (input: { body: string; reason: string }) =>
-      adminApi.createUserNote(id, input),
+    ...postApiV1AdminUsersByIdNotesMutation(),
     onSuccess: () =>
       void queryClient.invalidateQueries({
-        queryKey: ['admin', 'user-notes', id],
+        queryKey: getApiV1AdminUsersByIdNotesOptions({ path: { id } })
+          .queryKey,
       }),
   })
   const user = detailQuery.data?.user ?? row ?? {}
@@ -532,7 +577,9 @@ function UserSheet({
           <NotesPanel
             notes={notesQuery.data?.notes ?? []}
             pending={noteMutation.isPending}
-            onSubmit={(input) => noteMutation.mutate(input)}
+            onSubmit={(input) =>
+              noteMutation.mutate({ path: { id }, body: input })
+            }
           />
         </div>
       </SheetContent>
@@ -594,9 +641,10 @@ function CatalogPresetsScreen() {
   return (
     <>
       <AdminListTable
-        queryKey="catalog-presets"
         columns={columns}
-        fetcher={adminApi.catalogPresets}
+        queryOptionsFor={(params) =>
+          getApiV1AdminCatalogPresetsOptions({ query: params })
+        }
         searchPlaceholder="جستجو در قالب‌های کاتالوگ..."
         actions={
           <Button size="sm" onClick={() => setEditing('new')}>
@@ -610,7 +658,7 @@ function CatalogPresetsScreen() {
         onOpenChange={(open) => !open && setEditing(null)}
         onSaved={() =>
           void queryClient.invalidateQueries({
-            queryKey: ['admin', 'catalog-presets'],
+            queryKey: getApiV1AdminCatalogPresetsQueryKey(),
           })
         }
       />
@@ -629,24 +677,21 @@ function CatalogPresetSheet({
 }) {
   const isNew = preset === 'new'
   const source = preset && preset !== 'new' ? preset : {}
-  const mutation = useMutation({
-    mutationFn: (input: {
-      slug: string
-      name: string
-      description: string | null
-      tree: RecordRow[]
-      sortOrder: number
-      isActive: boolean
-      reason: string
-    }) => {
-      if (isNew) return adminApi.createCatalogPreset(input)
-      return adminApi.updateCatalogPreset(text(source.id), input)
-    },
+  const createMutation = useMutation({
+    ...postApiV1AdminCatalogPresetsMutation(),
     onSuccess: () => {
       onSaved()
       onOpenChange(false)
     },
   })
+  const updateMutation = useMutation({
+    ...patchApiV1AdminCatalogPresetsByIdMutation(),
+    onSuccess: () => {
+      onSaved()
+      onOpenChange(false)
+    },
+  })
+  const activeMutation = isNew ? createMutation : updateMutation
 
   return (
     <Sheet open={Boolean(preset)} onOpenChange={onOpenChange}>
@@ -661,9 +706,18 @@ function CatalogPresetSheet({
         </SheetHeader>
         <CatalogPresetForm
           source={source}
-          pending={mutation.isPending}
-          error={mutation.error}
-          onSubmit={(input) => mutation.mutate(input)}
+          pending={activeMutation.isPending}
+          error={activeMutation.error}
+          onSubmit={(input) => {
+            if (isNew) {
+              createMutation.mutate({ body: input })
+              return
+            }
+            updateMutation.mutate({
+              path: { id: text(source.id) },
+              body: input,
+            })
+          }}
         />
       </SheetContent>
     </Sheet>
@@ -778,10 +832,7 @@ function CatalogPresetForm({
 }
 
 function MessagingHealthScreen() {
-  const healthQuery = useQuery({
-    queryKey: ['admin', 'messaging-health'],
-    queryFn: adminApi.messagingHealth,
-  })
+  const healthQuery = useQuery(getApiV1AdminMessagingHealthOptions())
   const columns = useMemo<ColumnDef<RecordRow>[]>(
     () => [
       {
@@ -862,9 +913,10 @@ function MessagingHealthScreen() {
         </Panel>
       </section>
       <AdminListTable
-        queryKey="notification-deliveries"
         columns={columns}
-        fetcher={adminApi.notificationDeliveries}
+        queryOptionsFor={(params) =>
+          getApiV1AdminNotificationsDeliveriesOptions({ query: params })
+        }
         searchPlaceholder="جستجو در آخرین ارسال‌های اعلان..."
       />
     </div>
@@ -965,12 +1017,13 @@ function SupportLookupScreen() {
       </div>
       <AdminListTable
         key={kind}
-        queryKey={`support-${kind}`}
         columns={columns}
-        fetcher={
+        queryOptionsFor={(params) =>
           kind === 'appointments'
-            ? adminApi.supportAppointments
-            : adminApi.supportAppointmentRequests
+            ? getApiV1AdminSupportAppointmentsOptions({ query: params })
+            : getApiV1AdminSupportAppointmentRequestsOptions({
+                query: params,
+              })
         }
         searchPlaceholder="جستجو بر اساس مشتری، موبایل یا خدمت..."
       />
@@ -1044,15 +1097,10 @@ function AuditLogScreen() {
         )}
       </div>
       <AdminListTable
-        queryKey="audit-log"
-        queryIdentity={[
-          filters.action,
-          filters.targetType,
-          filters.targetId,
-          filters.salonId,
-        ]}
         columns={columns}
-        fetcher={(params) => adminApi.auditLog({ ...params, ...filters })}
+        queryOptionsFor={(params) =>
+          getApiV1AdminAuditLogOptions({ query: { ...params, ...filters } })
+        }
         searchPlaceholder="برای فیلتر دقیق لاگ ممیزی از فیلدهای بالا استفاده کنید."
       />
     </div>
@@ -1115,9 +1163,10 @@ function PlatformAdminsScreen() {
   return (
     <>
       <AdminListTable
-        queryKey="platform-admins"
         columns={columns}
-        fetcher={adminApi.platformAdmins}
+        queryOptionsFor={(params) =>
+          getApiV1AdminPlatformAdminsOptions({ query: params })
+        }
         searchPlaceholder="جستجو بر اساس نام، ایمیل، موبایل یا نام کاربری..."
         actions={
           <Button size="sm" onClick={() => setSelected('new')}>
@@ -1131,7 +1180,7 @@ function PlatformAdminsScreen() {
         onOpenChange={(open) => !open && setSelected(null)}
         onSaved={() =>
           void queryClient.invalidateQueries({
-            queryKey: ['admin', 'platform-admins'],
+            queryKey: getApiV1AdminPlatformAdminsQueryKey(),
           })
         }
       />
@@ -1152,37 +1201,44 @@ function PlatformAdminSheet({
   const { runtime } = useAdminAuth()
   const isLiveData = runtime.dataSource === 'live'
   const source = admin && admin !== 'new' ? admin : {}
-  const mutation = useMutation({
-    mutationFn: (input: {
-      userId: string
-      role: PlatformRole
-      active: boolean
-      reason: string
-      liveConfirmation?: string
-    }) => {
-      if (isNew) return adminApi.createPlatformAdmin(input)
-      return adminApi.updatePlatformAdmin(text(source.id), {
-        role: input.role,
-        active: input.active,
-        reason: input.reason,
-        liveConfirmation: input.liveConfirmation,
-      })
-    },
+  const createMutation = useMutation({
+    ...postApiV1AdminPlatformAdminsMutation(),
     onSuccess: () => {
       onSaved()
       onOpenChange(false)
     },
   })
+  const updateMutation = useMutation({
+    ...patchApiV1AdminPlatformAdminsByIdMutation(),
+    onSuccess: () => {
+      onSaved()
+      onOpenChange(false)
+    },
+  })
+  const activeMutation = isNew ? createMutation : updateMutation
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
-    mutation.mutate({
+    const body = {
       userId: String(form.get('userId') ?? ''),
       role: String(form.get('role') ?? 'platform_viewer') as PlatformRole,
       active: form.get('active') === 'on',
       reason: String(form.get('reason') ?? ''),
       liveConfirmation: liveConfirmationFromForm(form, isLiveData),
+    }
+    if (isNew) {
+      createMutation.mutate({ body })
+      return
+    }
+    updateMutation.mutate({
+      path: { id: text(source.id) },
+      body: {
+        role: body.role,
+        active: body.active,
+        reason: body.reason,
+        liveConfirmation: body.liveConfirmation,
+      },
     })
   }
 
@@ -1225,8 +1281,8 @@ function PlatformAdminSheet({
           </label>
           <TextAreaField label="دلیل" name="reason" rows={3} required />
           <LiveConfirmationInput show={isLiveData} />
-          <MutationError error={mutation.error} />
-          <Button disabled={mutation.isPending} type="submit">
+          <MutationError error={activeMutation.error} />
+          <Button disabled={activeMutation.isPending} type="submit">
             <ShieldCheck className="h-4 w-4" />
             ذخیره دسترسی
           </Button>
@@ -1260,21 +1316,13 @@ function SettingsScreen() {
 }
 
 function AdminListTable({
-  queryKey,
   columns,
-  fetcher,
+  queryOptionsFor,
   searchPlaceholder,
   actions,
-  queryIdentity = [],
 }: {
-  queryKey: string
-  queryIdentity?: unknown[]
   columns: ColumnDef<RecordRow>[]
-  fetcher: (params: {
-    page: number
-    pageSize: number
-    search?: string
-  }) => Promise<ListResult>
+  queryOptionsFor: (params: ListParams) => unknown
   searchPlaceholder: string
   actions?: ReactNode
 }) {
@@ -1283,22 +1331,13 @@ function AdminListTable({
     pageIndex: Math.max(tableState.page - 1, 0),
     pageSize: tableState.pageSize,
   }
-  const listQuery = useQuery({
-    queryKey: [
-      'admin',
-      queryKey,
-      tableState.page,
-      tableState.pageSize,
-      tableState.query,
-      ...queryIdentity,
-    ],
-    queryFn: () =>
-      fetcher({
-        page: tableState.page,
-        pageSize: tableState.pageSize,
-        search: tableState.query || undefined,
-      }),
-  })
+  const listQuery = useQuery(
+    queryOptionsFor({
+      page: tableState.page,
+      pageSize: tableState.pageSize,
+      search: tableState.query || undefined,
+    }) as AdminListQueryOptions,
+  )
   const total = listQuery.data?.pagination.total ?? 0
   const pageCount = Math.max(1, Math.ceil(total / tableState.pageSize))
 
