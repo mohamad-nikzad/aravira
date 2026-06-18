@@ -26,7 +26,7 @@ Triage label for all issues: `needs-triage`
    - **Blocked by**: ADMIN-001, ADMIN-003
    - **User stories covered**: Platform admin can land on `/overview` and see real platform metrics plus recent audit activity.
 
-5. **ADMIN-005: Rebuild Salons list and salon operations**
+5. **ADMIN-005: Rebuild Salons list and salon operations** ✅
    - **Type**: AFK
    - **Blocked by**: ADMIN-001, ADMIN-002, ADMIN-003
    - **User stories covered**: Platform admin can search salons, inspect salon overview, update salon status with a reason, and add internal notes.
@@ -158,13 +158,13 @@ Move salon management into `features/salons` with a searchable paginated salon t
 
 ## Acceptance criteria
 
-- [ ] `/salons` renders a searchable, paginated salon table from generated admin salon queries.
-- [ ] `/salons/$salonId` renders a salon Overview tab with salon summaries and existing status.
-- [ ] Salon status changes require a reason dialog.
-- [ ] Internal salon notes can be listed and created with a required reason.
-- [ ] Live-data mode adds the extra production-data warning and confirmation phrase for salon status changes.
-- [ ] Successful mutations invalidate the relevant generated query keys.
-- [ ] API, generated client, and UI tests cover the salon list/detail/status/note path.
+- [x] `/salons` renders a searchable, paginated salon table from generated admin salon queries.
+- [x] `/salons/$salonId` renders a salon Overview tab with salon summaries and existing status.
+- [x] Salon status changes require a reason dialog.
+- [x] Internal salon notes can be listed and created with a required reason.
+- [x] Live-data mode adds the extra production-data warning and confirmation phrase for salon status changes.
+- [x] Successful mutations invalidate the relevant generated query keys.
+- [x] API, generated client, and UI tests cover the salon list/detail/status/note path.
 
 ## Blocked by
 

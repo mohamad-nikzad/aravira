@@ -1,11 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { AdminPage } from '#/features/admin-page'
+import { SalonDetailPage } from '#/features/salons'
 
 export const Route = createFileRoute('/_admin/salons/$salonId')({
   component: SalonDetailRoute,
 })
 
 function SalonDetailRoute() {
-  return <AdminPage pageId="salons" />
+  const { salonId } = Route.useParams()
+  return <SalonDetailPage salonId={salonId} />
 }
