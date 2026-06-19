@@ -46,7 +46,7 @@ Triage label for all issues: `needs-triage`
   - **Type**: AFK
     - **Blocked by**: ADMIN-004, ADMIN-005, ADMIN-006, ADMIN-007, ADMIN-008, ADMIN-009
     - **User stories covered**: V1 admin exposes only the focused route set and no hidden legacy routes.
-11. **ADMIN-011: Verify Admin V1 end to end and document attribution**
+11. **ADMIN-011: Verify Admin V1 end to end and document attribution** ✅
   - **Type**: AFK
     - **Blocked by**: ADMIN-010
     - **User stories covered**: Platform admin can run, test, and visually verify the rebuilt admin with proper third-party attribution.
@@ -295,16 +295,24 @@ Run the full Admin V1 verification pass and make sure copied/adapted MIT source 
 
 ## Acceptance criteria
 
-- [ ] `pnpm --filter @repo/admin typecheck` passes.
-- [ ] `pnpm --filter @repo/admin lint` passes.
-- [ ] `pnpm --filter @repo/admin test` passes.
-- [ ] `pnpm --filter @repo/admin build` passes.
-- [ ] `pnpm --filter @repo/api test:unit` passes.
-- [ ] `pnpm generate:api-contract` passes.
-- [ ] `pnpm generate:api-client` passes.
-- [ ] Browser verification covers sidebar desktop, collapsed, rail, mobile sheet, and RTL behavior.
-- [ ] Browser verification covers command search navigation, salon detail tabs, CatalogPreset CRUD, and live-data mutation warnings.
-- [ ] `apps/admin/THIRD_PARTY_NOTICES.md` is kept or updated for copied/adapted MIT source.
+- [x] `pnpm --filter @repo/admin typecheck` passes.
+- [x] `pnpm --filter @repo/admin lint` passes.
+- [x] `pnpm --filter @repo/admin test` passes.
+- [x] `pnpm --filter @repo/admin build` passes.
+- [x] `pnpm --filter @repo/api test:unit` passes.
+- [x] `pnpm generate:api-contract` passes.
+- [x] `pnpm generate:api-client` passes.
+- [x] Browser verification covers sidebar desktop, collapsed, rail, mobile sheet, and RTL behavior.
+- [x] Browser verification covers command search navigation, salon detail tabs, CatalogPreset CRUD, and live-data mutation warnings.
+- [x] `apps/admin/THIRD_PARTY_NOTICES.md` is kept or updated for copied/adapted MIT source.
+
+## Verification evidence
+
+- 2026-06-19: command verification passed for admin typecheck, lint, test, build, API unit tests, OpenAPI contract generation, and generated API client generation.
+- 2026-06-19: browser verification passed against local admin on `localhost:3003` with a mocked local admin API on `127.0.0.1:3002`.
+- Verified `html lang="fa" dir="rtl"`, right-side `variant="inset"` sidebar, desktop expanded state, collapsed icon rail state, and mobile sheet navigation.
+- Verified command search navigation to `/salons`, salon detail read-only data tabs for Clients, Appointments, AppointmentRequests, Staff, and ServiceVariants, CatalogPreset create dialog submission, live-data banner, salon status live warning with `LIVE` confirmation, and CatalogPreset live warning.
+- Browser console error check returned no errors during verification.
 
 ## Blocked by
 
