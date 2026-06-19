@@ -27,6 +27,11 @@ vi.mock('@repo/database/admin', () => ({
   listAdminCatalogPresets: vi.fn(),
   listAdminInternalNotes: vi.fn(),
   listAdminNotificationDeliveries: vi.fn(),
+  listAdminSalonAppointmentRequests: vi.fn(),
+  listAdminSalonAppointments: vi.fn(),
+  listAdminSalonClients: vi.fn(),
+  listAdminSalonServices: vi.fn(),
+  listAdminSalonStaff: vi.fn(),
   listAdminSalons: vi.fn(),
   listAdminSupportAppointmentRequests: vi.fn(),
   listAdminSupportAppointments: vi.fn(),
@@ -53,6 +58,11 @@ import {
   listPlatformAdmins,
   listAdminCatalogPresets,
   listAdminInternalNotes,
+  listAdminSalonAppointmentRequests,
+  listAdminSalonAppointments,
+  listAdminSalonClients,
+  listAdminSalonServices,
+  listAdminSalonStaff,
   listAdminSalons,
   updateAdminCatalogPreset,
   updateAdminSalonStatus,
@@ -190,6 +200,80 @@ describe('admin runtime data source', () => {
     expect(detailRes.status).toBe(200)
     expect(await detailRes.json()).toMatchObject({
       salon: { id: salonId, name: 'Aftab' },
+    })
+  })
+
+  it('lists read-only salon tenant data tabs with pagination', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: { id: salonId, name: 'Aftab', status: 'active' },
+      members: [],
+      stats: { services: 0, appointments: 0 },
+    } as never)
+    vi.mocked(listAdminSalonClients).mockResolvedValue({
+      items: [{ id: 'client-1', name: 'Client One' }],
+      pagination: { page: 1, pageSize: 20, total: 1 },
+    } as never)
+    vi.mocked(listAdminSalonAppointments).mockResolvedValue({
+      items: [],
+      pagination: { page: 1, pageSize: 20, total: 0 },
+    } as never)
+    vi.mocked(listAdminSalonAppointmentRequests).mockResolvedValue({
+      items: [{ id: 'request-1', customerName: 'Request One' }],
+      pagination: { page: 1, pageSize: 20, total: 1 },
+    } as never)
+    vi.mocked(listAdminSalonStaff).mockResolvedValue({
+      items: [],
+      pagination: { page: 1, pageSize: 20, total: 0 },
+    } as never)
+    vi.mocked(listAdminSalonServices).mockResolvedValue({
+      items: [{ id: 'service-1', name: 'ServiceVariant One' }],
+      pagination: { page: 1, pageSize: 20, total: 1 },
+    } as never)
+
+    const clientsRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/clients?page=1&pageSize=20&search=Client`,
+      { headers: authHeaders },
+    )
+    const appointmentsRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/appointments?page=1&pageSize=20`,
+      { headers: authHeaders },
+    )
+    const requestsRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/appointment-requests?page=1&pageSize=20`,
+      { headers: authHeaders },
+    )
+    const staffRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/staff?page=1&pageSize=20`,
+      { headers: authHeaders },
+    )
+    const servicesRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/services?page=1&pageSize=20`,
+      { headers: authHeaders },
+    )
+
+    expect(clientsRes.status).toBe(200)
+    expect(await clientsRes.json()).toMatchObject({
+      items: [{ name: 'Client One' }],
+      pagination: { total: 1 },
+    })
+    expect(await appointmentsRes.json()).toMatchObject({
+      items: [],
+      pagination: { total: 0 },
+    })
+    expect(await requestsRes.json()).toMatchObject({
+      items: [{ customerName: 'Request One' }],
+    })
+    expect(await staffRes.json()).toMatchObject({
+      items: [],
+      pagination: { total: 0 },
+    })
+    expect(await servicesRes.json()).toMatchObject({
+      items: [{ name: 'ServiceVariant One' }],
+    })
+    expect(listAdminSalonClients).toHaveBeenCalledWith(salonId, {
+      page: 1,
+      pageSize: 20,
+      search: 'Client',
     })
   })
 
@@ -409,18 +493,15 @@ describe('admin runtime data source', () => {
       id: 'audit-catalog-update',
     } as never)
 
-    const res = await app.request(
-      `/api/v1/admin/catalog-presets/${presetId}`,
-      {
-        method: 'PATCH',
-        headers: { ...authHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: 'قالب خدمات مو و ابرو',
-          isActive: false,
-          reason: 'Archive old service variant language',
-        }),
-      },
-    )
+    const res = await app.request(`/api/v1/admin/catalog-presets/${presetId}`, {
+      method: 'PATCH',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'قالب خدمات مو و ابرو',
+        isActive: false,
+        reason: 'Archive old service variant language',
+      }),
+    })
 
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({

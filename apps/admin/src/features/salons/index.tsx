@@ -1,9 +1,14 @@
 import {
   getApiV1AdminOverviewQueryKey,
+  getApiV1AdminSalonsByIdAppointmentRequestsOptions,
+  getApiV1AdminSalonsByIdAppointmentsOptions,
+  getApiV1AdminSalonsByIdClientsOptions,
   getApiV1AdminSalonsByIdNotesOptions,
   getApiV1AdminSalonsByIdNotesQueryKey,
   getApiV1AdminSalonsByIdOptions,
   getApiV1AdminSalonsByIdQueryKey,
+  getApiV1AdminSalonsByIdServicesOptions,
+  getApiV1AdminSalonsByIdStaffOptions,
   getApiV1AdminSalonsOptions,
   getApiV1AdminSalonsQueryKey,
   patchApiV1AdminSalonsByIdStatusMutation,
@@ -39,6 +44,7 @@ import {
 } from '#/components/ui/dialog'
 import { Input } from '#/components/ui/input'
 import { Skeleton } from '#/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { useAdminAuth } from '#/context/admin-auth-provider'
 import { useTableUrlState } from '#/hooks/use-table-url-state'
 
@@ -278,6 +284,8 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
           noteMutation.mutate({ path: { id: salonId }, body: input })
         }
       />
+
+      <SalonTenantDataTabs salonId={salonId} />
     </div>
   )
 }
@@ -499,6 +507,349 @@ function NotesPanel({
         ))}
       </div>
     </Panel>
+  )
+}
+
+function SalonTenantDataTabs({ salonId }: { salonId: string }) {
+  const clientColumns = useMemo<ColumnDef<RecordRow>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Client',
+        cell: ({ row }) => (
+          <PrimaryCell
+            title={text(row.original.name)}
+            subtitle={text(row.original.phone)}
+          />
+        ),
+      },
+      {
+        accessorKey: 'isPlaceholder',
+        header: 'نوع',
+        cell: ({ row }) => (
+          <BooleanBadge
+            value={truthy(row.original.isPlaceholder)}
+            trueLabel="Placeholder"
+            falseLabel="Client"
+          />
+        ),
+      },
+      {
+        accessorKey: 'notes',
+        header: 'یادداشت',
+        cell: ({ row }) => text(row.original.notes) || '-',
+      },
+      {
+        accessorKey: 'createdAt',
+        header: 'ثبت',
+        cell: ({ row }) => formatDate(row.original.createdAt),
+      },
+    ],
+    [],
+  )
+  const appointmentColumns = useMemo<ColumnDef<RecordRow>[]>(
+    () => [
+      {
+        accessorKey: 'bookedServiceName',
+        header: 'Appointment',
+        cell: ({ row }) => (
+          <PrimaryCell
+            title={text(row.original.bookedServiceName)}
+            subtitle={`${text(row.original.date)} ${text(row.original.startTime)}`}
+          />
+        ),
+      },
+      {
+        accessorKey: 'clientName',
+        header: 'Client',
+        cell: ({ row }) => (
+          <PrimaryCell
+            title={text(row.original.clientName)}
+            subtitle={text(row.original.clientPhone)}
+          />
+        ),
+      },
+      {
+        accessorKey: 'staffName',
+        header: 'Staff',
+        cell: ({ row }) => text(row.original.staffName) || '-',
+      },
+      {
+        accessorKey: 'bookedTotalPrice',
+        header: 'مبلغ',
+        cell: ({ row }) => currency(row.original.bookedTotalPrice),
+      },
+      {
+        accessorKey: 'status',
+        header: 'وضعیت',
+        cell: ({ row }) => (
+          <Badge variant="outline">{text(row.original.status)}</Badge>
+        ),
+      },
+    ],
+    [],
+  )
+  const requestColumns = useMemo<ColumnDef<RecordRow>[]>(
+    () => [
+      {
+        accessorKey: 'bookedServiceName',
+        header: 'AppointmentRequest',
+        cell: ({ row }) => (
+          <PrimaryCell
+            title={text(row.original.bookedServiceName)}
+            subtitle={`${text(row.original.requestedDate)} ${text(row.original.requestedStartTime)}`}
+          />
+        ),
+      },
+      {
+        accessorKey: 'customerName',
+        header: 'Client',
+        cell: ({ row }) => (
+          <PrimaryCell
+            title={text(row.original.customerName)}
+            subtitle={text(row.original.customerPhone)}
+          />
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'وضعیت',
+        cell: ({ row }) => (
+          <Badge variant="outline">{text(row.original.status)}</Badge>
+        ),
+      },
+      {
+        accessorKey: 'paymentStatus',
+        header: 'پرداخت',
+        cell: ({ row }) => text(row.original.paymentStatus) || '-',
+      },
+      {
+        accessorKey: 'createdAt',
+        header: 'ثبت',
+        cell: ({ row }) => formatDate(row.original.createdAt),
+      },
+    ],
+    [],
+  )
+  const staffColumns = useMemo<ColumnDef<RecordRow>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Staff',
+        cell: ({ row }) => (
+          <PrimaryCell
+            title={text(row.original.displayName) || text(row.original.name)}
+            subtitle={
+              text(row.original.phoneNumber) || text(row.original.email)
+            }
+          />
+        ),
+      },
+      {
+        accessorKey: 'active',
+        header: 'وضعیت',
+        cell: ({ row }) => (
+          <BooleanBadge
+            value={truthy(row.original.active)}
+            trueLabel="فعال"
+            falseLabel="غیرفعال"
+          />
+        ),
+      },
+      {
+        accessorKey: 'color',
+        header: 'رنگ',
+        cell: ({ row }) => text(row.original.color) || '-',
+      },
+      {
+        accessorKey: 'createdAt',
+        header: 'عضویت',
+        cell: ({ row }) => formatDate(row.original.createdAt),
+      },
+    ],
+    [],
+  )
+  const serviceColumns = useMemo<ColumnDef<RecordRow>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'ServiceVariant',
+        cell: ({ row }) => (
+          <PrimaryCell
+            title={text(row.original.name)}
+            subtitle={[
+              text(row.original.categoryName),
+              text(row.original.familyName),
+            ]
+              .filter(Boolean)
+              .join(' / ')}
+          />
+        ),
+      },
+      {
+        accessorKey: 'kind',
+        header: 'نوع',
+        cell: ({ row }) => (
+          <Badge variant="outline">{text(row.original.kind)}</Badge>
+        ),
+      },
+      {
+        accessorKey: 'duration',
+        header: 'مدت',
+        cell: ({ row }) => `${number(row.original.duration)} دقیقه`,
+      },
+      {
+        accessorKey: 'price',
+        header: 'قیمت',
+        cell: ({ row }) => currency(row.original.price),
+      },
+      {
+        accessorKey: 'active',
+        header: 'وضعیت',
+        cell: ({ row }) => (
+          <BooleanBadge
+            value={truthy(row.original.active)}
+            trueLabel="فعال"
+            falseLabel="غیرفعال"
+          />
+        ),
+      },
+    ],
+    [],
+  )
+
+  return (
+    <Panel title="داده‌های عملیاتی سالن">
+      <Tabs defaultValue="clients" className="space-y-4">
+        <TabsList className="flex h-auto flex-wrap justify-start">
+          <TabsTrigger value="clients">Clients</TabsTrigger>
+          <TabsTrigger value="appointments">Appointments</TabsTrigger>
+          <TabsTrigger value="requests">AppointmentRequests</TabsTrigger>
+          <TabsTrigger value="staff">Staff</TabsTrigger>
+          <TabsTrigger value="services">ServiceVariants</TabsTrigger>
+        </TabsList>
+        <TenantTabContent
+          value="clients"
+          columns={clientColumns}
+          queryOptionsFor={(params) =>
+            getApiV1AdminSalonsByIdClientsOptions({
+              path: { id: salonId },
+              query: params,
+            })
+          }
+          emptyCopy="Client برای این سالن ثبت نشده است."
+        />
+        <TenantTabContent
+          value="appointments"
+          columns={appointmentColumns}
+          queryOptionsFor={(params) =>
+            getApiV1AdminSalonsByIdAppointmentsOptions({
+              path: { id: salonId },
+              query: params,
+            })
+          }
+          emptyCopy="Appointment برای این سالن ثبت نشده است."
+        />
+        <TenantTabContent
+          value="requests"
+          columns={requestColumns}
+          queryOptionsFor={(params) =>
+            getApiV1AdminSalonsByIdAppointmentRequestsOptions({
+              path: { id: salonId },
+              query: params,
+            })
+          }
+          emptyCopy="AppointmentRequest برای این سالن ثبت نشده است."
+        />
+        <TenantTabContent
+          value="staff"
+          columns={staffColumns}
+          queryOptionsFor={(params) =>
+            getApiV1AdminSalonsByIdStaffOptions({
+              path: { id: salonId },
+              query: params,
+            })
+          }
+          emptyCopy="Staff برای این سالن ثبت نشده است."
+        />
+        <TenantTabContent
+          value="services"
+          columns={serviceColumns}
+          queryOptionsFor={(params) =>
+            getApiV1AdminSalonsByIdServicesOptions({
+              path: { id: salonId },
+              query: params,
+            })
+          }
+          emptyCopy="ServiceVariant برای این سالن ثبت نشده است."
+        />
+      </Tabs>
+    </Panel>
+  )
+}
+
+function TenantTabContent({
+  value,
+  columns,
+  queryOptionsFor,
+  emptyCopy,
+}: {
+  value: string
+  columns: ColumnDef<RecordRow>[]
+  queryOptionsFor: (params: ListParams) => unknown
+  emptyCopy: string
+}) {
+  const [query, setQuery] = useState('')
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
+  const listQuery = useQuery(
+    queryOptionsFor({
+      page: pagination.pageIndex + 1,
+      pageSize: pagination.pageSize,
+      search: query || undefined,
+    }) as AdminListQueryOptions,
+  )
+  const total = listQuery.data?.pagination.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / pagination.pageSize))
+  const rows = listQuery.data?.items ?? []
+
+  return (
+    <TabsContent value={value} className="space-y-3">
+      <DataTableToolbar
+        query={query}
+        onQueryChange={(nextQuery) => {
+          setQuery(nextQuery)
+          setPagination((current) => ({ ...current, pageIndex: 0 }))
+        }}
+        onReset={() => {
+          setQuery('')
+          setPagination((current) => ({ ...current, pageIndex: 0 }))
+        }}
+      />
+      {listQuery.isLoading ? (
+        <ScreenSkeleton label={`در حال دریافت ${value}`} />
+      ) : null}
+      {listQuery.isError ? (
+        <ErrorPanel message="بارگذاری داده‌های سالن انجام نشد." />
+      ) : null}
+      {!listQuery.isLoading && rows.length === 0 ? (
+        <p className="text-xs text-muted-foreground">{emptyCopy}</p>
+      ) : null}
+      <DataTable
+        columns={columns}
+        data={rows}
+        pageCount={pageCount}
+        pagination={pagination}
+        onPaginationChange={setPagination}
+      />
+      <DataTablePagination
+        pagination={pagination}
+        pageCount={pageCount}
+        onPaginationChange={setPagination}
+      />
+    </TabsContent>
   )
 }
 
@@ -744,6 +1095,10 @@ function number(value: unknown): number {
   if (typeof value === 'number') return value
   if (typeof value === 'string') return Number(value) || 0
   return 0
+}
+
+function currency(value: unknown): string {
+  return new Intl.NumberFormat('fa-IR').format(number(value))
 }
 
 function truthy(value: unknown): boolean {

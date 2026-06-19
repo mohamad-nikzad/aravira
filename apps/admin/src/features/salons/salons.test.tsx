@@ -17,6 +17,11 @@ const generated = vi.hoisted(() => ({
   listSalons: vi.fn(),
   getSalon: vi.fn(),
   getNotes: vi.fn(),
+  getClients: vi.fn(),
+  getAppointments: vi.fn(),
+  getAppointmentRequests: vi.fn(),
+  getStaff: vi.fn(),
+  getServices: vi.fn(),
   patchStatus: vi.fn(),
   postNote: vi.fn(),
 }))
@@ -56,6 +61,26 @@ vi.mock('@repo/api-client/query', () => ({
   getApiV1AdminSalonsByIdNotesOptions: (options: unknown) => ({
     queryKey: ['salon-notes', options],
     queryFn: () => generated.getNotes(options),
+  }),
+  getApiV1AdminSalonsByIdClientsOptions: (options: unknown) => ({
+    queryKey: ['salon-clients', options],
+    queryFn: () => generated.getClients(options),
+  }),
+  getApiV1AdminSalonsByIdAppointmentsOptions: (options: unknown) => ({
+    queryKey: ['salon-appointments', options],
+    queryFn: () => generated.getAppointments(options),
+  }),
+  getApiV1AdminSalonsByIdAppointmentRequestsOptions: (options: unknown) => ({
+    queryKey: ['salon-appointment-requests', options],
+    queryFn: () => generated.getAppointmentRequests(options),
+  }),
+  getApiV1AdminSalonsByIdStaffOptions: (options: unknown) => ({
+    queryKey: ['salon-staff', options],
+    queryFn: () => generated.getStaff(options),
+  }),
+  getApiV1AdminSalonsByIdServicesOptions: (options: unknown) => ({
+    queryKey: ['salon-services', options],
+    queryFn: () => generated.getServices(options),
   }),
   patchApiV1AdminSalonsByIdStatusMutation: () => ({
     mutationFn: generated.patchStatus,
@@ -104,8 +129,33 @@ describe('salons feature', () => {
     generated.listSalons.mockReset()
     generated.getSalon.mockReset()
     generated.getNotes.mockReset()
+    generated.getClients.mockReset()
+    generated.getAppointments.mockReset()
+    generated.getAppointmentRequests.mockReset()
+    generated.getStaff.mockReset()
+    generated.getServices.mockReset()
     generated.patchStatus.mockReset()
     generated.postNote.mockReset()
+    generated.getClients.mockResolvedValue({
+      items: [],
+      pagination: { page: 1, pageSize: 10, total: 0 },
+    })
+    generated.getAppointments.mockResolvedValue({
+      items: [],
+      pagination: { page: 1, pageSize: 10, total: 0 },
+    })
+    generated.getAppointmentRequests.mockResolvedValue({
+      items: [],
+      pagination: { page: 1, pageSize: 10, total: 0 },
+    })
+    generated.getStaff.mockResolvedValue({
+      items: [],
+      pagination: { page: 1, pageSize: 10, total: 0 },
+    })
+    generated.getServices.mockResolvedValue({
+      items: [],
+      pagination: { page: 1, pageSize: 10, total: 0 },
+    })
     window.history.replaceState(null, '', '/salons')
   })
 
@@ -238,5 +288,67 @@ describe('salons feature', () => {
         reason: 'ثبت پیگیری داخلی',
       },
     })
+  })
+
+  it('renders read-only salon tenant data tabs with populated and empty states', async () => {
+    generated.getSalon.mockResolvedValue({
+      salon: { id: salonId, name: 'سالن آفتاب', status: 'active' },
+      members: [],
+      stats: { services: 1, appointments: 0, appointmentRequests: 0 },
+    })
+    generated.getNotes.mockResolvedValue({ notes: [] })
+    generated.getClients.mockResolvedValue({
+      items: [
+        {
+          id: 'client-1',
+          name: 'Client One',
+          phone: '+989121111111',
+          isPlaceholder: false,
+          notes: 'VIP',
+          createdAt: '2026-06-18T10:30:00.000Z',
+        },
+      ],
+      pagination: { page: 1, pageSize: 10, total: 1 },
+    })
+    generated.getServices.mockResolvedValue({
+      items: [
+        {
+          id: 'service-1',
+          name: 'ServiceVariant Cut',
+          kind: 'standard',
+          categoryName: 'Hair',
+          familyName: 'Cut',
+          duration: 45,
+          price: 500000,
+          active: true,
+        },
+      ],
+      pagination: { page: 1, pageSize: 10, total: 1 },
+    })
+
+    renderWithProviders(<SalonDetailScreen salonId={salonId} />)
+
+    expect(await screen.findByText('Client One')).toBeTruthy()
+    expect(screen.queryByText(/افزودن Client/)).toBeNull()
+    expect(generated.getClients).toHaveBeenCalledWith({
+      path: { id: salonId },
+      query: { page: 1, pageSize: 10, search: undefined },
+    })
+
+    fireEvent.pointerDown(screen.getByRole('tab', { name: 'Appointments' }))
+    await waitFor(() => {
+      expect(generated.getAppointments).toHaveBeenCalled()
+    })
+    expect(generated.getAppointments.mock.calls[0]?.[0]).toEqual({
+      path: { id: salonId },
+      query: { page: 1, pageSize: 10, search: undefined },
+    })
+    expect(screen.queryByText(/افزودن Appointment/)).toBeNull()
+
+    fireEvent.pointerDown(screen.getByRole('tab', { name: 'ServiceVariants' }))
+    await waitFor(() => {
+      expect(generated.getServices).toHaveBeenCalled()
+    })
+    expect(screen.queryByText(/افزودن ServiceVariant/)).toBeNull()
   })
 })

@@ -28,6 +28,8 @@ import {
   salonMember,
   salonProfile,
   salonPublicSettings,
+  serviceCategories,
+  serviceFamilies,
   services,
   user,
   userMessagingAccounts,
@@ -289,7 +291,9 @@ export async function getPlatformAdminMe(userId: string) {
     })
     .from(platformAdmins)
     .innerJoin(user, eq(user.id, platformAdmins.userId))
-    .where(and(eq(platformAdmins.userId, userId), eq(platformAdmins.active, true)))
+    .where(
+      and(eq(platformAdmins.userId, userId), eq(platformAdmins.active, true)),
+    )
     .limit(1)
 
   return rows[0]
@@ -297,44 +301,40 @@ export async function getPlatformAdminMe(userId: string) {
 
 export async function getAdminOverview() {
   const db = getDb()
-  const [
-    salonStatusRows,
-    failedDeliveryRows,
-    messagingRows,
-    auditRows,
-  ] = await Promise.all([
-    db
-      .select({ status: salonProfile.status, value: count() })
-      .from(salonProfile)
-      .groupBy(salonProfile.status),
-    db
-      .select({ value: count() })
-      .from(notificationDeliveries)
-      .where(eq(notificationDeliveries.status, 'failed')),
-    db
-      .select({
-        provider: userMessagingAccounts.provider,
-        enabled: userMessagingAccounts.enabled,
-        value: count(),
-      })
-      .from(userMessagingAccounts)
-      .groupBy(userMessagingAccounts.provider, userMessagingAccounts.enabled),
-    db
-      .select({
-        id: adminAuditEvents.id,
-        actorUserId: adminAuditEvents.actorUserId,
-        actorPlatformRole: adminAuditEvents.actorPlatformRole,
-        action: adminAuditEvents.action,
-        targetType: adminAuditEvents.targetType,
-        targetId: adminAuditEvents.targetId,
-        salonId: adminAuditEvents.salonId,
-        reason: adminAuditEvents.reason,
-        createdAt: adminAuditEvents.createdAt,
-      })
-      .from(adminAuditEvents)
-      .orderBy(desc(adminAuditEvents.createdAt))
-      .limit(10),
-  ])
+  const [salonStatusRows, failedDeliveryRows, messagingRows, auditRows] =
+    await Promise.all([
+      db
+        .select({ status: salonProfile.status, value: count() })
+        .from(salonProfile)
+        .groupBy(salonProfile.status),
+      db
+        .select({ value: count() })
+        .from(notificationDeliveries)
+        .where(eq(notificationDeliveries.status, 'failed')),
+      db
+        .select({
+          provider: userMessagingAccounts.provider,
+          enabled: userMessagingAccounts.enabled,
+          value: count(),
+        })
+        .from(userMessagingAccounts)
+        .groupBy(userMessagingAccounts.provider, userMessagingAccounts.enabled),
+      db
+        .select({
+          id: adminAuditEvents.id,
+          actorUserId: adminAuditEvents.actorUserId,
+          actorPlatformRole: adminAuditEvents.actorPlatformRole,
+          action: adminAuditEvents.action,
+          targetType: adminAuditEvents.targetType,
+          targetId: adminAuditEvents.targetId,
+          salonId: adminAuditEvents.salonId,
+          reason: adminAuditEvents.reason,
+          createdAt: adminAuditEvents.createdAt,
+        })
+        .from(adminAuditEvents)
+        .orderBy(desc(adminAuditEvents.createdAt))
+        .limit(10),
+    ])
 
   const salonsByStatus = {
     active: 0,
@@ -376,7 +376,10 @@ export async function listAdminSalons(input: ListInput = {}) {
     })
     .from(organization)
     .innerJoin(salonProfile, eq(salonProfile.organizationId, organization.id))
-    .leftJoin(salonPublicSettings, eq(salonPublicSettings.salonId, organization.id))
+    .leftJoin(
+      salonPublicSettings,
+      eq(salonPublicSettings.salonId, organization.id),
+    )
     .leftJoin(salonMember, eq(salonMember.organizationId, organization.id))
     .where(where)
     .groupBy(
@@ -418,46 +421,51 @@ export async function getAdminSalon(id: string) {
       phone: salonProfile.phone,
       address: salonProfile.address,
       publicEnabled: salonPublicSettings.enabled,
-      appointmentRequestsEnabled: salonPublicSettings.appointmentRequestsEnabled,
+      appointmentRequestsEnabled:
+        salonPublicSettings.appointmentRequestsEnabled,
       themeId: salonPublicSettings.themeId,
       layoutId: salonPublicSettings.layoutId,
     })
     .from(organization)
     .innerJoin(salonProfile, eq(salonProfile.organizationId, organization.id))
-    .leftJoin(salonPublicSettings, eq(salonPublicSettings.salonId, organization.id))
+    .leftJoin(
+      salonPublicSettings,
+      eq(salonPublicSettings.salonId, organization.id),
+    )
     .where(eq(organization.id, id))
     .limit(1)
 
   const salon = rows[0]
   if (!salon) return undefined
 
-  const [members, serviceRows, appointmentRows, requestRows] = await Promise.all([
-    db
-      .select({
-        userId: user.id,
-        name: user.name,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
-        role: member.role,
-        createdAt: member.createdAt,
-      })
-      .from(member)
-      .innerJoin(user, eq(user.id, member.userId))
-      .where(eq(member.organizationId, id))
-      .orderBy(asc(member.createdAt)),
-    db
-      .select({ value: count() })
-      .from(services)
-      .where(eq(services.salonId, id)),
-    db
-      .select({ value: count() })
-      .from(appointments)
-      .where(eq(appointments.salonId, id)),
-    db
-      .select({ value: count() })
-      .from(appointmentRequests)
-      .where(eq(appointmentRequests.salonId, id)),
-  ])
+  const [members, serviceRows, appointmentRows, requestRows] =
+    await Promise.all([
+      db
+        .select({
+          userId: user.id,
+          name: user.name,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          role: member.role,
+          createdAt: member.createdAt,
+        })
+        .from(member)
+        .innerJoin(user, eq(user.id, member.userId))
+        .where(eq(member.organizationId, id))
+        .orderBy(asc(member.createdAt)),
+      db
+        .select({ value: count() })
+        .from(services)
+        .where(eq(services.salonId, id)),
+      db
+        .select({ value: count() })
+        .from(appointments)
+        .where(eq(appointments.salonId, id)),
+      db
+        .select({ value: count() })
+        .from(appointmentRequests)
+        .where(eq(appointmentRequests.salonId, id)),
+    ])
 
   return {
     salon,
@@ -484,6 +492,237 @@ export async function updateAdminSalonStatus(input: {
       status: salonProfile.status,
     })
   return updated
+}
+
+export async function listAdminSalonClients(
+  salonId: string,
+  input: ListInput = {},
+) {
+  const { page, pageSize, offset, search } = normalizeList(input)
+  const where = and(
+    eq(clients.salonId, salonId),
+    search
+      ? or(
+          ilike(clients.name, searchLike(search)),
+          ilike(clients.phone, searchLike(search)),
+          ilike(clients.notes, searchLike(search)),
+        )
+      : undefined,
+  )
+  const db = getDb()
+  const rows = db
+    .select({
+      id: clients.id,
+      name: clients.name,
+      phone: clients.phone,
+      isPlaceholder: clients.isPlaceholder,
+      notes: clients.notes,
+      createdAt: clients.createdAt,
+    })
+    .from(clients)
+    .where(where)
+    .orderBy(desc(clients.createdAt))
+    .limit(pageSize)
+    .offset(offset)
+  const totalRows = db.select({ value: count() }).from(clients).where(where)
+  return withPagination(rows, totalRows, page, pageSize)
+}
+
+export async function listAdminSalonAppointments(
+  salonId: string,
+  input: ListInput = {},
+) {
+  const { page, pageSize, offset, search } = normalizeList(input)
+  const where = and(
+    eq(appointments.salonId, salonId),
+    search
+      ? or(
+          ilike(clients.name, searchLike(search)),
+          ilike(clients.phone, searchLike(search)),
+          ilike(user.name, searchLike(search)),
+          ilike(appointments.bookedServiceName, searchLike(search)),
+          ilike(appointments.date, searchLike(search)),
+        )
+      : undefined,
+  )
+  const db = getDb()
+  const rows = db
+    .select({
+      id: appointments.id,
+      clientId: appointments.clientId,
+      clientName: clients.name,
+      clientPhone: clients.phone,
+      staffId: appointments.staffId,
+      staffName: user.name,
+      serviceId: appointments.serviceId,
+      date: appointments.date,
+      startTime: appointments.startTime,
+      endTime: appointments.endTime,
+      bookedServiceName: appointments.bookedServiceName,
+      bookedTotalDuration: appointments.bookedTotalDuration,
+      bookedTotalPrice: appointments.bookedTotalPrice,
+      status: appointments.status,
+      createdAt: appointments.createdAt,
+      updatedAt: appointments.updatedAt,
+    })
+    .from(appointments)
+    .innerJoin(clients, eq(clients.id, appointments.clientId))
+    .innerJoin(user, eq(user.id, appointments.staffId))
+    .where(where)
+    .orderBy(desc(appointments.date), desc(appointments.startTime))
+    .limit(pageSize)
+    .offset(offset)
+  const totalRows = db
+    .select({ value: count() })
+    .from(appointments)
+    .innerJoin(clients, eq(clients.id, appointments.clientId))
+    .innerJoin(user, eq(user.id, appointments.staffId))
+    .where(where)
+  return withPagination(rows, totalRows, page, pageSize)
+}
+
+export async function listAdminSalonAppointmentRequests(
+  salonId: string,
+  input: ListInput = {},
+) {
+  const { page, pageSize, offset, search } = normalizeList(input)
+  const where = and(
+    eq(appointmentRequests.salonId, salonId),
+    search
+      ? or(
+          ilike(appointmentRequests.customerName, searchLike(search)),
+          ilike(appointmentRequests.customerPhone, searchLike(search)),
+          ilike(appointmentRequests.bookedServiceName, searchLike(search)),
+          ilike(appointmentRequests.requestedDate, searchLike(search)),
+        )
+      : undefined,
+  )
+  const db = getDb()
+  const rows = db
+    .select({
+      id: appointmentRequests.id,
+      serviceId: appointmentRequests.serviceId,
+      staffId: appointmentRequests.staffId,
+      requestedDate: appointmentRequests.requestedDate,
+      requestedStartTime: appointmentRequests.requestedStartTime,
+      requestedEndTime: appointmentRequests.requestedEndTime,
+      customerName: appointmentRequests.customerName,
+      customerPhone: appointmentRequests.customerPhone,
+      bookedServiceName: appointmentRequests.bookedServiceName,
+      bookedServiceDuration: appointmentRequests.bookedServiceDuration,
+      bookedServicePrice: appointmentRequests.bookedServicePrice,
+      status: appointmentRequests.status,
+      paymentStatus: appointmentRequests.paymentStatus,
+      appointmentId: appointmentRequests.appointmentId,
+      reviewedAt: appointmentRequests.reviewedAt,
+      rejectionReason: appointmentRequests.rejectionReason,
+      createdAt: appointmentRequests.createdAt,
+      updatedAt: appointmentRequests.updatedAt,
+    })
+    .from(appointmentRequests)
+    .where(where)
+    .orderBy(desc(appointmentRequests.createdAt))
+    .limit(pageSize)
+    .offset(offset)
+  const totalRows = db
+    .select({ value: count() })
+    .from(appointmentRequests)
+    .where(where)
+  return withPagination(rows, totalRows, page, pageSize)
+}
+
+export async function listAdminSalonStaff(
+  salonId: string,
+  input: ListInput = {},
+) {
+  const { page, pageSize, offset, search } = normalizeList(input)
+  const where = and(
+    eq(salonMember.organizationId, salonId),
+    search
+      ? or(
+          ilike(user.name, searchLike(search)),
+          ilike(user.phoneNumber, searchLike(search)),
+          ilike(user.email, searchLike(search)),
+          ilike(salonMember.displayName, searchLike(search)),
+        )
+      : undefined,
+  )
+  const db = getDb()
+  const rows = db
+    .select({
+      id: salonMember.id,
+      userId: salonMember.userId,
+      name: user.name,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      displayName: salonMember.displayName,
+      color: salonMember.color,
+      active: salonMember.active,
+      createdAt: salonMember.createdAt,
+    })
+    .from(salonMember)
+    .innerJoin(user, eq(user.id, salonMember.userId))
+    .where(where)
+    .orderBy(desc(salonMember.createdAt))
+    .limit(pageSize)
+    .offset(offset)
+  const totalRows = db
+    .select({ value: count() })
+    .from(salonMember)
+    .innerJoin(user, eq(user.id, salonMember.userId))
+    .where(where)
+  return withPagination(rows, totalRows, page, pageSize)
+}
+
+export async function listAdminSalonServices(
+  salonId: string,
+  input: ListInput = {},
+) {
+  const { page, pageSize, offset, search } = normalizeList(input)
+  const where = and(
+    eq(services.salonId, salonId),
+    search
+      ? or(
+          ilike(services.name, searchLike(search)),
+          ilike(serviceCategories.name, searchLike(search)),
+          ilike(serviceFamilies.name, searchLike(search)),
+        )
+      : undefined,
+  )
+  const db = getDb()
+  const rows = db
+    .select({
+      id: services.id,
+      name: services.name,
+      kind: services.kind,
+      categoryId: services.categoryId,
+      categoryName: serviceCategories.name,
+      familyId: services.familyId,
+      familyName: serviceFamilies.name,
+      duration: services.duration,
+      price: services.price,
+      color: services.color,
+      active: services.active,
+      createdAt: services.createdAt,
+    })
+    .from(services)
+    .innerJoin(serviceCategories, eq(serviceCategories.id, services.categoryId))
+    .leftJoin(serviceFamilies, eq(serviceFamilies.id, services.familyId))
+    .where(where)
+    .orderBy(
+      asc(serviceCategories.name),
+      asc(serviceFamilies.name),
+      asc(services.name),
+    )
+    .limit(pageSize)
+    .offset(offset)
+  const totalRows = db
+    .select({ value: count() })
+    .from(services)
+    .innerJoin(serviceCategories, eq(serviceCategories.id, services.categoryId))
+    .leftJoin(serviceFamilies, eq(serviceFamilies.id, services.familyId))
+    .where(where)
+  return withPagination(rows, totalRows, page, pageSize)
 }
 
 export async function listAdminUsers(input: ListInput = {}) {
@@ -622,7 +861,10 @@ export async function listAdminCatalogPresets(input: ListInput = {}) {
     .orderBy(asc(catalogPresets.sortOrder), asc(catalogPresets.name))
     .limit(pageSize)
     .offset(offset)
-  const totalRows = db.select({ value: count() }).from(catalogPresets).where(where)
+  const totalRows = db
+    .select({ value: count() })
+    .from(catalogPresets)
+    .where(where)
   return withPagination(rows, totalRows, page, pageSize)
 }
 
@@ -664,7 +906,9 @@ export async function updateAdminCatalogPreset(input: {
     .set({
       ...(input.slug !== undefined ? { slug: input.slug } : {}),
       ...(input.name !== undefined ? { name: input.name } : {}),
-      ...(input.description !== undefined ? { description: input.description } : {}),
+      ...(input.description !== undefined
+        ? { description: input.description }
+        : {}),
       ...(input.tree !== undefined ? { tree: input.tree } : {}),
       ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
@@ -729,7 +973,10 @@ export async function listAdminNotificationDeliveries(input: ListInput = {}) {
       title: notifications.title,
     })
     .from(notificationDeliveries)
-    .innerJoin(notifications, eq(notifications.id, notificationDeliveries.notificationId))
+    .innerJoin(
+      notifications,
+      eq(notifications.id, notificationDeliveries.notificationId),
+    )
     .orderBy(desc(notificationDeliveries.createdAt))
     .limit(pageSize)
     .offset(offset)
@@ -780,7 +1027,9 @@ export async function listAdminSupportAppointments(input: ListInput = {}) {
   return withPagination(rows, totalRows, page, pageSize)
 }
 
-export async function listAdminSupportAppointmentRequests(input: ListInput = {}) {
+export async function listAdminSupportAppointmentRequests(
+  input: ListInput = {},
+) {
   const { page, pageSize, offset, search } = normalizeList(input)
   const where = search
     ? or(
@@ -822,17 +1071,21 @@ export async function listAdminSupportAppointmentRequests(input: ListInput = {})
   return withPagination(rows, totalRows, page, pageSize)
 }
 
-export async function listAdminAuditLog(input: ListInput & {
-  action?: string
-  targetType?: string
-  targetId?: string
-  salonId?: string
-} = {}) {
+export async function listAdminAuditLog(
+  input: ListInput & {
+    action?: string
+    targetType?: string
+    targetId?: string
+    salonId?: string
+  } = {},
+) {
   const { page, pageSize, offset } = normalizeList(input)
   const filters: SQL[] = []
   if (input.action) filters.push(eq(adminAuditEvents.action, input.action))
-  if (input.targetType) filters.push(eq(adminAuditEvents.targetType, input.targetType))
-  if (input.targetId) filters.push(eq(adminAuditEvents.targetId, input.targetId))
+  if (input.targetType)
+    filters.push(eq(adminAuditEvents.targetType, input.targetType))
+  if (input.targetId)
+    filters.push(eq(adminAuditEvents.targetId, input.targetId))
   if (input.salonId) filters.push(eq(adminAuditEvents.salonId, input.salonId))
   const where = filters.length > 0 ? and(...filters) : undefined
 
@@ -860,7 +1113,10 @@ export async function listAdminAuditLog(input: ListInput & {
     .orderBy(desc(adminAuditEvents.createdAt))
     .limit(pageSize)
     .offset(offset)
-  const totalRows = db.select({ value: count() }).from(adminAuditEvents).where(where)
+  const totalRows = db
+    .select({ value: count() })
+    .from(adminAuditEvents)
+    .where(where)
   return withPagination(rows, totalRows, page, pageSize)
 }
 

@@ -23,7 +23,12 @@ import {
   adminPlatformAdminResponseSchema,
   adminPlatformAdminsResponseSchema,
   adminRuntimeResponseSchema,
+  adminSalonAppointmentRequestsResponseSchema,
+  adminSalonAppointmentsResponseSchema,
+  adminSalonClientsResponseSchema,
   adminSalonDetailResponseSchema,
+  adminSalonServicesResponseSchema,
+  adminSalonStaffResponseSchema,
   adminSalonsResponseSchema,
   adminStatusUpdateBodySchema,
   adminSupportAppointmentRequestsResponseSchema,
@@ -83,6 +88,35 @@ function getRoute(
       },
       401: unauthorizedResponse,
       403: forbiddenResponse,
+    },
+  })
+}
+
+function getSalonListRoute(
+  path: string,
+  summary: string,
+  responseSchema: z.ZodType,
+) {
+  return createRoute({
+    method: 'get',
+    path,
+    tags: ['Admin'],
+    summary,
+    security: adminSecurity,
+    request: {
+      params: idParamSchema,
+      query: adminListQuerySchema,
+    },
+    responses: {
+      200: {
+        description: summary,
+        content: {
+          'application/json': { schema: responseSchema },
+        },
+      },
+      401: unauthorizedResponse,
+      403: forbiddenResponse,
+      404: notFoundResponse,
     },
   })
 }
@@ -175,6 +209,36 @@ export const getAdminSalonRoute = createRoute({
     404: notFoundResponse,
   },
 })
+
+export const listAdminSalonClientsRoute = getSalonListRoute(
+  '/salons/{id}/clients',
+  'List salon Clients for platform admin',
+  adminSalonClientsResponseSchema,
+)
+
+export const listAdminSalonAppointmentsRoute = getSalonListRoute(
+  '/salons/{id}/appointments',
+  'List salon Appointments for platform admin',
+  adminSalonAppointmentsResponseSchema,
+)
+
+export const listAdminSalonAppointmentRequestsRoute = getSalonListRoute(
+  '/salons/{id}/appointment-requests',
+  'List salon AppointmentRequests for platform admin',
+  adminSalonAppointmentRequestsResponseSchema,
+)
+
+export const listAdminSalonStaffRoute = getSalonListRoute(
+  '/salons/{id}/staff',
+  'List salon Staff for platform admin',
+  adminSalonStaffResponseSchema,
+)
+
+export const listAdminSalonServicesRoute = getSalonListRoute(
+  '/salons/{id}/services',
+  'List salon ServiceVariants for platform admin',
+  adminSalonServicesResponseSchema,
+)
 
 export const updateAdminSalonStatusRoute = createRoute({
   method: 'patch',

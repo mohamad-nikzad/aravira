@@ -71,6 +71,41 @@ export type AdminSalonDetailResponse = {
     };
 };
 
+export type AdminSalonClientsResponse = {
+    items: Array<{
+        [key: string]: unknown;
+    }>;
+    pagination: AdminPagination;
+};
+
+export type AdminSalonAppointmentsResponse = {
+    items: Array<{
+        [key: string]: unknown;
+    }>;
+    pagination: AdminPagination;
+};
+
+export type AdminSalonAppointmentRequestsResponse = {
+    items: Array<{
+        [key: string]: unknown;
+    }>;
+    pagination: AdminPagination;
+};
+
+export type AdminSalonStaffResponse = {
+    items: Array<{
+        [key: string]: unknown;
+    }>;
+    pagination: AdminPagination;
+};
+
+export type AdminSalonServicesResponse = {
+    items: Array<{
+        [key: string]: unknown;
+    }>;
+    pagination: AdminPagination;
+};
+
 export type AdminSalonStatusUpdateRequest = {
     status: AdminSalonStatus;
     reason: string;
@@ -1456,6 +1491,201 @@ export type GetApiV1AdminSalonsByIdResponses = {
 };
 
 export type GetApiV1AdminSalonsByIdResponse = GetApiV1AdminSalonsByIdResponses[keyof GetApiV1AdminSalonsByIdResponses];
+
+export type GetApiV1AdminSalonsByIdClientsData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        page?: number;
+        pageSize?: number;
+        search?: string;
+    };
+    url: '/api/v1/admin/salons/{id}/clients';
+};
+
+export type GetApiV1AdminSalonsByIdClientsErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user is not an active platform admin or lacks permission
+     */
+    403: ApiError;
+    /**
+     * Admin resource not found
+     */
+    404: ApiError;
+};
+
+export type GetApiV1AdminSalonsByIdClientsError = GetApiV1AdminSalonsByIdClientsErrors[keyof GetApiV1AdminSalonsByIdClientsErrors];
+
+export type GetApiV1AdminSalonsByIdClientsResponses = {
+    /**
+     * List salon Clients for platform admin
+     */
+    200: AdminSalonClientsResponse;
+};
+
+export type GetApiV1AdminSalonsByIdClientsResponse = GetApiV1AdminSalonsByIdClientsResponses[keyof GetApiV1AdminSalonsByIdClientsResponses];
+
+export type GetApiV1AdminSalonsByIdAppointmentsData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        page?: number;
+        pageSize?: number;
+        search?: string;
+    };
+    url: '/api/v1/admin/salons/{id}/appointments';
+};
+
+export type GetApiV1AdminSalonsByIdAppointmentsErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user is not an active platform admin or lacks permission
+     */
+    403: ApiError;
+    /**
+     * Admin resource not found
+     */
+    404: ApiError;
+};
+
+export type GetApiV1AdminSalonsByIdAppointmentsError = GetApiV1AdminSalonsByIdAppointmentsErrors[keyof GetApiV1AdminSalonsByIdAppointmentsErrors];
+
+export type GetApiV1AdminSalonsByIdAppointmentsResponses = {
+    /**
+     * List salon Appointments for platform admin
+     */
+    200: AdminSalonAppointmentsResponse;
+};
+
+export type GetApiV1AdminSalonsByIdAppointmentsResponse = GetApiV1AdminSalonsByIdAppointmentsResponses[keyof GetApiV1AdminSalonsByIdAppointmentsResponses];
+
+export type GetApiV1AdminSalonsByIdAppointmentRequestsData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        page?: number;
+        pageSize?: number;
+        search?: string;
+    };
+    url: '/api/v1/admin/salons/{id}/appointment-requests';
+};
+
+export type GetApiV1AdminSalonsByIdAppointmentRequestsErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user is not an active platform admin or lacks permission
+     */
+    403: ApiError;
+    /**
+     * Admin resource not found
+     */
+    404: ApiError;
+};
+
+export type GetApiV1AdminSalonsByIdAppointmentRequestsError = GetApiV1AdminSalonsByIdAppointmentRequestsErrors[keyof GetApiV1AdminSalonsByIdAppointmentRequestsErrors];
+
+export type GetApiV1AdminSalonsByIdAppointmentRequestsResponses = {
+    /**
+     * List salon AppointmentRequests for platform admin
+     */
+    200: AdminSalonAppointmentRequestsResponse;
+};
+
+export type GetApiV1AdminSalonsByIdAppointmentRequestsResponse = GetApiV1AdminSalonsByIdAppointmentRequestsResponses[keyof GetApiV1AdminSalonsByIdAppointmentRequestsResponses];
+
+export type GetApiV1AdminSalonsByIdStaffData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        page?: number;
+        pageSize?: number;
+        search?: string;
+    };
+    url: '/api/v1/admin/salons/{id}/staff';
+};
+
+export type GetApiV1AdminSalonsByIdStaffErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user is not an active platform admin or lacks permission
+     */
+    403: ApiError;
+    /**
+     * Admin resource not found
+     */
+    404: ApiError;
+};
+
+export type GetApiV1AdminSalonsByIdStaffError = GetApiV1AdminSalonsByIdStaffErrors[keyof GetApiV1AdminSalonsByIdStaffErrors];
+
+export type GetApiV1AdminSalonsByIdStaffResponses = {
+    /**
+     * List salon Staff for platform admin
+     */
+    200: AdminSalonStaffResponse;
+};
+
+export type GetApiV1AdminSalonsByIdStaffResponse = GetApiV1AdminSalonsByIdStaffResponses[keyof GetApiV1AdminSalonsByIdStaffResponses];
+
+export type GetApiV1AdminSalonsByIdServicesData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        page?: number;
+        pageSize?: number;
+        search?: string;
+    };
+    url: '/api/v1/admin/salons/{id}/services';
+};
+
+export type GetApiV1AdminSalonsByIdServicesErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user is not an active platform admin or lacks permission
+     */
+    403: ApiError;
+    /**
+     * Admin resource not found
+     */
+    404: ApiError;
+};
+
+export type GetApiV1AdminSalonsByIdServicesError = GetApiV1AdminSalonsByIdServicesErrors[keyof GetApiV1AdminSalonsByIdServicesErrors];
+
+export type GetApiV1AdminSalonsByIdServicesResponses = {
+    /**
+     * List salon ServiceVariants for platform admin
+     */
+    200: AdminSalonServicesResponse;
+};
+
+export type GetApiV1AdminSalonsByIdServicesResponse = GetApiV1AdminSalonsByIdServicesResponses[keyof GetApiV1AdminSalonsByIdServicesResponses];
 
 export type PatchApiV1AdminSalonsByIdStatusData = {
     body: AdminSalonStatusUpdateRequest;

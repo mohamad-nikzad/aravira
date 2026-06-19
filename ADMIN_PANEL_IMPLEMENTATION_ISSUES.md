@@ -182,16 +182,16 @@ Add read-only salon detail tabs for Clients, Appointments, Appointment Requests,
 
 ## Acceptance criteria
 
-- [ ] Add `GET /api/v1/admin/salons/:id/clients`.
-- [ ] Add `GET /api/v1/admin/salons/:id/appointments`.
-- [ ] Add `GET /api/v1/admin/salons/:id/appointment-requests`.
-- [ ] Add `GET /api/v1/admin/salons/:id/staff`.
-- [ ] Add `GET /api/v1/admin/salons/:id/services`.
-- [ ] OpenAPI and `@repo/api-client` are regenerated for the new endpoints.
-- [ ] `/salons/$salonId` has read-only tabs for Clients, Appointments, Appointment Requests, Staff, and Services.
-- [ ] UI copy uses `Client`, `Appointment`, `AppointmentRequest`, `Staff`, and `ServiceVariant` where variant-level distinction matters.
-- [ ] No Client, Appointment, AppointmentRequest, Staff, or Service mutation actions appear in these tabs.
-- [ ] API and UI tests cover at least one populated and one empty state per tab group.
+- [x] Add `GET /api/v1/admin/salons/:id/clients`.
+- [x] Add `GET /api/v1/admin/salons/:id/appointments`.
+- [x] Add `GET /api/v1/admin/salons/:id/appointment-requests`.
+- [x] Add `GET /api/v1/admin/salons/:id/staff`.
+- [x] Add `GET /api/v1/admin/salons/:id/services`.
+- [x] OpenAPI and `@repo/api-client` are regenerated for the new endpoints.
+- [x] `/salons/$salonId` has read-only tabs for Clients, Appointments, Appointment Requests, Staff, and Services.
+- [x] UI copy uses `Client`, `Appointment`, `AppointmentRequest`, `Staff`, and `ServiceVariant` where variant-level distinction matters.
+- [x] No Client, Appointment, AppointmentRequest, Staff, or Service mutation actions appear in these tabs.
+- [x] API and UI tests cover at least one populated and one empty state per tab group.
 
 ## Blocked by
 

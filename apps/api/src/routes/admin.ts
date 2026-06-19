@@ -15,6 +15,11 @@ import {
   listAdminCatalogPresets,
   listAdminInternalNotes,
   listAdminNotificationDeliveries,
+  listAdminSalonAppointmentRequests,
+  listAdminSalonAppointments,
+  listAdminSalonClients,
+  listAdminSalonServices,
+  listAdminSalonStaff,
   listAdminSalons,
   listAdminSupportAppointmentRequests,
   listAdminSupportAppointments,
@@ -183,6 +188,69 @@ export const adminRoute = new Hono<AppEnv>()
       const result = await getAdminSalon(c.req.valid('param').id)
       if (!result) return error(c, 'سالن یافت نشد', 404)
       return ok(c, result)
+    },
+  )
+  .get(
+    '/salons/:id/clients',
+    requirePlatformAdmin('view_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('query', listQuerySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const missingSalon = await requireExistingSalon(c, id)
+      if (missingSalon) return missingSalon
+      return ok(c, await listAdminSalonClients(id, c.req.valid('query')))
+    },
+  )
+  .get(
+    '/salons/:id/appointments',
+    requirePlatformAdmin('view_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('query', listQuerySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const missingSalon = await requireExistingSalon(c, id)
+      if (missingSalon) return missingSalon
+      return ok(c, await listAdminSalonAppointments(id, c.req.valid('query')))
+    },
+  )
+  .get(
+    '/salons/:id/appointment-requests',
+    requirePlatformAdmin('view_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('query', listQuerySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const missingSalon = await requireExistingSalon(c, id)
+      if (missingSalon) return missingSalon
+      return ok(
+        c,
+        await listAdminSalonAppointmentRequests(id, c.req.valid('query')),
+      )
+    },
+  )
+  .get(
+    '/salons/:id/staff',
+    requirePlatformAdmin('view_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('query', listQuerySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const missingSalon = await requireExistingSalon(c, id)
+      if (missingSalon) return missingSalon
+      return ok(c, await listAdminSalonStaff(id, c.req.valid('query')))
+    },
+  )
+  .get(
+    '/salons/:id/services',
+    requirePlatformAdmin('view_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('query', listQuerySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const missingSalon = await requireExistingSalon(c, id)
+      if (missingSalon) return missingSalon
+      return ok(c, await listAdminSalonServices(id, c.req.valid('query')))
     },
   )
   .patch(

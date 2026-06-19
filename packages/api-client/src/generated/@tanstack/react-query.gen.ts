@@ -3,8 +3,8 @@
 import { type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { deleteApiV1AppointmentsById, deleteApiV1MessagingAccountsById, deleteApiV1StaffById, getApiV1AdminAuditLog, getApiV1AdminAuthMe, getApiV1AdminCatalogPresets, getApiV1AdminMessagingHealth, getApiV1AdminNotificationsDeliveries, getApiV1AdminOverview, getApiV1AdminPlatformAdmins, getApiV1AdminRuntime, getApiV1AdminSalons, getApiV1AdminSalonsById, getApiV1AdminSalonsByIdNotes, getApiV1AdminSupportAppointmentRequests, getApiV1AdminSupportAppointments, getApiV1AdminUsers, getApiV1AdminUsersById, getApiV1AdminUsersByIdNotes, getApiV1AppointmentRequests, getApiV1Appointments, getApiV1AppointmentsAvailability, getApiV1AppointmentsById, getApiV1CatalogPresets, getApiV1Clients, getApiV1ClientsById, getApiV1ClientsByIdSummary, getApiV1Dashboard, getApiV1MessagingAccounts, getApiV1NotificationPreferences, getApiV1Notifications, getApiV1Onboarding, getApiV1PublicSalonsBySlug, getApiV1PublicSalonsBySlugAppointmentRequestsByToken, getApiV1PublicSalonsBySlugAvailability, getApiV1Retention, getApiV1SalonProfilePresence, getApiV1SalonPublicSettings, getApiV1ServiceAddons, getApiV1ServiceCategories, getApiV1ServiceFamilies, getApiV1Services, getApiV1ServicesById, getApiV1ServicesByIdAddons, getApiV1ServicesByIdComboComponents, getApiV1SettingsBusiness, getApiV1Staff, getApiV1StaffBookingAvailability, getApiV1StaffByIdSchedule, getApiV1Today, type Options, patchApiV1AdminCatalogPresetsById, patchApiV1AdminPlatformAdminsById, patchApiV1AdminSalonsByIdStatus, patchApiV1AppointmentsById, patchApiV1ClientsById, patchApiV1MessagingAccountsById, patchApiV1NotificationPreferences, patchApiV1Onboarding, patchApiV1RetentionById, patchApiV1SalonProfilePresence, patchApiV1SalonPublicSettingsSlug, patchApiV1ServiceAddonsById, patchApiV1ServiceCategoriesById, patchApiV1ServiceFamiliesById, patchApiV1ServicesById, patchApiV1SettingsBusiness, patchApiV1StaffById, patchApiV1StaffByIdPassword, patchApiV1StaffByIdServices, postApiV1AdminCatalogPresets, postApiV1AdminPlatformAdmins, postApiV1AdminSalonsByIdNotes, postApiV1AdminUsersByIdNotes, postApiV1AppointmentRequestsByIdApprove, postApiV1AppointmentRequestsByIdReject, postApiV1Appointments, postApiV1AppointmentsByIdCompleteClient, postApiV1CatalogPresetsByIdApply, postApiV1Clients, postApiV1ClientsBulk, postApiV1ClientsByIdFollowUps, postApiV1MessagingLink, postApiV1NotificationsByIdRead, postApiV1NotificationsReadAll, postApiV1NotificationsTest, postApiV1PublicSalonsBySlugAppointmentRequests, postApiV1PublicSalonsBySlugAppointmentRequestsByTokenCancel, postApiV1RetentionByIdBaleMessage, postApiV1ServiceAddons, postApiV1ServiceCategories, postApiV1ServiceFamilies, postApiV1Services, postApiV1ServicesImportStarterTemplates, postApiV1Staff, putApiV1SalonPublicSettings, putApiV1ServicesByIdComboComponents, putApiV1StaffByIdSchedule } from '../sdk.gen';
-import type { DeleteApiV1AppointmentsByIdData, DeleteApiV1AppointmentsByIdError, DeleteApiV1AppointmentsByIdResponse, DeleteApiV1MessagingAccountsByIdData, DeleteApiV1MessagingAccountsByIdError, DeleteApiV1MessagingAccountsByIdResponse, DeleteApiV1StaffByIdData, DeleteApiV1StaffByIdError, DeleteApiV1StaffByIdResponse, GetApiV1AdminAuditLogData, GetApiV1AdminAuditLogError, GetApiV1AdminAuditLogResponse, GetApiV1AdminAuthMeData, GetApiV1AdminAuthMeError, GetApiV1AdminAuthMeResponse, GetApiV1AdminCatalogPresetsData, GetApiV1AdminCatalogPresetsError, GetApiV1AdminCatalogPresetsResponse, GetApiV1AdminMessagingHealthData, GetApiV1AdminMessagingHealthError, GetApiV1AdminMessagingHealthResponse, GetApiV1AdminNotificationsDeliveriesData, GetApiV1AdminNotificationsDeliveriesError, GetApiV1AdminNotificationsDeliveriesResponse, GetApiV1AdminOverviewData, GetApiV1AdminOverviewError, GetApiV1AdminOverviewResponse, GetApiV1AdminPlatformAdminsData, GetApiV1AdminPlatformAdminsError, GetApiV1AdminPlatformAdminsResponse, GetApiV1AdminRuntimeData, GetApiV1AdminRuntimeError, GetApiV1AdminRuntimeResponse, GetApiV1AdminSalonsByIdData, GetApiV1AdminSalonsByIdError, GetApiV1AdminSalonsByIdNotesData, GetApiV1AdminSalonsByIdNotesError, GetApiV1AdminSalonsByIdNotesResponse, GetApiV1AdminSalonsByIdResponse, GetApiV1AdminSalonsData, GetApiV1AdminSalonsError, GetApiV1AdminSalonsResponse, GetApiV1AdminSupportAppointmentRequestsData, GetApiV1AdminSupportAppointmentRequestsError, GetApiV1AdminSupportAppointmentRequestsResponse, GetApiV1AdminSupportAppointmentsData, GetApiV1AdminSupportAppointmentsError, GetApiV1AdminSupportAppointmentsResponse, GetApiV1AdminUsersByIdData, GetApiV1AdminUsersByIdError, GetApiV1AdminUsersByIdNotesData, GetApiV1AdminUsersByIdNotesError, GetApiV1AdminUsersByIdNotesResponse, GetApiV1AdminUsersByIdResponse, GetApiV1AdminUsersData, GetApiV1AdminUsersError, GetApiV1AdminUsersResponse, GetApiV1AppointmentRequestsData, GetApiV1AppointmentRequestsError, GetApiV1AppointmentRequestsResponse, GetApiV1AppointmentsAvailabilityData, GetApiV1AppointmentsAvailabilityError, GetApiV1AppointmentsAvailabilityResponse, GetApiV1AppointmentsByIdData, GetApiV1AppointmentsByIdError, GetApiV1AppointmentsByIdResponse, GetApiV1AppointmentsData, GetApiV1AppointmentsError, GetApiV1AppointmentsResponse, GetApiV1CatalogPresetsData, GetApiV1CatalogPresetsError, GetApiV1CatalogPresetsResponse, GetApiV1ClientsByIdData, GetApiV1ClientsByIdError, GetApiV1ClientsByIdResponse, GetApiV1ClientsByIdSummaryData, GetApiV1ClientsByIdSummaryError, GetApiV1ClientsByIdSummaryResponse, GetApiV1ClientsData, GetApiV1ClientsError, GetApiV1ClientsResponse, GetApiV1DashboardData, GetApiV1DashboardError, GetApiV1DashboardResponse, GetApiV1MessagingAccountsData, GetApiV1MessagingAccountsError, GetApiV1MessagingAccountsResponse, GetApiV1NotificationPreferencesData, GetApiV1NotificationPreferencesError, GetApiV1NotificationPreferencesResponse, GetApiV1NotificationsData, GetApiV1NotificationsError, GetApiV1NotificationsResponse, GetApiV1OnboardingData, GetApiV1OnboardingError, GetApiV1OnboardingResponse, GetApiV1PublicSalonsBySlugAppointmentRequestsByTokenData, GetApiV1PublicSalonsBySlugAppointmentRequestsByTokenError, GetApiV1PublicSalonsBySlugAppointmentRequestsByTokenResponse, GetApiV1PublicSalonsBySlugAvailabilityData, GetApiV1PublicSalonsBySlugAvailabilityError, GetApiV1PublicSalonsBySlugAvailabilityResponse, GetApiV1PublicSalonsBySlugData, GetApiV1PublicSalonsBySlugError, GetApiV1PublicSalonsBySlugResponse, GetApiV1RetentionData, GetApiV1RetentionError, GetApiV1RetentionResponse, GetApiV1SalonProfilePresenceData, GetApiV1SalonProfilePresenceError, GetApiV1SalonProfilePresenceResponse, GetApiV1SalonPublicSettingsData, GetApiV1SalonPublicSettingsError, GetApiV1SalonPublicSettingsResponse, GetApiV1ServiceAddonsData, GetApiV1ServiceAddonsError, GetApiV1ServiceAddonsResponse, GetApiV1ServiceCategoriesData, GetApiV1ServiceCategoriesError, GetApiV1ServiceCategoriesResponse, GetApiV1ServiceFamiliesData, GetApiV1ServiceFamiliesError, GetApiV1ServiceFamiliesResponse, GetApiV1ServicesByIdAddonsData, GetApiV1ServicesByIdAddonsError, GetApiV1ServicesByIdAddonsResponse, GetApiV1ServicesByIdComboComponentsData, GetApiV1ServicesByIdComboComponentsError, GetApiV1ServicesByIdComboComponentsResponse, GetApiV1ServicesByIdData, GetApiV1ServicesByIdError, GetApiV1ServicesByIdResponse, GetApiV1ServicesData, GetApiV1ServicesError, GetApiV1ServicesResponse, GetApiV1SettingsBusinessData, GetApiV1SettingsBusinessError, GetApiV1SettingsBusinessResponse, GetApiV1StaffBookingAvailabilityData, GetApiV1StaffBookingAvailabilityError, GetApiV1StaffBookingAvailabilityResponse, GetApiV1StaffByIdScheduleData, GetApiV1StaffByIdScheduleError, GetApiV1StaffByIdScheduleResponse, GetApiV1StaffData, GetApiV1StaffError, GetApiV1StaffResponse, GetApiV1TodayData, GetApiV1TodayError, GetApiV1TodayResponse, PatchApiV1AdminCatalogPresetsByIdData, PatchApiV1AdminCatalogPresetsByIdError, PatchApiV1AdminCatalogPresetsByIdResponse, PatchApiV1AdminPlatformAdminsByIdData, PatchApiV1AdminPlatformAdminsByIdError, PatchApiV1AdminPlatformAdminsByIdResponse, PatchApiV1AdminSalonsByIdStatusData, PatchApiV1AdminSalonsByIdStatusError, PatchApiV1AdminSalonsByIdStatusResponse, PatchApiV1AppointmentsByIdData, PatchApiV1AppointmentsByIdError, PatchApiV1AppointmentsByIdResponse, PatchApiV1ClientsByIdData, PatchApiV1ClientsByIdError, PatchApiV1ClientsByIdResponse, PatchApiV1MessagingAccountsByIdData, PatchApiV1MessagingAccountsByIdError, PatchApiV1MessagingAccountsByIdResponse, PatchApiV1NotificationPreferencesData, PatchApiV1NotificationPreferencesError, PatchApiV1NotificationPreferencesResponse, PatchApiV1OnboardingData, PatchApiV1OnboardingError, PatchApiV1OnboardingResponse, PatchApiV1RetentionByIdData, PatchApiV1RetentionByIdError, PatchApiV1RetentionByIdResponse, PatchApiV1SalonProfilePresenceData, PatchApiV1SalonProfilePresenceError, PatchApiV1SalonProfilePresenceResponse, PatchApiV1SalonPublicSettingsSlugData, PatchApiV1SalonPublicSettingsSlugError, PatchApiV1SalonPublicSettingsSlugResponse, PatchApiV1ServiceAddonsByIdData, PatchApiV1ServiceAddonsByIdError, PatchApiV1ServiceAddonsByIdResponse, PatchApiV1ServiceCategoriesByIdData, PatchApiV1ServiceCategoriesByIdError, PatchApiV1ServiceCategoriesByIdResponse, PatchApiV1ServiceFamiliesByIdData, PatchApiV1ServiceFamiliesByIdError, PatchApiV1ServiceFamiliesByIdResponse, PatchApiV1ServicesByIdData, PatchApiV1ServicesByIdError, PatchApiV1ServicesByIdResponse, PatchApiV1SettingsBusinessData, PatchApiV1SettingsBusinessError, PatchApiV1SettingsBusinessResponse, PatchApiV1StaffByIdData, PatchApiV1StaffByIdError, PatchApiV1StaffByIdPasswordData, PatchApiV1StaffByIdPasswordError, PatchApiV1StaffByIdPasswordResponse, PatchApiV1StaffByIdResponse, PatchApiV1StaffByIdServicesData, PatchApiV1StaffByIdServicesError, PatchApiV1StaffByIdServicesResponse, PostApiV1AdminCatalogPresetsData, PostApiV1AdminCatalogPresetsError, PostApiV1AdminCatalogPresetsResponse, PostApiV1AdminPlatformAdminsData, PostApiV1AdminPlatformAdminsError, PostApiV1AdminPlatformAdminsResponse, PostApiV1AdminSalonsByIdNotesData, PostApiV1AdminSalonsByIdNotesError, PostApiV1AdminSalonsByIdNotesResponse, PostApiV1AdminUsersByIdNotesData, PostApiV1AdminUsersByIdNotesError, PostApiV1AdminUsersByIdNotesResponse, PostApiV1AppointmentRequestsByIdApproveData, PostApiV1AppointmentRequestsByIdApproveError, PostApiV1AppointmentRequestsByIdApproveResponse, PostApiV1AppointmentRequestsByIdRejectData, PostApiV1AppointmentRequestsByIdRejectError, PostApiV1AppointmentRequestsByIdRejectResponse, PostApiV1AppointmentsByIdCompleteClientData, PostApiV1AppointmentsByIdCompleteClientError, PostApiV1AppointmentsByIdCompleteClientResponse, PostApiV1AppointmentsData, PostApiV1AppointmentsError, PostApiV1AppointmentsResponse, PostApiV1CatalogPresetsByIdApplyData, PostApiV1CatalogPresetsByIdApplyError, PostApiV1CatalogPresetsByIdApplyResponse, PostApiV1ClientsBulkData, PostApiV1ClientsBulkError, PostApiV1ClientsBulkResponse, PostApiV1ClientsByIdFollowUpsData, PostApiV1ClientsByIdFollowUpsError, PostApiV1ClientsByIdFollowUpsResponse, PostApiV1ClientsData, PostApiV1ClientsError, PostApiV1ClientsResponse, PostApiV1MessagingLinkData, PostApiV1MessagingLinkError, PostApiV1MessagingLinkResponse, PostApiV1NotificationsByIdReadData, PostApiV1NotificationsByIdReadError, PostApiV1NotificationsByIdReadResponse, PostApiV1NotificationsReadAllData, PostApiV1NotificationsReadAllError, PostApiV1NotificationsReadAllResponse, PostApiV1NotificationsTestData, PostApiV1NotificationsTestError, PostApiV1NotificationsTestResponse, PostApiV1PublicSalonsBySlugAppointmentRequestsByTokenCancelData, PostApiV1PublicSalonsBySlugAppointmentRequestsByTokenCancelError, PostApiV1PublicSalonsBySlugAppointmentRequestsByTokenCancelResponse, PostApiV1PublicSalonsBySlugAppointmentRequestsData, PostApiV1PublicSalonsBySlugAppointmentRequestsError, PostApiV1PublicSalonsBySlugAppointmentRequestsResponse, PostApiV1RetentionByIdBaleMessageData, PostApiV1RetentionByIdBaleMessageError, PostApiV1RetentionByIdBaleMessageResponse, PostApiV1ServiceAddonsData, PostApiV1ServiceAddonsError, PostApiV1ServiceAddonsResponse, PostApiV1ServiceCategoriesData, PostApiV1ServiceCategoriesError, PostApiV1ServiceCategoriesResponse, PostApiV1ServiceFamiliesData, PostApiV1ServiceFamiliesError, PostApiV1ServiceFamiliesResponse, PostApiV1ServicesData, PostApiV1ServicesError, PostApiV1ServicesImportStarterTemplatesData, PostApiV1ServicesImportStarterTemplatesError, PostApiV1ServicesImportStarterTemplatesResponse, PostApiV1ServicesResponse, PostApiV1StaffData, PostApiV1StaffError, PostApiV1StaffResponse, PutApiV1SalonPublicSettingsData, PutApiV1SalonPublicSettingsError, PutApiV1SalonPublicSettingsResponse, PutApiV1ServicesByIdComboComponentsData, PutApiV1ServicesByIdComboComponentsError, PutApiV1ServicesByIdComboComponentsResponse, PutApiV1StaffByIdScheduleData, PutApiV1StaffByIdScheduleError, PutApiV1StaffByIdScheduleResponse } from '../types.gen';
+import { deleteApiV1AppointmentsById, deleteApiV1MessagingAccountsById, deleteApiV1StaffById, getApiV1AdminAuditLog, getApiV1AdminAuthMe, getApiV1AdminCatalogPresets, getApiV1AdminMessagingHealth, getApiV1AdminNotificationsDeliveries, getApiV1AdminOverview, getApiV1AdminPlatformAdmins, getApiV1AdminRuntime, getApiV1AdminSalons, getApiV1AdminSalonsById, getApiV1AdminSalonsByIdAppointmentRequests, getApiV1AdminSalonsByIdAppointments, getApiV1AdminSalonsByIdClients, getApiV1AdminSalonsByIdNotes, getApiV1AdminSalonsByIdServices, getApiV1AdminSalonsByIdStaff, getApiV1AdminSupportAppointmentRequests, getApiV1AdminSupportAppointments, getApiV1AdminUsers, getApiV1AdminUsersById, getApiV1AdminUsersByIdNotes, getApiV1AppointmentRequests, getApiV1Appointments, getApiV1AppointmentsAvailability, getApiV1AppointmentsById, getApiV1CatalogPresets, getApiV1Clients, getApiV1ClientsById, getApiV1ClientsByIdSummary, getApiV1Dashboard, getApiV1MessagingAccounts, getApiV1NotificationPreferences, getApiV1Notifications, getApiV1Onboarding, getApiV1PublicSalonsBySlug, getApiV1PublicSalonsBySlugAppointmentRequestsByToken, getApiV1PublicSalonsBySlugAvailability, getApiV1Retention, getApiV1SalonProfilePresence, getApiV1SalonPublicSettings, getApiV1ServiceAddons, getApiV1ServiceCategories, getApiV1ServiceFamilies, getApiV1Services, getApiV1ServicesById, getApiV1ServicesByIdAddons, getApiV1ServicesByIdComboComponents, getApiV1SettingsBusiness, getApiV1Staff, getApiV1StaffBookingAvailability, getApiV1StaffByIdSchedule, getApiV1Today, type Options, patchApiV1AdminCatalogPresetsById, patchApiV1AdminPlatformAdminsById, patchApiV1AdminSalonsByIdStatus, patchApiV1AppointmentsById, patchApiV1ClientsById, patchApiV1MessagingAccountsById, patchApiV1NotificationPreferences, patchApiV1Onboarding, patchApiV1RetentionById, patchApiV1SalonProfilePresence, patchApiV1SalonPublicSettingsSlug, patchApiV1ServiceAddonsById, patchApiV1ServiceCategoriesById, patchApiV1ServiceFamiliesById, patchApiV1ServicesById, patchApiV1SettingsBusiness, patchApiV1StaffById, patchApiV1StaffByIdPassword, patchApiV1StaffByIdServices, postApiV1AdminCatalogPresets, postApiV1AdminPlatformAdmins, postApiV1AdminSalonsByIdNotes, postApiV1AdminUsersByIdNotes, postApiV1AppointmentRequestsByIdApprove, postApiV1AppointmentRequestsByIdReject, postApiV1Appointments, postApiV1AppointmentsByIdCompleteClient, postApiV1CatalogPresetsByIdApply, postApiV1Clients, postApiV1ClientsBulk, postApiV1ClientsByIdFollowUps, postApiV1MessagingLink, postApiV1NotificationsByIdRead, postApiV1NotificationsReadAll, postApiV1NotificationsTest, postApiV1PublicSalonsBySlugAppointmentRequests, postApiV1PublicSalonsBySlugAppointmentRequestsByTokenCancel, postApiV1RetentionByIdBaleMessage, postApiV1ServiceAddons, postApiV1ServiceCategories, postApiV1ServiceFamilies, postApiV1Services, postApiV1ServicesImportStarterTemplates, postApiV1Staff, putApiV1SalonPublicSettings, putApiV1ServicesByIdComboComponents, putApiV1StaffByIdSchedule } from '../sdk.gen';
+import type { DeleteApiV1AppointmentsByIdData, DeleteApiV1AppointmentsByIdError, DeleteApiV1AppointmentsByIdResponse, DeleteApiV1MessagingAccountsByIdData, DeleteApiV1MessagingAccountsByIdError, DeleteApiV1MessagingAccountsByIdResponse, DeleteApiV1StaffByIdData, DeleteApiV1StaffByIdError, DeleteApiV1StaffByIdResponse, GetApiV1AdminAuditLogData, GetApiV1AdminAuditLogError, GetApiV1AdminAuditLogResponse, GetApiV1AdminAuthMeData, GetApiV1AdminAuthMeError, GetApiV1AdminAuthMeResponse, GetApiV1AdminCatalogPresetsData, GetApiV1AdminCatalogPresetsError, GetApiV1AdminCatalogPresetsResponse, GetApiV1AdminMessagingHealthData, GetApiV1AdminMessagingHealthError, GetApiV1AdminMessagingHealthResponse, GetApiV1AdminNotificationsDeliveriesData, GetApiV1AdminNotificationsDeliveriesError, GetApiV1AdminNotificationsDeliveriesResponse, GetApiV1AdminOverviewData, GetApiV1AdminOverviewError, GetApiV1AdminOverviewResponse, GetApiV1AdminPlatformAdminsData, GetApiV1AdminPlatformAdminsError, GetApiV1AdminPlatformAdminsResponse, GetApiV1AdminRuntimeData, GetApiV1AdminRuntimeError, GetApiV1AdminRuntimeResponse, GetApiV1AdminSalonsByIdAppointmentRequestsData, GetApiV1AdminSalonsByIdAppointmentRequestsError, GetApiV1AdminSalonsByIdAppointmentRequestsResponse, GetApiV1AdminSalonsByIdAppointmentsData, GetApiV1AdminSalonsByIdAppointmentsError, GetApiV1AdminSalonsByIdAppointmentsResponse, GetApiV1AdminSalonsByIdClientsData, GetApiV1AdminSalonsByIdClientsError, GetApiV1AdminSalonsByIdClientsResponse, GetApiV1AdminSalonsByIdData, GetApiV1AdminSalonsByIdError, GetApiV1AdminSalonsByIdNotesData, GetApiV1AdminSalonsByIdNotesError, GetApiV1AdminSalonsByIdNotesResponse, GetApiV1AdminSalonsByIdResponse, GetApiV1AdminSalonsByIdServicesData, GetApiV1AdminSalonsByIdServicesError, GetApiV1AdminSalonsByIdServicesResponse, GetApiV1AdminSalonsByIdStaffData, GetApiV1AdminSalonsByIdStaffError, GetApiV1AdminSalonsByIdStaffResponse, GetApiV1AdminSalonsData, GetApiV1AdminSalonsError, GetApiV1AdminSalonsResponse, GetApiV1AdminSupportAppointmentRequestsData, GetApiV1AdminSupportAppointmentRequestsError, GetApiV1AdminSupportAppointmentRequestsResponse, GetApiV1AdminSupportAppointmentsData, GetApiV1AdminSupportAppointmentsError, GetApiV1AdminSupportAppointmentsResponse, GetApiV1AdminUsersByIdData, GetApiV1AdminUsersByIdError, GetApiV1AdminUsersByIdNotesData, GetApiV1AdminUsersByIdNotesError, GetApiV1AdminUsersByIdNotesResponse, GetApiV1AdminUsersByIdResponse, GetApiV1AdminUsersData, GetApiV1AdminUsersError, GetApiV1AdminUsersResponse, GetApiV1AppointmentRequestsData, GetApiV1AppointmentRequestsError, GetApiV1AppointmentRequestsResponse, GetApiV1AppointmentsAvailabilityData, GetApiV1AppointmentsAvailabilityError, GetApiV1AppointmentsAvailabilityResponse, GetApiV1AppointmentsByIdData, GetApiV1AppointmentsByIdError, GetApiV1AppointmentsByIdResponse, GetApiV1AppointmentsData, GetApiV1AppointmentsError, GetApiV1AppointmentsResponse, GetApiV1CatalogPresetsData, GetApiV1CatalogPresetsError, GetApiV1CatalogPresetsResponse, GetApiV1ClientsByIdData, GetApiV1ClientsByIdError, GetApiV1ClientsByIdResponse, GetApiV1ClientsByIdSummaryData, GetApiV1ClientsByIdSummaryError, GetApiV1ClientsByIdSummaryResponse, GetApiV1ClientsData, GetApiV1ClientsError, GetApiV1ClientsResponse, GetApiV1DashboardData, GetApiV1DashboardError, GetApiV1DashboardResponse, GetApiV1MessagingAccountsData, GetApiV1MessagingAccountsError, GetApiV1MessagingAccountsResponse, GetApiV1NotificationPreferencesData, GetApiV1NotificationPreferencesError, GetApiV1NotificationPreferencesResponse, GetApiV1NotificationsData, GetApiV1NotificationsError, GetApiV1NotificationsResponse, GetApiV1OnboardingData, GetApiV1OnboardingError, GetApiV1OnboardingResponse, GetApiV1PublicSalonsBySlugAppointmentRequestsByTokenData, GetApiV1PublicSalonsBySlugAppointmentRequestsByTokenError, GetApiV1PublicSalonsBySlugAppointmentRequestsByTokenResponse, GetApiV1PublicSalonsBySlugAvailabilityData, GetApiV1PublicSalonsBySlugAvailabilityError, GetApiV1PublicSalonsBySlugAvailabilityResponse, GetApiV1PublicSalonsBySlugData, GetApiV1PublicSalonsBySlugError, GetApiV1PublicSalonsBySlugResponse, GetApiV1RetentionData, GetApiV1RetentionError, GetApiV1RetentionResponse, GetApiV1SalonProfilePresenceData, GetApiV1SalonProfilePresenceError, GetApiV1SalonProfilePresenceResponse, GetApiV1SalonPublicSettingsData, GetApiV1SalonPublicSettingsError, GetApiV1SalonPublicSettingsResponse, GetApiV1ServiceAddonsData, GetApiV1ServiceAddonsError, GetApiV1ServiceAddonsResponse, GetApiV1ServiceCategoriesData, GetApiV1ServiceCategoriesError, GetApiV1ServiceCategoriesResponse, GetApiV1ServiceFamiliesData, GetApiV1ServiceFamiliesError, GetApiV1ServiceFamiliesResponse, GetApiV1ServicesByIdAddonsData, GetApiV1ServicesByIdAddonsError, GetApiV1ServicesByIdAddonsResponse, GetApiV1ServicesByIdComboComponentsData, GetApiV1ServicesByIdComboComponentsError, GetApiV1ServicesByIdComboComponentsResponse, GetApiV1ServicesByIdData, GetApiV1ServicesByIdError, GetApiV1ServicesByIdResponse, GetApiV1ServicesData, GetApiV1ServicesError, GetApiV1ServicesResponse, GetApiV1SettingsBusinessData, GetApiV1SettingsBusinessError, GetApiV1SettingsBusinessResponse, GetApiV1StaffBookingAvailabilityData, GetApiV1StaffBookingAvailabilityError, GetApiV1StaffBookingAvailabilityResponse, GetApiV1StaffByIdScheduleData, GetApiV1StaffByIdScheduleError, GetApiV1StaffByIdScheduleResponse, GetApiV1StaffData, GetApiV1StaffError, GetApiV1StaffResponse, GetApiV1TodayData, GetApiV1TodayError, GetApiV1TodayResponse, PatchApiV1AdminCatalogPresetsByIdData, PatchApiV1AdminCatalogPresetsByIdError, PatchApiV1AdminCatalogPresetsByIdResponse, PatchApiV1AdminPlatformAdminsByIdData, PatchApiV1AdminPlatformAdminsByIdError, PatchApiV1AdminPlatformAdminsByIdResponse, PatchApiV1AdminSalonsByIdStatusData, PatchApiV1AdminSalonsByIdStatusError, PatchApiV1AdminSalonsByIdStatusResponse, PatchApiV1AppointmentsByIdData, PatchApiV1AppointmentsByIdError, PatchApiV1AppointmentsByIdResponse, PatchApiV1ClientsByIdData, PatchApiV1ClientsByIdError, PatchApiV1ClientsByIdResponse, PatchApiV1MessagingAccountsByIdData, PatchApiV1MessagingAccountsByIdError, PatchApiV1MessagingAccountsByIdResponse, PatchApiV1NotificationPreferencesData, PatchApiV1NotificationPreferencesError, PatchApiV1NotificationPreferencesResponse, PatchApiV1OnboardingData, PatchApiV1OnboardingError, PatchApiV1OnboardingResponse, PatchApiV1RetentionByIdData, PatchApiV1RetentionByIdError, PatchApiV1RetentionByIdResponse, PatchApiV1SalonProfilePresenceData, PatchApiV1SalonProfilePresenceError, PatchApiV1SalonProfilePresenceResponse, PatchApiV1SalonPublicSettingsSlugData, PatchApiV1SalonPublicSettingsSlugError, PatchApiV1SalonPublicSettingsSlugResponse, PatchApiV1ServiceAddonsByIdData, PatchApiV1ServiceAddonsByIdError, PatchApiV1ServiceAddonsByIdResponse, PatchApiV1ServiceCategoriesByIdData, PatchApiV1ServiceCategoriesByIdError, PatchApiV1ServiceCategoriesByIdResponse, PatchApiV1ServiceFamiliesByIdData, PatchApiV1ServiceFamiliesByIdError, PatchApiV1ServiceFamiliesByIdResponse, PatchApiV1ServicesByIdData, PatchApiV1ServicesByIdError, PatchApiV1ServicesByIdResponse, PatchApiV1SettingsBusinessData, PatchApiV1SettingsBusinessError, PatchApiV1SettingsBusinessResponse, PatchApiV1StaffByIdData, PatchApiV1StaffByIdError, PatchApiV1StaffByIdPasswordData, PatchApiV1StaffByIdPasswordError, PatchApiV1StaffByIdPasswordResponse, PatchApiV1StaffByIdResponse, PatchApiV1StaffByIdServicesData, PatchApiV1StaffByIdServicesError, PatchApiV1StaffByIdServicesResponse, PostApiV1AdminCatalogPresetsData, PostApiV1AdminCatalogPresetsError, PostApiV1AdminCatalogPresetsResponse, PostApiV1AdminPlatformAdminsData, PostApiV1AdminPlatformAdminsError, PostApiV1AdminPlatformAdminsResponse, PostApiV1AdminSalonsByIdNotesData, PostApiV1AdminSalonsByIdNotesError, PostApiV1AdminSalonsByIdNotesResponse, PostApiV1AdminUsersByIdNotesData, PostApiV1AdminUsersByIdNotesError, PostApiV1AdminUsersByIdNotesResponse, PostApiV1AppointmentRequestsByIdApproveData, PostApiV1AppointmentRequestsByIdApproveError, PostApiV1AppointmentRequestsByIdApproveResponse, PostApiV1AppointmentRequestsByIdRejectData, PostApiV1AppointmentRequestsByIdRejectError, PostApiV1AppointmentRequestsByIdRejectResponse, PostApiV1AppointmentsByIdCompleteClientData, PostApiV1AppointmentsByIdCompleteClientError, PostApiV1AppointmentsByIdCompleteClientResponse, PostApiV1AppointmentsData, PostApiV1AppointmentsError, PostApiV1AppointmentsResponse, PostApiV1CatalogPresetsByIdApplyData, PostApiV1CatalogPresetsByIdApplyError, PostApiV1CatalogPresetsByIdApplyResponse, PostApiV1ClientsBulkData, PostApiV1ClientsBulkError, PostApiV1ClientsBulkResponse, PostApiV1ClientsByIdFollowUpsData, PostApiV1ClientsByIdFollowUpsError, PostApiV1ClientsByIdFollowUpsResponse, PostApiV1ClientsData, PostApiV1ClientsError, PostApiV1ClientsResponse, PostApiV1MessagingLinkData, PostApiV1MessagingLinkError, PostApiV1MessagingLinkResponse, PostApiV1NotificationsByIdReadData, PostApiV1NotificationsByIdReadError, PostApiV1NotificationsByIdReadResponse, PostApiV1NotificationsReadAllData, PostApiV1NotificationsReadAllError, PostApiV1NotificationsReadAllResponse, PostApiV1NotificationsTestData, PostApiV1NotificationsTestError, PostApiV1NotificationsTestResponse, PostApiV1PublicSalonsBySlugAppointmentRequestsByTokenCancelData, PostApiV1PublicSalonsBySlugAppointmentRequestsByTokenCancelError, PostApiV1PublicSalonsBySlugAppointmentRequestsByTokenCancelResponse, PostApiV1PublicSalonsBySlugAppointmentRequestsData, PostApiV1PublicSalonsBySlugAppointmentRequestsError, PostApiV1PublicSalonsBySlugAppointmentRequestsResponse, PostApiV1RetentionByIdBaleMessageData, PostApiV1RetentionByIdBaleMessageError, PostApiV1RetentionByIdBaleMessageResponse, PostApiV1ServiceAddonsData, PostApiV1ServiceAddonsError, PostApiV1ServiceAddonsResponse, PostApiV1ServiceCategoriesData, PostApiV1ServiceCategoriesError, PostApiV1ServiceCategoriesResponse, PostApiV1ServiceFamiliesData, PostApiV1ServiceFamiliesError, PostApiV1ServiceFamiliesResponse, PostApiV1ServicesData, PostApiV1ServicesError, PostApiV1ServicesImportStarterTemplatesData, PostApiV1ServicesImportStarterTemplatesError, PostApiV1ServicesImportStarterTemplatesResponse, PostApiV1ServicesResponse, PostApiV1StaffData, PostApiV1StaffError, PostApiV1StaffResponse, PutApiV1SalonPublicSettingsData, PutApiV1SalonPublicSettingsError, PutApiV1SalonPublicSettingsResponse, PutApiV1ServicesByIdComboComponentsData, PutApiV1ServicesByIdComboComponentsError, PutApiV1ServicesByIdComboComponentsResponse, PutApiV1StaffByIdScheduleData, PutApiV1StaffByIdScheduleError, PutApiV1StaffByIdScheduleResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -183,6 +183,231 @@ export const getApiV1AdminSalonsByIdOptions = (options: Options<GetApiV1AdminSal
         return data;
     },
     queryKey: getApiV1AdminSalonsByIdQueryKey(options)
+});
+
+export const getApiV1AdminSalonsByIdClientsQueryKey = (options: Options<GetApiV1AdminSalonsByIdClientsData>) => createQueryKey('getApiV1AdminSalonsByIdClients', options);
+
+/**
+ * List salon Clients for platform admin
+ */
+export const getApiV1AdminSalonsByIdClientsOptions = (options: Options<GetApiV1AdminSalonsByIdClientsData>) => queryOptions<GetApiV1AdminSalonsByIdClientsResponse, GetApiV1AdminSalonsByIdClientsError, GetApiV1AdminSalonsByIdClientsResponse, ReturnType<typeof getApiV1AdminSalonsByIdClientsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getApiV1AdminSalonsByIdClients({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getApiV1AdminSalonsByIdClientsQueryKey(options)
+});
+
+export const getApiV1AdminSalonsByIdClientsInfiniteQueryKey = (options: Options<GetApiV1AdminSalonsByIdClientsData>): QueryKey<Options<GetApiV1AdminSalonsByIdClientsData>> => createQueryKey('getApiV1AdminSalonsByIdClients', options, true);
+
+/**
+ * List salon Clients for platform admin
+ */
+export const getApiV1AdminSalonsByIdClientsInfiniteOptions = (options: Options<GetApiV1AdminSalonsByIdClientsData>) => infiniteQueryOptions<GetApiV1AdminSalonsByIdClientsResponse, GetApiV1AdminSalonsByIdClientsError, InfiniteData<GetApiV1AdminSalonsByIdClientsResponse>, QueryKey<Options<GetApiV1AdminSalonsByIdClientsData>>, number | Pick<QueryKey<Options<GetApiV1AdminSalonsByIdClientsData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
+// @ts-ignore
+{
+    queryFn: async ({ pageParam, queryKey, signal }) => {
+        // @ts-ignore
+        const page: Pick<QueryKey<Options<GetApiV1AdminSalonsByIdClientsData>>[0], 'body' | 'headers' | 'path' | 'query'> = typeof pageParam === 'object' ? pageParam : {
+            query: {
+                page: pageParam
+            }
+        };
+        const params = createInfiniteParams(queryKey, page);
+        const { data } = await getApiV1AdminSalonsByIdClients({
+            ...options,
+            ...params,
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getApiV1AdminSalonsByIdClientsInfiniteQueryKey(options)
+});
+
+export const getApiV1AdminSalonsByIdAppointmentsQueryKey = (options: Options<GetApiV1AdminSalonsByIdAppointmentsData>) => createQueryKey('getApiV1AdminSalonsByIdAppointments', options);
+
+/**
+ * List salon Appointments for platform admin
+ */
+export const getApiV1AdminSalonsByIdAppointmentsOptions = (options: Options<GetApiV1AdminSalonsByIdAppointmentsData>) => queryOptions<GetApiV1AdminSalonsByIdAppointmentsResponse, GetApiV1AdminSalonsByIdAppointmentsError, GetApiV1AdminSalonsByIdAppointmentsResponse, ReturnType<typeof getApiV1AdminSalonsByIdAppointmentsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getApiV1AdminSalonsByIdAppointments({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getApiV1AdminSalonsByIdAppointmentsQueryKey(options)
+});
+
+export const getApiV1AdminSalonsByIdAppointmentsInfiniteQueryKey = (options: Options<GetApiV1AdminSalonsByIdAppointmentsData>): QueryKey<Options<GetApiV1AdminSalonsByIdAppointmentsData>> => createQueryKey('getApiV1AdminSalonsByIdAppointments', options, true);
+
+/**
+ * List salon Appointments for platform admin
+ */
+export const getApiV1AdminSalonsByIdAppointmentsInfiniteOptions = (options: Options<GetApiV1AdminSalonsByIdAppointmentsData>) => infiniteQueryOptions<GetApiV1AdminSalonsByIdAppointmentsResponse, GetApiV1AdminSalonsByIdAppointmentsError, InfiniteData<GetApiV1AdminSalonsByIdAppointmentsResponse>, QueryKey<Options<GetApiV1AdminSalonsByIdAppointmentsData>>, number | Pick<QueryKey<Options<GetApiV1AdminSalonsByIdAppointmentsData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
+// @ts-ignore
+{
+    queryFn: async ({ pageParam, queryKey, signal }) => {
+        // @ts-ignore
+        const page: Pick<QueryKey<Options<GetApiV1AdminSalonsByIdAppointmentsData>>[0], 'body' | 'headers' | 'path' | 'query'> = typeof pageParam === 'object' ? pageParam : {
+            query: {
+                page: pageParam
+            }
+        };
+        const params = createInfiniteParams(queryKey, page);
+        const { data } = await getApiV1AdminSalonsByIdAppointments({
+            ...options,
+            ...params,
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getApiV1AdminSalonsByIdAppointmentsInfiniteQueryKey(options)
+});
+
+export const getApiV1AdminSalonsByIdAppointmentRequestsQueryKey = (options: Options<GetApiV1AdminSalonsByIdAppointmentRequestsData>) => createQueryKey('getApiV1AdminSalonsByIdAppointmentRequests', options);
+
+/**
+ * List salon AppointmentRequests for platform admin
+ */
+export const getApiV1AdminSalonsByIdAppointmentRequestsOptions = (options: Options<GetApiV1AdminSalonsByIdAppointmentRequestsData>) => queryOptions<GetApiV1AdminSalonsByIdAppointmentRequestsResponse, GetApiV1AdminSalonsByIdAppointmentRequestsError, GetApiV1AdminSalonsByIdAppointmentRequestsResponse, ReturnType<typeof getApiV1AdminSalonsByIdAppointmentRequestsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getApiV1AdminSalonsByIdAppointmentRequests({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getApiV1AdminSalonsByIdAppointmentRequestsQueryKey(options)
+});
+
+export const getApiV1AdminSalonsByIdAppointmentRequestsInfiniteQueryKey = (options: Options<GetApiV1AdminSalonsByIdAppointmentRequestsData>): QueryKey<Options<GetApiV1AdminSalonsByIdAppointmentRequestsData>> => createQueryKey('getApiV1AdminSalonsByIdAppointmentRequests', options, true);
+
+/**
+ * List salon AppointmentRequests for platform admin
+ */
+export const getApiV1AdminSalonsByIdAppointmentRequestsInfiniteOptions = (options: Options<GetApiV1AdminSalonsByIdAppointmentRequestsData>) => infiniteQueryOptions<GetApiV1AdminSalonsByIdAppointmentRequestsResponse, GetApiV1AdminSalonsByIdAppointmentRequestsError, InfiniteData<GetApiV1AdminSalonsByIdAppointmentRequestsResponse>, QueryKey<Options<GetApiV1AdminSalonsByIdAppointmentRequestsData>>, number | Pick<QueryKey<Options<GetApiV1AdminSalonsByIdAppointmentRequestsData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
+// @ts-ignore
+{
+    queryFn: async ({ pageParam, queryKey, signal }) => {
+        // @ts-ignore
+        const page: Pick<QueryKey<Options<GetApiV1AdminSalonsByIdAppointmentRequestsData>>[0], 'body' | 'headers' | 'path' | 'query'> = typeof pageParam === 'object' ? pageParam : {
+            query: {
+                page: pageParam
+            }
+        };
+        const params = createInfiniteParams(queryKey, page);
+        const { data } = await getApiV1AdminSalonsByIdAppointmentRequests({
+            ...options,
+            ...params,
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getApiV1AdminSalonsByIdAppointmentRequestsInfiniteQueryKey(options)
+});
+
+export const getApiV1AdminSalonsByIdStaffQueryKey = (options: Options<GetApiV1AdminSalonsByIdStaffData>) => createQueryKey('getApiV1AdminSalonsByIdStaff', options);
+
+/**
+ * List salon Staff for platform admin
+ */
+export const getApiV1AdminSalonsByIdStaffOptions = (options: Options<GetApiV1AdminSalonsByIdStaffData>) => queryOptions<GetApiV1AdminSalonsByIdStaffResponse, GetApiV1AdminSalonsByIdStaffError, GetApiV1AdminSalonsByIdStaffResponse, ReturnType<typeof getApiV1AdminSalonsByIdStaffQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getApiV1AdminSalonsByIdStaff({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getApiV1AdminSalonsByIdStaffQueryKey(options)
+});
+
+export const getApiV1AdminSalonsByIdStaffInfiniteQueryKey = (options: Options<GetApiV1AdminSalonsByIdStaffData>): QueryKey<Options<GetApiV1AdminSalonsByIdStaffData>> => createQueryKey('getApiV1AdminSalonsByIdStaff', options, true);
+
+/**
+ * List salon Staff for platform admin
+ */
+export const getApiV1AdminSalonsByIdStaffInfiniteOptions = (options: Options<GetApiV1AdminSalonsByIdStaffData>) => infiniteQueryOptions<GetApiV1AdminSalonsByIdStaffResponse, GetApiV1AdminSalonsByIdStaffError, InfiniteData<GetApiV1AdminSalonsByIdStaffResponse>, QueryKey<Options<GetApiV1AdminSalonsByIdStaffData>>, number | Pick<QueryKey<Options<GetApiV1AdminSalonsByIdStaffData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
+// @ts-ignore
+{
+    queryFn: async ({ pageParam, queryKey, signal }) => {
+        // @ts-ignore
+        const page: Pick<QueryKey<Options<GetApiV1AdminSalonsByIdStaffData>>[0], 'body' | 'headers' | 'path' | 'query'> = typeof pageParam === 'object' ? pageParam : {
+            query: {
+                page: pageParam
+            }
+        };
+        const params = createInfiniteParams(queryKey, page);
+        const { data } = await getApiV1AdminSalonsByIdStaff({
+            ...options,
+            ...params,
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getApiV1AdminSalonsByIdStaffInfiniteQueryKey(options)
+});
+
+export const getApiV1AdminSalonsByIdServicesQueryKey = (options: Options<GetApiV1AdminSalonsByIdServicesData>) => createQueryKey('getApiV1AdminSalonsByIdServices', options);
+
+/**
+ * List salon ServiceVariants for platform admin
+ */
+export const getApiV1AdminSalonsByIdServicesOptions = (options: Options<GetApiV1AdminSalonsByIdServicesData>) => queryOptions<GetApiV1AdminSalonsByIdServicesResponse, GetApiV1AdminSalonsByIdServicesError, GetApiV1AdminSalonsByIdServicesResponse, ReturnType<typeof getApiV1AdminSalonsByIdServicesQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getApiV1AdminSalonsByIdServices({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getApiV1AdminSalonsByIdServicesQueryKey(options)
+});
+
+export const getApiV1AdminSalonsByIdServicesInfiniteQueryKey = (options: Options<GetApiV1AdminSalonsByIdServicesData>): QueryKey<Options<GetApiV1AdminSalonsByIdServicesData>> => createQueryKey('getApiV1AdminSalonsByIdServices', options, true);
+
+/**
+ * List salon ServiceVariants for platform admin
+ */
+export const getApiV1AdminSalonsByIdServicesInfiniteOptions = (options: Options<GetApiV1AdminSalonsByIdServicesData>) => infiniteQueryOptions<GetApiV1AdminSalonsByIdServicesResponse, GetApiV1AdminSalonsByIdServicesError, InfiniteData<GetApiV1AdminSalonsByIdServicesResponse>, QueryKey<Options<GetApiV1AdminSalonsByIdServicesData>>, number | Pick<QueryKey<Options<GetApiV1AdminSalonsByIdServicesData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
+// @ts-ignore
+{
+    queryFn: async ({ pageParam, queryKey, signal }) => {
+        // @ts-ignore
+        const page: Pick<QueryKey<Options<GetApiV1AdminSalonsByIdServicesData>>[0], 'body' | 'headers' | 'path' | 'query'> = typeof pageParam === 'object' ? pageParam : {
+            query: {
+                page: pageParam
+            }
+        };
+        const params = createInfiniteParams(queryKey, page);
+        const { data } = await getApiV1AdminSalonsByIdServices({
+            ...options,
+            ...params,
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getApiV1AdminSalonsByIdServicesInfiniteQueryKey(options)
 });
 
 /**

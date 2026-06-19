@@ -132,6 +132,21 @@ const adminListResponse = (name: string) =>
 export const adminSalonsResponseSchema = adminListResponse(
   'AdminSalonsResponse',
 )
+export const adminSalonClientsResponseSchema = adminListResponse(
+  'AdminSalonClientsResponse',
+)
+export const adminSalonAppointmentsResponseSchema = adminListResponse(
+  'AdminSalonAppointmentsResponse',
+)
+export const adminSalonAppointmentRequestsResponseSchema = adminListResponse(
+  'AdminSalonAppointmentRequestsResponse',
+)
+export const adminSalonStaffResponseSchema = adminListResponse(
+  'AdminSalonStaffResponse',
+)
+export const adminSalonServicesResponseSchema = adminListResponse(
+  'AdminSalonServicesResponse',
+)
 export const adminUsersResponseSchema = adminListResponse('AdminUsersResponse')
 export const adminCatalogPresetsResponseSchema = adminListResponse(
   'AdminCatalogPresetsResponse',

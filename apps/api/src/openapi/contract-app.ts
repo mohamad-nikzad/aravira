@@ -120,7 +120,12 @@ import {
   listAdminAuditLogRoute,
   listAdminCatalogPresetsRoute,
   listAdminNotificationDeliveriesRoute,
+  listAdminSalonAppointmentRequestsRoute,
+  listAdminSalonAppointmentsRoute,
+  listAdminSalonClientsRoute,
   listAdminSalonNotesRoute,
+  listAdminSalonServicesRoute,
+  listAdminSalonStaffRoute,
   listAdminSalonsRoute,
   listAdminSupportAppointmentRequestsRoute,
   listAdminSupportAppointmentsRoute,
@@ -442,6 +447,26 @@ const listAdminSalonsStub: RouteHandler<typeof listAdminSalonsRoute> = (c) =>
 
 const getAdminSalonStub: RouteHandler<typeof getAdminSalonRoute> = (c) =>
   c.json({ salon: {}, members: [], stats: {} }, 200)
+
+const listAdminSalonClientsStub: RouteHandler<
+  typeof listAdminSalonClientsRoute
+> = (c) => c.json(adminListStub, 200)
+
+const listAdminSalonAppointmentsStub: RouteHandler<
+  typeof listAdminSalonAppointmentsRoute
+> = (c) => c.json(adminListStub, 200)
+
+const listAdminSalonAppointmentRequestsStub: RouteHandler<
+  typeof listAdminSalonAppointmentRequestsRoute
+> = (c) => c.json(adminListStub, 200)
+
+const listAdminSalonStaffStub: RouteHandler<typeof listAdminSalonStaffRoute> = (
+  c,
+) => c.json(adminListStub, 200)
+
+const listAdminSalonServicesStub: RouteHandler<
+  typeof listAdminSalonServicesRoute
+> = (c) => c.json(adminListStub, 200)
 
 const updateAdminSalonStatusStub: RouteHandler<
   typeof updateAdminSalonStatusRoute
@@ -906,6 +931,14 @@ export const contractApp = new OpenAPIHono()
       .openapi(getAdminOverviewRoute, getAdminOverviewStub)
       .openapi(listAdminSalonsRoute, listAdminSalonsStub)
       .openapi(getAdminSalonRoute, getAdminSalonStub)
+      .openapi(listAdminSalonClientsRoute, listAdminSalonClientsStub)
+      .openapi(listAdminSalonAppointmentsRoute, listAdminSalonAppointmentsStub)
+      .openapi(
+        listAdminSalonAppointmentRequestsRoute,
+        listAdminSalonAppointmentRequestsStub,
+      )
+      .openapi(listAdminSalonStaffRoute, listAdminSalonStaffStub)
+      .openapi(listAdminSalonServicesRoute, listAdminSalonServicesStub)
       .openapi(updateAdminSalonStatusRoute, updateAdminSalonStatusStub)
       .openapi(listAdminSalonNotesRoute, listAdminSalonNotesStub)
       .openapi(createAdminSalonNoteRoute, createAdminSalonNoteStub)
