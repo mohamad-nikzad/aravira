@@ -1,5 +1,5 @@
 /**
- * Authentication form schemas — shared between PWA (`apps/pwa`) and native (`apps/native`).
+ * Authentication form schemas shared by Saluna clients.
  * Both validates and normalizes (phone is canonical in the output payload).
  */
 import { z } from 'zod'
