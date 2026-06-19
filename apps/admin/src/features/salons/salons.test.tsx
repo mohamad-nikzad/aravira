@@ -235,6 +235,11 @@ describe('salons feature', () => {
     await waitFor(() => {
       expect(generated.patchStatus).toHaveBeenCalled()
     })
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('dialog', { name: 'تغییر وضعیت سالن' }),
+      ).toBeNull()
+    })
     expect(generated.patchStatus.mock.calls[0]?.[0]).toEqual({
       path: { id: salonId },
       body: {
@@ -280,6 +285,10 @@ describe('salons feature', () => {
 
     await waitFor(() => {
       expect(generated.postNote).toHaveBeenCalled()
+    })
+    await waitFor(() => {
+      expect((screen.getByLabelText('یادداشت') as HTMLTextAreaElement).value)
+        .toBe('')
     })
     expect(generated.postNote.mock.calls[0]?.[0]).toEqual({
       path: { id: salonId },

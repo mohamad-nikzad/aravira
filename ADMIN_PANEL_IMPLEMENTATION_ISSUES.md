@@ -14,7 +14,7 @@ Triage label for all issues: `needs-triage`
   - **Type**: AFK
   - **Blocked by**: ADMIN-001
   - **User stories covered**: Platform admin can tell whether they are using local or live data before reading or mutating anything.
-3. **ADMIN-003: Move rebuilt admin features onto generated API client query options**
+3. **ADMIN-003: Move rebuilt admin features onto generated API client query options** ✅
   - **Type**: AFK
   - **Blocked by**: ADMIN-001
   - **User stories covered**: Admin pages use generated contract-backed data access instead of handwritten fetch wrappers.
@@ -105,12 +105,18 @@ Configure rebuilt admin features to use generated SDK functions and TanStack que
 
 ## Acceptance criteria
 
-- [ ] The generated API client is configured once for the admin app with credentials included.
-- [ ] Rebuilt V1 queries use generated query options from `@repo/api-client`.
-- [ ] Rebuilt V1 mutations use generated SDK mutation helpers or generated SDK functions.
-- [ ] Query keys and invalidation use generated keys where practical.
-- [ ] `apps/admin/src/lib/admin-api.ts` is not imported by rebuilt V1 feature folders.
-- [ ] OpenAPI and `@repo/api-client` generation still succeed.
+- [x] The generated API client is configured once for the admin app with credentials included.
+- [x] Rebuilt V1 queries use generated query options from `@repo/api-client`.
+- [x] Rebuilt V1 mutations use generated SDK mutation helpers or generated SDK functions.
+- [x] Query keys and invalidation use generated keys where practical.
+- [x] `apps/admin/src/lib/admin-api.ts` is not imported by rebuilt V1 feature folders.
+- [x] OpenAPI and `@repo/api-client` generation still succeed.
+
+## Verification evidence
+
+- 2026-06-19: implementation verified in `apps/admin/src/main.tsx`, `apps/admin/src/features/overview/index.tsx`, `apps/admin/src/features/salons/index.tsx`, `apps/admin/src/features/catalog-presets/index.tsx`, `apps/admin/src/features/audit-log/index.tsx`, and `apps/admin/src/features/settings/index.tsx`.
+- 2026-06-19: `rg "admin-api|from ['\"]@repo/api-client|queryOptions|fetch\\(" apps/admin/src -n` showed rebuilt V1 features use generated client/query imports; only the login page keeps a direct Better Auth sign-in `fetch`.
+- 2026-06-19: `pnpm generate:api-contract` and `pnpm generate:api-client` passed.
 
 ## Blocked by
 

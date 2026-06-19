@@ -269,8 +269,11 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
           error={statusMutation.error}
           isLiveData={isLiveData}
           pending={statusMutation.isPending}
-          onSubmit={(input) =>
-            statusMutation.mutate({ path: { id: salonId }, body: input })
+          onSubmit={(input, options) =>
+            statusMutation.mutate(
+              { path: { id: salonId }, body: input },
+              options,
+            )
           }
         />
       </section>
@@ -280,8 +283,11 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
         isLoading={notesQuery.isLoading}
         notes={notesQuery.data?.notes ?? []}
         pending={noteMutation.isPending}
-        onSubmit={(input) =>
-          noteMutation.mutate({ path: { id: salonId }, body: input })
+        onSubmit={(input, options) =>
+          noteMutation.mutate(
+            { path: { id: salonId }, body: input },
+            options,
+          )
         }
       />
 
