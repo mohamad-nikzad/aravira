@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { LogIn, ShieldAlert } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { ErrorBoundary } from '#/components/admin/error-boundary'
 import { AppSidebar } from '#/components/app-sidebar'
 import { CommandMenu } from '#/components/command-menu'
 import { AdminTopbar } from '#/components/layout/admin-topbar'
@@ -46,18 +47,18 @@ export function AdminShell({ children }: { children?: ReactNode }) {
             </div>
             <h1 className="mt-4 text-xl font-semibold">
               {isUnauthenticated
-                ? 'ورود به ادمین لازم است'
-                : 'دسترسی ادمین مجاز نیست'}
+                ? 'ورود به پنل ادمین الزامی است'
+                : 'دسترسی به پنل ادمین مجاز نیست'}
             </h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {isUnauthenticated
-                ? 'با حسابی وارد شوید که نقش فعال ادمین پلتفرم دارد.'
-                : 'نشست شما معتبر است، اما این حساب اجازه ورود به پنل ادمین سالونا را ندارد.'}
+                ? 'با حسابی که نقش فعال ادمین پلتفرم دارد وارد شوید.'
+                : 'نشست شما معتبر است، اما این حساب اجازه دسترسی به پنل ادمین Saluna را ندارد.'}
             </p>
             <Button asChild className="mt-5">
               <a href="/login">
                 <LogIn className="h-4 w-4" />
-                رفتن به ورود
+                رفتن به صفحه ورود
               </a>
             </Button>
           </CardContent>
@@ -78,12 +79,12 @@ export function AdminShell({ children }: { children?: ReactNode }) {
           <AdminTopbar />
           {runtime.dataSource === 'live' ? (
             <div className="border-b border-destructive/35 bg-destructive px-4 py-2 text-center text-sm font-semibold text-destructive-foreground">
-              اتصال به داده زنده تولید فعال است. تغییرات این پنل روی اطلاعات
-              واقعی اعمال می‌شود.
+              به داده‌های LIVE تولید متصل هستید. تغییرات این پنل روی داده‌های واقعی
+              اعمال می‌شود.
             </div>
           ) : null}
           <main className="flex w-full flex-1 flex-col gap-5 px-4 py-5 sm:px-6 lg:px-7">
-            {children ?? <Outlet />}
+            <ErrorBoundary>{children ?? <Outlet />}</ErrorBoundary>
           </main>
         </SidebarInset>
         <CommandMenu />

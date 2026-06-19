@@ -1,17 +1,14 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, use, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 type SearchContextValue = {
   open: boolean
-  query: string
   setOpen: (open: boolean) => void
-  setQuery: (query: string) => void
 }
 
 const SearchContext = createContext<SearchContextValue | null>(null)
 
 export function SearchProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState('')
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -25,13 +22,13 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  const value = useMemo(() => ({ open, query, setOpen, setQuery }), [open, query])
+  const value = useMemo(() => ({ open, setOpen }), [open])
 
-  return <SearchContext.Provider value={value}>{children}</SearchContext.Provider>
+  return <SearchContext value={value}>{children}</SearchContext>
 }
 
 export function useSearch() {
-  const value = useContext(SearchContext)
+  const value = use(SearchContext)
 
   if (!value) {
     throw new Error('useSearch must be used inside SearchProvider')

@@ -1,5 +1,5 @@
 import { DirectionProvider as RadixDirectionProvider } from '@radix-ui/react-direction'
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, use, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 type Direction = 'rtl' | 'ltr'
 
@@ -28,13 +28,13 @@ export function DirectionProvider({
 
   return (
     <RadixDirectionProvider dir={direction}>
-      <DirectionContext.Provider value={value}>{children}</DirectionContext.Provider>
+      <DirectionContext value={value}>{children}</DirectionContext>
     </RadixDirectionProvider>
   )
 }
 
 export function useDirection() {
-  const value = useContext(DirectionContext)
+  const value = use(DirectionContext)
 
   if (!value) {
     throw new Error('useDirection must be used inside DirectionProvider')

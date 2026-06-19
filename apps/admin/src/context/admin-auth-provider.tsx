@@ -1,6 +1,6 @@
 import type { AdminMeResponse } from '@repo/api-client/types'
 import type { ReactNode } from 'react'
-import { createContext, useContext } from 'react'
+import { createContext, use } from 'react'
 
 type AdminAuthContextValue = {
   me: AdminMeResponse['user']
@@ -19,14 +19,14 @@ export function AdminAuthProvider({
   children: ReactNode
 }) {
   return (
-    <AdminAuthContext.Provider value={{ me, runtime }}>
+    <AdminAuthContext value={{ me, runtime }}>
       {children}
-    </AdminAuthContext.Provider>
+    </AdminAuthContext>
   )
 }
 
 export function useAdminAuth() {
-  const value = useContext(AdminAuthContext)
+  const value = use(AdminAuthContext)
   if (!value)
     throw new Error('useAdminAuth must be used inside AdminAuthProvider')
   return value

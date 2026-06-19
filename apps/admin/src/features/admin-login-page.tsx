@@ -1,6 +1,9 @@
 import { ApiError } from '@repo/api-client/errors'
+import {
+  getApiV1AdminAuthMeQueryKey,
+} from '@repo/api-client/query'
 import { getApiV1AdminAuthMe } from '@repo/api-client/sdk'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { LogIn, ShieldAlert } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
@@ -8,6 +11,10 @@ import { useState, type FormEvent } from 'react'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent } from '#/components/ui/card'
 import { Input } from '#/components/ui/input'
+
+const INVALID_CREDENTIALS_MESSAGE = 'شماره تلفن یا رمز عبور نادرست است.'
+const NOT_ACTIVE_ADMIN_MESSAGE =
+  'ورود موفق بود، اما این حساب مدیر فعال پلتفرم نیست.'
 
 async function signIn(input: { phoneNumber: string; password: string }) {
   const response = await fetch('/api/v1/auth/sign-in/phone-number', {
@@ -18,34 +25,34 @@ async function signIn(input: { phoneNumber: string; password: string }) {
   })
 
   if (!response.ok) {
-    let message = 'شماره موبایل یا رمز عبور درست نیست.'
-    try {
-      const body = (await response.json()) as { error?: string; message?: string }
-      message = body.error ?? body.message ?? message
-    } catch {
-      message = response.statusText || message
-    }
-    throw new Error(message)
+    throw new ApiError(INVALID_CREDENTIALS_MESSAGE, response.status, null)
   }
 }
 
 export function AdminLoginPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [error, setError] = useState('')
   const loginMutation = useMutation({
     mutationFn: async (input: { phoneNumber: string; password: string }) => {
       await signIn(input)
-      await getApiV1AdminAuthMe({ throwOnError: true })
+      const { data } = await getApiV1AdminAuthMe({ throwOnError: true })
+      return data
     },
-    onSuccess: async () => {
-      await navigate({ to: '/overview', replace: true })
+    onSuccess: (me) => {
+      queryClient.setQueryData(getApiV1AdminAuthMeQueryKey(), me)
+      void navigate({ to: '/overview', replace: true })
     },
     onError: (caught) => {
       if (caught instanceof ApiError && caught.status === 403) {
-        setError('این حساب وارد شده، اما ادمین فعال پلتفرم نیست.')
+        setError(NOT_ACTIVE_ADMIN_MESSAGE)
         return
       }
-      setError(caught instanceof Error ? caught.message : 'ورود انجام نشد.')
+      if (caught instanceof ApiError) {
+        setError(INVALID_CREDENTIALS_MESSAGE)
+        return
+      }
+      setError(caught instanceof Error ? caught.message : 'ورود ناموفق بود.')
     },
   })
 
@@ -66,13 +73,13 @@ export function AdminLoginPage() {
           <div className="grid h-11 w-11 place-items-center rounded-lg bg-primary text-primary-foreground">
             <ShieldAlert className="h-5 w-5" />
           </div>
-          <h1 className="mt-5 text-2xl font-semibold">ادمین سالونا</h1>
+          <h1 className="mt-5 text-2xl font-semibold">مدیریت Saluna</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            برای ادامه با حساب ادمین پلتفرم وارد شوید.
+            برای ادامه با حساب مدیر پلتفرم وارد شوید.
           </p>
           <form className="mt-6 space-y-4" onSubmit={submit}>
             <label className="block space-y-1.5 text-sm">
-              <span className="text-muted-foreground">شماره موبایل</span>
+              <span className="text-muted-foreground">شماره تلفن</span>
               <Input name="phoneNumber" dir="ltr" inputMode="tel" autoComplete="username" required />
             </label>
             <label className="block space-y-1.5 text-sm">
