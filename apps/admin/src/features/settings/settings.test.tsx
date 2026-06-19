@@ -11,7 +11,7 @@ import type { ReactNode } from 'react'
 
 import { AdminAuthProvider } from '#/context/admin-auth-provider'
 
-import { AdminPage } from './admin-page'
+import { SettingsPage } from './index'
 
 const generated = vi.hoisted(() => ({
   listPlatformAdmins: vi.fn(),
@@ -20,112 +20,16 @@ const generated = vi.hoisted(() => ({
 }))
 
 vi.mock('@repo/api-client/query', () => ({
-  getApiV1AdminAuditLogOptions: () => ({
-    queryKey: ['audit-log'],
-    queryFn: () =>
-      Promise.resolve({
-        items: [],
-        pagination: { page: 1, pageSize: 20, total: 0 },
-      }),
-  }),
-  getApiV1AdminCatalogPresetsOptions: () => ({
-    queryKey: ['catalog-presets'],
-    queryFn: () =>
-      Promise.resolve({
-        items: [],
-        pagination: { page: 1, pageSize: 20, total: 0 },
-      }),
-  }),
-  getApiV1AdminCatalogPresetsQueryKey: () => [{ _id: 'catalog-presets' }],
-  getApiV1AdminMessagingHealthOptions: () => ({
-    queryKey: ['messaging-health'],
-    queryFn: () => Promise.resolve({}),
-  }),
-  getApiV1AdminNotificationsDeliveriesOptions: () => ({
-    queryKey: ['notification-deliveries'],
-    queryFn: () =>
-      Promise.resolve({
-        items: [],
-        pagination: { page: 1, pageSize: 20, total: 0 },
-      }),
-  }),
-  getApiV1AdminOverviewQueryKey: () => [{ _id: 'overview' }],
   getApiV1AdminPlatformAdminsOptions: (options: unknown) => ({
     queryKey: ['platform-admins', options],
     queryFn: () => generated.listPlatformAdmins(options),
   }),
   getApiV1AdminPlatformAdminsQueryKey: () => [{ _id: 'platform-admins' }],
-  getApiV1AdminSalonsByIdNotesOptions: () => ({
-    queryKey: ['salon-notes'],
-    queryFn: () => Promise.resolve({ notes: [] }),
-  }),
-  getApiV1AdminSalonsByIdNotesQueryKey: () => [{ _id: 'salon-notes' }],
-  getApiV1AdminSalonsByIdOptions: () => ({
-    queryKey: ['salon-detail'],
-    queryFn: () => Promise.resolve({ salon: {}, members: [], stats: {} }),
-  }),
-  getApiV1AdminSalonsByIdQueryKey: () => [{ _id: 'salon-detail' }],
-  getApiV1AdminSalonsOptions: () => ({
-    queryKey: ['salons'],
-    queryFn: () =>
-      Promise.resolve({
-        items: [],
-        pagination: { page: 1, pageSize: 20, total: 0 },
-      }),
-  }),
-  getApiV1AdminSalonsQueryKey: () => [{ _id: 'salons' }],
-  getApiV1AdminSupportAppointmentRequestsOptions: () => ({
-    queryKey: ['support-appointment-requests'],
-    queryFn: () =>
-      Promise.resolve({
-        items: [],
-        pagination: { page: 1, pageSize: 20, total: 0 },
-      }),
-  }),
-  getApiV1AdminSupportAppointmentsOptions: () => ({
-    queryKey: ['support-appointments'],
-    queryFn: () =>
-      Promise.resolve({
-        items: [],
-        pagination: { page: 1, pageSize: 20, total: 0 },
-      }),
-  }),
-  getApiV1AdminUsersByIdNotesOptions: () => ({
-    queryKey: ['user-notes'],
-    queryFn: () => Promise.resolve({ notes: [] }),
-  }),
-  getApiV1AdminUsersByIdOptions: () => ({
-    queryKey: ['user-detail'],
-    queryFn: () => Promise.resolve({ user: {}, salons: [] }),
-  }),
-  getApiV1AdminUsersOptions: () => ({
-    queryKey: ['users'],
-    queryFn: () =>
-      Promise.resolve({
-        items: [],
-        pagination: { page: 1, pageSize: 20, total: 0 },
-      }),
-  }),
-  patchApiV1AdminCatalogPresetsByIdMutation: () => ({
-    mutationFn: vi.fn(),
-  }),
   patchApiV1AdminPlatformAdminsByIdMutation: () => ({
     mutationFn: generated.updatePlatformAdmin,
   }),
-  patchApiV1AdminSalonsByIdStatusMutation: () => ({
-    mutationFn: vi.fn(),
-  }),
-  postApiV1AdminCatalogPresetsMutation: () => ({
-    mutationFn: vi.fn(),
-  }),
   postApiV1AdminPlatformAdminsMutation: () => ({
     mutationFn: generated.createPlatformAdmin,
-  }),
-  postApiV1AdminSalonsByIdNotesMutation: () => ({
-    mutationFn: vi.fn(),
-  }),
-  postApiV1AdminUsersByIdNotesMutation: () => ({
-    mutationFn: vi.fn(),
   }),
 }))
 
@@ -188,15 +92,13 @@ describe('admin settings platform admins', () => {
       pagination: { page: 1, pageSize: 20, total: 0 },
     })
 
-    renderWithProviders(<AdminPage pageId="settings" />, {
+    renderWithProviders(<SettingsPage />, {
       role: 'platform_admin',
     })
 
     expect(screen.queryByText('Platform Admins')).toBeNull()
     expect(generated.listPlatformAdmins).not.toHaveBeenCalled()
-    expect(
-      screen.getByText(/PLATFORM_ADMIN_BOOTSTRAP_PHONES/),
-    ).toBeTruthy()
+    expect(screen.getByText(/PLATFORM_ADMIN_BOOTSTRAP_PHONES/)).toBeTruthy()
   })
 
   it('lists and grants platform admin access from Settings with reason and live confirmation', async () => {
@@ -219,7 +121,7 @@ describe('admin settings platform admins', () => {
       admin: { id: 'platform-admin-2' },
     })
 
-    renderWithProviders(<AdminPage pageId="settings" />, {
+    renderWithProviders(<SettingsPage />, {
       dataSource: 'live',
     })
 

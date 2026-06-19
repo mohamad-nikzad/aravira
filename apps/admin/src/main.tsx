@@ -4,7 +4,6 @@ import { RouterProvider } from '@tanstack/react-router'
 import ReactDOM from 'react-dom/client'
 
 import { DirectionProvider } from '#/context/direction-provider'
-import { LayoutProvider } from '#/context/layout-provider'
 import { SearchProvider } from '#/context/search-provider'
 import { ThemeProvider } from '#/context/theme-provider'
 import { queryClient } from '#/lib/query-client'
@@ -21,11 +20,9 @@ if (!rootElement.innerHTML) {
     <QueryClientProvider client={queryClient}>
       <DirectionProvider defaultDirection="rtl">
         <ThemeProvider>
-          <LayoutProvider>
-            <SearchProvider>
-              <RouterProvider router={router} />
-            </SearchProvider>
-          </LayoutProvider>
+          <SearchProvider>
+            <RouterProvider router={router} />
+          </SearchProvider>
         </ThemeProvider>
       </DirectionProvider>
     </QueryClientProvider>,

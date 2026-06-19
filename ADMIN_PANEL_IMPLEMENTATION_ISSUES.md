@@ -7,57 +7,47 @@ Triage label for all issues: `needs-triage`
 ## Proposed Breakdown Review
 
 1. **ADMIN-001: Rebuild the admin app shell with official shadcn sidebar and file-based routes**
-   - **Type**: AFK
-   - **Blocked by**: None
-   - **User stories covered**: Platform admin can enter a focused V1 admin shell with RTL layout, right sidebar navigation, login guard, and command search.
-
+  - **Type**: AFK
+  - **Blocked by**: None
+  - **User stories covered**: Platform admin can enter a focused V1 admin shell with RTL layout, right sidebar navigation, login guard, and command search.
 2. **ADMIN-002: Expose admin runtime data source and show live-data guardrails** ✅
-   - **Type**: AFK
-   - **Blocked by**: ADMIN-001
-   - **User stories covered**: Platform admin can tell whether they are using local or live data before reading or mutating anything.
-
+  - **Type**: AFK
+  - **Blocked by**: ADMIN-001
+  - **User stories covered**: Platform admin can tell whether they are using local or live data before reading or mutating anything.
 3. **ADMIN-003: Move rebuilt admin features onto generated API client query options**
-   - **Type**: AFK
-   - **Blocked by**: ADMIN-001
-   - **User stories covered**: Admin pages use generated contract-backed data access instead of handwritten fetch wrappers.
-
+  - **Type**: AFK
+  - **Blocked by**: ADMIN-001
+  - **User stories covered**: Admin pages use generated contract-backed data access instead of handwritten fetch wrappers.
 4. **ADMIN-004: Rebuild Overview as a feature slice** ✅
-   - **Type**: AFK
-   - **Blocked by**: ADMIN-001, ADMIN-003
-   - **User stories covered**: Platform admin can land on `/overview` and see real platform metrics plus recent audit activity.
-
+  - **Type**: AFK
+  - **Blocked by**: ADMIN-001, ADMIN-003
+  - **User stories covered**: Platform admin can land on `/overview` and see real platform metrics plus recent audit activity.
 5. **ADMIN-005: Rebuild Salons list and salon operations** ✅
-   - **Type**: AFK
-   - **Blocked by**: ADMIN-001, ADMIN-002, ADMIN-003
-   - **User stories covered**: Platform admin can search salons, inspect salon overview, update salon status with a reason, and add internal notes.
-
-6. **ADMIN-006: Add read-only salon tenant data tabs**
-   - **Type**: AFK
-   - **Blocked by**: ADMIN-005
-   - **User stories covered**: Platform admin can inspect a salon's Clients, Appointments, Appointment Requests, Staff, and Services without tenant mutations.
-
+  - **Type**: AFK
+  - **Blocked by**: ADMIN-001, ADMIN-002, ADMIN-003
+  - **User stories covered**: Platform admin can search salons, inspect salon overview, update salon status with a reason, and add internal notes.
+6. **ADMIN-006: Add read-only salon tenant data tabs** ✅
+  - **Type**: AFK
+  - **Blocked by**: ADMIN-005
+  - **User stories covered**: Platform admin can inspect a salon's Clients, Appointments, Appointment Requests, Staff, and Services without tenant mutations.
 7. **ADMIN-007: Rebuild Catalog Presets CRUD with canonical catalog language** ✅
-   - **Type**: AFK
-   - **Blocked by**: ADMIN-001, ADMIN-002, ADMIN-003
-   - **User stories covered**: Platform admin can manage CatalogPreset records using category, family, and service variant language.
-
+  - **Type**: AFK
+  - **Blocked by**: ADMIN-001, ADMIN-002, ADMIN-003
+  - **User stories covered**: Platform admin can manage CatalogPreset records using category, family, and service variant language.
 8. **ADMIN-008: Rebuild Audit Log as a filterable feature slice** ✅
-   - **Type**: AFK
-   - **Blocked by**: ADMIN-001, ADMIN-003
-   - **User stories covered**: Platform admin can review audited admin actions with filters.
-
-9. **ADMIN-009: Move Platform Admins into role-gated Settings**
-   - **Type**: AFK
-   - **Blocked by**: ADMIN-001, ADMIN-002, ADMIN-003
-   - **User stories covered**: Platform owner can manage ongoing platform access after bootstrap.
-
-10. **ADMIN-010: Remove legacy admin surfaces and monolithic admin page**
-    - **Type**: AFK
+  - **Type**: AFK
+  - **Blocked by**: ADMIN-001, ADMIN-003
+  - **User stories covered**: Platform admin can review audited admin actions with filters.
+9. **ADMIN-009: Move Platform Admins into role-gated Settings** ✅
+  - **Type**: AFK
+  - **Blocked by**: ADMIN-001, ADMIN-002, ADMIN-003
+  - **User stories covered**: Platform owner can manage ongoing platform access after bootstrap.
+10. **ADMIN-010: Remove legacy admin surfaces and monolithic admin page** ✅
+  - **Type**: AFK
     - **Blocked by**: ADMIN-004, ADMIN-005, ADMIN-006, ADMIN-007, ADMIN-008, ADMIN-009
     - **User stories covered**: V1 admin exposes only the focused route set and no hidden legacy routes.
-
 11. **ADMIN-011: Verify Admin V1 end to end and document attribution**
-    - **Type**: AFK
+  - **Type**: AFK
     - **Blocked by**: ADMIN-010
     - **User stories covered**: Platform admin can run, test, and visually verify the rebuilt admin with proper third-party attribution.
 
@@ -278,13 +268,13 @@ Remove the legacy admin monolith and unreachable V1-deferred surfaces from the r
 
 ## Acceptance criteria
 
-- [ ] `features/admin-page.tsx` is removed after all V1 routes have feature-owned replacements.
-- [ ] Hidden compatibility routes for `/users`, `/messaging-health`, and `/support-lookup` are not present.
-- [ ] Old custom `AdminSidebar` usage is deleted or fully disconnected.
-- [ ] Deferred API endpoints may remain server-supported but are not reachable from V1 admin UI.
-- [ ] Temporary `adminApi` adapters are removed unless still required by an explicitly deferred legacy surface.
-- [ ] Navigation, command search, and route definitions expose only V1 routes plus role-gated platform-admin settings.
-- [ ] Admin typecheck, lint, tests, and build pass.
+- [x] `features/admin-page.tsx` is removed after all V1 routes have feature-owned replacements.
+- [x] Hidden compatibility routes for `/users`, `/messaging-health`, and `/support-lookup` are not present.
+- [x] Old custom `AdminSidebar` usage is deleted or fully disconnected.
+- [x] Deferred API endpoints may remain server-supported but are not reachable from V1 admin UI.
+- [x] Temporary `adminApi` adapters are removed unless still required by an explicitly deferred legacy surface.
+- [x] Navigation, command search, and route definitions expose only V1 routes plus role-gated platform-admin settings.
+- [x] Admin typecheck, lint, tests, and build pass.
 
 ## Blocked by
 
