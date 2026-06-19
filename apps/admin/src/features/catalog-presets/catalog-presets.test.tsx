@@ -1,25 +1,40 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   cleanup,
   fireEvent,
-  render,
   screen,
   waitFor,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ReactNode } from 'react'
-
-import { AdminAuthProvider } from '#/context/admin-auth-provider'
-
-import { CatalogPresetsScreen } from './index'
+import { renderAdminRoute } from '#/test/render-with-search-route'
 
 const generated = vi.hoisted(() => ({
   listPresets: vi.fn(),
   createPreset: vi.fn(),
   updatePreset: vi.fn(),
+  authMe: vi.fn(),
 }))
 
+function mockAuthMe(options: { dataSource?: 'local' | 'live' } = {}) {
+  generated.authMe.mockResolvedValue({
+    user: {
+      id: 'admin-user-id',
+      userId: 'admin-user-id',
+      name: 'Platform Owner',
+      email: 'owner@saluna.test',
+      phoneNumber: '+989120000000',
+      username: 'owner',
+      role: 'platform_owner',
+      active: true,
+    },
+    runtime: { dataSource: options.dataSource ?? 'local' },
+  })
+}
+
 vi.mock('@repo/api-client/query', () => ({
+  getApiV1AdminAuthMeOptions: () => ({
+    queryKey: ['admin-auth-me-test'],
+    queryFn: () => generated.authMe(),
+  }),
   getApiV1AdminCatalogPresetsQueryKey: () => [{ _id: 'catalog-presets' }],
   getApiV1AdminCatalogPresetsOptions: (options: unknown) => ({
     queryKey: ['catalog-presets', options],
@@ -33,36 +48,11 @@ vi.mock('@repo/api-client/query', () => ({
   }),
 }))
 
-function renderWithProviders(
-  children: ReactNode,
+function renderCatalogPresets(
   options: { dataSource?: 'local' | 'live' } = {},
 ) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  })
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <AdminAuthProvider
-        me={{
-          id: 'admin-user-id',
-          userId: 'admin-user-id',
-          name: 'Platform Owner',
-          email: 'owner@saluna.test',
-          phoneNumber: '+989120000000',
-          username: 'owner',
-          role: 'platform_owner',
-          active: true,
-        }}
-        runtime={{ dataSource: options.dataSource ?? 'local' }}
-      >
-        {children}
-      </AdminAuthProvider>
-    </QueryClientProvider>,
-  )
+  mockAuthMe(options)
+  return renderAdminRoute('/catalog-presets')
 }
 
 const presetId = '22222222-2222-4222-8222-222222222222'
@@ -72,7 +62,7 @@ describe('catalog presets feature', () => {
     generated.listPresets.mockReset()
     generated.createPreset.mockReset()
     generated.updatePreset.mockReset()
-    window.history.replaceState(null, '', '/catalog-presets')
+    mockAuthMe()
   })
 
   afterEach(() => {
@@ -84,17 +74,17 @@ describe('catalog presets feature', () => {
       items: [
         {
           id: presetId,
-          name: 'قالب خدمات پایه',
+          name: 'Starter services',
           slug: 'starter-services',
           isActive: true,
           sortOrder: 1,
           tree: [
             {
-              name: 'مو',
+              name: 'Hair',
               families: [
                 {
-                  name: 'کوتاهی',
-                  variants: [{ name: 'کوتاهی ساده', duration: 30, price: 10 }],
+                  name: 'Cut',
+                  variants: [{ name: 'Basic cut', duration: 30, price: 10 }],
                 },
               ],
             },
@@ -104,13 +94,13 @@ describe('catalog presets feature', () => {
       pagination: { page: 1, pageSize: 20, total: 1 },
     })
 
-    renderWithProviders(<CatalogPresetsScreen />)
+    await renderCatalogPresets()
 
-    expect(await screen.findByText('قالب خدمات پایه')).toBeTruthy()
+    expect(await screen.findByText('Starter services')).toBeTruthy()
     expect(screen.getByText('starter-services')).toBeTruthy()
-    expect(screen.getByText('1 category')).toBeTruthy()
-    expect(screen.getByText('1 family')).toBeTruthy()
-    expect(screen.getByText('1 service variant')).toBeTruthy()
+    expect(screen.getByText('1 دسته')).toBeTruthy()
+    expect(screen.getByText('1 خانواده')).toBeTruthy()
+    expect(screen.getByText('1 نسخه سرویس')).toBeTruthy()
     expect(generated.listPresets).toHaveBeenCalledWith({
       query: { page: 1, pageSize: 20, search: undefined },
     })
@@ -123,28 +113,28 @@ describe('catalog presets feature', () => {
     })
     generated.createPreset.mockResolvedValue({ preset: { id: presetId } })
 
-    renderWithProviders(<CatalogPresetsScreen />)
+    await renderCatalogPresets()
 
-    fireEvent.click(await screen.findByRole('button', { name: /جدید/ }))
-    fireEvent.change(screen.getByLabelText('Slug'), {
+    fireEvent.click(await screen.findByRole('button', { name: /الگوی جدید/ }))
+    fireEvent.change(screen.getByLabelText('شناسه'), {
       target: { value: 'hair-services' },
     })
-    fireEvent.change(screen.getByLabelText('نام Catalog Preset'), {
-      target: { value: 'قالب خدمات مو' },
+    fireEvent.change(screen.getByLabelText('نام الگوی کاتالوگ'), {
+      target: { value: 'Hair services' },
     })
-    fireEvent.change(screen.getByLabelText('category'), {
-      target: { value: 'مو' },
+    fireEvent.change(screen.getByLabelText('دسته'), {
+      target: { value: 'Hair' },
     })
-    fireEvent.change(screen.getByLabelText('family'), {
-      target: { value: 'رنگ' },
+    fireEvent.change(screen.getByLabelText('خانواده'), {
+      target: { value: 'Color' },
     })
-    fireEvent.change(screen.getByLabelText('service variant'), {
-      target: { value: 'رنگ ریشه' },
+    fireEvent.change(screen.getByLabelText('نسخه سرویس'), {
+      target: { value: 'Root color' },
     })
     fireEvent.change(screen.getByLabelText('دلیل'), {
-      target: { value: 'افزودن قالب خدمات پایه' },
+      target: { value: 'Add starter service template' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /ذخیره/ }))
+    fireEvent.click(screen.getByRole('button', { name: /ذخیره الگوی کاتالوگ/ }))
 
     await waitFor(() => {
       expect(generated.createPreset).toHaveBeenCalled()
@@ -152,17 +142,17 @@ describe('catalog presets feature', () => {
     expect(generated.createPreset.mock.calls[0]?.[0]).toEqual({
       body: {
         slug: 'hair-services',
-        name: 'قالب خدمات مو',
+        name: 'Hair services',
         description: null,
         tree: [
           {
-            name: 'مو',
+            name: 'Hair',
             families: [
               {
-                name: 'رنگ',
+                name: 'Color',
                 variants: [
                   {
-                    name: 'رنگ ریشه',
+                    name: 'Root color',
                     duration: 30,
                     price: 0,
                     color: 'teal',
@@ -175,7 +165,7 @@ describe('catalog presets feature', () => {
         ],
         sortOrder: 0,
         isActive: true,
-        reason: 'افزودن قالب خدمات پایه',
+        reason: 'Add starter service template',
       },
     })
   })
@@ -185,22 +175,28 @@ describe('catalog presets feature', () => {
       items: [
         {
           id: presetId,
-          name: 'قالب خدمات پایه',
+          name: 'Starter services',
           slug: 'starter-services',
           isActive: true,
           sortOrder: 1,
           tree: [
             {
-              name: 'مو',
+              name: 'Hair',
               families: [
                 {
-                  name: 'کوتاهی',
+                  name: 'Cut',
                   variants: [
                     {
-                      name: 'کوتاهی ساده',
+                      name: 'Basic cut',
                       duration: 30,
                       price: 10,
                       color: 'rose',
+                    },
+                    {
+                      name: 'Layered cut',
+                      duration: 45,
+                      price: 20,
+                      color: 'teal',
                     },
                   ],
                 },
@@ -213,15 +209,18 @@ describe('catalog presets feature', () => {
     })
     generated.updatePreset.mockResolvedValue({ preset: { id: presetId } })
 
-    renderWithProviders(<CatalogPresetsScreen />, { dataSource: 'live' })
+    await renderCatalogPresets({ dataSource: 'live' })
 
     fireEvent.click(await screen.findByRole('button', { name: /ویرایش/ }))
-    expect(screen.getByText(/روی داده زنده تولید اعمال می‌شود/)).toBeTruthy()
+    expect(screen.getByText(/داده LIVE تولید/)).toBeTruthy()
 
     fireEvent.change(screen.getByLabelText('دلیل'), {
-      target: { value: 'اصلاح نام service variant' },
+      target: { value: 'Fix service variant name' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /ذخیره/ }))
+    fireEvent.change(screen.getByLabelText('تأیید داده LIVE'), {
+      target: { value: 'LIVE' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /ذخیره الگوی کاتالوگ/ }))
 
     await waitFor(() => {
       expect(generated.updatePreset).toHaveBeenCalled()
@@ -230,9 +229,66 @@ describe('catalog presets feature', () => {
       path: { id: presetId },
       body: {
         slug: 'starter-services',
-        name: 'قالب خدمات پایه',
-        reason: 'اصلاح نام service variant',
+        name: 'Starter services',
+        reason: 'Fix service variant name',
+        liveConfirmation: 'LIVE',
       },
     })
+  })
+
+  it('requires confirmation before removing nested tree items', async () => {
+    generated.listPresets.mockResolvedValue({
+      items: [
+        {
+          id: presetId,
+          name: 'Starter services',
+          slug: 'starter-services',
+          isActive: true,
+          sortOrder: 1,
+          tree: [
+            {
+              name: 'Hair',
+              families: [
+                {
+                  name: 'Cut',
+                  variants: [
+                    {
+                      name: 'Basic cut',
+                      duration: 30,
+                      price: 10,
+                      color: 'rose',
+                    },
+                    {
+                      name: 'Layered cut',
+                      duration: 45,
+                      price: 20,
+                      color: 'teal',
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      pagination: { page: 1, pageSize: 20, total: 1 },
+    })
+
+    await renderCatalogPresets()
+
+    fireEvent.click(await screen.findByRole('button', { name: /ویرایش/ }))
+    expect(screen.getAllByLabelText('نسخه سرویس')).toHaveLength(2)
+
+    fireEvent.click(screen.getAllByLabelText('حذف نسخه سرویس')[0]!)
+    expect(
+      screen.getByText('این نسخه سرویس حذف شود؟'),
+    ).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'انصراف' }))
+    expect(screen.getAllByLabelText('نسخه سرویس')).toHaveLength(2)
+
+    fireEvent.click(screen.getAllByLabelText('حذف نسخه سرویس')[0]!)
+    fireEvent.click(screen.getByRole('button', { name: 'حذف' }))
+    expect(screen.getAllByLabelText('نسخه سرویس')).toHaveLength(1)
   })
 })

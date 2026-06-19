@@ -1,4 +1,5 @@
 import { getApiV1AdminOverviewOptions } from '@repo/api-client/query'
+import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   Activity,
@@ -8,19 +9,21 @@ import {
   MessageSquareWarning,
   ShieldCheck,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
-
+import { CompactRows, Panel } from '#/components/admin/panel'
+import { ErrorPanel } from '#/components/admin/error-panel'
+import { ScreenSkeleton } from '#/components/admin/screen-skeleton'
 import { AdminPageHeader } from '#/components/layout/admin-page-header'
 import { Badge } from '#/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
-import { Skeleton } from '#/components/ui/skeleton'
+import { formatDate, number, text } from '#/lib/admin-format'
+import { cn } from '#/lib/utils'
 
 export function OverviewPage() {
   return (
     <>
       <AdminPageHeader
         title="نمای کلی"
-        description="وضعیت پلتفرم، سلامت سالن‌ها و آخرین رویدادهای حاکمیتی."
+        description="وضعیت پلتفرم، سلامت سالن‌ها و رویدادهای حاکمیتی اخیر."
       />
       <OverviewScreen />
     </>
@@ -30,20 +33,29 @@ export function OverviewPage() {
 export function OverviewScreen() {
   const overviewQuery = useQuery(getApiV1AdminOverviewOptions())
   const data = overviewQuery.data
-  const cards = [
+  const cards: Array<{
+    label: string
+    value: number
+    icon: typeof Activity
+    tone: 'success' | 'default' | 'warning'
+    hint: string
+    href?: '/salons' | '/audit-log'
+  }> = [
     {
       label: 'سالن‌های فعال',
       value: data?.salonsByStatus.active ?? 0,
       icon: Activity,
       tone: 'success',
       hint: `${data?.salonsByStatus.suspended ?? 0} تعلیق‌شده`,
+      href: '/salons',
     },
     {
       label: 'سالن‌های آرشیوشده',
       value: data?.salonsByStatus.archived ?? 0,
       icon: Archive,
       tone: 'default',
-      hint: 'خارج از جریان کاری سالن‌ها',
+      hint: 'خارج از گردش کار سالن‌ها',
+      href: '/salons',
     },
     {
       label: 'ارسال‌های ناموفق',
@@ -58,14 +70,20 @@ export function OverviewScreen() {
       icon: ShieldCheck,
       tone: 'default',
       hint: 'آخرین فعالیت‌های حاکمیتی',
+      href: '/audit-log',
     },
-  ] as const
+  ]
 
-  if (overviewQuery.isLoading) return <OverviewSkeleton />
+  if (overviewQuery.isLoading) {
+    return <ScreenSkeleton label="در حال بارگذاری نمای کلی" />
+  }
 
   if (overviewQuery.isError) {
     return (
-      <ErrorPanel message="دریافت آمار نمای کلی انجام نشد. دوباره تلاش کنید." />
+      <ErrorPanel
+        message="بارگذاری شاخص‌های نمای کلی ناموفق بود. لطفاً دوباره تلاش کنید."
+        onRetry={() => void overviewQuery.refetch()}
+      />
     )
   }
 
@@ -74,8 +92,14 @@ export function OverviewScreen() {
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => {
           const Icon = card.icon
-          return (
-            <Card key={card.label} className="min-h-36">
+          const content = (
+            <Card
+              className={cn(
+                'min-h-36',
+                card.href &&
+                  'transition-colors hover:border-primary/35 hover:bg-accent/20',
+              )}
+            >
               <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <CardTitle>{card.label}</CardTitle>
                 <Icon className="h-4 w-4 text-muted-foreground/85" />
@@ -90,12 +114,26 @@ export function OverviewScreen() {
               </CardContent>
             </Card>
           )
+
+          if (!card.href) {
+            return <div key={card.label}>{content}</div>
+          }
+
+          return (
+            <Link
+              key={card.label}
+              to={card.href}
+              className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {content}
+            </Link>
+          )
         })}
       </section>
 
       <section className="grid min-h-32 gap-4 lg:grid-cols-2">
         <Panel
-          title="ارائه‌دهنده‌های پیام‌رسانی"
+          title="ارائه‌دهندگان پیام‌رسانی"
           icon={<MessageSquareWarning className="h-4 w-4" />}
         >
           <CompactRows
@@ -110,14 +148,23 @@ export function OverviewScreen() {
         <Panel
           title="رویدادهای ممیزی اخیر"
           icon={<FileClock className="h-4 w-4" />}
+          action={
+            <Link
+              to="/audit-log"
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              مشاهده همه
+            </Link>
+          }
         >
           <CompactRows
             rows={(data?.recentAuditEvents ?? []).map((row) => ({
               label: text(row.action),
               value: formatAuditTarget(row),
               badge: formatDate(row.createdAt),
+              href: '/audit-log',
             }))}
-            empty="هنوز تغییری توسط ادمین ثبت نشده است."
+            empty="هنوز تغییری توسط مدیر ثبت نشده است."
           />
         </Panel>
       </section>
@@ -125,111 +172,8 @@ export function OverviewScreen() {
   )
 }
 
-function Panel({
-  title,
-  icon,
-  children,
-}: {
-  title: string
-  icon?: ReactNode
-  children: ReactNode
-}) {
-  return (
-    <section className="rounded-lg border border-border/80 bg-card shadow-sm">
-      <div className="flex items-center gap-2 border-b border-border/80 px-4 py-3">
-        {icon ? <span className="text-muted-foreground/85">{icon}</span> : null}
-        <h2 className="text-sm font-semibold">{title}</h2>
-      </div>
-      <div className="p-4">{children}</div>
-    </section>
-  )
-}
-
-function CompactRows({
-  rows,
-  empty,
-}: {
-  rows: Array<{ label: string; value: string; badge?: string }>
-  empty: string
-}) {
-  if (rows.length === 0)
-    return <p className="text-sm text-muted-foreground">{empty}</p>
-  return (
-    <div className="space-y-2">
-      {rows.map((row, index) => (
-        <div
-          key={`${row.label}-${index}`}
-          className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-background/35 px-3 py-2.5"
-        >
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium">
-              {row.label || '-'}
-            </div>
-            {row.badge ? (
-              <div className="truncate text-xs text-muted-foreground">
-                {row.badge}
-              </div>
-            ) : null}
-          </div>
-          <span className="shrink-0 text-sm text-muted-foreground">
-            {row.value}
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function OverviewSkeleton() {
-  return (
-    <div
-      role="status"
-      aria-label="در حال دریافت نمای کلی"
-      className="space-y-3 rounded-lg border border-border bg-card p-4"
-    >
-      <Skeleton className="h-5 w-52" />
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-4 w-2/3" />
-    </div>
-  )
-}
-
-function ErrorPanel({ message }: { message: string }) {
-  return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-      {message}
-    </div>
-  )
-}
-
-function text(value: unknown): string {
-  if (value === null || value === undefined) return ''
-  if (value instanceof Date) return value.toISOString()
-  if (typeof value === 'string') return value
-  if (typeof value === 'number' || typeof value === 'boolean')
-    return String(value)
-  return ''
-}
-
-function number(value: unknown): number {
-  if (typeof value === 'number') return value
-  if (typeof value === 'string') return Number(value) || 0
-  return 0
-}
-
 function truthy(value: unknown): boolean {
   return value === true || value === 'true' || value === 1
-}
-
-function formatDate(value: unknown): string {
-  const raw = text(value)
-  if (!raw) return '-'
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return raw
-  return new Intl.DateTimeFormat('fa-IR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
 }
 
 function formatAuditTarget(row: Record<string, unknown>): string {

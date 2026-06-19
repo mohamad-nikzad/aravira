@@ -3,16 +3,23 @@ import { useQuery } from '@tanstack/react-query'
 import type { UseQueryOptions } from '@tanstack/react-query'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { Filter, RotateCcw } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 import { DataTable } from '#/components/data-table/data-table'
 import { DataTablePagination } from '#/components/data-table/data-table-pagination'
 import { DataTableToolbar } from '#/components/data-table/data-table-toolbar'
+import { ErrorPanel } from '#/components/admin/error-panel'
+import { RoleBadge } from '#/components/admin/role-badge'
+import { ScreenSkeleton } from '#/components/admin/screen-skeleton'
 import { AdminPageHeader } from '#/components/layout/admin-page-header'
-import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
-import { Skeleton } from '#/components/ui/skeleton'
+import { formatDate, text } from '#/lib/admin-format'
+import { normalizePageSize } from '#/lib/admin-search-schemas'
+import {
+  useAuditLogSearch,
+  type AuditLogUrlState,
+} from '#/hooks/use-audit-log-search'
 
 type RecordRow = Record<string, unknown>
 
@@ -42,29 +49,19 @@ type AuditLogQueryOptions = UseQueryOptions<
   readonly unknown[]
 >
 
-type AuditLogUrlState = {
-  page: number
-  pageSize: number
-  search: string
-  action: string
-  targetType: string
-  targetId: string
-  salonId: string
-}
-
 const filterFields = [
-  ['action', 'Action'],
-  ['targetType', 'Target type'],
-  ['targetId', 'Target ID'],
-  ['salonId', 'Salon ID'],
+  ['action', 'عمل'],
+  ['targetType', 'نوع هدف'],
+  ['targetId', 'شناسه هدف'],
+  ['salonId', 'شناسه سالن'],
 ] as const
 
 export function AuditLogPage() {
   return (
     <>
       <AdminPageHeader
-        title="لاگ ممیزی"
-        description="بازبینی عملیات ادمین‌های پلتفرم با فیلترهای دقیق و صفحه‌بندی."
+        title="گزارش ممیزی"
+        description="بررسی عملیات ادمین پلتفرم با فیلترهای دقیق و صفحه‌بندی."
       />
       <AuditLogScreen />
     </>
@@ -72,12 +69,12 @@ export function AuditLogPage() {
 }
 
 export function AuditLogScreen() {
-  const [state, setState] = useAuditLogUrlState(20)
+  const [state, setState] = useAuditLogSearch(20)
   const columns = useMemo<ColumnDef<RecordRow>[]>(
     () => [
       {
         accessorKey: 'action',
-        header: 'Action',
+        header: 'عمل',
         cell: ({ row }) => (
           <PrimaryCell
             title={text(row.original.action)}
@@ -87,7 +84,7 @@ export function AuditLogScreen() {
       },
       {
         accessorKey: 'actorName',
-        header: 'Actor',
+        header: 'عامل',
         cell: ({ row }) => (
           <PrimaryCell
             title={text(row.original.actorName) || text(row.original.actorUserId)}
@@ -97,14 +94,14 @@ export function AuditLogScreen() {
       },
       {
         accessorKey: 'actorPlatformRole',
-        header: 'Role',
+        header: 'نقش',
         cell: ({ row }) => (
           <RoleBadge role={text(row.original.actorPlatformRole)} />
         ),
       },
       {
         accessorKey: 'targetType',
-        header: 'Target',
+        header: 'هدف',
         cell: ({ row }) => (
           <PrimaryCell
             title={text(row.original.targetType)}
@@ -114,14 +111,14 @@ export function AuditLogScreen() {
       },
       {
         accessorKey: 'salonId',
-        header: 'Salon ID',
+        header: 'شناسه سالن',
         cell: ({ row }) => (
           <span dir="ltr">{shortId(row.original.salonId) || '-'}</span>
         ),
       },
       {
         accessorKey: 'createdAt',
-        header: 'Created',
+        header: 'تاریخ ایجاد',
         cell: ({ row }) => formatDate(row.original.createdAt),
       },
     ],
@@ -165,27 +162,42 @@ export function AuditLogScreen() {
       />
       <AuditFilters state={state} onChange={setState} />
       {auditLogQuery.isLoading ? (
-        <ScreenSkeleton label="در حال دریافت لاگ ممیزی" />
+        <ScreenSkeleton label="در حال بارگذاری گزارش ممیزی" />
       ) : null}
       {auditLogQuery.isError ? (
-        <ErrorPanel message="بارگذاری لاگ ممیزی انجام نشد." />
+        <ErrorPanel
+          message="بارگذاری گزارش ممیزی ناموفق بود."
+          onRetry={() => void auditLogQuery.refetch()}
+        />
       ) : null}
-      <DataTable
-        columns={columns}
-        data={auditLogQuery.data?.items ?? []}
-        pageCount={pageCount}
-        pagination={pagination}
-        onPaginationChange={(next) =>
-          setState({ page: next.pageIndex + 1, pageSize: next.pageSize })
-        }
-      />
-      <DataTablePagination
-        pagination={pagination}
-        pageCount={pageCount}
-        onPaginationChange={(next) =>
-          setState({ page: next.pageIndex + 1, pageSize: next.pageSize })
-        }
-      />
+      {!auditLogQuery.isLoading && !auditLogQuery.isError ? (
+        <>
+          <DataTable
+            columns={columns}
+            data={auditLogQuery.data?.items ?? []}
+            pageCount={pageCount}
+            pagination={pagination}
+            onPaginationChange={(next) =>
+              setState({
+                page: next.pageIndex + 1,
+                pageSize: normalizePageSize(next.pageSize, state.pageSize),
+              })
+            }
+          />
+          <DataTablePagination
+            pagination={pagination}
+            pageCount={pageCount}
+            totalRows={total}
+            onPaginationChange={(next) =>
+              setState({
+                page: next.pageIndex + 1,
+                pageSize: normalizePageSize(next.pageSize, state.pageSize),
+              })
+            }
+            onPageSizeChange={(pageSize) => setState({ page: 1, pageSize })}
+          />
+        </>
+      ) : null}
     </section>
   )
 }
@@ -219,7 +231,7 @@ function AuditFilters({
           }
         >
           <RotateCcw className="h-4 w-4" />
-          پاک‌سازی فیلترها
+          پاک کردن فیلترها
         </Button>
       </div>
       <div className="grid gap-2 md:grid-cols-4">
@@ -239,54 +251,6 @@ function AuditFilters({
       </div>
     </div>
   )
-}
-
-function useAuditLogUrlState(defaultPageSize: number) {
-  const [state, setStateValue] = useState<AuditLogUrlState>(() => {
-    const params = new URLSearchParams(window.location.search)
-    return {
-      page: positiveNumber(params.get('page'), 1),
-      pageSize: positiveNumber(params.get('pageSize'), defaultPageSize),
-      search: params.get('q') ?? '',
-      action: params.get('action') ?? '',
-      targetType: params.get('targetType') ?? '',
-      targetId: params.get('targetId') ?? '',
-      salonId: params.get('salonId') ?? '',
-    }
-  })
-
-  const setState = useCallback(
-    (next: Partial<AuditLogUrlState>) => {
-      setStateValue((current) => {
-        const updated = { ...current, ...next }
-        const params = new URLSearchParams(window.location.search)
-        const entries = {
-          page: updated.page,
-          pageSize: updated.pageSize,
-          q: updated.search,
-          action: updated.action,
-          targetType: updated.targetType,
-          targetId: updated.targetId,
-          salonId: updated.salonId,
-        }
-
-        for (const [key, value] of Object.entries(entries)) {
-          if (value === undefined || value === '') {
-            params.delete(key)
-          } else {
-            params.set(key, String(value))
-          }
-        }
-
-        const nextUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`
-        window.history.replaceState(null, '', nextUrl)
-        return updated
-      })
-    },
-    [],
-  )
-
-  return [state, setState] as const
 }
 
 function compactParams(params: AuditLogParams): AuditLogParams {
@@ -312,71 +276,8 @@ function PrimaryCell({
   )
 }
 
-function RoleBadge({ role }: { role: string }) {
-  if (!role) return <Badge variant="outline">بدون نقش</Badge>
-  return <Badge>{formatRole(role)}</Badge>
-}
-
-function ErrorPanel({ message }: { message: string }) {
-  return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-      {message}
-    </div>
-  )
-}
-
-function ScreenSkeleton({ label }: { label: string }) {
-  return (
-    <div
-      role="status"
-      aria-label={label}
-      className="space-y-3 rounded-lg border border-border bg-card p-4"
-    >
-      <Skeleton className="h-5 w-52" />
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-4 w-2/3" />
-    </div>
-  )
-}
-
-function formatRole(role: string) {
-  const roles: Record<string, string> = {
-    platform_owner: 'مالک',
-    platform_admin: 'ادمین',
-    platform_support: 'پشتیبان',
-    platform_viewer: 'بیننده',
-  }
-  return roles[role] ?? role
-}
-
-function text(value: unknown): string {
-  if (value === null || value === undefined) return ''
-  if (value instanceof Date) return value.toISOString()
-  if (typeof value === 'string') return value
-  if (typeof value === 'number' || typeof value === 'boolean')
-    return String(value)
-  return ''
-}
-
-function formatDate(value: unknown): string {
-  const raw = text(value)
-  if (!raw) return '-'
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return raw
-  return new Intl.DateTimeFormat('fa-IR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
-}
-
 function shortId(value: unknown) {
   const id = text(value)
   if (!id) return ''
   return id.length > 8 ? id.slice(0, 8) : id
-}
-
-function positiveNumber(value: string | null, fallback: number) {
-  const parsed = Number(value)
-  if (!Number.isFinite(parsed) || parsed < 1) return fallback
-  return parsed
 }

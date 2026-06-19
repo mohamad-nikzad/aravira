@@ -1,17 +1,13 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   cleanup,
   fireEvent,
-  render,
   screen,
   waitFor,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
 
-import { AdminAuthProvider } from '#/context/admin-auth-provider'
-
-import { SalonDetailScreen, SalonsListScreen } from './index'
+import { renderAdminRoute } from '#/test/render-with-search-route'
 
 const generated = vi.hoisted(() => ({
   listSalons: vi.fn(),
@@ -24,24 +20,62 @@ const generated = vi.hoisted(() => ({
   getServices: vi.fn(),
   patchStatus: vi.fn(),
   postNote: vi.fn(),
+  authMe: vi.fn(),
 }))
 
-vi.mock('@tanstack/react-router', () => ({
-  Link: ({
-    to,
-    params,
-    children,
-  }: {
-    to: string
-    params?: Record<string, string>
-    children: ReactNode
-  }) => {
-    const href = params?.salonId ? to.replace('$salonId', params.salonId) : to
-    return <a href={href}>{children}</a>
-  },
-}))
+function mockAuthMe(options: { dataSource?: 'local' | 'live' } = {}) {
+  generated.authMe.mockResolvedValue({
+    user: {
+      id: 'admin-user-id',
+      userId: 'admin-user-id',
+      name: 'Platform Owner',
+      email: 'owner@saluna.test',
+      phoneNumber: '+989120000000',
+      username: 'owner',
+      role: 'platform_owner',
+      active: true,
+    },
+    runtime: { dataSource: options.dataSource ?? 'local' },
+  })
+}
+
+function renderSalonsList() {
+  mockAuthMe()
+  return renderAdminRoute('/salons')
+}
+
+function renderSalonDetail(
+  initialEntry: string,
+  options: { dataSource?: 'local' | 'live' } = {},
+) {
+  mockAuthMe(options)
+  return renderAdminRoute(initialEntry)
+}
+
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>()
+  return {
+    ...actual,
+    Link: ({
+      to,
+      params,
+      children,
+    }: {
+      to: string
+      params?: Record<string, string>
+      children: ReactNode
+    }) => {
+      const href = params?.salonId ? to.replace('$salonId', params.salonId) : to
+      return <a href={href}>{children}</a>
+    },
+  }
+})
 
 vi.mock('@repo/api-client/query', () => ({
+  getApiV1AdminAuthMeOptions: () => ({
+    queryKey: ['admin-auth-me-test'],
+    queryFn: () => generated.authMe(),
+  }),
   getApiV1AdminOverviewQueryKey: () => [{ _id: 'overview' }],
   getApiV1AdminSalonsQueryKey: () => [{ _id: 'salons' }],
   getApiV1AdminSalonsByIdQueryKey: (options: unknown) => [
@@ -90,38 +124,6 @@ vi.mock('@repo/api-client/query', () => ({
   }),
 }))
 
-function renderWithProviders(
-  children: ReactNode,
-  options: { dataSource?: 'local' | 'live' } = {},
-) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  })
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <AdminAuthProvider
-        me={{
-          id: 'admin-user-id',
-          userId: 'admin-user-id',
-          name: 'Platform Owner',
-          email: 'owner@saluna.test',
-          phoneNumber: '+989120000000',
-          username: 'owner',
-          role: 'platform_owner',
-          active: true,
-        }}
-        runtime={{ dataSource: options.dataSource ?? 'local' }}
-      >
-        {children}
-      </AdminAuthProvider>
-    </QueryClientProvider>,
-  )
-}
-
 const salonId = '11111111-1111-4111-8111-111111111111'
 
 describe('salons feature', () => {
@@ -136,6 +138,7 @@ describe('salons feature', () => {
     generated.getServices.mockReset()
     generated.patchStatus.mockReset()
     generated.postNote.mockReset()
+    mockAuthMe()
     generated.getClients.mockResolvedValue({
       items: [],
       pagination: { page: 1, pageSize: 10, total: 0 },
@@ -156,7 +159,6 @@ describe('salons feature', () => {
       items: [],
       pagination: { page: 1, pageSize: 10, total: 0 },
     })
-    window.history.replaceState(null, '', '/salons')
   })
 
   afterEach(() => {
@@ -168,7 +170,7 @@ describe('salons feature', () => {
       items: [
         {
           id: salonId,
-          name: 'سالن آفتاب',
+          name: 'Sun Salon',
           slug: 'aftab',
           status: 'active',
           phone: '+989121234567',
@@ -179,11 +181,11 @@ describe('salons feature', () => {
       pagination: { page: 1, pageSize: 20, total: 1 },
     })
 
-    renderWithProviders(<SalonsListScreen />)
+    await renderSalonsList()
 
-    expect(await screen.findByText('سالن آفتاب')).toBeTruthy()
+    expect(await screen.findByText('Sun Salon')).toBeTruthy()
     expect(screen.getByText('aftab')).toBeTruthy()
-    expect(screen.getByText('فعال')).toBeTruthy()
+    expect(screen.getAllByText('فعال').length).toBeGreaterThan(0)
     expect(
       screen.getByRole('link', { name: /مشاهده/ }).getAttribute('href'),
     ).toBe('/salons/11111111-1111-4111-8111-111111111111')
@@ -196,38 +198,42 @@ describe('salons feature', () => {
     generated.getSalon.mockResolvedValue({
       salon: {
         id: salonId,
-        name: 'سالن آفتاب',
+        name: 'Sun Salon',
         slug: 'aftab',
         status: 'active',
         phone: '+989121234567',
         timezone: 'Asia/Tehran',
         publicEnabled: true,
       },
-      members: [{ name: 'مریم', role: 'owner', phoneNumber: '+989120000000' }],
+      members: [{ name: 'Maryam', role: 'owner', phoneNumber: '+989120000000' }],
       stats: { services: 9, appointments: 12 },
     })
     generated.getNotes.mockResolvedValue({ notes: [] })
     generated.patchStatus.mockResolvedValue({ salon: { id: salonId } })
 
-    renderWithProviders(<SalonDetailScreen salonId={salonId} />, {
+    await renderSalonDetail(`/salons/${salonId}?tab=governance`, {
       dataSource: 'live',
     })
 
-    expect(await screen.findByText('سالن آفتاب')).toBeTruthy()
-    expect(screen.getByText('Overview')).toBeTruthy()
+    expect(
+      await screen.findByRole('button', { name: /^تغییر وضعیت$/ }),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('tab', { name: 'حاکمیت' }).getAttribute('aria-selected'),
+    ).toBe('true')
 
     fireEvent.click(screen.getByRole('button', { name: /^تغییر وضعیت$/ }))
     expect(
-      screen.getByText(/تغییر وضعیت سالن روی داده زنده تولید اعمال می‌شود/),
+      screen.getByText(/تغییر وضعیت سالن روی داده‌های زنده تولیدی اعمال می‌شود/),
     ).toBeTruthy()
 
     fireEvent.change(screen.getByLabelText('وضعیت'), {
       target: { value: 'suspended' },
     })
     fireEvent.change(screen.getByLabelText('دلیل'), {
-      target: { value: 'بررسی تخلف' },
+      target: { value: 'Policy review' },
     })
-    fireEvent.change(screen.getByLabelText('تأیید داده زنده'), {
+    fireEvent.change(screen.getByLabelText('تأیید داده LIVE'), {
       target: { value: 'LIVE' },
     })
     fireEvent.click(screen.getByRole('button', { name: /به‌روزرسانی وضعیت/ }))
@@ -244,7 +250,7 @@ describe('salons feature', () => {
       path: { id: salonId },
       body: {
         status: 'suspended',
-        reason: 'بررسی تخلف',
+        reason: 'Policy review',
         liveConfirmation: 'LIVE',
       },
     })
@@ -252,7 +258,7 @@ describe('salons feature', () => {
 
   it('lists and creates internal salon notes with a required reason', async () => {
     generated.getSalon.mockResolvedValue({
-      salon: { id: salonId, name: 'سالن آفتاب', status: 'active' },
+      salon: { id: salonId, name: 'Sun Salon', status: 'active' },
       members: [],
       stats: { services: 0, appointments: 0 },
     })
@@ -262,24 +268,24 @@ describe('salons feature', () => {
           id: 'note-1',
           subjectType: 'salon',
           subjectId: salonId,
-          body: 'نیاز به پیگیری',
+          body: 'Needs follow-up',
           authorUserId: 'admin-user-id',
-          authorName: 'ادمین',
+          authorName: 'Admin',
           createdAt: '2026-06-18T10:30:00.000Z',
         },
       ],
     })
     generated.postNote.mockResolvedValue({ note: { id: 'note-2' } })
 
-    renderWithProviders(<SalonDetailScreen salonId={salonId} />)
+    renderSalonDetail(`/salons/${salonId}?tab=governance`)
 
-    expect(await screen.findByText('نیاز به پیگیری')).toBeTruthy()
+    expect(await screen.findByText('Needs follow-up')).toBeTruthy()
 
     fireEvent.change(screen.getByLabelText('یادداشت'), {
-      target: { value: 'تماس دوباره با مالک' },
+      target: { value: 'Call owner again' },
     })
-    fireEvent.change(screen.getByPlaceholderText('دلیل الزامی برای ممیزی'), {
-      target: { value: 'ثبت پیگیری داخلی' },
+    fireEvent.change(screen.getByPlaceholderText('ثبت دلیل برای گزارش ممیزی الزامی است'), {
+      target: { value: 'Internal follow-up note' },
     })
     fireEvent.click(screen.getByRole('button', { name: /افزودن یادداشت/ }))
 
@@ -293,15 +299,15 @@ describe('salons feature', () => {
     expect(generated.postNote.mock.calls[0]?.[0]).toEqual({
       path: { id: salonId },
       body: {
-        body: 'تماس دوباره با مالک',
-        reason: 'ثبت پیگیری داخلی',
+        body: 'Call owner again',
+        reason: 'Internal follow-up note',
       },
     })
   })
 
   it('renders read-only salon tenant data tabs with populated and empty states', async () => {
     generated.getSalon.mockResolvedValue({
-      salon: { id: salonId, name: 'سالن آفتاب', status: 'active' },
+      salon: { id: salonId, name: 'Sun Salon', status: 'active' },
       members: [],
       stats: { services: 1, appointments: 0, appointmentRequests: 0 },
     })
@@ -335,16 +341,16 @@ describe('salons feature', () => {
       pagination: { page: 1, pageSize: 10, total: 1 },
     })
 
-    renderWithProviders(<SalonDetailScreen salonId={salonId} />)
+    await renderSalonDetail(`/salons/${salonId}?tab=operations`)
 
     expect(await screen.findByText('Client One')).toBeTruthy()
-    expect(screen.queryByText(/افزودن Client/)).toBeNull()
+    expect(screen.queryByText(/Add Client/)).toBeNull()
     expect(generated.getClients).toHaveBeenCalledWith({
       path: { id: salonId },
       query: { page: 1, pageSize: 10, search: undefined },
     })
 
-    fireEvent.pointerDown(screen.getByRole('tab', { name: 'Appointments' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'نوبت‌ها' }))
     await waitFor(() => {
       expect(generated.getAppointments).toHaveBeenCalled()
     })
@@ -352,12 +358,12 @@ describe('salons feature', () => {
       path: { id: salonId },
       query: { page: 1, pageSize: 10, search: undefined },
     })
-    expect(screen.queryByText(/افزودن Appointment/)).toBeNull()
+    expect(screen.queryByText(/Add Appointment/)).toBeNull()
 
-    fireEvent.pointerDown(screen.getByRole('tab', { name: 'ServiceVariants' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'انواع خدمت' }))
     await waitFor(() => {
       expect(generated.getServices).toHaveBeenCalled()
     })
-    expect(screen.queryByText(/افزودن ServiceVariant/)).toBeNull()
+    expect(screen.queryByText(/Add ServiceVariant/)).toBeNull()
   })
 })

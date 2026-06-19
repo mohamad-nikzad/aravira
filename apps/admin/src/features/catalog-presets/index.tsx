@@ -7,9 +7,8 @@ import {
 import type {
   AdminCatalogPresetCreateRequest,
 } from '@repo/api-client/types'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { UseQueryOptions } from '@tanstack/react-query'
-import type { ColumnDef, PaginationState } from '@tanstack/react-table'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import type { ColumnDef } from '@tanstack/react-table'
 import {
   CopyPlus,
   FolderTree,
@@ -20,9 +19,21 @@ import {
 } from 'lucide-react'
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 
-import { DataTable } from '#/components/data-table/data-table'
-import { DataTablePagination } from '#/components/data-table/data-table-pagination'
-import { DataTableToolbar } from '#/components/data-table/data-table-toolbar'
+import { AdminListTable } from '#/components/admin/admin-list-table'
+import {
+  FormField,
+  TextAreaField,
+} from '#/components/admin/form-field'
+import {
+  LiveConfirmationInput,
+  LiveDataWarning,
+  liveConfirmationFromForm,
+} from '#/components/admin/live-data-form'
+import { MutationError } from '#/components/admin/mutation-error'
+import {
+  MutationSuccess,
+  useMutationSuccess,
+} from '#/components/admin/mutation-success'
 import { AdminPageHeader } from '#/components/layout/admin-page-header'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -35,9 +46,8 @@ import {
   DialogTitle,
 } from '#/components/ui/dialog'
 import { Input } from '#/components/ui/input'
-import { Skeleton } from '#/components/ui/skeleton'
 import { useAdminAuth } from '#/context/admin-auth-provider'
-import { useTableUrlState } from '#/hooks/use-table-url-state'
+import { number, text } from '#/lib/admin-format'
 import { cn } from '#/lib/utils'
 
 type RecordRow = Record<string, unknown>
@@ -72,28 +82,6 @@ type CatalogPresetRow = RecordRow & {
   isActive?: boolean
 }
 
-type ListParams = {
-  page: number
-  pageSize: number
-  search?: string
-}
-
-type ListResult = {
-  items: RecordRow[]
-  pagination: {
-    page: number
-    pageSize: number
-    total: number
-  }
-}
-
-type AdminListQueryOptions = UseQueryOptions<
-  ListResult,
-  unknown,
-  ListResult,
-  readonly unknown[]
->
-
 const defaultVariant = (): PresetVariant => ({
   name: '',
   duration: 30,
@@ -118,8 +106,8 @@ export function CatalogPresetsPage() {
   return (
     <>
       <AdminPageHeader
-        title="Catalog Presets"
-        description="مدیریت قالب خدمات با ساختار category، family و service variant."
+        title="الگوهای کاتالوگ"
+        description="مدیریت قالب‌های سرویس با ساختار دسته، خانواده و نسخه سرویس."
       />
       <CatalogPresetsScreen />
     </>
@@ -128,12 +116,13 @@ export function CatalogPresetsPage() {
 
 export function CatalogPresetsScreen() {
   const queryClient = useQueryClient()
+  const { successMessage, showSuccess } = useMutationSuccess()
   const [editing, setEditing] = useState<CatalogPresetRow | 'new' | null>(null)
   const columns = useMemo<ColumnDef<RecordRow>[]>(
     () => [
       {
         accessorKey: 'name',
-        header: 'Catalog Preset',
+        header: 'الگوی کاتالوگ',
         cell: ({ row }) => (
           <PrimaryCell
             title={text(row.original.name)}
@@ -148,13 +137,13 @@ export function CatalogPresetsScreen() {
           <BooleanBadge
             value={truthy(row.original.isActive)}
             trueLabel="فعال"
-            falseLabel="آرشیوشده"
+            falseLabel="بایگانی‌شده"
           />
         ),
       },
       {
         accessorKey: 'tree',
-        header: 'درخت قالب خدمات',
+        header: 'درخت قالب سرویس',
         cell: ({ row }) => <TreeSummary tree={row.original.tree} />,
       },
       {
@@ -181,96 +170,34 @@ export function CatalogPresetsScreen() {
 
   return (
     <>
+      <MutationSuccess message={successMessage} />
       <AdminListTable
+        from="/_admin/catalog-presets"
         columns={columns}
         queryOptionsFor={(params) =>
           getApiV1AdminCatalogPresetsOptions({ query: params })
         }
-        searchPlaceholder="جستجو در Catalog Presets بر اساس نام یا slug..."
-        actions={
+        hint="جستجوی الگوهای کاتالوگ بر اساس نام یا شناسه..."
+        loadingLabel="در حال بارگذاری الگوهای کاتالوگ"
+        errorMessage="بارگذاری الگوهای کاتالوگ ناموفق بود."
+        toolbarActions={
           <Button size="sm" onClick={() => setEditing('new')}>
             <Plus className="h-4 w-4" />
-            Catalog Preset جدید
+            الگوی جدید
           </Button>
         }
       />
       <CatalogPresetDialog
         preset={editing}
         onOpenChange={(open) => !open && setEditing(null)}
-        onSaved={() =>
+        onSaved={() => {
+          showSuccess('الگوی کاتالوگ ذخیره شد.')
           void queryClient.invalidateQueries({
             queryKey: getApiV1AdminCatalogPresetsQueryKey(),
           })
-        }
+        }}
       />
     </>
-  )
-}
-
-function AdminListTable({
-  columns,
-  queryOptionsFor,
-  searchPlaceholder,
-  actions,
-}: {
-  columns: ColumnDef<RecordRow>[]
-  queryOptionsFor: (params: ListParams) => unknown
-  searchPlaceholder: string
-  actions?: ReactNode
-}) {
-  const [tableState, setTableState] = useTableUrlState(20)
-  const pagination: PaginationState = {
-    pageIndex: Math.max(tableState.page - 1, 0),
-    pageSize: tableState.pageSize,
-  }
-  const listQuery = useQuery(
-    queryOptionsFor({
-      page: tableState.page,
-      pageSize: tableState.pageSize,
-      search: tableState.query || undefined,
-    }) as AdminListQueryOptions,
-  )
-  const total = listQuery.data?.pagination.total ?? 0
-  const pageCount = Math.max(1, Math.ceil(total / tableState.pageSize))
-
-  return (
-    <section className="space-y-3">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0 flex-1">
-          <DataTableToolbar
-            query={tableState.query}
-            onQueryChange={(query) => setTableState({ query, page: 1 })}
-            onReset={() => setTableState({ query: '', page: 1, sort: '' })}
-          />
-          <p className="mt-2 text-xs text-muted-foreground">
-            {searchPlaceholder}
-          </p>
-        </div>
-        {actions ? <div className="shrink-0">{actions}</div> : null}
-      </div>
-      {listQuery.isLoading ? (
-        <ScreenSkeleton label="در حال دریافت Catalog Presets" />
-      ) : null}
-      {listQuery.isError ? (
-        <ErrorPanel message="بارگذاری Catalog Presets انجام نشد." />
-      ) : null}
-      <DataTable
-        columns={columns}
-        data={listQuery.data?.items ?? []}
-        pageCount={pageCount}
-        pagination={pagination}
-        onPaginationChange={(next) =>
-          setTableState({ page: next.pageIndex + 1, pageSize: next.pageSize })
-        }
-      />
-      <DataTablePagination
-        pagination={pagination}
-        pageCount={pageCount}
-        onPaginationChange={(next) =>
-          setTableState({ page: next.pageIndex + 1, pageSize: next.pageSize })
-        }
-      />
-    </section>
   )
 }
 
@@ -308,11 +235,10 @@ function CatalogPresetDialog({
       <DialogContent className="max-h-[min(92vh,920px)] overflow-y-auto sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>
-            {isNew ? 'Catalog Preset جدید' : 'ویرایش Catalog Preset'}
+            {isNew ? 'الگوی جدید کاتالوگ' : 'ویرایش الگوی کاتالوگ'}
           </DialogTitle>
           <DialogDescription>
-            قالب خدمات را با زبان category، family و service variant ویرایش
-            کنید.
+            قالب سرویس را با ساختار دسته، خانواده و نسخه سرویس ویرایش کنید.
           </DialogDescription>
         </DialogHeader>
         <CatalogPresetForm
@@ -364,21 +290,25 @@ function CatalogPresetForm({
       sortOrder: Number(form.get('sortOrder') ?? 0),
       isActive: form.get('isActive') === 'on',
       reason: String(form.get('reason') ?? ''),
+      liveConfirmation: liveConfirmationFromForm(form, isLiveData),
     })
   }
 
   return (
     <form className="space-y-5" onSubmit={submit}>
-      <LiveDataWarning show={isLiveData} />
+      <LiveDataWarning
+        show={isLiveData}
+        message="این تغییر روی داده LIVE تولید اعمال می‌شود. قبل از ذخیره، الگوی کاتالوگ و ساختار دسته، خانواده و نسخه سرویس را بررسی کنید."
+      />
       <section className="grid gap-3 md:grid-cols-[1fr_1fr_140px_auto]">
         <FormField
-          label="Slug"
+          label="شناسه"
           name="slug"
           defaultValue={text(source.slug)}
           required
         />
         <FormField
-          label="نام Catalog Preset"
+          label="نام الگوی کاتالوگ"
           name="name"
           defaultValue={text(source.name)}
           required
@@ -409,15 +339,16 @@ function CatalogPresetForm({
       <TextAreaField
         label="دلیل"
         name="reason"
-        placeholder="دلیل الزامی برای ممیزی"
+        placeholder="دلیل برای گزارش ممیزی الزامی است"
         rows={3}
         required
       />
+      <LiveConfirmationInput show={isLiveData} />
       <MutationError error={error} />
       <DialogFooter>
         <Button disabled={pending} type="submit">
           <Save className="h-4 w-4" />
-          ذخیره Catalog Preset
+          ذخیره الگوی کاتالوگ
         </Button>
       </DialogFooter>
     </form>
@@ -445,9 +376,9 @@ function TreeEditor({
         <div className="flex min-w-0 items-center gap-2">
           <FolderTree className="h-4 w-4 text-muted-foreground" />
           <div>
-            <h2 className="text-sm font-semibold">درخت قالب خدمات</h2>
+            <h2 className="text-sm font-semibold">درخت قالب سرویس</h2>
             <p className="text-xs text-muted-foreground">
-              PresetCategory {'->'} PresetFamily {'->'} PresetVariant
+              دسته {'->'} خانواده {'->'} نسخه سرویس
             </p>
           </div>
         </div>
@@ -458,7 +389,7 @@ function TreeEditor({
           onClick={() => onChange([...tree, defaultCategory()])}
         >
           <Plus className="h-4 w-4" />
-          category
+          دسته
         </Button>
       </div>
       <div className="space-y-3">
@@ -487,6 +418,8 @@ function CategoryEditor({
   onChange: (category: PresetCategory) => void
   onRemove: () => void
 }) {
+  const [confirmRemove, setConfirmRemove] = useState(false)
+
   function updateFamily(index: number, next: PresetFamily) {
     onChange({
       ...category,
@@ -500,19 +433,25 @@ function CategoryEditor({
     <div className="space-y-3 rounded-md border border-border bg-card p-3">
       <div className="grid gap-2 md:grid-cols-[1fr_auto]">
         <LabeledInput
-          label="category"
+          label="دسته"
           value={category.name}
           required
           onChange={(name) => onChange({ ...category, name })}
         />
         <IconAction
-          label="حذف category"
+          label="حذف دسته"
           disabled={!canRemove}
-          onClick={onRemove}
+          onClick={() => setConfirmRemove(true)}
         >
           <Trash2 className="h-4 w-4" />
         </IconAction>
       </div>
+      <RemoveConfirmationDialog
+        open={confirmRemove}
+        message="این دسته و همه موارد تو در تو حذف شوند؟"
+        onConfirm={onRemove}
+        onOpenChange={setConfirmRemove}
+      />
       <div className="space-y-3 ps-0 md:ps-4">
         {category.families.map((family, familyIndex) => (
           <FamilyEditor
@@ -542,7 +481,7 @@ function CategoryEditor({
           }
         >
           <Plus className="h-4 w-4" />
-          family
+          خانواده
         </Button>
       </div>
     </div>
@@ -560,6 +499,8 @@ function FamilyEditor({
   onChange: (family: PresetFamily) => void
   onRemove: () => void
 }) {
+  const [confirmRemove, setConfirmRemove] = useState(false)
+
   function updateVariant(index: number, next: PresetVariant) {
     onChange({
       ...family,
@@ -573,19 +514,25 @@ function FamilyEditor({
     <div className="space-y-3 rounded-md border border-border/80 bg-background/45 p-3">
       <div className="grid gap-2 md:grid-cols-[1fr_auto]">
         <LabeledInput
-          label="family"
+          label="خانواده"
           value={family.name}
           required
           onChange={(name) => onChange({ ...family, name })}
         />
         <IconAction
-          label="حذف family"
+          label="حذف خانواده"
           disabled={!canRemove}
-          onClick={onRemove}
+          onClick={() => setConfirmRemove(true)}
         >
           <Trash2 className="h-4 w-4" />
         </IconAction>
       </div>
+      <RemoveConfirmationDialog
+        open={confirmRemove}
+        message="این خانواده و همه نسخه‌های سرویس تو در تو حذف شوند؟"
+        onConfirm={onRemove}
+        onOpenChange={setConfirmRemove}
+      />
       <div className="space-y-2">
         {family.variants.map((variant, variantIndex) => (
           <VariantEditor
@@ -615,7 +562,7 @@ function FamilyEditor({
           }
         >
           <CopyPlus className="h-4 w-4" />
-          service variant
+          نسخه سرویس
         </Button>
       </div>
     </div>
@@ -633,10 +580,12 @@ function VariantEditor({
   onChange: (variant: PresetVariant) => void
   onRemove: () => void
 }) {
+  const [confirmRemove, setConfirmRemove] = useState(false)
+
   return (
     <div className="grid gap-2 rounded-md border border-border/70 bg-card px-3 py-2 md:grid-cols-[1.2fr_100px_120px_120px_1fr_auto]">
       <LabeledInput
-        label="service variant"
+        label="نسخه سرویس"
         value={variant.name}
         required
         onChange={(name) => onChange({ ...variant, name })}
@@ -666,30 +615,64 @@ function VariantEditor({
         onChange={(color) => onChange({ ...variant, color })}
       />
       <LabeledInput
-        label="توضیح service variant"
+        label="توضیحات نسخه سرویس"
         value={variant.description ?? ''}
         onChange={(description) =>
           onChange({ ...variant, description: description || null })
         }
       />
       <IconAction
-        label="حذف service variant"
+        label="حذف نسخه سرویس"
         disabled={!canRemove}
-        onClick={onRemove}
+        onClick={() => setConfirmRemove(true)}
       >
         <Trash2 className="h-4 w-4" />
       </IconAction>
+      <RemoveConfirmationDialog
+        open={confirmRemove}
+        message="این نسخه سرویس حذف شود؟"
+        onConfirm={onRemove}
+        onOpenChange={setConfirmRemove}
+      />
     </div>
   )
 }
 
-function LiveDataWarning({ show }: { show: boolean }) {
-  if (!show) return null
+function RemoveConfirmationDialog({
+  open,
+  message,
+  onConfirm,
+  onOpenChange,
+}: {
+  open: boolean
+  message: string
+  onConfirm: () => void
+  onOpenChange: (open: boolean) => void
+}) {
   return (
-    <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm leading-6 text-destructive">
-      این تغییر روی داده زنده تولید اعمال می‌شود. قبل از ذخیره Catalog Preset
-      و ساختار category، family و service variant را دوباره بررسی کنید.
-    </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>تأیید حذف</DialogTitle>
+          <DialogDescription>{message}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            انصراف
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => {
+              onConfirm()
+              onOpenChange(false)
+            }}
+          >
+            حذف
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -711,9 +694,9 @@ function TreeSummary({ tree }: { tree: unknown }) {
 
   return (
     <div className="flex flex-wrap gap-1.5">
-      <Badge variant="outline">{normalized.length} category</Badge>
-      <Badge variant="outline">{familyCount} family</Badge>
-      <Badge variant="outline">{variantCount} service variant</Badge>
+      <Badge variant="outline">{normalized.length} دسته</Badge>
+      <Badge variant="outline">{familyCount} خانواده</Badge>
+      <Badge variant="outline">{variantCount} نسخه سرویس</Badge>
     </div>
   )
 }
@@ -748,62 +731,6 @@ function BooleanBadge({
     <Badge variant="success">{trueLabel}</Badge>
   ) : (
     <Badge variant="outline">{falseLabel}</Badge>
-  )
-}
-
-function FormField({
-  label,
-  name,
-  type = 'text',
-  defaultValue,
-  required,
-}: {
-  label: string
-  name: string
-  type?: string
-  defaultValue?: string
-  required?: boolean
-}) {
-  return (
-    <label className="block space-y-1.5 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <Input
-        name={name}
-        type={type}
-        defaultValue={defaultValue}
-        required={required}
-      />
-    </label>
-  )
-}
-
-function TextAreaField({
-  label,
-  name,
-  defaultValue,
-  placeholder,
-  rows,
-  required,
-}: {
-  label: string
-  name: string
-  defaultValue?: string
-  placeholder?: string
-  rows: number
-  required?: boolean
-}) {
-  return (
-    <label className="block space-y-1.5 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <textarea
-        name={name}
-        defaultValue={defaultValue}
-        placeholder={placeholder}
-        rows={rows}
-        required={required}
-        className="min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      />
-    </label>
   )
 }
 
@@ -860,37 +787,6 @@ function IconAction({
   )
 }
 
-function ScreenSkeleton({ label }: { label: string }) {
-  return (
-    <div
-      role="status"
-      aria-label={label}
-      className="space-y-3 rounded-lg border border-border bg-card p-4"
-    >
-      <Skeleton className="h-5 w-52" />
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-4 w-2/3" />
-    </div>
-  )
-}
-
-function ErrorPanel({ message }: { message: string }) {
-  return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-      {message}
-    </div>
-  )
-}
-
-function MutationError({ error }: { error: unknown }) {
-  if (!error) return null
-  return (
-    <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-      {error instanceof Error ? error.message : 'ثبت تغییر انجام نشد.'}
-    </div>
-  )
-}
-
 function normalizeTree(value: unknown): CatalogPresetTree {
   if (!Array.isArray(value)) return defaultTree()
   const categories = value
@@ -942,21 +838,6 @@ function isRecord(value: unknown): value is RecordRow {
 
 function isPresent<T>(value: T | null): value is T {
   return value !== null
-}
-
-function text(value: unknown): string {
-  if (value === null || value === undefined) return ''
-  if (value instanceof Date) return value.toISOString()
-  if (typeof value === 'string') return value
-  if (typeof value === 'number' || typeof value === 'boolean')
-    return String(value)
-  return ''
-}
-
-function number(value: unknown): number {
-  if (typeof value === 'number') return value
-  if (typeof value === 'string') return Number(value) || 0
-  return 0
 }
 
 function truthy(value: unknown): boolean {

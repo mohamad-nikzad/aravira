@@ -61,7 +61,7 @@ export function DataTable<TData>({
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                  موردی پیدا نشد.
+                  نتیجه‌ای یافت نشد.
                 </TableCell>
               </TableRow>
             )}

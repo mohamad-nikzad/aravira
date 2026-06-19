@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ReactNode } from 'react'
 
 import type { AdminOverviewResponse } from '@repo/api-client/types'
 
@@ -8,6 +9,16 @@ import { OverviewScreen } from './index'
 
 const overviewQuery = vi.hoisted(() => ({
   queryFn: vi.fn(),
+}))
+
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({
+    to,
+    children,
+  }: {
+    to: string
+    children: ReactNode
+  }) => <a href={to}>{children}</a>,
 }))
 
 vi.mock('@repo/api-client/query', () => ({
@@ -80,6 +91,30 @@ describe('OverviewScreen', () => {
     expect(screen.getByText('salon · salon_12')).toBeTruthy()
   })
 
+  it('links metric cards to salons and audit section to audit log', async () => {
+    overviewQuery.queryFn.mockResolvedValue(populatedOverview)
+
+    renderOverview()
+
+    await screen.findByText('سالن‌های فعال')
+
+    expect(
+      screen.getByRole('link', { name: /سالن‌های فعال/ }).getAttribute('href'),
+    ).toBe('/salons')
+    expect(
+      screen.getByRole('link', { name: /سالن‌های آرشیوشده/ }).getAttribute('href'),
+    ).toBe('/salons')
+    expect(
+      screen.getByRole('link', { name: /رویدادهای ممیزی اخیر/ }).getAttribute('href'),
+    ).toBe('/audit-log')
+    expect(
+      screen.getByRole('link', { name: 'مشاهده همه' }).getAttribute('href'),
+    ).toBe('/audit-log')
+    expect(
+      screen.getByRole('link', { name: /salon\.status\.updated/ }).getAttribute('href'),
+    ).toBe('/audit-log')
+  })
+
   it('renders empty states when overview lists are empty', async () => {
     overviewQuery.queryFn.mockResolvedValue({
       salonsByStatus: {
@@ -98,7 +133,7 @@ describe('OverviewScreen', () => {
       await screen.findByText('هنوز حساب پیام‌رسانی متصل نشده است.'),
     ).toBeTruthy()
     expect(
-      screen.getByText('هنوز تغییری توسط ادمین ثبت نشده است.'),
+      screen.getByText('هنوز تغییری توسط مدیر ثبت نشده است.'),
     ).toBeTruthy()
   })
 
@@ -107,7 +142,7 @@ describe('OverviewScreen', () => {
 
     renderOverview()
 
-    expect(screen.getByLabelText('در حال دریافت نمای کلی')).toBeTruthy()
+    expect(screen.getByLabelText('در حال بارگذاری نمای کلی')).toBeTruthy()
   })
 
   it('renders an error state when the overview query fails', async () => {
@@ -117,7 +152,9 @@ describe('OverviewScreen', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('دریافت آمار نمای کلی انجام نشد. دوباره تلاش کنید.'),
+        screen.getByText(
+          'بارگذاری شاخص‌های نمای کلی ناموفق بود. لطفاً دوباره تلاش کنید.',
+        ),
       ).toBeTruthy()
     })
   })

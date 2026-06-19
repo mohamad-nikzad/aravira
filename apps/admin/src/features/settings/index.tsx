@@ -5,19 +5,28 @@ import {
   postApiV1AdminPlatformAdminsMutation,
 } from '@repo/api-client/query'
 import type { PlatformRole } from '@repo/api-client/types'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { UseQueryOptions } from '@tanstack/react-query'
-import type { ColumnDef, PaginationState } from '@tanstack/react-table'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import type { ColumnDef } from '@tanstack/react-table'
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
-import { CircleAlert, Eye, LockKeyhole, Plus, ShieldCheck, UserRound } from 'lucide-react'
+import { Eye, LockKeyhole, Plus, ShieldCheck, UserRound } from 'lucide-react'
 
-import { DataTable } from '#/components/data-table/data-table'
-import { DataTablePagination } from '#/components/data-table/data-table-pagination'
-import { DataTableToolbar } from '#/components/data-table/data-table-toolbar'
+import { AdminListTable } from '#/components/admin/admin-list-table'
+import {
+  LiveConfirmationInput,
+  LiveDataWarning,
+  liveConfirmationFromForm,
+} from '#/components/admin/live-data-form'
+import { MutationError } from '#/components/admin/mutation-error'
+import {
+  MutationSuccess,
+  useMutationSuccess,
+} from '#/components/admin/mutation-success'
+import { RoleBadge } from '#/components/admin/role-badge'
+import { TextAreaField } from '#/components/admin/form-field'
+import { UserPicker } from '#/components/admin/user-picker'
 import { AdminPageHeader } from '#/components/layout/admin-page-header'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
-import { Input } from '#/components/ui/input'
 import {
   Sheet,
   SheetContent,
@@ -25,34 +34,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from '#/components/ui/sheet'
-import { Skeleton } from '#/components/ui/skeleton'
 import { useAdminAuth } from '#/context/admin-auth-provider'
-import { useTableUrlState } from '#/hooks/use-table-url-state'
+import { formatDate, text } from '#/lib/admin-format'
 import { cn } from '#/lib/utils'
 
 type RecordRow = Record<string, unknown>
-
-type ListParams = {
-  page: number
-  pageSize: number
-  search?: string
-}
-
-type ListResult = {
-  items: RecordRow[]
-  pagination: {
-    page: number
-    pageSize: number
-    total: number
-  }
-}
-
-type AdminListQueryOptions = UseQueryOptions<
-  ListResult,
-  unknown,
-  ListResult,
-  readonly unknown[]
->
 
 const roleOptions: Array<[PlatformRole, string]> = [
   ['platform_owner', 'مالک'],
@@ -83,9 +69,9 @@ function SettingsScreen() {
         <Panel title="نشست" icon={<UserRound className="h-4 w-4" />}>
           <DetailGrid
             items={[
-              ['Name', me.name],
+              ['نام', me.name],
               ['ایمیل', me.email],
-              ['موبایل', me.phoneNumber],
+              ['تلفن', me.phoneNumber],
               [
                 'نقش',
                 <RoleBadge key="role" role={me.role} active={me.active} />,
@@ -96,20 +82,20 @@ function SettingsScreen() {
         <Panel title="مدل دسترسی" icon={<LockKeyhole className="h-4 w-4" />}>
           <div className="space-y-3 text-sm leading-6 text-muted-foreground">
             <p>
-              دسترسی ادمین با نقش‌های پلتفرمی و نشست کوکی Better Auth کنترل
+              دسترسی ادمین با نقش‌های پلتفرم و نشست کوکی احراز هویت کنترل
               می‌شود.
             </p>
             <p>
-              متغیر PLATFORM_ADMIN_BOOTSTRAP_PHONES فقط برای بوت‌استرپ اولیه یا
-              بازیابی اضطراری مالک پلتفرم است؛ بعد از بوت‌استرپ، دسترسی‌ها از
-              همین بخش تنظیمات مدیریت می‌شوند.
+              فهرست شماره‌های راه‌اندازی اولیه فقط برای راه‌اندازی اولیه یا
+              بازیابی اضطراری مالک پلتفرم است؛ پس از آن، دسترسی از همین بخش
+              تنظیمات مدیریت می‌شود.
             </p>
           </div>
         </Panel>
       </section>
       {isPlatformOwner ? (
         <Panel
-          title="Platform Admins"
+          title="ادمین‌های پلتفرم"
           icon={<ShieldCheck className="h-4 w-4" />}
         >
           <PlatformAdminsScreen />
@@ -121,6 +107,7 @@ function SettingsScreen() {
 
 function PlatformAdminsScreen() {
   const queryClient = useQueryClient()
+  const { successMessage, showSuccess } = useMutationSuccess()
   const [selected, setSelected] = useState<RecordRow | null | 'new'>(null)
   const columns = useMemo<ColumnDef<RecordRow>[]>(
     () => [
@@ -151,13 +138,13 @@ function PlatformAdminsScreen() {
           <BooleanBadge
             value={truthy(row.original.active)}
             trueLabel="فعال"
-            falseLabel="لغوشده"
+            falseLabel="لغو شده"
           />
         ),
       },
       {
         accessorKey: 'updatedAt',
-        header: 'به‌روزشده',
+        header: 'به‌روزرسانی',
         cell: ({ row }) => formatDate(row.original.updatedAt),
       },
       {
@@ -172,13 +159,17 @@ function PlatformAdminsScreen() {
 
   return (
     <>
+      <MutationSuccess message={successMessage} />
       <AdminListTable
+        from="/_admin/settings"
         columns={columns}
         queryOptionsFor={(params) =>
           getApiV1AdminPlatformAdminsOptions({ query: params })
         }
-        searchPlaceholder="جستجو بر اساس نام، ایمیل، موبایل یا نام کاربری..."
-        actions={
+        hint="جستجو بر اساس نام، ایمیل، تلفن یا نام کاربری..."
+        loadingLabel="در حال بارگذاری رکوردهای ادمین"
+        errorMessage="بارگذاری رکوردهای ادمین ناموفق بود."
+        toolbarActions={
           <Button size="sm" onClick={() => setSelected('new')}>
             <Plus className="h-4 w-4" />
             اعطای دسترسی
@@ -188,11 +179,12 @@ function PlatformAdminsScreen() {
       <PlatformAdminSheet
         admin={selected}
         onOpenChange={(open) => !open && setSelected(null)}
-        onSaved={() =>
+        onSaved={() => {
+          showSuccess('دسترسی ادمین پلتفرم ذخیره شد.')
           void queryClient.invalidateQueries({
             queryKey: getApiV1AdminPlatformAdminsQueryKey(),
           })
-        }
+        }}
       />
     </>
   )
@@ -260,20 +252,28 @@ function PlatformAdminSheet({
             {isNew ? 'اعطای دسترسی پلتفرم' : 'مدیریت ادمین پلتفرم'}
           </SheetTitle>
           <SheetDescription>
-            محافظت از آخرین مالک فعال در API اعمال می‌شود.
+            محافظت از آخرین مالک فعال در سمت سرور اعمال می‌شود.
           </SheetDescription>
         </SheetHeader>
         <form className="mt-6 space-y-4" onSubmit={submit}>
           <LiveDataWarning
             show={isLiveData}
-            message="این تغییر دسترسی ادمین روی داده زنده تولید اعمال می‌شود."
+            message="این تغییر دسترسی روی داده LIVE تولید اعمال می‌شود. برای ادامه LIVE را وارد کنید."
           />
-          <FormField
-            label="شناسه کاربر"
+          <UserPicker
             name="userId"
-            defaultValue={text(source.userId)}
-            required
+            required={isNew}
             readOnly={!isNew}
+            displayUser={
+              isNew
+                ? undefined
+                : {
+                    userId: text(source.userId),
+                    name: text(source.name),
+                    email: text(source.email),
+                    phoneNumber: text(source.phoneNumber),
+                  }
+            }
           />
           <SelectField
             label="نقش"
@@ -299,67 +299,6 @@ function PlatformAdminSheet({
         </form>
       </SheetContent>
     </Sheet>
-  )
-}
-
-function AdminListTable({
-  columns,
-  queryOptionsFor,
-  searchPlaceholder,
-  actions,
-}: {
-  columns: ColumnDef<RecordRow>[]
-  queryOptionsFor: (params: ListParams) => unknown
-  searchPlaceholder: string
-  actions?: ReactNode
-}) {
-  const [tableState, setTableState] = useTableUrlState(20)
-  const pagination: PaginationState = {
-    pageIndex: Math.max(tableState.page - 1, 0),
-    pageSize: tableState.pageSize,
-  }
-  const listQuery = useQuery(
-    queryOptionsFor({
-      page: tableState.page,
-      pageSize: tableState.pageSize,
-      search: tableState.query || undefined,
-    }) as AdminListQueryOptions,
-  )
-  const total = listQuery.data?.pagination.total ?? 0
-  const pageCount = Math.max(1, Math.ceil(total / tableState.pageSize))
-
-  return (
-    <section className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <DataTableToolbar
-          query={tableState.query}
-          onQueryChange={(query) => setTableState({ query, page: 1 })}
-          onReset={() => setTableState({ query: '', page: 1, sort: '' })}
-        />
-        {actions ? <div className="shrink-0">{actions}</div> : null}
-      </div>
-      <p className="text-xs text-muted-foreground">{searchPlaceholder}</p>
-      {listQuery.isLoading ? <ScreenSkeleton /> : null}
-      {listQuery.isError ? (
-        <ErrorPanel message="بارگذاری رکوردهای ادمین انجام نشد." />
-      ) : null}
-      <DataTable
-        columns={columns}
-        data={listQuery.data?.items ?? []}
-        pageCount={pageCount}
-        pagination={pagination}
-        onPaginationChange={(next) =>
-          setTableState({ page: next.pageIndex + 1, pageSize: next.pageSize })
-        }
-      />
-      <DataTablePagination
-        pagination={pagination}
-        pageCount={pageCount}
-        onPaginationChange={(next) =>
-          setTableState({ page: next.pageIndex + 1, pageSize: next.pageSize })
-        }
-      />
-    </section>
   )
 }
 
@@ -432,71 +371,6 @@ function RowButton({
   )
 }
 
-function FormField({
-  label,
-  name,
-  defaultValue,
-  placeholder,
-  pattern,
-  type = 'text',
-  required,
-  readOnly,
-}: {
-  label: string
-  name: string
-  defaultValue?: string
-  placeholder?: string
-  pattern?: string
-  type?: string
-  required?: boolean
-  readOnly?: boolean
-}) {
-  return (
-    <label className="block space-y-1.5 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <Input
-        name={name}
-        type={type}
-        defaultValue={defaultValue}
-        placeholder={placeholder}
-        pattern={pattern}
-        required={required}
-        readOnly={readOnly}
-      />
-    </label>
-  )
-}
-
-function TextAreaField({
-  label,
-  name,
-  defaultValue,
-  placeholder,
-  rows,
-  required,
-}: {
-  label: string
-  name: string
-  defaultValue?: string
-  placeholder?: string
-  rows: number
-  required?: boolean
-}) {
-  return (
-    <label className="block space-y-1.5 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <textarea
-        name={name}
-        defaultValue={defaultValue}
-        placeholder={placeholder}
-        rows={rows}
-        required={required}
-        className="min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      />
-    </label>
-  )
-}
-
 function SelectField({
   label,
   name,
@@ -542,104 +416,6 @@ function BooleanBadge({
   )
 }
 
-function RoleBadge({ role, active }: { role: string; active: boolean }) {
-  if (!role) return <Badge variant="outline">بدون نقش پلتفرمی</Badge>
-  return (
-    <Badge variant={active ? 'default' : 'outline'}>{formatRole(role)}</Badge>
-  )
-}
-
-function LiveDataWarning({
-  show,
-  message,
-}: {
-  show: boolean
-  message: string
-}) {
-  if (!show) return null
-  return (
-    <div className="flex items-start gap-2 rounded-md border border-destructive/35 bg-destructive/10 p-3 text-sm text-destructive">
-      <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-      <p className="leading-6">{message} برای ادامه عبارت LIVE را وارد کنید.</p>
-    </div>
-  )
-}
-
-function LiveConfirmationInput({ show }: { show: boolean }) {
-  if (!show) return null
-  return (
-    <FormField
-      label="تأیید داده زنده"
-      name="liveConfirmation"
-      placeholder="LIVE"
-      pattern="LIVE"
-      required
-    />
-  )
-}
-
-function MutationError({ error }: { error: unknown }) {
-  if (!error) return null
-  return (
-    <p className="text-sm text-destructive">
-      {error instanceof Error ? error.message : 'عملیات انجام نشد'}
-    </p>
-  )
-}
-
-function ErrorPanel({ message }: { message: string }) {
-  return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-      {message}
-    </div>
-  )
-}
-
-function ScreenSkeleton() {
-  return (
-    <div className="space-y-3 rounded-lg border border-border bg-card p-4">
-      <Skeleton className="h-5 w-52" />
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-4 w-2/3" />
-    </div>
-  )
-}
-
-function liveConfirmationFromForm(form: FormData, isLiveData: boolean) {
-  if (!isLiveData) return undefined
-  return String(form.get('liveConfirmation') ?? '')
-}
-
-function formatRole(role: string) {
-  const roles: Record<string, string> = {
-    platform_owner: 'مالک',
-    platform_admin: 'ادمین',
-    platform_support: 'پشتیبان',
-    platform_viewer: 'بیننده',
-  }
-  return roles[role] ?? role
-}
-
-function text(value: unknown): string {
-  if (value === null || value === undefined) return ''
-  if (value instanceof Date) return value.toISOString()
-  if (typeof value === 'string') return value
-  if (typeof value === 'number' || typeof value === 'boolean')
-    return String(value)
-  return ''
-}
-
 function truthy(value: unknown): boolean {
   return value === true || value === 'true' || value === 1
-}
-
-function formatDate(value: unknown): string {
-  const raw = text(value)
-  if (!raw) return '-'
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return raw
-  return new Intl.DateTimeFormat('fa-IR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
 }

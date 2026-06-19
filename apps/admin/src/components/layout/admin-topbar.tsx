@@ -41,7 +41,7 @@ export function AdminTopbar() {
                 : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/50 dark:text-emerald-300',
             )}
           >
-            {isLive ? 'LIVE DATA' : 'LOCAL DATA'}
+            {isLive ? 'داده LIVE' : 'داده محلی'}
           </span>
           <IconButton label="تغییر پوسته" onClick={toggleTheme}>
             <ThemeIcon className="h-4 w-4" />
