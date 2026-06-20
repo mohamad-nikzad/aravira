@@ -45,7 +45,10 @@ export type VerifyPhoneOtpResponse = {
 
 export type PreWorkspaceAccountResponse = { user: PreWorkspaceUser }
 
-export type PhoneStatusResponse = { registered: boolean }
+export type PhoneStatusResponse = {
+  registered: boolean
+  otpLoginEnabled: boolean
+}
 
 export type PreWorkspaceResponse = {
   user: PreWorkspaceUser
@@ -95,6 +98,30 @@ export function createAuthApi(client: ApiClient) {
           body: { phoneNumber: input.phone, code: input.code },
         },
       )
+    },
+    requestPasswordReset(input: { phone: string }) {
+      return client.request<{ status: boolean }>(
+        endpoints.auth.requestPasswordReset,
+        {
+          method: 'POST',
+          body: { phoneNumber: input.phone },
+        },
+      )
+    },
+    verifyPasswordResetOtp(input: { phone: string; code: string }) {
+      return client.request<{ token: string }>(
+        endpoints.auth.verifyPasswordResetOtp,
+        {
+          method: 'POST',
+          body: { phoneNumber: input.phone, otp: input.code },
+        },
+      )
+    },
+    resetPassword(input: { token: string; newPassword: string }) {
+      return client.request<{ status: boolean }>(endpoints.auth.resetPassword, {
+        method: 'POST',
+        body: input,
+      })
     },
     completeSignupAccount(input: PreWorkspaceAccountPayload) {
       return client.request<PreWorkspaceAccountResponse>(

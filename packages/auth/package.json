@@ -10,7 +10,9 @@
     "./platform": "./src/platform.ts",
     "./keys": "./src/keys.ts",
     "./signup": "./src/signup.ts",
-    "./tenant": "./src/tenant.ts"
+    "./tenant": "./src/tenant.ts",
+    "./phone-otp": "./src/phone-otp.ts",
+    "./password-recovery": "./src/password-recovery.ts"
   },
   "scripts": {
     "lint": "eslint .",

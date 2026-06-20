@@ -141,10 +141,13 @@ describe('legacy auth API wrapper', () => {
 
   it('maps phone status to the app-owned auth helper endpoint', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
-      new Response(JSON.stringify({ registered: true }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({ registered: true, otpLoginEnabled: false }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
     )
 
     const auth = createAuthApi(
@@ -158,12 +161,62 @@ describe('legacy auth API wrapper', () => {
     const response = await auth.getPhoneStatus({ phone: '09121234567' })
 
     expect(response.registered).toBe(true)
+    expect(response.otpLoginEnabled).toBe(false)
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.example.test/api/v1/auth/phone-status',
       expect.objectContaining({
         method: 'POST',
         credentials: 'include',
         body: JSON.stringify({ phone: '09121234567' }),
+      }),
+    )
+  })
+
+  it('maps the three password recovery calls without exposing a session', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: true }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ token: 'reset-token' }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: true }), { status: 200 }),
+      )
+    const auth = createAuthApi(
+      createApiClient({
+        baseUrl: 'https://api.example.test',
+        credentials: 'include',
+        fetchImpl: fetchMock,
+      }),
+    )
+
+    await auth.requestPasswordReset({ phone: '09121234567' })
+    const { token } = await auth.verifyPasswordResetOtp({
+      phone: '09121234567',
+      code: '123456',
+    })
+    await auth.resetPassword({ token, newPassword: 'new-secret' })
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api.example.test/api/v1/auth/phone-number/verify-password-reset-otp',
+      expect.objectContaining({
+        body: JSON.stringify({
+          phoneNumber: '09121234567',
+          otp: '123456',
+        }),
+      }),
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      'https://api.example.test/api/v1/auth/reset-password',
+      expect.objectContaining({
+        body: JSON.stringify({
+          token: 'reset-token',
+          newPassword: 'new-secret',
+        }),
       }),
     )
   })

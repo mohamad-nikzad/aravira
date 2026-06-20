@@ -15,6 +15,11 @@ const TEMP_EMAIL_DOMAIN = 'saluna.local'
 export type AuthOtpEnv = {
   AUTH_OTP_BYPASS_ENABLED?: string | boolean | null
   AUTH_OTP_BYPASS_CODE?: string | null
+  AUTH_OTP_LOGIN_ENABLED?: string | boolean | null
+}
+
+export function isAuthOtpLoginEnabled(env: AuthOtpEnv = process.env): boolean {
+  return envFlagEnabled(env.AUTH_OTP_LOGIN_ENABLED)
 }
 
 export type AuthOtpConfig = {
@@ -72,6 +77,26 @@ export async function sendAuthPhoneOtp(data: {
 
   if (result.status !== 'sent') {
     throw new Error(result.error ?? 'auth_otp_send_failed')
+  }
+}
+
+export async function sendPasswordResetPhoneOtp(data: {
+  phoneNumber: string
+  code: string
+}): Promise<void> {
+  const config = readAuthOtpConfig()
+  if (config.bypassEnabled) return
+
+  const phone = normalizeAuthPhoneNumber(data.phoneNumber)
+  const result = await sendSmsOtp({
+    phone,
+    code: data.code,
+    purpose: 'forgot_password',
+    requestId: `auth-password-reset-otp:${phone}`,
+  })
+
+  if (result.status !== 'sent') {
+    throw new Error(result.error ?? 'auth_password_reset_otp_send_failed')
   }
 }
 

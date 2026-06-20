@@ -26,16 +26,17 @@ vi.mock('@repo/database/staff', () => ({
 
 vi.mock('@repo/database/client', () => {
   let selectRows: unknown[] = []
+  type SelectChain = {
+    innerJoin: () => SelectChain
+    where: () => { limit: () => Promise<unknown[]> }
+  }
   const stub: {
     __setSelectRows: (rows: unknown[]) => void
     transaction: (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>
     insert: () => { values: () => Promise<void> }
     update: () => { set: () => { where: () => Promise<void> } }
     select: () => {
-      from: () => {
-        leftJoin?: unknown
-        where: () => { limit: () => Promise<unknown[]> }
-      }
+      from: () => SelectChain
     }
   } = {
     __setSelectRows: (rows) => {
@@ -45,9 +46,13 @@ vi.mock('@repo/database/client', () => {
     insert: () => ({ values: async () => undefined }),
     update: () => ({ set: () => ({ where: async () => undefined }) }),
     select: () => ({
-      from: () => ({
-        where: () => ({ limit: async () => selectRows }),
-      }),
+      from: () => {
+        const chain: SelectChain = {
+          innerJoin: () => chain,
+          where: () => ({ limit: async () => selectRows }),
+        }
+        return chain
+      },
     }),
   }
   return { getDb: () => stub }
@@ -307,7 +312,10 @@ describe('auth phone status route', () => {
     })
 
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ registered: true })
+    expect(await res.json()).toEqual({
+      registered: true,
+      otpLoginEnabled: false,
+    })
   })
 
   it('returns registered false for a new phone number', async () => {
@@ -318,11 +326,48 @@ describe('auth phone status route', () => {
     })
 
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ registered: false })
+    expect(await res.json()).toEqual({
+      registered: false,
+      otpLoginEnabled: false,
+    })
   })
 })
 
 describe('Better Auth passthrough routes', () => {
+  it('rejects OTP login for a completed account while the flag is disabled', async () => {
+    ;(
+      getDb() as unknown as { __setSelectRows: (rows: unknown[]) => void }
+    ).__setSelectRows([{ id: 'u1' }])
+
+    const res = await app.request('/api/v1/auth/phone-number/send-otp', {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify({ phoneNumber: '09121234567' }),
+    })
+
+    expect(res.status).toBe(403)
+    expect(await res.json()).toMatchObject({ code: 'OTP_LOGIN_DISABLED' })
+    expect(authServer.handler).not.toHaveBeenCalled()
+  })
+
+  it('keeps registration OTP available for an incomplete account', async () => {
+    vi.mocked(authServer.handler).mockResolvedValue(
+      new Response(JSON.stringify({ message: 'OTP sent' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }) as never,
+    )
+
+    const res = await app.request('/api/v1/auth/phone-number/send-otp', {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify({ phoneNumber: '09121234567' }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(authServer.handler).toHaveBeenCalledOnce()
+  })
+
   it('passes phone-number password sign-in through to Better Auth', async () => {
     vi.mocked(authServer.handler).mockResolvedValue(
       new Response(JSON.stringify({ ok: true, endpoint: 'phone' }), {

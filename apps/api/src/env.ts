@@ -80,6 +80,10 @@ const envSchema = z
       .default('false')
       .transform((v) => v === 'true' || v === '1'),
     AUTH_OTP_BYPASS_CODE: z.string().default('123456'),
+    AUTH_OTP_LOGIN_ENABLED: z
+      .string()
+      .default('false')
+      .transform((v) => v === 'true' || v === '1'),
     PLATFORM_ADMIN_BOOTSTRAP_PHONES: z
       .string()
       .default('')

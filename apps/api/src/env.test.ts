@@ -16,6 +16,7 @@ function env(overrides: Partial<Env> = {}): Env {
     SMS_ENABLED: false,
     AUTH_OTP_BYPASS_ENABLED: false,
     AUTH_OTP_BYPASS_CODE: '123456',
+    AUTH_OTP_LOGIN_ENABLED: false,
     PLATFORM_ADMIN_BOOTSTRAP_PHONES: [],
     ADMIN_DATA_SOURCE: 'local',
     ...overrides,
@@ -72,6 +73,7 @@ describe('env SMS delivery config', () => {
       SMS_IR_API_KEY: 'secret-api-key',
       AUTH_OTP_BYPASS_ENABLED: false,
       AUTH_OTP_BYPASS_CODE: '123456',
+      AUTH_OTP_LOGIN_ENABLED: false,
     })
   })
 

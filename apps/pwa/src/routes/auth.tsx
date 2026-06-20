@@ -36,7 +36,12 @@ const searchSchema = z.object({
   redirect: z.string().optional(),
 })
 
-type AuthMode = 'phone' | 'password' | 'otp'
+type AuthMode =
+  | 'phone'
+  | 'password'
+  | 'otp'
+  | 'recoveryOtp'
+  | 'recoveryPassword'
 type OtpIntent = 'login' | 'register'
 
 /** Only honor internal relative paths to avoid open-redirect. */
@@ -78,6 +83,12 @@ function AuthPage() {
   const [otpPhone, setOtpPhone] = useState('')
   const [otp, setOtp] = useState('')
   const [otpError, setOtpError] = useState<string | null>(null)
+  const [otpLoginEnabled, setOtpLoginEnabled] = useState(false)
+  const [resetToken, setResetToken] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [recoveryError, setRecoveryError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [resendAvailableAt, setResendAvailableAt] = useState<number | null>(
     null,
   )
@@ -100,6 +111,8 @@ function AuthPage() {
   const phoneValue = watch('phone')
   const isPhoneMode = mode === 'phone'
   const isPasswordMode = mode === 'password'
+  const isRecoveryOtp = mode === 'recoveryOtp'
+  const isRecoveryPassword = mode === 'recoveryPassword'
   const isRegistering = otpIntent === 'register'
 
   const login = useMutation({
@@ -144,6 +157,7 @@ function AuthPage() {
       setOtpPhone(values.phone)
       setOtp('')
       setOtpError(null)
+      setOtpLoginEnabled(data.otpLoginEnabled)
       if (data.registered) {
         setMode('password')
         return
@@ -184,6 +198,48 @@ function AuthPage() {
         return
       }
       setOtpError('ورود انجام نشد. دوباره تلاش کنید.')
+    },
+  })
+
+  const requestPasswordReset = useMutation({
+    mutationFn: (phone: string) => api.auth.requestPasswordReset({ phone }),
+    meta: { skipToast: true },
+    onSuccess: (_, phone) => {
+      setOtpPhone(phone)
+      setOtp('')
+      setOtpError(null)
+      setRecoveryError(null)
+      setResendAvailableAt(Date.now() + AUTH_OTP_RESEND_SECONDS * 1000)
+      setMode('recoveryOtp')
+    },
+  })
+
+  const verifyPasswordResetOtp = useMutation({
+    mutationFn: (code: string) =>
+      api.auth.verifyPasswordResetOtp({ phone: otpPhone, code }),
+    meta: { skipToast: true },
+    onSuccess: ({ token }) => {
+      setResetToken(token)
+      setOtpError(null)
+      setNewPassword('')
+      setConfirmPassword('')
+      setMode('recoveryPassword')
+    },
+  })
+
+  const resetPassword = useMutation({
+    mutationFn: () =>
+      api.auth.resetPassword({ token: resetToken, newPassword }),
+    meta: { skipToast: true },
+    onSuccess: () => {
+      setValue('phone', otpPhone)
+      setValue('password', '')
+      setResetToken('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setRecoveryError(null)
+      setSuccessMessage('رمز عبور با موفقیت تغییر کرد. اکنون وارد شوید.')
+      setMode('password')
     },
   })
 
@@ -256,20 +312,48 @@ function AuthPage() {
     )
   }
 
+  const startPasswordRecovery = () => {
+    const parsedPhone = phoneSchema.safeParse(phoneValue)
+    if (!parsedPhone.success) {
+      setError('phone', { message: parsedPhone.error.issues[0]?.message })
+      return
+    }
+    setSuccessMessage(null)
+    setRecoveryError(null)
+    requestPasswordReset.mutate(parsedPhone.data, {
+      onError: (err) =>
+        setRecoveryError(
+          getMutationErrorMessage(err, 'ارسال کد بازیابی انجام نشد.'),
+        ),
+    })
+  }
+
   const submitOtp = (value?: string) => {
-    if (verifyOtp.isPending) return
+    if (verifyOtp.isPending || verifyPasswordResetOtp.isPending) return
     const code = normalizeOtpCode(value ?? otp)
     if (code.length !== AUTH_OTP_CODE_LENGTH) {
       setOtpError(`کد ${AUTH_OTP_CODE_LENGTH} رقمی را کامل وارد کنید`)
       return
     }
-    verifyOtp.mutate(code, {
-      onError: (err) => setOtpError(getOtpErrorMessage(err)),
-    })
+    if (isRecoveryOtp) {
+      verifyPasswordResetOtp.mutate(code, {
+        onError: (err) => setOtpError(getOtpErrorMessage(err)),
+      })
+    } else {
+      verifyOtp.mutate(code, {
+        onError: (err) => setOtpError(getOtpErrorMessage(err)),
+      })
+    }
   }
 
   const resendOtp = () => {
     if (!otpPhone || resendRemaining > 0) return
+    if (isRecoveryOtp) {
+      requestPasswordReset.mutate(otpPhone, {
+        onError: (err) => setOtpError(getOtpErrorMessage(err)),
+      })
+      return
+    }
     sendOtp.mutate(
       { phone: otpPhone, intent: otpIntent },
       { onError: (err) => setOtpError(getOtpErrorMessage(err)) },
@@ -282,6 +366,8 @@ function AuthPage() {
     setOtpPhone('')
     setOtp('')
     setOtpError(null)
+    setRecoveryError(null)
+    setSuccessMessage(null)
     setValue('password', '')
     clearErrors()
   }
@@ -303,11 +389,34 @@ function AuthPage() {
   }, [clearErrors, mode, setValue])
 
   const passwordField = register('password')
+  const submitNewPassword = () => {
+    setRecoveryError(null)
+    if (newPassword.length < 8) {
+      setRecoveryError('رمز عبور باید حداقل ۸ کاراکتر باشد.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setRecoveryError('تکرار رمز عبور با رمز جدید یکسان نیست.')
+      return
+    }
+    resetPassword.mutate(undefined, {
+      onError: (err) =>
+        setRecoveryError(
+          getMutationErrorMessage(
+            err,
+            'تغییر رمز انجام نشد. دوباره کد بازیابی بگیرید.',
+          ),
+        ),
+    })
+  }
   const isBusy =
     login.isPending ||
     sendOtp.isPending ||
     verifyOtp.isPending ||
-    phoneStatus.isPending
+    phoneStatus.isPending ||
+    requestPasswordReset.isPending ||
+    verifyPasswordResetOtp.isPending ||
+    resetPassword.isPending
 
   return (
     <main className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-background p-4">
@@ -328,16 +437,24 @@ function AuthPage() {
                 ? 'ورود یا ثبت‌نام'
                 : isPasswordMode
                   ? 'ورود با رمز عبور'
-                  : isRegistering
-                    ? 'ثبت‌نام با کد تایید'
-                    : 'ورود با کد تایید'}
+                  : isRecoveryPassword
+                    ? 'انتخاب رمز عبور جدید'
+                    : isRecoveryOtp
+                      ? 'بازیابی رمز عبور'
+                      : isRegistering
+                        ? 'ثبت‌نام با کد تایید'
+                        : 'ورود با کد تایید'}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {isPhoneMode
                 ? 'برای شروع فقط شماره موبایل‌تان را وارد کنید'
                 : isPasswordMode
                   ? 'رمز عبور را وارد کنید.'
-                  : 'کد تایید را وارد کنید.'}
+                  : isRecoveryPassword
+                    ? 'رمز جدید را وارد و تایید کنید.'
+                    : isRecoveryOtp
+                      ? 'کد بازیابی پیامک‌شده را وارد کنید.'
+                      : 'کد تایید را وارد کنید.'}
             </p>
           </div>
 
@@ -409,7 +526,7 @@ function AuthPage() {
                     </button>
                   </div>
                 </div>
-              ) : mode === 'otp' ? (
+              ) : mode === 'otp' || isRecoveryOtp ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm font-semibold text-foreground">
                     <span>کد تایید را وارد کنید.</span>
@@ -421,10 +538,14 @@ function AuthPage() {
                       <button
                         type="button"
                         className="text-xs font-semibold text-primary disabled:text-muted-foreground"
-                        disabled={sendOtp.isPending}
+                        disabled={
+                          sendOtp.isPending || requestPasswordReset.isPending
+                        }
                         onClick={resendOtp}
                       >
-                        {sendOtp.isPending ? 'در حال ارسال...' : 'ارسال دوباره'}
+                        {sendOtp.isPending || requestPasswordReset.isPending
+                          ? 'در حال ارسال...'
+                          : 'ارسال دوباره'}
                       </button>
                     )}
                   </div>
@@ -440,7 +561,9 @@ function AuthPage() {
                         setOtpError(null)
                       }}
                       onComplete={submitOtp}
-                      disabled={verifyOtp.isPending}
+                      disabled={
+                        verifyOtp.isPending || verifyPasswordResetOtp.isPending
+                      }
                       invalid={Boolean(otpError)}
                       slotClassName="bg-muted/40 border-primary/35"
                     />
@@ -449,7 +572,8 @@ function AuthPage() {
 
                   <div className="flex items-center justify-between gap-3 text-sm">
                     <span className="min-w-0 truncate text-muted-foreground">
-                      در حال ورود با شماره {displayPhone(otpPhone)}
+                      {isRecoveryOtp ? 'بازیابی' : 'در حال ورود'} با شماره{' '}
+                      {displayPhone(otpPhone)}
                     </span>
                     <button
                       type="button"
@@ -460,9 +584,48 @@ function AuthPage() {
                     </button>
                   </div>
                 </div>
+              ) : isRecoveryPassword ? (
+                <div className="space-y-4">
+                  <Field>
+                    <FieldLabel htmlFor="new-password">
+                      رمز عبور جدید
+                    </FieldLabel>
+                    <PasswordInput
+                      id="new-password"
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      autoComplete="new-password"
+                      disabled={isBusy}
+                      className="h-12 rounded-xl bg-muted/40 border-border/50"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="confirm-password">
+                      تکرار رمز عبور جدید
+                    </FieldLabel>
+                    <PasswordInput
+                      id="confirm-password"
+                      value={confirmPassword}
+                      onChange={(event) =>
+                        setConfirmPassword(event.target.value)
+                      }
+                      autoComplete="new-password"
+                      disabled={isBusy}
+                      className="h-12 rounded-xl bg-muted/40 border-border/50"
+                    />
+                  </Field>
+                  {recoveryError ? (
+                    <FieldError>{recoveryError}</FieldError>
+                  ) : null}
+                </div>
               ) : null}
 
               <FormRootError message={errors.root?.message} />
+              {successMessage ? (
+                <p className="rounded-xl bg-primary/10 px-3 py-2 text-sm text-primary">
+                  {successMessage}
+                </p>
+              ) : null}
 
               {isPhoneMode ? (
                 <Button
@@ -486,27 +649,60 @@ function AuthPage() {
                     {login.isPending ? <Spinner className="ml-2" /> : null}
                     {login.isPending ? 'در حال ورود…' : 'ورود'}
                   </Button>
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    className="w-full h-12 rounded-xl text-base font-semibold touch-manipulation"
+                    className="text-sm font-semibold text-primary disabled:text-muted-foreground"
                     disabled={isBusy}
-                    onClick={startOtpLogin}
+                    onClick={startPasswordRecovery}
                   >
-                    {sendOtp.isPending ? <Spinner className="ml-2" /> : null}
-                    ورود با کد پیامکی
-                  </Button>
+                    رمز عبور را فراموش کرده‌اید؟
+                  </button>
+                  {recoveryError ? (
+                    <FieldError>{recoveryError}</FieldError>
+                  ) : null}
+                  {otpLoginEnabled ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full h-12 rounded-xl text-base font-semibold touch-manipulation"
+                      disabled={isBusy}
+                      onClick={startOtpLogin}
+                    >
+                      {sendOtp.isPending ? <Spinner className="ml-2" /> : null}
+                      ورود با کد پیامکی
+                    </Button>
+                  ) : null}
                 </>
+              ) : isRecoveryPassword ? (
+                <Button
+                  type="button"
+                  className="w-full h-12 rounded-xl text-base font-semibold touch-manipulation shadow-sm"
+                  disabled={isBusy}
+                  onClick={submitNewPassword}
+                >
+                  {resetPassword.isPending ? (
+                    <Spinner className="ml-2" />
+                  ) : null}
+                  ثبت رمز عبور جدید
+                </Button>
               ) : (
                 <>
                   <Button
                     type="button"
                     className="w-full h-12 rounded-xl text-base font-semibold touch-manipulation shadow-sm"
-                    disabled={verifyOtp.isPending}
+                    disabled={
+                      verifyOtp.isPending || verifyPasswordResetOtp.isPending
+                    }
                     onClick={() => submitOtp()}
                   >
-                    {verifyOtp.isPending ? <Spinner className="ml-2" /> : null}
-                    {isRegistering ? 'تایید و ادامه ثبت‌نام' : 'تایید و ورود'}
+                    {verifyOtp.isPending || verifyPasswordResetOtp.isPending ? (
+                      <Spinner className="ml-2" />
+                    ) : null}
+                    {isRecoveryOtp
+                      ? 'تایید کد'
+                      : isRegistering
+                        ? 'تایید و ادامه ثبت‌نام'
+                        : 'تایید و ورود'}
                   </Button>
                 </>
               )}

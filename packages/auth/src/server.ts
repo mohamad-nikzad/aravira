@@ -29,6 +29,7 @@ import {
   isValidAuthPhoneNumber,
   readAuthOtpConfig,
   sendAuthPhoneOtp,
+  sendPasswordResetPhoneOtp,
   verifyBypassAuthPhoneOtp,
 } from './phone-otp'
 
@@ -55,6 +56,8 @@ export const auth = betterAuth({
   basePath: '/api/v1/auth',
   emailAndPassword: {
     enabled: true,
+    revokeSessionsOnPasswordReset: true,
+    resetPasswordTokenExpiresIn: 10 * 60,
     password: {
       hash: hashCredentialPassword,
       verify: ({ hash, password }) => verifyCredentialPassword(hash, password),
@@ -86,6 +89,7 @@ export const auth = betterAuth({
       allowedAttempts: AUTH_OTP_ALLOWED_ATTEMPTS,
       phoneNumberValidator: isValidAuthPhoneNumber,
       sendOTP: sendAuthPhoneOtp,
+      sendPasswordResetOTP: sendPasswordResetPhoneOtp,
       ...(otpConfig.bypassEnabled
         ? { verifyOTP: verifyBypassAuthPhoneOtp }
         : {}),

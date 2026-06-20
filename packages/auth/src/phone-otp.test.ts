@@ -11,10 +11,12 @@ vi.mock('@repo/notifications', () => ({
 import {
   DEFAULT_AUTH_OTP_BYPASS_CODE,
   getTempEmailForPhoneNumber,
+  isAuthOtpLoginEnabled,
   isValidAuthPhoneNumber,
   normalizeAuthPhoneNumber,
   readAuthOtpConfig,
   sendAuthPhoneOtp,
+  sendPasswordResetPhoneOtp,
   verifyBypassAuthPhoneOtp,
 } from './phone-otp'
 
@@ -35,6 +37,11 @@ describe('phone OTP auth config', () => {
       bypassEnabled: true,
       bypassCode: DEFAULT_AUTH_OTP_BYPASS_CODE,
     })
+  })
+
+  it('keeps OTP login disabled unless explicitly enabled', () => {
+    expect(isAuthOtpLoginEnabled({})).toBe(false)
+    expect(isAuthOtpLoginEnabled({ AUTH_OTP_LOGIN_ENABLED: 'true' })).toBe(true)
   })
 
   it('uses normalized phone placeholder emails for OTP-created users', () => {
@@ -66,6 +73,22 @@ describe('phone OTP auth config', () => {
       code: '112233',
       purpose: 'signup',
       requestId: 'auth-otp:09123456789',
+    })
+  })
+
+  it('uses the forgot-password SMS purpose for recovery codes', async () => {
+    mocks.sendSmsOtp.mockResolvedValue({ status: 'sent', provider: 'sms_ir' })
+
+    await sendPasswordResetPhoneOtp({
+      phoneNumber: '+98 912 345 6789',
+      code: '112233',
+    })
+
+    expect(mocks.sendSmsOtp).toHaveBeenCalledWith({
+      phone: '09123456789',
+      code: '112233',
+      purpose: 'forgot_password',
+      requestId: 'auth-password-reset-otp:09123456789',
     })
   })
 

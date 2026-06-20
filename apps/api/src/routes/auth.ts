@@ -1,10 +1,17 @@
 import { Hono } from 'hono'
-import { eq, or } from 'drizzle-orm'
+import { and, eq, or } from 'drizzle-orm'
 import { z } from 'zod'
 import { auth } from '@repo/auth/server'
+import { isAuthOtpLoginEnabled } from '@repo/auth/phone-otp'
+import {
+  exchangePasswordResetOtp,
+  PasswordRecoveryError,
+} from '@repo/auth/password-recovery'
 import { getDb } from '@repo/database/client'
 import {
   businessSettings,
+  account,
+  member,
   organization,
   salonOnboarding,
   salonMember,
@@ -30,6 +37,11 @@ import { error, ok } from '../lib/responses'
 
 const OWNER_COLOR = normalizeCalendarColorId(STAFF_COLORS[0])
 const phoneStatusSchema = z.object({ phone: phoneSchema })
+const phoneOtpRequestSchema = z.object({ phoneNumber: phoneSchema })
+const verifyPasswordResetOtpSchema = z.object({
+  phoneNumber: phoneSchema,
+  otp: z.string().length(6),
+})
 
 function phoneToEmail(phone: string): string {
   return `${phone}@${brand.emailLocalDomain}`
@@ -86,6 +98,41 @@ function getBetterAuthErrorCode(err: unknown): string | undefined {
 async function getSessionUser(c: Parameters<typeof ok>[0]) {
   const session = await auth.api.getSession({ headers: c.req.raw.headers })
   return session?.user
+}
+
+async function isCompletedAccount(phone: string): Promise<boolean> {
+  const rows = await getDb()
+    .select({ id: user.id })
+    .from(user)
+    .innerJoin(
+      account,
+      and(eq(account.userId, user.id), eq(account.providerId, 'credential')),
+    )
+    .innerJoin(member, eq(member.userId, user.id))
+    .where(or(eq(user.phoneNumber, phone), eq(user.username, phone)))
+    .limit(1)
+  return Boolean(rows[0])
+}
+
+async function guardOtpLogin(c: Parameters<typeof ok>[0]) {
+  if (isAuthOtpLoginEnabled()) return auth.handler(c.req.raw)
+
+  const parsed = phoneOtpRequestSchema.safeParse(
+    await c.req.raw
+      .clone()
+      .json()
+      .catch(() => null),
+  )
+  if (!parsed.success) return auth.handler(c.req.raw)
+  if (await isCompletedAccount(parsed.data.phoneNumber)) {
+    return error(
+      c,
+      'ورود با کد پیامکی موقتاً غیرفعال است',
+      403,
+      'OTP_LOGIN_DISABLED',
+    )
+  }
+  return auth.handler(c.req.raw)
 }
 
 async function getOrganizationById(db: ReturnType<typeof getDb>, id: string) {
@@ -175,6 +222,25 @@ export const authRoute = new Hono<AppEnv>()
 
     return ok(c, { status: 'ready', user: { ...user, role } })
   })
+  .post('/phone-number/send-otp', guardOtpLogin)
+  .post('/phone-number/verify', guardOtpLogin)
+  .post(
+    '/phone-number/verify-password-reset-otp',
+    zValidator('json', verifyPasswordResetOtpSchema),
+    async (c) => {
+      const { phoneNumber, otp } = c.req.valid('json')
+      try {
+        const token = await exchangePasswordResetOtp({ phoneNumber, otp })
+        return ok(c, { token })
+      } catch (err) {
+        if (!(err instanceof PasswordRecoveryError)) throw err
+        if (err.code === 'TOO_MANY_ATTEMPTS') {
+          return error(c, 'تعداد تلاش‌ها بیش از حد مجاز است', 403, err.code)
+        }
+        return error(c, 'کد تایید نامعتبر یا منقضی شده است', 400, err.code)
+      }
+    },
+  )
   .post('/phone-status', zValidator('json', phoneStatusSchema), async (c) => {
     const { phone } = c.req.valid('json')
     const rows = await getDb()
@@ -183,7 +249,10 @@ export const authRoute = new Hono<AppEnv>()
       .where(or(eq(user.phoneNumber, phone), eq(user.username, phone)))
       .limit(1)
 
-    return ok(c, { registered: Boolean(rows[0]) })
+    return ok(c, {
+      registered: Boolean(rows[0]),
+      otpLoginEnabled: isAuthOtpLoginEnabled(),
+    })
   })
   .post(
     '/signup/account',
