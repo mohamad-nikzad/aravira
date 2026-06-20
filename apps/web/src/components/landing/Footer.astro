@@ -13,17 +13,19 @@ const brandFa = brand.name.fa
   >
     <div class="flex items-center gap-2.5">
       <img
-        src="/landing/saloora-mark.png"
+        src={brand.assets.landingMark}
         alt=""
         width="32"
         height="32"
         decoding="async"
-        class="h-8 w-8"
+        class="h-8 w-8 object-contain"
       />
       <span class={`${displayClass} text-xl text-[#7a2a40]`}>{brandFa}</span>
     </div>
 
-    <nav class="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-[#8b6b73]">
+    <nav
+      class="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-[#8b6b73]"
+    >
       {
         publicNavLinks.map((link) => (
           <a href={link.href} class="transition hover:text-[#7a2a40]">
@@ -33,7 +35,9 @@ const brandFa = brand.name.fa
       }
     </nav>
 
-    <div class="flex flex-col items-center gap-2 text-xs text-[#8b6b73] sm:flex-row">
+    <div
+      class="flex flex-col items-center gap-2 text-xs text-[#8b6b73] sm:flex-row"
+    >
       <p>© ۱۴۰۵ {brandFa}. تمام حقوق محفوظ است.</p>
       <span class="hidden sm:inline">|</span>
       <div class="flex items-center gap-1.5">

@@ -15,7 +15,7 @@ import {
   formatPersianWeekRange,
 } from '@repo/salon-core/jalali-display'
 import { brand } from '@repo/brand'
-import { SalooraMark } from '#/components/brand/saloora-mark'
+import { SalunaMark } from '#/components/brand/saluna-mark'
 
 interface CalendarHeaderProps {
   titleAnchor: Date
@@ -66,7 +66,7 @@ export function CalendarHeader({
   return (
     <header className="calendar-header-gradient safe-area-pt flex items-center gap-2 px-3 py-2 sm:px-4">
       <div className="flex items-center gap-1.5 shrink-0">
-        <SalooraMark className="size-8 rounded-xl" />
+        <SalunaMark className="size-8 rounded-xl" />
         <span className="hidden text-base font-bold text-primary tracking-tight ml-1 min-[430px]:inline">
           {brand.name.fa}
         </span>

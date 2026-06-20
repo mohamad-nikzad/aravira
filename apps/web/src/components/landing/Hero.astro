@@ -75,15 +75,17 @@ const { loginHref, signupHref } = Astro.props
   >
     <a href="#top" class="flex items-center gap-2.5" aria-label={brandFa}>
       <img
-        src="/landing/saloora-mark.png"
+        src={brand.assets.landingMark}
         alt=""
         width="44"
         height="44"
         fetchpriority="high"
         decoding="async"
-        class="h-10 w-10 sm:h-11 sm:w-11"
+        class="h-10 w-10 object-contain sm:h-11 sm:w-11"
       />
-      <span class={`${displayClass} text-2xl leading-none text-[#7a2a40] sm:text-3xl`}>
+      <span
+        class={`${displayClass} text-2xl leading-none text-[#7a2a40] sm:text-3xl`}
+      >
         {brandFa}
       </span>
     </a>
@@ -92,7 +94,9 @@ const { loginHref, signupHref } = Astro.props
       <a href="#features" class="transition hover:text-[#7a2a40]"> امکانات </a>
       <a href="/services" class="transition hover:text-[#7a2a40]"> خدمات </a>
       <a href="/about" class="transition hover:text-[#7a2a40]"> درباره ما </a>
-      <a href="/contact" class="transition hover:text-[#7a2a40]"> تماس با ما </a>
+      <a href="/contact" class="transition hover:text-[#7a2a40]">
+        تماس با ما
+      </a>
       <a href="#pricing" class="transition hover:text-[#7a2a40]"> پلن‌ها </a>
     </nav>
 
@@ -122,9 +126,11 @@ const { loginHref, signupHref } = Astro.props
       <span class="text-[#9b2f4a]">سالن زیبایی</span>
     </h1>
 
-    <p class="mt-6 max-w-2xl text-base leading-8 text-[#6b4955] sm:mt-8 sm:text-lg">
-      {brandFa} به مدیر سالن کمک می‌کند نوبت‌ها، مشتریان، پرسنل، خدمات و
-      درخواست‌های نوبت از صفحه عمومی سالن را در یک مسیر منظم پیگیری کند.
+    <p
+      class="mt-6 max-w-2xl text-base leading-8 text-[#6b4955] sm:mt-8 sm:text-lg"
+    >
+      {brandFa} به مدیر سالن کمک می‌کند نوبت‌ها، مشتریان، پرسنل، خدمات و درخواست‌های
+      نوبت از صفحه عمومی سالن را در یک مسیر منظم پیگیری کند.
     </p>
 
     <div class="mt-9 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
@@ -143,8 +149,8 @@ const { loginHref, signupHref } = Astro.props
     </div>
 
     <p class="mt-5 max-w-xl text-xs leading-6 text-[#7a5964] sm:text-sm">
-      پلن‌ها هنوز نهایی نشده‌اند؛ قیمت‌گذاری بعد از شناخت بهتر بازار و نیاز واقعی
-      سالن‌ها اعلام می‌شود.
+      پلن‌ها هنوز نهایی نشده‌اند؛ قیمت‌گذاری بعد از شناخت بهتر بازار و نیاز
+      واقعی سالن‌ها اعلام می‌شود.
     </p>
   </div>
 </section>

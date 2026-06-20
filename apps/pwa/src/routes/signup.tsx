@@ -27,7 +27,7 @@ import { formMessages } from '@repo/salon-core/forms/messages'
 
 import { brand } from '@repo/brand'
 import { OtpCodeInput } from '#/components/auth/otp-code-input'
-import { SalooraMark } from '#/components/brand/saloora-mark'
+import { SalunaMark } from '#/components/brand/saluna-mark'
 import { PasswordInput } from '#/components/password-input'
 import { api } from '#/lib/api-client'
 import {
@@ -267,7 +267,7 @@ function SignupPage() {
       <div className="flex w-full max-w-md flex-col">
         <div className="flex items-center gap-2 px-1 pt-2">
           <span className="inline-flex size-9 items-center justify-center rounded-xl bg-primary/10">
-            <SalooraMark className="size-[22px]" />
+            <SalunaMark className="size-[22px]" />
           </span>
           <span className="text-sm font-extrabold tracking-tight text-primary">
             {brand.name.fa}

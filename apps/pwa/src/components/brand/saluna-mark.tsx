@@ -1,13 +1,13 @@
 import { brand } from '@repo/brand'
 import { cn } from '@repo/ui/utils'
 
-type SalooraMarkProps = {
+type SalunaMarkProps = {
   className?: string
   imageClassName?: string
 }
 
-/** Cherry-blossom mark; asset paths come from `@repo/brand`. */
-export function SalooraMark({ className, imageClassName }: SalooraMarkProps) {
+/** Saluna mark; asset paths come from `@repo/brand`. */
+export function SalunaMark({ className, imageClassName }: SalunaMarkProps) {
   return (
     <span
       className={cn(

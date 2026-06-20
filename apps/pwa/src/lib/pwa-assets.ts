@@ -1,4 +1,4 @@
-const DEFAULT_PWA_ASSET_VERSION = '2026-05-26-v1'
+const DEFAULT_PWA_ASSET_VERSION = '2026-06-20-saluna-v1'
 
 const rawVersion = import.meta.env.VITE_PWA_ASSET_VERSION as string | undefined
 

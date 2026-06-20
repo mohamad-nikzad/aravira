@@ -18,11 +18,11 @@ export const brand = {
   /** Default production API host (Vercel / edge deployment) */
   defaultApiOrigin: 'https://saluna.vercel.app',
   assets: {
-    markClean: '/brand/saloora-mark-clean.png',
-    markCleanFilename: 'saloora-mark-clean.png',
-    markSourceFilename: 'saloora-mark-source.png',
-    logoCleanFilename: 'saloora-logo-clean.png',
-    landingMark: '/landing/saloora-mark.png',
+    markClean: '/brand/saluna-mark.png',
+    markCleanFilename: 'saluna-mark.png',
+    markSourceFilename: 'saluna-mark-gradient.png',
+    logoCleanFilename: 'saluna-logo-horizontal-fa-en.png',
+    landingMark: '/landing/saluna-mark.png',
   },
   storage: {
     theme: 'saloora-theme',
