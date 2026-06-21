@@ -6,7 +6,7 @@ RUNNER_SHA256="${RUNNER_SHA256:-4ef2f25285f0ae4477f1fe1e346db76d2f3ebf03824e2ddd
 ICU_VERSION="${ICU_VERSION:-76.1-4}"
 ICU_SHA256="${ICU_SHA256:-c1bf762996de9ecba9b9d871e4928a8090f023a3e9e7fa3240b3d90f892a01dc}"
 RUNNER_ROOT="${RUNNER_ROOT:-/opt/saluna/github-runner}"
-REPOSITORY_URL="${REPOSITORY_URL:-https://github.com/mohamad-nikzad/aravira}"
+REPOSITORY_URL="${REPOSITORY_URL:-https://github.com/mohamad-nikzad/saluna}"
 RUNNER_NAME="${RUNNER_NAME:-saluna-production-deploy}"
 
 : "${GITHUB_RUNNER_TOKEN:?Set GITHUB_RUNNER_TOKEN to a repository runner registration token}"
