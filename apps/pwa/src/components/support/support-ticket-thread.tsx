@@ -6,7 +6,7 @@ import type {
 } from '@repo/api-client/types'
 import { cn } from '@repo/ui/utils'
 import { useAddManagerSupportMessageMutation } from '#/lib/support-ticket-queries'
-import { scrollFocusedInputIntoView } from '#/lib/scroll-focused-input-into-view'
+import { useKeyboardInset } from '#/lib/use-keyboard-inset'
 
 const dateTimeFormatter = new Intl.DateTimeFormat('fa-IR', {
   dateStyle: 'medium',
@@ -193,7 +193,7 @@ export function SupportMessageComposer({
   return (
     <form
       onSubmit={onSubmit}
-      className="sticky bottom-0 z-10 shrink-0 border-t border-line-soft bg-card/95 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur supports-backdrop-filter:bg-card/80"
+      className="shrink-0 border-t border-line-soft bg-card/95 px-3 pt-3 pb-[calc(max(0.75rem,env(safe-area-inset-bottom))+var(--keyboard-inset,0px))] backdrop-blur transition-[padding-bottom] duration-150 supports-backdrop-filter:bg-card/80"
     >
       {resolved ? (
         <div className="mb-3 flex items-center gap-2 rounded-xl bg-amber-soft px-3 py-2">
@@ -221,7 +221,6 @@ export function SupportMessageComposer({
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={onKeyDown}
-          onFocus={(event) => scrollFocusedInputIntoView(event.target)}
           maxLength={4000}
           rows={1}
           disabled={mutation.isPending}
@@ -263,6 +262,7 @@ export function SupportTicketThread({
 }: {
   detail: ManagerSupportTicketDetailResponse
 }) {
+  useKeyboardInset(true)
   const endRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLElement>(null)
   const previousCountRef = useRef(detail.messages.length)
@@ -280,7 +280,7 @@ export function SupportTicketThread({
     <div className="flex min-h-0 flex-1 flex-col">
       <section
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-4"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-3 pt-4"
         aria-label="پیام‌های درخواست"
       >
         {detail.truncated ? (

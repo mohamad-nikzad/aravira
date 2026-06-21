@@ -41,6 +41,7 @@ No active backlog items.
 - [BL-0001 Improve landing page](done/BL-0001-improve-landing-page.md)
 - [BL-0002 Improve salons landing pages](done/BL-0002-improve-salons-landing-pages.md)
 - [BL-0024 Login validation errors persist through OTP flow and back to login](done/BL-0024-auth-credentials-persist-across-otp-navigation.md)
+- [BL-0028 Support ticket thread header hides when composer is focused on mobile](done/BL-0028-support-ticket-thread-mobile-header.md)
 
 ## Archive
 
