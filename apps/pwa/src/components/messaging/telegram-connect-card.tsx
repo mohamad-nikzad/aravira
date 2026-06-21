@@ -1,20 +1,29 @@
 import { Check, Send } from 'lucide-react'
+import type { MessagingProviderId } from '@repo/api-client/types'
 import { Button } from '@repo/ui/button'
 import { Spinner } from '@repo/ui/spinner'
 
-export function TelegramConnectCard({
+import { getMessagingProviderConfig } from './messaging-provider-config'
+
+export function MessagingConnectCard({
+  provider,
   configured,
   isRefreshing = false,
   linkError = null,
   onConnect,
   isConnecting,
 }: {
+  provider: MessagingProviderId
   configured: boolean
   isRefreshing?: boolean
   linkError?: string | null
   onConnect: () => void
   isConnecting: boolean
 }) {
+  const config = getMessagingProviderConfig(provider)
+
+  if (!config) return null
+
   return (
     <>
       <div className="flex items-center gap-3 rounded-2xl border border-line-soft bg-card p-4">
@@ -26,11 +35,9 @@ export function TelegramConnectCard({
           )}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-foreground">ربات تلگرام</p>
+          <p className="text-sm font-bold text-foreground">{config.botName}</p>
           <p className="text-xs text-muted-foreground">
-            {configured
-              ? 'متصل شد — نوبت‌ها به تلگرام شما ارسال می‌شوند.'
-              : 'یک کلیک تا فعال‌سازی اعلان‌ها.'}
+            {configured ? config.linkedHint : config.unlinkedHint}
           </p>
         </div>
         {isRefreshing && <Spinner className="size-4" />}
@@ -45,11 +52,17 @@ export function TelegramConnectCard({
           onClick={onConnect}
         >
           {isConnecting && <Spinner className="ml-2 size-4" />}
-          اتصال به ربات تلگرام
+          اتصال به {config.botName}
         </Button>
       )}
 
       {linkError && <p className="text-xs text-destructive">{linkError}</p>}
     </>
   )
+}
+
+export function TelegramConnectCard(
+  props: Omit<Parameters<typeof MessagingConnectCard>[0], 'provider'>,
+) {
+  return <MessagingConnectCard provider="telegram" {...props} />
 }

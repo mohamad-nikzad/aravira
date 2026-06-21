@@ -12,34 +12,13 @@ import {
   useDeleteMessagingAccountMutation,
   usePatchMessagingAccountMutation,
 } from '#/lib/messaging-queries'
+import {
+  MESSAGING_PROVIDER_CONFIGS,
+  type MessagingProviderConfig,
+} from '#/components/messaging/messaging-provider-config'
 import { useMessagingConnect } from '#/components/messaging/use-messaging-connect'
 
 import { SettingsRow, ToggleRow } from '#/components/settings/settings-rows'
-
-type MessagingProviderRowConfig = {
-  provider: MessagingProviderId
-  displayName: string
-  toggleLabel: string
-  connectLabel: string
-  connectHint: string
-}
-
-const MESSAGING_PROVIDER_ROWS = [
-  {
-    provider: 'telegram',
-    displayName: 'تلگرام',
-    toggleLabel: 'اعلان تلگرام',
-    connectLabel: 'اتصال تلگرام',
-    connectHint: 'دریافت اعلان درخواست نوبت در تلگرام',
-  },
-  {
-    provider: 'bale',
-    displayName: 'بله',
-    toggleLabel: 'اعلان بله',
-    connectLabel: 'اتصال بله',
-    connectHint: 'دریافت اعلان درخواست نوبت در بله',
-  },
-] as const satisfies ReadonlyArray<MessagingProviderRowConfig>
 
 export function MessagingAccountsSection() {
   const { user } = useAuth()
@@ -55,12 +34,12 @@ export function MessagingAccountsSection() {
   const accounts = messagingAccountsQuery.data?.accounts ?? []
   const configuredProviderIds = new Set<MessagingProviderId>(
     messagingAccountsQuery.data?.providers?.map((provider) => provider.id) ??
-      MESSAGING_PROVIDER_ROWS.map((provider) => provider.provider),
+      MESSAGING_PROVIDER_CONFIGS.map((provider) => provider.provider),
   )
   const linkedProviderIds = new Set<MessagingProviderId>(
     accounts.map((account) => account.provider),
   )
-  const visibleProviderRows = MESSAGING_PROVIDER_ROWS.filter(
+  const visibleProviderRows = MESSAGING_PROVIDER_CONFIGS.filter(
     (config) =>
       configuredProviderIds.has(config.provider) ||
       linkedProviderIds.has(config.provider),
@@ -88,7 +67,7 @@ function MessagingProviderRow({
   account,
   accountsLoading,
 }: {
-  config: MessagingProviderRowConfig
+  config: MessagingProviderConfig
   account: MessagingAccount | null
   accountsLoading: boolean
 }) {
