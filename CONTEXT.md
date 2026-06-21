@@ -87,6 +87,28 @@ Salon-level open-day mask — which weekdays the salon is open. DB: `business_se
 Public contact surface: address, map links, and social links. DB: typed nullable columns on `salon_profile`. Persian UI: `حضور آنلاین`.
 _Avoid_: contact info, social block
 
+### Product Support
+
+**Support Ticket**:
+A question, problem report, or feature request submitted by an authenticated salon manager to Saluna's platform support team. Belongs to the manager's salon; any manager of that salon may view it, while staff have no support-ticket access. Forms a conversation through one or more `Support Message`s. Lifecycle: new tickets and manager messages set `open`; platform-support replies set `waiting_for_manager`; platform support alone sets `resolved`; any later message reopens a resolved ticket as `open`.
+_Avoid_: issue (ambiguous with engineering work), feedback (too narrow), request (conflicts with `AppointmentRequest`)
+
+Resolving a `feature_request` Support Ticket means its support conversation is complete; it does not mean the feature was accepted, scheduled, or delivered.
+
+**Support Message**:
+A manager-authored or platform-support-authored entry in a `Support Ticket` conversation. The ticket's initial description is its first message.
+_Avoid_: comment, reply (a message may begin the conversation)
+
+**Support Ticket Category**:
+The manager-selected classification of a `Support Ticket`: `problem`, `question`, `feature_request`, or `other`. Categories organize one shared support workflow rather than defining separate ticket types.
+_Avoid_: ticket type, department
+
+**Example dialogue**:
+
+> **Support:** “I replied to the salon’s Support Ticket, so it is now waiting for a manager.”
+>
+> **Developer:** “The manager answered, which reopened it. If it is a feature request, resolving the ticket still does not mean the feature will ship.”
+
 ## Naming rules
 
 - Use `category`, `family`, and `service variant` in user-facing catalog language.

@@ -73,6 +73,11 @@ export function requirePlatformAdmin(permission?: PlatformPermission) {
     c.set('platformAdmin', {
       userId: admin.userId,
       role: admin.role,
+      name:
+        session.user.name?.trim() ||
+        session.user.email?.trim() ||
+        sessionPhone ||
+        session.user.id,
     })
     await next()
   })

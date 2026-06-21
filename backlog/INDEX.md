@@ -16,6 +16,7 @@ No active backlog items.
 - [BL-0008 Add SMS support](ready/BL-0008-add-sms-support.md)
 - [BL-0009 Desktop-friendly UI](ready/BL-0009-desktop-friendly-ui.md)
 - [BL-0010 Update assets and logo](ready/BL-0010-update-assets-and-logo.md)
+- [BL-0023 Support ticket system](ready/BL-0023-support-ticket-system.md)
 
 ## Inbox
 

@@ -77,6 +77,7 @@ describe('requirePlatformAdmin', () => {
     expect(await res.json()).toEqual({
       userId: 'u1',
       role: 'platform_admin',
+      name: 'Ali',
     })
   })
 
@@ -94,6 +95,37 @@ describe('requirePlatformAdmin', () => {
 
     expect(res.status).toBe(403)
   })
+
+  it.each([
+    [
+      { name: '  ', email: 'admin@example.com', phoneNumber: '09121111111' },
+      'admin@example.com',
+    ],
+    [{ name: '', email: ' ', phoneNumber: '09121111111' }, '09121111111'],
+    [{ name: '', email: '', phoneNumber: '', username: '', id: 'u1' }, 'u1'],
+  ])(
+    'uses a stable authenticated platform display-name fallback',
+    async (user, expectedName) => {
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: { id: 'u1', ...user },
+      } as never)
+      vi.mocked(getPlatformAdminForUser).mockResolvedValue({
+        id: 'pa1',
+        userId: 'u1',
+        role: 'platform_admin',
+        active: true,
+      })
+
+      const response = await appWithPlatform('view_support_tickets').request(
+        '/admin',
+      )
+
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual(
+        expect.objectContaining({ name: expectedName }),
+      )
+    },
+  )
 
   it('bootstraps the first owner from the env allowlist', async () => {
     vi.mocked(getPlatformAdminForUser).mockResolvedValue(undefined)

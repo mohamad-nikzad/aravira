@@ -1,10 +1,15 @@
 import type { PlatformRole } from '@repo/api-client/types'
 import {
+  hasPlatformPermission,
+  type PlatformPermission,
+} from '@repo/auth/platform'
+import {
   Gauge,
   ScrollText,
   Settings,
   Sparkles,
   Store,
+  TicketCheck,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -28,6 +33,7 @@ export type AdminNavItem = {
   icon: LucideIcon
   keywords: string[]
   minRole?: PlatformRole
+  permission?: PlatformPermission
 }
 
 export type AdminNavGroup = {
@@ -41,6 +47,13 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { title: 'نمای کلی', href: '/overview', icon: Gauge, keywords: ['dashboard', 'metrics', 'home', 'نمای', 'کلی'] },
       { title: 'سالن‌ها', href: '/salons', icon: Store, keywords: ['tenants', 'status', 'profiles', 'سالن'] },
+      {
+        title: 'تیکت‌های پشتیبانی',
+        href: '/support-tickets',
+        icon: TicketCheck,
+        keywords: ['support', 'ticket', 'inbox', 'پشتیبانی', 'تیکت'],
+        permission: 'view_support_tickets',
+      },
     ],
   },
   {
@@ -78,8 +91,14 @@ export const navUserDropdownItems: Array<
 ]
 
 export const commandActions: Array<
-  Pick<AdminNavItem, 'title' | 'href' | 'icon' | 'minRole'>
+  Pick<AdminNavItem, 'title' | 'href' | 'icon' | 'minRole' | 'permission'>
 > = [
+  {
+    title: 'صندوق تیکت‌های پشتیبانی',
+    href: '/support-tickets',
+    icon: TicketCheck,
+    permission: 'view_support_tickets',
+  },
   { title: 'رویدادهای اخیر ممیزی', href: '/audit-log', icon: ScrollText },
   {
     title: 'تنظیمات ادمین',
@@ -99,17 +118,23 @@ export function filterNavGroupsByRole(
     .map((group) => ({
       ...group,
       items: group.items.filter(
-        (item) => !item.minRole || hasMinPlatformRole(role, item.minRole),
+        (item) =>
+          (!item.minRole || hasMinPlatformRole(role, item.minRole)) &&
+          (!item.permission || hasPlatformPermission(role, item.permission)),
       ),
     }))
     .filter((group) => group.items.length > 0)
 }
 
-export function filterNavItemsByRole<T extends { minRole?: PlatformRole }>(
+export function filterNavItemsByRole<
+  T extends { minRole?: PlatformRole; permission?: PlatformPermission },
+>(
   items: T[],
   role: PlatformRole,
 ): T[] {
   return items.filter(
-    (item) => !item.minRole || hasMinPlatformRole(role, item.minRole),
+    (item) =>
+      (!item.minRole || hasMinPlatformRole(role, item.minRole)) &&
+      (!item.permission || hasPlatformPermission(role, item.permission)),
   )
 }

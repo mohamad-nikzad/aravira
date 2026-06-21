@@ -12,12 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminSupportTicketsRouteImport } from './routes/_admin/support-tickets'
 import { Route as AdminSettingsRouteImport } from './routes/_admin/settings'
 import { Route as AdminSalonsRouteImport } from './routes/_admin/salons'
 import { Route as AdminOverviewRouteImport } from './routes/_admin/overview'
 import { Route as AdminCatalogPresetsRouteImport } from './routes/_admin/catalog-presets'
 import { Route as AdminAuditLogRouteImport } from './routes/_admin/audit-log'
+import { Route as AdminSupportTicketsIndexRouteImport } from './routes/_admin/support-tickets.index'
 import { Route as AdminSalonsIndexRouteImport } from './routes/_admin/salons.index'
+import { Route as AdminSupportTicketsTicketIdRouteImport } from './routes/_admin/support-tickets.$ticketId'
 import { Route as AdminSalonsSalonIdRouteImport } from './routes/_admin/salons.$salonId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -33,6 +36,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSupportTicketsRoute = AdminSupportTicketsRouteImport.update({
+  id: '/support-tickets',
+  path: '/support-tickets',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
@@ -59,11 +67,23 @@ const AdminAuditLogRoute = AdminAuditLogRouteImport.update({
   path: '/audit-log',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSupportTicketsIndexRoute =
+  AdminSupportTicketsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminSupportTicketsRoute,
+  } as any)
 const AdminSalonsIndexRoute = AdminSalonsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminSalonsRoute,
 } as any)
+const AdminSupportTicketsTicketIdRoute =
+  AdminSupportTicketsTicketIdRouteImport.update({
+    id: '/$ticketId',
+    path: '/$ticketId',
+    getParentRoute: () => AdminSupportTicketsRoute,
+  } as any)
 const AdminSalonsSalonIdRoute = AdminSalonsSalonIdRouteImport.update({
   id: '/$salonId',
   path: '/$salonId',
@@ -78,8 +98,11 @@ export interface FileRoutesByFullPath {
   '/overview': typeof AdminOverviewRoute
   '/salons': typeof AdminSalonsRouteWithChildren
   '/settings': typeof AdminSettingsRoute
+  '/support-tickets': typeof AdminSupportTicketsRouteWithChildren
   '/salons/$salonId': typeof AdminSalonsSalonIdRoute
+  '/support-tickets/$ticketId': typeof AdminSupportTicketsTicketIdRoute
   '/salons/': typeof AdminSalonsIndexRoute
+  '/support-tickets/': typeof AdminSupportTicketsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -89,7 +112,9 @@ export interface FileRoutesByTo {
   '/overview': typeof AdminOverviewRoute
   '/settings': typeof AdminSettingsRoute
   '/salons/$salonId': typeof AdminSalonsSalonIdRoute
+  '/support-tickets/$ticketId': typeof AdminSupportTicketsTicketIdRoute
   '/salons': typeof AdminSalonsIndexRoute
+  '/support-tickets': typeof AdminSupportTicketsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -101,8 +126,11 @@ export interface FileRoutesById {
   '/_admin/overview': typeof AdminOverviewRoute
   '/_admin/salons': typeof AdminSalonsRouteWithChildren
   '/_admin/settings': typeof AdminSettingsRoute
+  '/_admin/support-tickets': typeof AdminSupportTicketsRouteWithChildren
   '/_admin/salons/$salonId': typeof AdminSalonsSalonIdRoute
+  '/_admin/support-tickets/$ticketId': typeof AdminSupportTicketsTicketIdRoute
   '/_admin/salons/': typeof AdminSalonsIndexRoute
+  '/_admin/support-tickets/': typeof AdminSupportTicketsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -114,8 +142,11 @@ export interface FileRouteTypes {
     | '/overview'
     | '/salons'
     | '/settings'
+    | '/support-tickets'
     | '/salons/$salonId'
+    | '/support-tickets/$ticketId'
     | '/salons/'
+    | '/support-tickets/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -125,7 +156,9 @@ export interface FileRouteTypes {
     | '/overview'
     | '/settings'
     | '/salons/$salonId'
+    | '/support-tickets/$ticketId'
     | '/salons'
+    | '/support-tickets'
   id:
     | '__root__'
     | '/'
@@ -136,8 +169,11 @@ export interface FileRouteTypes {
     | '/_admin/overview'
     | '/_admin/salons'
     | '/_admin/settings'
+    | '/_admin/support-tickets'
     | '/_admin/salons/$salonId'
+    | '/_admin/support-tickets/$ticketId'
     | '/_admin/salons/'
+    | '/_admin/support-tickets/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -168,6 +204,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_admin/support-tickets': {
+      id: '/_admin/support-tickets'
+      path: '/support-tickets'
+      fullPath: '/support-tickets'
+      preLoaderRoute: typeof AdminSupportTicketsRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/_admin/settings': {
       id: '/_admin/settings'
@@ -204,12 +247,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAuditLogRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_admin/support-tickets/': {
+      id: '/_admin/support-tickets/'
+      path: '/'
+      fullPath: '/support-tickets/'
+      preLoaderRoute: typeof AdminSupportTicketsIndexRouteImport
+      parentRoute: typeof AdminSupportTicketsRoute
+    }
     '/_admin/salons/': {
       id: '/_admin/salons/'
       path: '/'
       fullPath: '/salons/'
       preLoaderRoute: typeof AdminSalonsIndexRouteImport
       parentRoute: typeof AdminSalonsRoute
+    }
+    '/_admin/support-tickets/$ticketId': {
+      id: '/_admin/support-tickets/$ticketId'
+      path: '/$ticketId'
+      fullPath: '/support-tickets/$ticketId'
+      preLoaderRoute: typeof AdminSupportTicketsTicketIdRouteImport
+      parentRoute: typeof AdminSupportTicketsRoute
     }
     '/_admin/salons/$salonId': {
       id: '/_admin/salons/$salonId'
@@ -235,12 +292,26 @@ const AdminSalonsRouteWithChildren = AdminSalonsRoute._addFileChildren(
   AdminSalonsRouteChildren,
 )
 
+interface AdminSupportTicketsRouteChildren {
+  AdminSupportTicketsTicketIdRoute: typeof AdminSupportTicketsTicketIdRoute
+  AdminSupportTicketsIndexRoute: typeof AdminSupportTicketsIndexRoute
+}
+
+const AdminSupportTicketsRouteChildren: AdminSupportTicketsRouteChildren = {
+  AdminSupportTicketsTicketIdRoute: AdminSupportTicketsTicketIdRoute,
+  AdminSupportTicketsIndexRoute: AdminSupportTicketsIndexRoute,
+}
+
+const AdminSupportTicketsRouteWithChildren =
+  AdminSupportTicketsRoute._addFileChildren(AdminSupportTicketsRouteChildren)
+
 interface AdminRouteChildren {
   AdminAuditLogRoute: typeof AdminAuditLogRoute
   AdminCatalogPresetsRoute: typeof AdminCatalogPresetsRoute
   AdminOverviewRoute: typeof AdminOverviewRoute
   AdminSalonsRoute: typeof AdminSalonsRouteWithChildren
   AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminSupportTicketsRoute: typeof AdminSupportTicketsRouteWithChildren
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -249,6 +320,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminOverviewRoute: AdminOverviewRoute,
   AdminSalonsRoute: AdminSalonsRouteWithChildren,
   AdminSettingsRoute: AdminSettingsRoute,
+  AdminSupportTicketsRoute: AdminSupportTicketsRouteWithChildren,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

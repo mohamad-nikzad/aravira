@@ -12,6 +12,7 @@ export type NotificationType =
   | 'appointment_request_approved'
   | 'appointment_request_rejected'
   | 'appointment_reminder'
+  | 'support_reply'
 export type NotificationChannel =
   | 'in_app'
   | 'local_sync'

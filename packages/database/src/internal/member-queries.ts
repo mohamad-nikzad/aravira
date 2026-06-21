@@ -28,6 +28,7 @@ export async function getMemberForUser(
       role: member.role,
       salonStatus: salonProfile.status,
       name: user.name,
+      displayName: salonMember.displayName,
       phoneNumber: user.phoneNumber,
       username: user.username,
     })
@@ -55,6 +56,7 @@ export async function getMemberForUser(
   if (!row) return undefined
   return {
     ...row,
+    name: row.displayName?.trim() || row.name,
     salonStatus: row.salonStatus ?? undefined,
     username: row.phoneNumber ?? row.username ?? '',
   }

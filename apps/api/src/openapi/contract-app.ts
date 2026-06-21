@@ -100,6 +100,22 @@ import {
   updateNotificationPreferencesRoute,
 } from './routes/notification-preferences'
 import {
+  createManagerSupportMessageRoute,
+  createManagerSupportTicketRoute,
+  getManagerSupportTicketRoute,
+  getManagerSupportTicketSummaryRoute,
+  listManagerSupportTicketsRoute,
+  markManagerSupportTicketReadRoute,
+} from './routes/support-tickets'
+import {
+  createAdminSupportMessageRoute,
+  getAdminSupportTicketRoute,
+  getAdminSupportTicketSummaryRoute,
+  listAdminSupportTicketsRoute,
+  markAdminSupportTicketReadRoute,
+  resolveAdminSupportTicketRoute,
+} from './routes/admin-support-tickets'
+import {
   cancelPublicAppointmentRequestRoute,
   createPublicAppointmentRequestRoute,
   getPublicAppointmentRequestRoute,
@@ -918,6 +934,147 @@ const cancelPublicAppointmentRequestStub: RouteHandler<
   typeof cancelPublicAppointmentRequestRoute
 > = (c) => c.json({ ok: true as const }, 200)
 
+const supportTimestamp = new Date().toISOString()
+const managerSupportTicketStub = {
+  id: '00000000-0000-4000-8000-000000000001',
+  salonId: '00000000-0000-4000-8000-000000000002',
+  submittedByUserId: '00000000-0000-4000-8000-000000000003',
+  category: 'question' as const,
+  subject: 'stub',
+  status: 'open' as const,
+  lastActivityAt: supportTimestamp,
+  resolvedAt: null,
+  createdAt: supportTimestamp,
+}
+const managerSupportMessageStub = {
+  id: '00000000-0000-4000-8000-000000000004',
+  ticketId: managerSupportTicketStub.id,
+  authorUserId: managerSupportTicketStub.submittedByUserId,
+  authorKind: 'manager' as const,
+  authorDisplayNameSnapshot: 'stub',
+  body: 'stub',
+  createdAt: supportTimestamp,
+}
+const adminSupportTicketStub = {
+  ...managerSupportTicketStub,
+  lastManagerMessageAt: supportTimestamp,
+  lastPlatformMessageAt: null,
+  managerLastReadAt: supportTimestamp,
+  platformLastReadAt: null,
+  resolvedByUserId: null,
+}
+const adminSupportMessageStub = {
+  ...managerSupportMessageStub,
+  authorKind: 'platform' as const,
+}
+
+const listManagerSupportTicketsStub: RouteHandler<
+  typeof listManagerSupportTicketsRoute
+> = (c) =>
+  c.json({ items: [], pagination: { page: 1, pageSize: 25, total: 0 } }, 200)
+const createManagerSupportTicketStub: RouteHandler<
+  typeof createManagerSupportTicketRoute
+> = (c) =>
+  c.json(
+    {
+      previousStatus: null,
+      resultingStatus: 'open',
+      ticket: managerSupportTicketStub,
+      message: managerSupportMessageStub,
+    },
+    201,
+  )
+const getManagerSupportTicketSummaryStub: RouteHandler<
+  typeof getManagerSupportTicketSummaryRoute
+> = (c) => c.json({ unreadCount: 0 }, 200)
+const getManagerSupportTicketStub: RouteHandler<
+  typeof getManagerSupportTicketRoute
+> = (c) =>
+  c.json(
+    {
+      ticket: managerSupportTicketStub,
+      managerHasUnread: false,
+      messages: [],
+      truncated: false,
+    },
+    200,
+  )
+const createManagerSupportMessageStub: RouteHandler<
+  typeof createManagerSupportMessageRoute
+> = (c) =>
+  c.json(
+    {
+      previousStatus: null,
+      resultingStatus: 'open',
+      ticket: managerSupportTicketStub,
+      message: managerSupportMessageStub,
+    },
+    201,
+  )
+const markManagerSupportTicketReadStub: RouteHandler<
+  typeof markManagerSupportTicketReadRoute
+> = (c) =>
+  c.json(
+    { ticketId: managerSupportTicketStub.id, readAt: supportTimestamp },
+    200,
+  )
+
+const listAdminSupportTicketsStub: RouteHandler<
+  typeof listAdminSupportTicketsRoute
+> = (c) =>
+  c.json({ items: [], pagination: { page: 1, pageSize: 25, total: 0 } }, 200)
+const getAdminSupportTicketSummaryStub: RouteHandler<
+  typeof getAdminSupportTicketSummaryRoute
+> = (c) => c.json({ unresolvedCount: 0, unreadCount: 0 }, 200)
+const getAdminSupportTicketStub: RouteHandler<
+  typeof getAdminSupportTicketRoute
+> = (c) =>
+  c.json(
+    {
+      ticket: {
+        ...managerSupportTicketStub,
+        resolvedByUserId: null,
+        salonName: 'stub',
+        submittedByDisplayName: 'stub',
+      },
+      platformHasUnread: false,
+      messages: [],
+      truncated: false,
+    },
+    200,
+  )
+const markAdminSupportTicketReadStub: RouteHandler<
+  typeof markAdminSupportTicketReadRoute
+> = (c) =>
+  c.json(
+    { ticketId: managerSupportTicketStub.id, readAt: supportTimestamp },
+    200,
+  )
+const createAdminSupportMessageStub: RouteHandler<
+  typeof createAdminSupportMessageRoute
+> = (c) =>
+  c.json(
+    {
+      previousStatus: 'open',
+      resultingStatus: 'waiting_for_manager',
+      ticket: adminSupportTicketStub,
+      message: adminSupportMessageStub,
+    },
+    201,
+  )
+const resolveAdminSupportTicketStub: RouteHandler<
+  typeof resolveAdminSupportTicketRoute
+> = (c) =>
+  c.json(
+    {
+      changed: true,
+      previousStatus: 'open',
+      resultingStatus: 'resolved',
+      ticket: { ...adminSupportTicketStub, status: 'resolved' },
+    },
+    200,
+  )
+
 /**
  * Minimal OpenAPI app used only for contract generation.
  * Stub handlers avoid loading auth/database modules at generate time.
@@ -1134,6 +1291,38 @@ export const contractApp = new OpenAPIHono()
         cancelPublicAppointmentRequestStub,
       ),
   )
+  .route(
+    '/api/v1/support-tickets',
+    new OpenAPIHono()
+      .openapi(listManagerSupportTicketsRoute, listManagerSupportTicketsStub)
+      .openapi(createManagerSupportTicketRoute, createManagerSupportTicketStub)
+      .openapi(
+        getManagerSupportTicketSummaryRoute,
+        getManagerSupportTicketSummaryStub,
+      )
+      .openapi(getManagerSupportTicketRoute, getManagerSupportTicketStub)
+      .openapi(
+        createManagerSupportMessageRoute,
+        createManagerSupportMessageStub,
+      )
+      .openapi(
+        markManagerSupportTicketReadRoute,
+        markManagerSupportTicketReadStub,
+      ),
+  )
+  .route(
+    '/api/v1/admin/support-tickets',
+    new OpenAPIHono()
+      .openapi(listAdminSupportTicketsRoute, listAdminSupportTicketsStub)
+      .openapi(
+        getAdminSupportTicketSummaryRoute,
+        getAdminSupportTicketSummaryStub,
+      )
+      .openapi(getAdminSupportTicketRoute, getAdminSupportTicketStub)
+      .openapi(markAdminSupportTicketReadRoute, markAdminSupportTicketReadStub)
+      .openapi(createAdminSupportMessageRoute, createAdminSupportMessageStub)
+      .openapi(resolveAdminSupportTicketRoute, resolveAdminSupportTicketStub),
+  )
 
 export const openApiDocumentConfig = {
   openapi: '3.0.0' as const,
@@ -1142,7 +1331,7 @@ export const openApiDocumentConfig = {
     version: '0.8.0',
     description:
       'Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. ' +
-      'This contract is expanded incrementally; admin, clients, staff, services catalog, appointments, appointment-requests, settings, salon-profile, salon-public-settings, onboarding, dashboard, today, retention, messaging, notifications, notification-preferences, and public booking route groups are documented.',
+      'This contract is expanded incrementally; admin, Support Tickets, clients, staff, services catalog, appointments, appointment-requests, settings, salon-profile, salon-public-settings, onboarding, dashboard, today, retention, messaging, notifications, notification-preferences, and public booking route groups are documented.',
   },
   servers: [
     { url: '', description: 'Saluna API (paths include /api/v1 prefix)' },
@@ -1220,6 +1409,14 @@ export const openApiDocumentConfig = {
     {
       name: 'Admin',
       description: 'Internal Saluna platform admin APIs',
+    },
+    {
+      name: 'Support tickets',
+      description: 'Salon manager Support Ticket conversations',
+    },
+    {
+      name: 'Admin support tickets',
+      description: 'Internal platform Support Ticket inbox and operations',
     },
   ],
   components: {

@@ -3,6 +3,7 @@ import type { PlatformRole } from '@repo/database/admin'
 export type PlatformAdminUser = {
   userId: string
   role: PlatformRole
+  name: string
 }
 
 export type PlatformPermission =
@@ -13,6 +14,9 @@ export type PlatformPermission =
   | 'manage_catalog_presets'
   | 'view_messaging_health'
   | 'view_support_lookup'
+  | 'view_support_tickets'
+  | 'reply_support_tickets'
+  | 'resolve_support_tickets'
   | 'view_audit_log'
   | 'manage_platform_admins'
   | 'write_internal_notes'
@@ -26,6 +30,9 @@ const rolePermissions: Record<PlatformRole, ReadonlySet<PlatformPermission>> = {
     'manage_catalog_presets',
     'view_messaging_health',
     'view_support_lookup',
+    'view_support_tickets',
+    'reply_support_tickets',
+    'resolve_support_tickets',
     'view_audit_log',
     'manage_platform_admins',
     'write_internal_notes',
@@ -38,6 +45,9 @@ const rolePermissions: Record<PlatformRole, ReadonlySet<PlatformPermission>> = {
     'manage_catalog_presets',
     'view_messaging_health',
     'view_support_lookup',
+    'view_support_tickets',
+    'reply_support_tickets',
+    'resolve_support_tickets',
     'view_audit_log',
     'write_internal_notes',
   ]),
@@ -47,6 +57,9 @@ const rolePermissions: Record<PlatformRole, ReadonlySet<PlatformPermission>> = {
     'view_users',
     'view_messaging_health',
     'view_support_lookup',
+    'view_support_tickets',
+    'reply_support_tickets',
+    'resolve_support_tickets',
     'view_audit_log',
     'write_internal_notes',
   ]),
@@ -56,6 +69,7 @@ const rolePermissions: Record<PlatformRole, ReadonlySet<PlatformPermission>> = {
     'view_users',
     'view_messaging_health',
     'view_support_lookup',
+    'view_support_tickets',
     'view_audit_log',
   ]),
 }

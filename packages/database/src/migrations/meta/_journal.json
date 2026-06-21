@@ -64,6 +64,13 @@
       "when": 1781654400000,
       "tag": "0008_platform_admin_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781979737320,
+      "tag": "0009_ambitious_starfox",
+      "breakpoints": true
     }
   ]
 }

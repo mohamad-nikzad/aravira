@@ -75,4 +75,32 @@ describe('requirePermission', () => {
       requirePermission(queryClient, 'manage_catalog_presets'),
     ).resolves.toBeUndefined()
   })
+
+  it.each([
+    'platform_owner',
+    'platform_admin',
+    'platform_support',
+    'platform_viewer',
+  ] as const)('allows %s to view Support Tickets', async (role) => {
+    mockAuthRole(role)
+
+    await expect(
+      requirePermission(queryClient, 'view_support_tickets'),
+    ).resolves.toBeUndefined()
+  })
+
+  it('keeps platform viewers from writing Support Tickets', async () => {
+    mockAuthRole('platform_viewer')
+
+    await expect(
+      requirePermission(queryClient, 'reply_support_tickets'),
+    ).rejects.toEqual(redirect({ to: '/overview' }))
+
+    queryClient.clear()
+    mockAuthRole('platform_viewer')
+
+    await expect(
+      requirePermission(queryClient, 'resolve_support_tickets'),
+    ).rejects.toEqual(redirect({ to: '/overview' }))
+  })
 })

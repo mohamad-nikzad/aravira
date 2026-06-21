@@ -3,7 +3,7 @@
   "info": {
     "title": "Saluna API",
     "version": "0.8.0",
-    "description": "Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. This contract is expanded incrementally; admin, clients, staff, services catalog, appointments, appointment-requests, settings, salon-profile, salon-public-settings, onboarding, dashboard, today, retention, messaging, notifications, notification-preferences, and public booking route groups are documented."
+    "description": "Tenant-facing Saluna API. Generated from Hono OpenAPI route definitions. This contract is expanded incrementally; admin, Support Tickets, clients, staff, services catalog, appointments, appointment-requests, settings, salon-profile, salon-public-settings, onboarding, dashboard, today, retention, messaging, notifications, notification-preferences, and public booking route groups are documented."
   },
   "servers": [
     {
@@ -95,6 +95,14 @@
     {
       "name": "Admin",
       "description": "Internal Saluna platform admin APIs"
+    },
+    {
+      "name": "Support tickets",
+      "description": "Salon manager Support Ticket conversations"
+    },
+    {
+      "name": "Admin support tickets",
+      "description": "Internal platform Support Ticket inbox and operations"
     }
   ],
   "components": {
@@ -5057,6 +5065,798 @@
         },
         "required": [
           "ok"
+        ]
+      },
+      "ManagerSupportTicketListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagerSupportTicketListItem"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/SupportTicketPagination"
+          }
+        },
+        "required": [
+          "items",
+          "pagination"
+        ]
+      },
+      "ManagerSupportTicketListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category": {
+            "$ref": "#/components/schemas/SupportTicketCategory"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SupportTicketStatus"
+          },
+          "lastActivityAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "managerHasUnread": {
+            "type": "boolean"
+          },
+          "lastMessage": {
+            "$ref": "#/components/schemas/SupportMessagePreview"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "subject",
+          "status",
+          "lastActivityAt",
+          "createdAt",
+          "managerHasUnread",
+          "lastMessage"
+        ]
+      },
+      "SupportTicketCategory": {
+        "type": "string",
+        "enum": [
+          "problem",
+          "question",
+          "feature_request",
+          "other"
+        ]
+      },
+      "SupportTicketStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "waiting_for_manager",
+          "resolved"
+        ]
+      },
+      "SupportMessagePreview": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "authorKind": {
+            "type": "string",
+            "enum": [
+              "manager",
+              "platform"
+            ]
+          },
+          "authorDisplayName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "body",
+          "authorKind",
+          "authorDisplayName"
+        ]
+      },
+      "SupportTicketPagination": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "total"
+        ]
+      },
+      "ManagerSupportTicketMutationResponse": {
+        "type": "object",
+        "properties": {
+          "previousStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "open",
+              "waiting_for_manager",
+              "resolved",
+              null
+            ]
+          },
+          "resultingStatus": {
+            "$ref": "#/components/schemas/SupportTicketStatus"
+          },
+          "ticket": {
+            "$ref": "#/components/schemas/ManagerSupportTicket"
+          },
+          "message": {
+            "$ref": "#/components/schemas/ManagerSupportTicketMutationMessage"
+          }
+        },
+        "required": [
+          "previousStatus",
+          "resultingStatus",
+          "ticket",
+          "message"
+        ]
+      },
+      "ManagerSupportTicket": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "salonId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "submittedByUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category": {
+            "$ref": "#/components/schemas/SupportTicketCategory"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SupportTicketStatus"
+          },
+          "lastActivityAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resolvedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "salonId",
+          "submittedByUserId",
+          "category",
+          "subject",
+          "status",
+          "lastActivityAt",
+          "resolvedAt",
+          "createdAt"
+        ]
+      },
+      "ManagerSupportTicketMutationMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticketId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorKind": {
+            "type": "string",
+            "enum": [
+              "manager"
+            ]
+          },
+          "authorDisplayNameSnapshot": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "ticketId",
+          "authorUserId",
+          "authorKind",
+          "authorDisplayNameSnapshot",
+          "body",
+          "createdAt"
+        ]
+      },
+      "CreateManagerSupportTicketRequest": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/SupportTicketCategory"
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "category",
+          "subject",
+          "body"
+        ]
+      },
+      "ManagerSupportTicketSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "unreadCount": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unreadCount"
+        ]
+      },
+      "ManagerSupportTicketDetailResponse": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "$ref": "#/components/schemas/ManagerSupportTicket"
+          },
+          "managerHasUnread": {
+            "type": "boolean"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagerSupportMessage"
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ticket",
+          "managerHasUnread",
+          "messages",
+          "truncated"
+        ]
+      },
+      "ManagerSupportMessage": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "authorKind": {
+                "type": "string",
+                "enum": [
+                  "manager"
+                ]
+              },
+              "authorUserId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "authorDisplayName": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "authorKind",
+              "authorUserId",
+              "authorDisplayName",
+              "body",
+              "createdAt"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "authorKind": {
+                "type": "string",
+                "enum": [
+                  "platform"
+                ]
+              },
+              "authorDisplayName": {
+                "type": "string",
+                "enum": [
+                  "پشتیبانی سالونا"
+                ]
+              },
+              "body": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "authorKind",
+              "authorDisplayName",
+              "body",
+              "createdAt"
+            ]
+          }
+        ]
+      },
+      "CreateManagerSupportMessageRequest": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "body"
+        ]
+      },
+      "SupportTicketReadResponse": {
+        "type": "object",
+        "properties": {
+          "ticketId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "readAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "ticketId",
+          "readAt"
+        ]
+      },
+      "AdminSupportTicketListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminSupportTicketListItem"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/SupportTicketPagination"
+          }
+        },
+        "required": [
+          "items",
+          "pagination"
+        ]
+      },
+      "AdminSupportTicketListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "salonId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "salonName": {
+            "type": "string"
+          },
+          "submittedByUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "submittedByDisplayName": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/SupportTicketCategory"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SupportTicketStatus"
+          },
+          "lastActivityAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "platformHasUnread": {
+            "type": "boolean"
+          },
+          "lastMessage": {
+            "$ref": "#/components/schemas/SupportMessagePreview"
+          }
+        },
+        "required": [
+          "id",
+          "salonId",
+          "salonName",
+          "submittedByUserId",
+          "submittedByDisplayName",
+          "category",
+          "subject",
+          "status",
+          "lastActivityAt",
+          "createdAt",
+          "platformHasUnread",
+          "lastMessage"
+        ]
+      },
+      "AdminSupportTicketSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "unresolvedCount": {
+            "type": "integer"
+          },
+          "unreadCount": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unresolvedCount",
+          "unreadCount"
+        ]
+      },
+      "AdminSupportTicketDetailResponse": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "$ref": "#/components/schemas/AdminSupportTicket"
+          },
+          "platformHasUnread": {
+            "type": "boolean"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminSupportMessage"
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ticket",
+          "platformHasUnread",
+          "messages",
+          "truncated"
+        ]
+      },
+      "AdminSupportTicket": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ManagerSupportTicket"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "resolvedByUserId": {
+                "type": "string",
+                "nullable": true,
+                "format": "uuid"
+              },
+              "salonName": {
+                "type": "string"
+              },
+              "submittedByDisplayName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "resolvedByUserId",
+              "salonName",
+              "submittedByDisplayName"
+            ]
+          }
+        ]
+      },
+      "AdminSupportMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorKind": {
+            "type": "string",
+            "enum": [
+              "manager",
+              "platform"
+            ]
+          },
+          "authorUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorDisplayName": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "authorKind",
+          "authorUserId",
+          "authorDisplayName",
+          "body",
+          "createdAt"
+        ]
+      },
+      "AdminSupportTicketReplyResponse": {
+        "type": "object",
+        "properties": {
+          "previousStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "open",
+              "waiting_for_manager",
+              "resolved",
+              null
+            ]
+          },
+          "resultingStatus": {
+            "$ref": "#/components/schemas/SupportTicketStatus"
+          },
+          "ticket": {
+            "$ref": "#/components/schemas/AdminSupportTicketMutationTicket"
+          },
+          "message": {
+            "$ref": "#/components/schemas/AdminSupportTicketMutationMessage"
+          }
+        },
+        "required": [
+          "previousStatus",
+          "resultingStatus",
+          "ticket",
+          "message"
+        ]
+      },
+      "AdminSupportTicketMutationTicket": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "salonId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "submittedByUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category": {
+            "$ref": "#/components/schemas/SupportTicketCategory"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SupportTicketStatus"
+          },
+          "lastActivityAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastManagerMessageAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "lastPlatformMessageAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "managerLastReadAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "platformLastReadAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "resolvedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "resolvedByUserId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "salonId",
+          "submittedByUserId",
+          "category",
+          "subject",
+          "status",
+          "lastActivityAt",
+          "lastManagerMessageAt",
+          "lastPlatformMessageAt",
+          "managerLastReadAt",
+          "platformLastReadAt",
+          "resolvedAt",
+          "resolvedByUserId",
+          "createdAt"
+        ]
+      },
+      "AdminSupportTicketMutationMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticketId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorKind": {
+            "type": "string",
+            "enum": [
+              "manager",
+              "platform"
+            ]
+          },
+          "authorDisplayNameSnapshot": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "ticketId",
+          "authorUserId",
+          "authorKind",
+          "authorDisplayNameSnapshot",
+          "body",
+          "createdAt"
+        ]
+      },
+      "CreateAdminSupportMessageRequest": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "resolveAfter": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "body"
+        ]
+      },
+      "AdminSupportTicketResolveResponse": {
+        "type": "object",
+        "properties": {
+          "changed": {
+            "type": "boolean"
+          },
+          "previousStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "open",
+              "waiting_for_manager",
+              "resolved",
+              null
+            ]
+          },
+          "resultingStatus": {
+            "$ref": "#/components/schemas/SupportTicketStatus"
+          },
+          "ticket": {
+            "$ref": "#/components/schemas/AdminSupportTicketMutationTicket"
+          }
+        },
+        "required": [
+          "changed",
+          "previousStatus",
+          "resultingStatus",
+          "ticket"
         ]
       }
     },
@@ -12702,6 +13502,1034 @@
           },
           "409": {
             "description": "Appointment request cannot be cancelled in its current state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/support-tickets": {
+      "get": {
+        "operationId": "listManagerSupportTickets",
+        "tags": [
+          "Support tickets"
+        ],
+        "summary": "List salon Support Tickets",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "One-based page number. Defaults to 1."
+            },
+            "required": false,
+            "description": "One-based page number. Defaults to 1.",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Items per page. Defaults to 25 and is capped at 100."
+            },
+            "required": false,
+            "description": "Items per page. Defaults to 25 and is capped at 100.",
+            "name": "pageSize",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Salon-scoped Support Tickets ordered by newest activity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerSupportTicketListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Support Ticket request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the required manager permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Support Ticket not found in the authenticated salon",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createManagerSupportTicket",
+        "tags": [
+          "Support tickets"
+        ],
+        "summary": "Create a Support Ticket and its first manager message",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateManagerSupportTicketRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Support Ticket created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerSupportTicketMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Support Ticket request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the required manager permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Support Ticket not found in the authenticated salon",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/support-tickets/summary": {
+      "get": {
+        "operationId": "getManagerSupportTicketSummary",
+        "tags": [
+          "Support tickets"
+        ],
+        "summary": "Get the salon-shared unread Support Ticket count",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Salon-shared unread summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerSupportTicketSummaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Support Ticket request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the required manager permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Support Ticket not found in the authenticated salon",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/support-tickets/{ticketId}": {
+      "get": {
+        "operationId": "getManagerSupportTicket",
+        "tags": [
+          "Support tickets"
+        ],
+        "summary": "Get a salon-scoped Support Ticket conversation",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Support Ticket detail with platform identity redacted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerSupportTicketDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Support Ticket request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the required manager permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Support Ticket not found in the authenticated salon",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/support-tickets/{ticketId}/messages": {
+      "post": {
+        "operationId": "createManagerSupportMessage",
+        "tags": [
+          "Support tickets"
+        ],
+        "summary": "Add a manager message to a Support Ticket",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateManagerSupportMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Manager message created and lifecycle transition applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerSupportTicketMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Support Ticket request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the required manager permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Support Ticket not found in the authenticated salon",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/support-tickets/{ticketId}/read": {
+      "post": {
+        "operationId": "markManagerSupportTicketRead",
+        "tags": [
+          "Support tickets"
+        ],
+        "summary": "Advance the salon-shared manager read cursor",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read cursor advanced idempotently",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportTicketReadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Support Ticket request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the required manager permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Support Ticket not found in the authenticated salon",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/support-tickets": {
+      "get": {
+        "operationId": "listAdminSupportTickets",
+        "tags": [
+          "Admin support tickets"
+        ],
+        "summary": "List the platform Support Ticket inbox",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "pageSize",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/SupportTicketStatus"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/SupportTicketCategory"
+            },
+            "required": false,
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "salonId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Case-insensitive subject or salon-name search."
+            },
+            "required": false,
+            "description": "Case-insensitive subject or salon-name search.",
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "unresolved",
+                "all"
+              ],
+              "description": "Defaults to unresolved; ignored when status is supplied."
+            },
+            "required": false,
+            "description": "Defaults to unresolved; ignored when status is supplied.",
+            "name": "scope",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Filtered platform Support Ticket inbox",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSupportTicketListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid admin Support Ticket request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Platform user lacks the required Support Ticket permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Support Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/support-tickets/summary": {
+      "get": {
+        "operationId": "getAdminSupportTicketSummary",
+        "tags": [
+          "Admin support tickets"
+        ],
+        "summary": "Get unresolved and unread platform Support Ticket counts",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Platform Support Ticket summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSupportTicketSummaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid admin Support Ticket request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Platform user lacks the required Support Ticket permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Support Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/support-tickets/{ticketId}": {
+      "get": {
+        "operationId": "getAdminSupportTicket",
+        "tags": [
+          "Admin support tickets"
+        ],
+        "summary": "Get a Support Ticket conversation with internal author identities",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Support Ticket detail with real stored author identities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSupportTicketDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid admin Support Ticket request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Platform user lacks the required Support Ticket permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Support Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/support-tickets/{ticketId}/read": {
+      "post": {
+        "operationId": "markAdminSupportTicketRead",
+        "tags": [
+          "Admin support tickets"
+        ],
+        "summary": "Advance the platform-shared Support Ticket read cursor",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read cursor advanced idempotently",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportTicketReadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid admin Support Ticket request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Platform user lacks the required Support Ticket permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Support Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/support-tickets/{ticketId}/messages": {
+      "post": {
+        "operationId": "createAdminSupportMessage",
+        "tags": [
+          "Admin support tickets"
+        ],
+        "summary": "Reply to a Support Ticket, optionally resolving it atomically",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdminSupportMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Platform reply created and lifecycle transition applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSupportTicketReplyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid admin Support Ticket request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Platform user lacks the required Support Ticket permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Support Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/support-tickets/{ticketId}/resolve": {
+      "post": {
+        "operationId": "resolveAdminSupportTicket",
+        "tags": [
+          "Admin support tickets"
+        ],
+        "summary": "Resolve a Support Ticket without adding a message",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Support Ticket resolved, or unchanged if already resolved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSupportTicketResolveResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid admin Support Ticket request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Platform user lacks the required Support Ticket permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Support Ticket not found",
             "content": {
               "application/json": {
                 "schema": {

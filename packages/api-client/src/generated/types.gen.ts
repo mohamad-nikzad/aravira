@@ -1339,6 +1339,201 @@ export type PublicCancelAppointmentRequestResponse = {
     ok: true;
 };
 
+export type ManagerSupportTicketListResponse = {
+    items: Array<ManagerSupportTicketListItem>;
+    pagination: SupportTicketPagination;
+};
+
+export type ManagerSupportTicketListItem = {
+    id: string;
+    category: SupportTicketCategory;
+    subject: string;
+    status: SupportTicketStatus;
+    lastActivityAt: string;
+    createdAt: string;
+    managerHasUnread: boolean;
+    lastMessage: SupportMessagePreview;
+};
+
+export type SupportTicketCategory = 'problem' | 'question' | 'feature_request' | 'other';
+
+export type SupportTicketStatus = 'open' | 'waiting_for_manager' | 'resolved';
+
+export type SupportMessagePreview = {
+    body: string;
+    authorKind: 'manager' | 'platform';
+    authorDisplayName: string;
+} | null;
+
+export type SupportTicketPagination = {
+    page: number;
+    pageSize: number;
+    total: number;
+};
+
+export type ManagerSupportTicketMutationResponse = {
+    previousStatus: 'open' | 'waiting_for_manager' | 'resolved' | null;
+    resultingStatus: SupportTicketStatus;
+    ticket: ManagerSupportTicket;
+    message: ManagerSupportTicketMutationMessage;
+};
+
+export type ManagerSupportTicket = {
+    id: string;
+    salonId: string;
+    submittedByUserId: string;
+    category: SupportTicketCategory;
+    subject: string;
+    status: SupportTicketStatus;
+    lastActivityAt: string;
+    resolvedAt: string | null;
+    createdAt: string;
+};
+
+export type ManagerSupportTicketMutationMessage = {
+    id: string;
+    ticketId: string;
+    authorUserId: string;
+    authorKind: 'manager';
+    authorDisplayNameSnapshot: string;
+    body: string;
+    createdAt: string;
+};
+
+export type CreateManagerSupportTicketRequest = {
+    category: SupportTicketCategory;
+    subject: string;
+    body: string;
+};
+
+export type ManagerSupportTicketSummaryResponse = {
+    unreadCount: number;
+};
+
+export type ManagerSupportTicketDetailResponse = {
+    ticket: ManagerSupportTicket;
+    managerHasUnread: boolean;
+    messages: Array<ManagerSupportMessage>;
+    truncated: boolean;
+};
+
+export type ManagerSupportMessage = {
+    id: string;
+    authorKind: 'manager';
+    authorUserId: string;
+    authorDisplayName: string;
+    body: string;
+    createdAt: string;
+} | {
+    id: string;
+    authorKind: 'platform';
+    authorDisplayName: 'پشتیبانی سالونا';
+    body: string;
+    createdAt: string;
+};
+
+export type CreateManagerSupportMessageRequest = {
+    body: string;
+};
+
+export type SupportTicketReadResponse = {
+    ticketId: string;
+    readAt: string;
+};
+
+export type AdminSupportTicketListResponse = {
+    items: Array<AdminSupportTicketListItem>;
+    pagination: SupportTicketPagination;
+};
+
+export type AdminSupportTicketListItem = {
+    id: string;
+    salonId: string;
+    salonName: string;
+    submittedByUserId: string;
+    submittedByDisplayName: string;
+    category: SupportTicketCategory;
+    subject: string;
+    status: SupportTicketStatus;
+    lastActivityAt: string;
+    createdAt: string;
+    platformHasUnread: boolean;
+    lastMessage: SupportMessagePreview;
+};
+
+export type AdminSupportTicketSummaryResponse = {
+    unresolvedCount: number;
+    unreadCount: number;
+};
+
+export type AdminSupportTicketDetailResponse = {
+    ticket: AdminSupportTicket;
+    platformHasUnread: boolean;
+    messages: Array<AdminSupportMessage>;
+    truncated: boolean;
+};
+
+export type AdminSupportTicket = ManagerSupportTicket & {
+    resolvedByUserId: string | null;
+    salonName: string;
+    submittedByDisplayName: string;
+};
+
+export type AdminSupportMessage = {
+    id: string;
+    authorKind: 'manager' | 'platform';
+    authorUserId: string;
+    authorDisplayName: string;
+    body: string;
+    createdAt: string;
+};
+
+export type AdminSupportTicketReplyResponse = {
+    previousStatus: 'open' | 'waiting_for_manager' | 'resolved' | null;
+    resultingStatus: SupportTicketStatus;
+    ticket: AdminSupportTicketMutationTicket;
+    message: AdminSupportTicketMutationMessage;
+};
+
+export type AdminSupportTicketMutationTicket = {
+    id: string;
+    salonId: string;
+    submittedByUserId: string;
+    category: SupportTicketCategory;
+    subject: string;
+    status: SupportTicketStatus;
+    lastActivityAt: string;
+    lastManagerMessageAt: string | null;
+    lastPlatformMessageAt: string | null;
+    managerLastReadAt: string | null;
+    platformLastReadAt: string | null;
+    resolvedAt: string | null;
+    resolvedByUserId: string | null;
+    createdAt: string;
+};
+
+export type AdminSupportTicketMutationMessage = {
+    id: string;
+    ticketId: string;
+    authorUserId: string;
+    authorKind: 'manager' | 'platform';
+    authorDisplayNameSnapshot: string;
+    body: string;
+    createdAt: string;
+};
+
+export type CreateAdminSupportMessageRequest = {
+    body: string;
+    resolveAfter?: boolean;
+};
+
+export type AdminSupportTicketResolveResponse = {
+    changed: boolean;
+    previousStatus: 'open' | 'waiting_for_manager' | 'resolved' | null;
+    resultingStatus: SupportTicketStatus;
+    ticket: AdminSupportTicketMutationTicket;
+};
+
 export type GetApiV1AdminAuthMeData = {
     body?: never;
     path?: never;
@@ -4933,3 +5128,484 @@ export type PostApiV1PublicSalonsBySlugAppointmentRequestsByTokenCancelResponses
 };
 
 export type PostApiV1PublicSalonsBySlugAppointmentRequestsByTokenCancelResponse = PostApiV1PublicSalonsBySlugAppointmentRequestsByTokenCancelResponses[keyof PostApiV1PublicSalonsBySlugAppointmentRequestsByTokenCancelResponses];
+
+export type ListManagerSupportTicketsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * One-based page number. Defaults to 1.
+         */
+        page?: number;
+        /**
+         * Items per page. Defaults to 25 and is capped at 100.
+         */
+        pageSize?: number;
+    };
+    url: '/api/v1/support-tickets';
+};
+
+export type ListManagerSupportTicketsErrors = {
+    /**
+     * Invalid Support Ticket request
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user lacks the required manager permission
+     */
+    403: ApiError;
+    /**
+     * Support Ticket not found in the authenticated salon
+     */
+    404: ApiError;
+};
+
+export type ListManagerSupportTicketsError = ListManagerSupportTicketsErrors[keyof ListManagerSupportTicketsErrors];
+
+export type ListManagerSupportTicketsResponses = {
+    /**
+     * Salon-scoped Support Tickets ordered by newest activity
+     */
+    200: ManagerSupportTicketListResponse;
+};
+
+export type ListManagerSupportTicketsResponse = ListManagerSupportTicketsResponses[keyof ListManagerSupportTicketsResponses];
+
+export type CreateManagerSupportTicketData = {
+    body: CreateManagerSupportTicketRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/support-tickets';
+};
+
+export type CreateManagerSupportTicketErrors = {
+    /**
+     * Invalid Support Ticket request
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user lacks the required manager permission
+     */
+    403: ApiError;
+    /**
+     * Support Ticket not found in the authenticated salon
+     */
+    404: ApiError;
+};
+
+export type CreateManagerSupportTicketError = CreateManagerSupportTicketErrors[keyof CreateManagerSupportTicketErrors];
+
+export type CreateManagerSupportTicketResponses = {
+    /**
+     * Support Ticket created
+     */
+    201: ManagerSupportTicketMutationResponse;
+};
+
+export type CreateManagerSupportTicketResponse = CreateManagerSupportTicketResponses[keyof CreateManagerSupportTicketResponses];
+
+export type GetManagerSupportTicketSummaryData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/support-tickets/summary';
+};
+
+export type GetManagerSupportTicketSummaryErrors = {
+    /**
+     * Invalid Support Ticket request
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user lacks the required manager permission
+     */
+    403: ApiError;
+    /**
+     * Support Ticket not found in the authenticated salon
+     */
+    404: ApiError;
+};
+
+export type GetManagerSupportTicketSummaryError = GetManagerSupportTicketSummaryErrors[keyof GetManagerSupportTicketSummaryErrors];
+
+export type GetManagerSupportTicketSummaryResponses = {
+    /**
+     * Salon-shared unread summary
+     */
+    200: ManagerSupportTicketSummaryResponse;
+};
+
+export type GetManagerSupportTicketSummaryResponse = GetManagerSupportTicketSummaryResponses[keyof GetManagerSupportTicketSummaryResponses];
+
+export type GetManagerSupportTicketData = {
+    body?: never;
+    path: {
+        ticketId: string;
+    };
+    query?: never;
+    url: '/api/v1/support-tickets/{ticketId}';
+};
+
+export type GetManagerSupportTicketErrors = {
+    /**
+     * Invalid Support Ticket request
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user lacks the required manager permission
+     */
+    403: ApiError;
+    /**
+     * Support Ticket not found in the authenticated salon
+     */
+    404: ApiError;
+};
+
+export type GetManagerSupportTicketError = GetManagerSupportTicketErrors[keyof GetManagerSupportTicketErrors];
+
+export type GetManagerSupportTicketResponses = {
+    /**
+     * Support Ticket detail with platform identity redacted
+     */
+    200: ManagerSupportTicketDetailResponse;
+};
+
+export type GetManagerSupportTicketResponse = GetManagerSupportTicketResponses[keyof GetManagerSupportTicketResponses];
+
+export type CreateManagerSupportMessageData = {
+    body: CreateManagerSupportMessageRequest;
+    path: {
+        ticketId: string;
+    };
+    query?: never;
+    url: '/api/v1/support-tickets/{ticketId}/messages';
+};
+
+export type CreateManagerSupportMessageErrors = {
+    /**
+     * Invalid Support Ticket request
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user lacks the required manager permission
+     */
+    403: ApiError;
+    /**
+     * Support Ticket not found in the authenticated salon
+     */
+    404: ApiError;
+};
+
+export type CreateManagerSupportMessageError = CreateManagerSupportMessageErrors[keyof CreateManagerSupportMessageErrors];
+
+export type CreateManagerSupportMessageResponses = {
+    /**
+     * Manager message created and lifecycle transition applied
+     */
+    201: ManagerSupportTicketMutationResponse;
+};
+
+export type CreateManagerSupportMessageResponse = CreateManagerSupportMessageResponses[keyof CreateManagerSupportMessageResponses];
+
+export type MarkManagerSupportTicketReadData = {
+    body?: never;
+    path: {
+        ticketId: string;
+    };
+    query?: never;
+    url: '/api/v1/support-tickets/{ticketId}/read';
+};
+
+export type MarkManagerSupportTicketReadErrors = {
+    /**
+     * Invalid Support Ticket request
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user lacks the required manager permission
+     */
+    403: ApiError;
+    /**
+     * Support Ticket not found in the authenticated salon
+     */
+    404: ApiError;
+};
+
+export type MarkManagerSupportTicketReadError = MarkManagerSupportTicketReadErrors[keyof MarkManagerSupportTicketReadErrors];
+
+export type MarkManagerSupportTicketReadResponses = {
+    /**
+     * Read cursor advanced idempotently
+     */
+    200: SupportTicketReadResponse;
+};
+
+export type MarkManagerSupportTicketReadResponse = MarkManagerSupportTicketReadResponses[keyof MarkManagerSupportTicketReadResponses];
+
+export type ListAdminSupportTicketsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        page?: number;
+        pageSize?: number;
+        status?: SupportTicketStatus;
+        category?: SupportTicketCategory;
+        salonId?: string;
+        /**
+         * Case-insensitive subject or salon-name search.
+         */
+        search?: string;
+        /**
+         * Defaults to unresolved; ignored when status is supplied.
+         */
+        scope?: 'unresolved' | 'all';
+    };
+    url: '/api/v1/admin/support-tickets';
+};
+
+export type ListAdminSupportTicketsErrors = {
+    /**
+     * Invalid admin Support Ticket request
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Platform user lacks the required Support Ticket permission
+     */
+    403: ApiError;
+    /**
+     * Support Ticket not found
+     */
+    404: ApiError;
+};
+
+export type ListAdminSupportTicketsError = ListAdminSupportTicketsErrors[keyof ListAdminSupportTicketsErrors];
+
+export type ListAdminSupportTicketsResponses = {
+    /**
+     * Filtered platform Support Ticket inbox
+     */
+    200: AdminSupportTicketListResponse;
+};
+
+export type ListAdminSupportTicketsResponse = ListAdminSupportTicketsResponses[keyof ListAdminSupportTicketsResponses];
+
+export type GetAdminSupportTicketSummaryData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/support-tickets/summary';
+};
+
+export type GetAdminSupportTicketSummaryErrors = {
+    /**
+     * Invalid admin Support Ticket request
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Platform user lacks the required Support Ticket permission
+     */
+    403: ApiError;
+    /**
+     * Support Ticket not found
+     */
+    404: ApiError;
+};
+
+export type GetAdminSupportTicketSummaryError = GetAdminSupportTicketSummaryErrors[keyof GetAdminSupportTicketSummaryErrors];
+
+export type GetAdminSupportTicketSummaryResponses = {
+    /**
+     * Platform Support Ticket summary
+     */
+    200: AdminSupportTicketSummaryResponse;
+};
+
+export type GetAdminSupportTicketSummaryResponse = GetAdminSupportTicketSummaryResponses[keyof GetAdminSupportTicketSummaryResponses];
+
+export type GetAdminSupportTicketData = {
+    body?: never;
+    path: {
+        ticketId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/support-tickets/{ticketId}';
+};
+
+export type GetAdminSupportTicketErrors = {
+    /**
+     * Invalid admin Support Ticket request
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Platform user lacks the required Support Ticket permission
+     */
+    403: ApiError;
+    /**
+     * Support Ticket not found
+     */
+    404: ApiError;
+};
+
+export type GetAdminSupportTicketError = GetAdminSupportTicketErrors[keyof GetAdminSupportTicketErrors];
+
+export type GetAdminSupportTicketResponses = {
+    /**
+     * Support Ticket detail with real stored author identities
+     */
+    200: AdminSupportTicketDetailResponse;
+};
+
+export type GetAdminSupportTicketResponse = GetAdminSupportTicketResponses[keyof GetAdminSupportTicketResponses];
+
+export type MarkAdminSupportTicketReadData = {
+    body?: never;
+    path: {
+        ticketId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/support-tickets/{ticketId}/read';
+};
+
+export type MarkAdminSupportTicketReadErrors = {
+    /**
+     * Invalid admin Support Ticket request
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Platform user lacks the required Support Ticket permission
+     */
+    403: ApiError;
+    /**
+     * Support Ticket not found
+     */
+    404: ApiError;
+};
+
+export type MarkAdminSupportTicketReadError = MarkAdminSupportTicketReadErrors[keyof MarkAdminSupportTicketReadErrors];
+
+export type MarkAdminSupportTicketReadResponses = {
+    /**
+     * Read cursor advanced idempotently
+     */
+    200: SupportTicketReadResponse;
+};
+
+export type MarkAdminSupportTicketReadResponse = MarkAdminSupportTicketReadResponses[keyof MarkAdminSupportTicketReadResponses];
+
+export type CreateAdminSupportMessageData = {
+    body: CreateAdminSupportMessageRequest;
+    path: {
+        ticketId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/support-tickets/{ticketId}/messages';
+};
+
+export type CreateAdminSupportMessageErrors = {
+    /**
+     * Invalid admin Support Ticket request
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Platform user lacks the required Support Ticket permission
+     */
+    403: ApiError;
+    /**
+     * Support Ticket not found
+     */
+    404: ApiError;
+};
+
+export type CreateAdminSupportMessageError = CreateAdminSupportMessageErrors[keyof CreateAdminSupportMessageErrors];
+
+export type CreateAdminSupportMessageResponses = {
+    /**
+     * Platform reply created and lifecycle transition applied
+     */
+    201: AdminSupportTicketReplyResponse;
+};
+
+export type CreateAdminSupportMessageResponse = CreateAdminSupportMessageResponses[keyof CreateAdminSupportMessageResponses];
+
+export type ResolveAdminSupportTicketData = {
+    body?: never;
+    path: {
+        ticketId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/support-tickets/{ticketId}/resolve';
+};
+
+export type ResolveAdminSupportTicketErrors = {
+    /**
+     * Invalid admin Support Ticket request
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Platform user lacks the required Support Ticket permission
+     */
+    403: ApiError;
+    /**
+     * Support Ticket not found
+     */
+    404: ApiError;
+};
+
+export type ResolveAdminSupportTicketError = ResolveAdminSupportTicketErrors[keyof ResolveAdminSupportTicketErrors];
+
+export type ResolveAdminSupportTicketResponses = {
+    /**
+     * Support Ticket resolved, or unchanged if already resolved
+     */
+    200: AdminSupportTicketResolveResponse;
+};
+
+export type ResolveAdminSupportTicketResponse = ResolveAdminSupportTicketResponses[keyof ResolveAdminSupportTicketResponses];

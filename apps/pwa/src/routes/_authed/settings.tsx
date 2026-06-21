@@ -49,6 +49,7 @@ import {
 } from '#/lib/notification-preferences-queries'
 import { BusinessHoursFields } from '#/components/business-hours/business-hours-fields'
 import { MessagingAccountsSection } from '#/components/settings/messaging-accounts-section'
+import { SupportSettingsRow } from '#/components/support/support-settings-row'
 import { SettingsRow, ToggleRow } from '#/components/settings/settings-rows'
 import { StaffDrawer } from '#/components/staff/staff-drawer'
 
@@ -364,6 +365,7 @@ function SettingsPage() {
                 hint="لینک نوبت‌گیری برای مشتریان"
                 to="/public-page"
               />
+              <SupportSettingsRow enabled={isManager} />
             </SettingsGroup>
           ) : null}
 

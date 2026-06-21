@@ -5,7 +5,9 @@ import type { LucideIcon } from 'lucide-react'
 import { cn } from '@repo/ui/utils'
 
 import { pendingAppointmentRequestsQueryOptions } from '#/lib/appointment-requests-queries'
+import { supportTicketSummaryQueryOptions } from '#/lib/support-ticket-queries'
 import { useAuth } from '#/lib/auth'
+import { toPersianDigits } from '@repo/salon-core/persian-digits'
 
 type NavItem = {
   to: string
@@ -29,6 +31,7 @@ const managerItems: ReadonlyArray<NavItem> = [
       '/retention',
       '/services',
       '/staff',
+      '/support',
     ],
   },
 ]
@@ -52,6 +55,11 @@ export function BottomNav() {
     refetchInterval: 60_000,
   })
   const pendingCount = pendingData?.requests.length ?? 0
+  const { data: supportSummary } = useQuery({
+    ...supportTicketSummaryQueryOptions(),
+    enabled: isManager && !onOnboarding,
+  })
+  const supportUnreadCount = supportSummary?.unreadCount ?? 0
 
   return (
     <nav className="shrink-0 border-t border-border/60 bg-card safe-area-pb">
@@ -85,6 +93,18 @@ export function BottomNav() {
                     {pendingCount > 99 ? '99+' : pendingCount}
                   </span>
                 )}
+                {item.to === '/settings' &&
+                isManager &&
+                supportUnreadCount > 0 ? (
+                  <span
+                    aria-label={`${supportUnreadCount} پیام پشتیبانی خوانده‌نشده`}
+                    className="absolute -top-1 -right-1 box-content min-w-[16px] h-[16px] px-1 rounded-full border-2 border-card bg-saloora-rose text-white text-[9px] font-bold flex items-center justify-center tabular-nums"
+                  >
+                    {toPersianDigits(
+                      supportUnreadCount > 99 ? '99+' : supportUnreadCount,
+                    )}
+                  </span>
+                ) : null}
               </div>
               <span className="truncate px-1">{item.label}</span>
             </Link>

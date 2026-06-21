@@ -14,6 +14,11 @@ import {
 } from 'drizzle-orm/pg-core'
 
 import type { CatalogPresetTree } from '@repo/salon-core/forms/catalog-preset'
+import type {
+  SupportMessageAuthorKind,
+  SupportTicketCategory,
+  SupportTicketStatus,
+} from '@repo/salon-core/support-tickets'
 
 import type { MessagingProviderId } from './messaging-provider-id'
 
@@ -268,6 +273,86 @@ export const salonMember = pgTable(
     index('salon_member_organization_id_idx').on(t.organizationId),
     uniqueIndex('salon_member_user_id_organization_id_unique').on(t.userId, t.organizationId),
   ]
+)
+
+export const supportTickets = pgTable(
+  'support_tickets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'restrict' }),
+    submittedByUserId: uuid('submitted_by_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict' }),
+    category: text('category').notNull().$type<SupportTicketCategory>(),
+    subject: text('subject').notNull(),
+    status: text('status')
+      .notNull()
+      .$type<SupportTicketStatus>()
+      .default('open'),
+    lastActivityAt: timestamp('last_activity_at', {
+      withTimezone: true,
+    }).notNull(),
+    lastManagerMessageAt: timestamp('last_manager_message_at', {
+      withTimezone: true,
+    }),
+    lastPlatformMessageAt: timestamp('last_platform_message_at', {
+      withTimezone: true,
+    }),
+    managerLastReadAt: timestamp('manager_last_read_at', {
+      withTimezone: true,
+    }),
+    platformLastReadAt: timestamp('platform_last_read_at', {
+      withTimezone: true,
+    }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    resolvedByUserId: uuid('resolved_by_user_id').references(() => user.id, {
+      onDelete: 'restrict',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index('support_tickets_salon_activity_idx').on(
+      t.salonId,
+      t.lastActivityAt.desc(),
+    ),
+    index('support_tickets_status_activity_idx').on(
+      t.status,
+      t.lastActivityAt.desc(),
+    ),
+    index('support_tickets_category_activity_idx').on(
+      t.category,
+      t.lastActivityAt.desc(),
+    ),
+    index('support_tickets_salon_status_idx').on(t.salonId, t.status),
+  ],
+)
+
+export const supportMessages = pgTable(
+  'support_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ticketId: uuid('ticket_id')
+      .notNull()
+      .references(() => supportTickets.id, { onDelete: 'cascade' }),
+    authorUserId: uuid('author_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict' }),
+    authorKind: text('author_kind').notNull().$type<SupportMessageAuthorKind>(),
+    authorDisplayNameSnapshot: text('author_display_name_snapshot').notNull(),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    index('support_messages_ticket_created_id_idx').on(
+      t.ticketId,
+      t.createdAt.asc(),
+      t.id.asc(),
+    ),
+  ],
 )
 
 export const locations = pgTable(
@@ -782,6 +867,7 @@ export const notifications = pgTable(
       | 'appointment_request_approved'
       | 'appointment_request_rejected'
       | 'appointment_reminder'
+      | 'support_reply'
     >(),
     title: text('title').notNull(),
     body: text('body').notNull(),

@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedTodayRouteImport } from './routes/_authed/today'
+import { Route as AuthedSupportRouteImport } from './routes/_authed/support'
 import { Route as AuthedStaffRouteImport } from './routes/_authed/staff'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AuthedServicesRouteImport } from './routes/_authed/services'
@@ -25,9 +26,12 @@ import { Route as AuthedOnboardingRouteImport } from './routes/_authed/onboardin
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as AuthedClientsRouteImport } from './routes/_authed/clients'
 import { Route as AuthedCalendarRouteImport } from './routes/_authed/calendar'
+import { Route as AuthedSupportIndexRouteImport } from './routes/_authed/support.index'
 import { Route as AuthedStaffIndexRouteImport } from './routes/_authed/staff.index'
 import { Route as AuthedOnboardingIndexRouteImport } from './routes/_authed/onboarding/index'
 import { Route as AuthedClientsIndexRouteImport } from './routes/_authed/clients.index'
+import { Route as AuthedSupportNewRouteImport } from './routes/_authed/support.new'
+import { Route as AuthedSupportTicketIdRouteImport } from './routes/_authed/support.$ticketId'
 import { Route as AuthedStaffIdRouteImport } from './routes/_authed/staff.$id'
 import { Route as AuthedOnboardingWelcomeRouteImport } from './routes/_authed/onboarding/welcome'
 import { Route as AuthedOnboardingStaffRouteImport } from './routes/_authed/onboarding/staff'
@@ -67,6 +71,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthedTodayRoute = AuthedTodayRouteImport.update({
   id: '/today',
   path: '/today',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedSupportRoute = AuthedSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedStaffRoute = AuthedStaffRouteImport.update({
@@ -119,6 +128,11 @@ const AuthedCalendarRoute = AuthedCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedSupportIndexRoute = AuthedSupportIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedSupportRoute,
+} as any)
 const AuthedStaffIndexRoute = AuthedStaffIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -133,6 +147,16 @@ const AuthedClientsIndexRoute = AuthedClientsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthedClientsRoute,
+} as any)
+const AuthedSupportNewRoute = AuthedSupportNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthedSupportRoute,
+} as any)
+const AuthedSupportTicketIdRoute = AuthedSupportTicketIdRouteImport.update({
+  id: '/$ticketId',
+  path: '/$ticketId',
+  getParentRoute: () => AuthedSupportRoute,
 } as any)
 const AuthedStaffIdRoute = AuthedStaffIdRouteImport.update({
   id: '/$id',
@@ -208,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/services': typeof AuthedServicesRoute
   '/settings': typeof AuthedSettingsRoute
   '/staff': typeof AuthedStaffRouteWithChildren
+  '/support': typeof AuthedSupportRouteWithChildren
   '/today': typeof AuthedTodayRoute
   '/clients/$id': typeof AuthedClientsIdRoute
   '/clients/import': typeof AuthedClientsImportRoute
@@ -220,9 +245,12 @@ export interface FileRoutesByFullPath {
   '/onboarding/staff': typeof AuthedOnboardingStaffRoute
   '/onboarding/welcome': typeof AuthedOnboardingWelcomeRoute
   '/staff/$id': typeof AuthedStaffIdRoute
+  '/support/$ticketId': typeof AuthedSupportTicketIdRoute
+  '/support/new': typeof AuthedSupportNewRoute
   '/clients/': typeof AuthedClientsIndexRoute
   '/onboarding/': typeof AuthedOnboardingIndexRoute
   '/staff/': typeof AuthedStaffIndexRoute
+  '/support/': typeof AuthedSupportIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -248,9 +276,12 @@ export interface FileRoutesByTo {
   '/onboarding/staff': typeof AuthedOnboardingStaffRoute
   '/onboarding/welcome': typeof AuthedOnboardingWelcomeRoute
   '/staff/$id': typeof AuthedStaffIdRoute
+  '/support/$ticketId': typeof AuthedSupportTicketIdRoute
+  '/support/new': typeof AuthedSupportNewRoute
   '/clients': typeof AuthedClientsIndexRoute
   '/onboarding': typeof AuthedOnboardingIndexRoute
   '/staff': typeof AuthedStaffIndexRoute
+  '/support': typeof AuthedSupportIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -269,6 +300,7 @@ export interface FileRoutesById {
   '/_authed/services': typeof AuthedServicesRoute
   '/_authed/settings': typeof AuthedSettingsRoute
   '/_authed/staff': typeof AuthedStaffRouteWithChildren
+  '/_authed/support': typeof AuthedSupportRouteWithChildren
   '/_authed/today': typeof AuthedTodayRoute
   '/_authed/clients/$id': typeof AuthedClientsIdRoute
   '/_authed/clients/import': typeof AuthedClientsImportRoute
@@ -281,9 +313,12 @@ export interface FileRoutesById {
   '/_authed/onboarding/staff': typeof AuthedOnboardingStaffRoute
   '/_authed/onboarding/welcome': typeof AuthedOnboardingWelcomeRoute
   '/_authed/staff/$id': typeof AuthedStaffIdRoute
+  '/_authed/support/$ticketId': typeof AuthedSupportTicketIdRoute
+  '/_authed/support/new': typeof AuthedSupportNewRoute
   '/_authed/clients/': typeof AuthedClientsIndexRoute
   '/_authed/onboarding/': typeof AuthedOnboardingIndexRoute
   '/_authed/staff/': typeof AuthedStaffIndexRoute
+  '/_authed/support/': typeof AuthedSupportIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -302,6 +337,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/settings'
     | '/staff'
+    | '/support'
     | '/today'
     | '/clients/$id'
     | '/clients/import'
@@ -314,9 +350,12 @@ export interface FileRouteTypes {
     | '/onboarding/staff'
     | '/onboarding/welcome'
     | '/staff/$id'
+    | '/support/$ticketId'
+    | '/support/new'
     | '/clients/'
     | '/onboarding/'
     | '/staff/'
+    | '/support/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -342,9 +381,12 @@ export interface FileRouteTypes {
     | '/onboarding/staff'
     | '/onboarding/welcome'
     | '/staff/$id'
+    | '/support/$ticketId'
+    | '/support/new'
     | '/clients'
     | '/onboarding'
     | '/staff'
+    | '/support'
   id:
     | '__root__'
     | '/'
@@ -362,6 +404,7 @@ export interface FileRouteTypes {
     | '/_authed/services'
     | '/_authed/settings'
     | '/_authed/staff'
+    | '/_authed/support'
     | '/_authed/today'
     | '/_authed/clients/$id'
     | '/_authed/clients/import'
@@ -374,9 +417,12 @@ export interface FileRouteTypes {
     | '/_authed/onboarding/staff'
     | '/_authed/onboarding/welcome'
     | '/_authed/staff/$id'
+    | '/_authed/support/$ticketId'
+    | '/_authed/support/new'
     | '/_authed/clients/'
     | '/_authed/onboarding/'
     | '/_authed/staff/'
+    | '/_authed/support/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -429,6 +475,13 @@ declare module '@tanstack/react-router' {
       path: '/today'
       fullPath: '/today'
       preLoaderRoute: typeof AuthedTodayRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/support': {
+      id: '/_authed/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof AuthedSupportRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/staff': {
@@ -501,6 +554,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCalendarRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/support/': {
+      id: '/_authed/support/'
+      path: '/'
+      fullPath: '/support/'
+      preLoaderRoute: typeof AuthedSupportIndexRouteImport
+      parentRoute: typeof AuthedSupportRoute
+    }
     '/_authed/staff/': {
       id: '/_authed/staff/'
       path: '/'
@@ -521,6 +581,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/clients/'
       preLoaderRoute: typeof AuthedClientsIndexRouteImport
       parentRoute: typeof AuthedClientsRoute
+    }
+    '/_authed/support/new': {
+      id: '/_authed/support/new'
+      path: '/new'
+      fullPath: '/support/new'
+      preLoaderRoute: typeof AuthedSupportNewRouteImport
+      parentRoute: typeof AuthedSupportRoute
+    }
+    '/_authed/support/$ticketId': {
+      id: '/_authed/support/$ticketId'
+      path: '/$ticketId'
+      fullPath: '/support/$ticketId'
+      preLoaderRoute: typeof AuthedSupportTicketIdRouteImport
+      parentRoute: typeof AuthedSupportRoute
     }
     '/_authed/staff/$id': {
       id: '/_authed/staff/$id'
@@ -659,6 +733,22 @@ const AuthedStaffRouteWithChildren = AuthedStaffRoute._addFileChildren(
   AuthedStaffRouteChildren,
 )
 
+interface AuthedSupportRouteChildren {
+  AuthedSupportTicketIdRoute: typeof AuthedSupportTicketIdRoute
+  AuthedSupportNewRoute: typeof AuthedSupportNewRoute
+  AuthedSupportIndexRoute: typeof AuthedSupportIndexRoute
+}
+
+const AuthedSupportRouteChildren: AuthedSupportRouteChildren = {
+  AuthedSupportTicketIdRoute: AuthedSupportTicketIdRoute,
+  AuthedSupportNewRoute: AuthedSupportNewRoute,
+  AuthedSupportIndexRoute: AuthedSupportIndexRoute,
+}
+
+const AuthedSupportRouteWithChildren = AuthedSupportRoute._addFileChildren(
+  AuthedSupportRouteChildren,
+)
+
 interface AuthedRouteChildren {
   AuthedCalendarRoute: typeof AuthedCalendarRoute
   AuthedClientsRoute: typeof AuthedClientsRouteWithChildren
@@ -670,6 +760,7 @@ interface AuthedRouteChildren {
   AuthedServicesRoute: typeof AuthedServicesRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedStaffRoute: typeof AuthedStaffRouteWithChildren
+  AuthedSupportRoute: typeof AuthedSupportRouteWithChildren
   AuthedTodayRoute: typeof AuthedTodayRoute
 }
 
@@ -684,6 +775,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedServicesRoute: AuthedServicesRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedStaffRoute: AuthedStaffRouteWithChildren,
+  AuthedSupportRoute: AuthedSupportRouteWithChildren,
   AuthedTodayRoute: AuthedTodayRoute,
 }
 

@@ -2,7 +2,6 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import {
   countActivePlatformOwners,
-  createAdminAuditEvent,
   createAdminCatalogPreset,
   createAdminInternalNote,
   getAdminMessagingHealth,
@@ -37,6 +36,10 @@ import { getEnv } from '../env'
 import { requirePlatformAdmin } from '../middleware/auth'
 import { error, ok, created } from '../lib/responses'
 import { zValidator } from '../lib/validate'
+import {
+  adminAuditRequestMeta as auditMeta,
+  writeAdminAudit as writeAudit,
+} from '../lib/admin-audit'
 
 const idParamSchema = z.object({ id: z.string().uuid() })
 
@@ -114,45 +117,6 @@ function requireLiveConfirmation(
   if (getEnv().ADMIN_DATA_SOURCE !== 'live') return null
   if (confirmation === 'LIVE') return null
   return error(c, 'برای تغییر داده زنده عبارت LIVE را وارد کنید', 400)
-}
-
-function auditMeta(c: {
-  req: { header: (name: string) => string | undefined }
-}) {
-  return {
-    ip:
-      c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ??
-      c.req.header('x-real-ip') ??
-      null,
-    userAgent: c.req.header('user-agent') ?? null,
-    requestId: c.req.header('x-request-id') ?? null,
-  }
-}
-
-async function writeAudit(input: {
-  actorUserId: string
-  actorPlatformRole: PlatformRole
-  action: string
-  targetType: string
-  targetId: string
-  reason: string
-  salonId?: string | null
-  metadata?: Record<string, unknown>
-  request: ReturnType<typeof auditMeta>
-}) {
-  await createAdminAuditEvent({
-    actorUserId: input.actorUserId,
-    actorPlatformRole: input.actorPlatformRole,
-    action: input.action,
-    targetType: input.targetType,
-    targetId: input.targetId,
-    reason: input.reason,
-    salonId: input.salonId ?? null,
-    metadata: input.metadata,
-    requestId: input.request.requestId,
-    ip: input.request.ip,
-    userAgent: input.request.userAgent,
-  })
 }
 
 async function requireExistingSalon(

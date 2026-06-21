@@ -36,6 +36,8 @@ import { messagingRoute } from './routes/messaging'
 import { messagingBaleRoute } from './routes/messaging-bale'
 import { messagingTelegramRoute } from './routes/messaging-telegram'
 import { adminRoute } from './routes/admin'
+import { supportTicketsRoute } from './routes/support-tickets'
+import { adminSupportTicketsRoute } from './routes/admin-support-tickets'
 const env = getEnv()
 
 const corsOrigins = env.CORS_ORIGINS
@@ -70,7 +72,9 @@ const app = new Hono<AppEnv>()
   .route('/api/v1/auth', authRoute)
   .on(['GET', 'POST'], '/api/v1/auth/*', (c) => authServer.handler(c.req.raw))
   .route('/health', health)
+  .route('/api/v1/admin/support-tickets', adminSupportTicketsRoute)
   .route('/api/v1/admin', adminRoute)
+  .route('/api/v1/support-tickets', supportTicketsRoute)
   .use('/api/v1/clients', requireTenant('manage_clients'))
   .use('/api/v1/clients/*', requireTenant('manage_clients'))
   .route('/api/v1/clients', clients)

@@ -31,6 +31,10 @@ function mockAuthMe(options: { dataSource?: 'local' | 'live' } = {}) {
 }
 
 vi.mock('@repo/api-client/query', () => ({
+  getAdminSupportTicketSummaryOptions: () => ({
+    queryKey: [{ _id: 'getAdminSupportTicketSummary' }],
+    queryFn: () => new Promise(() => undefined),
+  }),
   getApiV1AdminAuthMeOptions: () => ({
     queryKey: ['admin-auth-me-test'],
     queryFn: () => generated.authMe(),

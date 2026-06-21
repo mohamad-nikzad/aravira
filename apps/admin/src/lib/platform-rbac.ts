@@ -7,6 +7,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { redirect } from '@tanstack/react-router'
 
 export const adminRoutePermissions = {
+  '/support-tickets': 'view_support_tickets',
   '/settings': 'manage_platform_admins',
   '/catalog-presets': 'manage_catalog_presets',
   '/audit-log': 'view_audit_log',
