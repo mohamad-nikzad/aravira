@@ -1,9 +1,4 @@
-import {
-  cleanup,
-  fireEvent,
-  screen,
-  waitFor,
-} from '@testing-library/react'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderAdminRoute } from '#/test/render-with-search-route'
 
@@ -52,9 +47,7 @@ vi.mock('@repo/api-client/query', () => ({
   }),
 }))
 
-function renderCatalogPresets(
-  options: { dataSource?: 'local' | 'live' } = {},
-) {
+function renderCatalogPresets(options: { dataSource?: 'local' | 'live' } = {}) {
   mockAuthMe(options)
   return renderAdminRoute('/catalog-presets')
 }
@@ -284,9 +277,7 @@ describe('catalog presets feature', () => {
     expect(screen.getAllByLabelText('نسخه سرویس')).toHaveLength(2)
 
     fireEvent.click(screen.getAllByLabelText('حذف نسخه سرویس')[0]!)
-    expect(
-      screen.getByText('این نسخه سرویس حذف شود؟'),
-    ).toBeTruthy()
+    expect(screen.getByText('این نسخه سرویس حذف شود؟')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'انصراف' }))
     expect(screen.getAllByLabelText('نسخه سرویس')).toHaveLength(2)

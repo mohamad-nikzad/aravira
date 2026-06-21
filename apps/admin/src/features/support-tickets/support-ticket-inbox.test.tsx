@@ -123,12 +123,9 @@ describe('admin Support Ticket inbox', () => {
     expect(salonLink.getAttribute('href')).toBe(`/salons/${salonId}`)
     expect(salonLink.querySelector('a')).toBeNull()
 
-    fireEvent.change(
-      screen.getByPlaceholderText('موضوع یا نام سالن...'),
-      {
-        target: { value: ' آفتاب ' },
-      },
-    )
+    fireEvent.change(screen.getByPlaceholderText('موضوع یا نام سالن...'), {
+      target: { value: ' آفتاب ' },
+    })
     await waitFor(
       () =>
         expect(api.list).toHaveBeenCalledWith({

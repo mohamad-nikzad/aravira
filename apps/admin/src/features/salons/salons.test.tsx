@@ -1,9 +1,4 @@
-import {
-  cleanup,
-  fireEvent,
-  screen,
-  waitFor,
-} from '@testing-library/react'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
 
@@ -209,7 +204,9 @@ describe('salons feature', () => {
         timezone: 'Asia/Tehran',
         publicEnabled: true,
       },
-      members: [{ name: 'Maryam', role: 'owner', phoneNumber: '+989120000000' }],
+      members: [
+        { name: 'Maryam', role: 'owner', phoneNumber: '+989120000000' },
+      ],
       stats: { services: 9, appointments: 12 },
     })
     generated.getNotes.mockResolvedValue({ notes: [] })
@@ -228,7 +225,9 @@ describe('salons feature', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^تغییر وضعیت$/ }))
     expect(
-      screen.getByText(/تغییر وضعیت سالن روی داده‌های زنده تولیدی اعمال می‌شود/),
+      screen.getByText(
+        /تغییر وضعیت سالن روی داده‌های زنده تولیدی اعمال می‌شود/,
+      ),
     ).toBeTruthy()
 
     fireEvent.click(screen.getByRole('combobox', { name: 'وضعیت' }))
@@ -287,17 +286,21 @@ describe('salons feature', () => {
     fireEvent.change(screen.getByLabelText('یادداشت'), {
       target: { value: 'Call owner again' },
     })
-    fireEvent.change(screen.getByPlaceholderText('ثبت دلیل برای گزارش ممیزی الزامی است'), {
-      target: { value: 'Internal follow-up note' },
-    })
+    fireEvent.change(
+      screen.getByPlaceholderText('ثبت دلیل برای گزارش ممیزی الزامی است'),
+      {
+        target: { value: 'Internal follow-up note' },
+      },
+    )
     fireEvent.click(screen.getByRole('button', { name: /افزودن یادداشت/ }))
 
     await waitFor(() => {
       expect(generated.postNote).toHaveBeenCalled()
     })
     await waitFor(() => {
-      expect((screen.getByLabelText('یادداشت') as HTMLTextAreaElement).value)
-        .toBe('')
+      expect(
+        (screen.getByLabelText('یادداشت') as HTMLTextAreaElement).value,
+      ).toBe('')
     })
     expect(generated.postNote.mock.calls[0]?.[0]).toEqual({
       path: { id: salonId },

@@ -11,10 +11,7 @@ import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Eye, LockKeyhole, Plus, ShieldCheck, UserRound } from 'lucide-react'
 
 import { AdminListTable } from '#/components/admin/admin-list-table'
-import {
-  CheckboxField,
-  TextAreaField,
-} from '#/components/admin/form-field'
+import { CheckboxField, TextAreaField } from '#/components/admin/form-field'
 import {
   LiveConfirmationInput,
   LiveDataWarning,
@@ -122,7 +119,9 @@ function PlatformAdminsScreen() {
         cell: ({ row }) => (
           <PrimaryCell
             title={text(row.original.name)}
-            subtitle={text(row.original.email) || text(row.original.phoneNumber)}
+            subtitle={
+              text(row.original.email) || text(row.original.phoneNumber)
+            }
           />
         ),
       },

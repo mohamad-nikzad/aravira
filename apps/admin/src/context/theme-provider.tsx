@@ -1,4 +1,11 @@
-import { createContext, use, useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  use,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
 
 type Theme = 'light' | 'dark'
 
@@ -13,7 +20,9 @@ const ThemeContext = createContext<ThemeContextValue | null>(null)
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     const storedTheme = window.localStorage.getItem('saluna-admin-theme')
-    return storedTheme === 'dark' || storedTheme === 'light' ? storedTheme : 'light'
+    return storedTheme === 'dark' || storedTheme === 'light'
+      ? storedTheme
+      : 'light'
   })
 
   useEffect(() => {
@@ -26,7 +35,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     () => ({
       theme,
       setTheme,
-      toggleTheme: () => setTheme((current) => (current === 'light' ? 'dark' : 'light')),
+      toggleTheme: () =>
+        setTheme((current) => (current === 'light' ? 'dark' : 'light')),
     }),
     [theme],
   )

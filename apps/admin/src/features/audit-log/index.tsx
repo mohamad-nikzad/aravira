@@ -90,7 +90,9 @@ export function AuditLogScreen() {
         header: 'عامل',
         cell: ({ row }) => (
           <PrimaryCell
-            title={text(row.original.actorName) || text(row.original.actorUserId)}
+            title={
+              text(row.original.actorName) || text(row.original.actorUserId)
+            }
             subtitle={text(row.original.actorUserId)}
           />
         ),

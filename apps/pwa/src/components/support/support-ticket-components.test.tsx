@@ -82,6 +82,7 @@ describe('manager support components', () => {
   it('renders manager snapshots and the fixed platform alias', () => {
     const { rerender } = render(
       <SupportMessageBubble
+        grouped={false}
         message={{
           id: 'm1',
           authorKind: 'manager',
@@ -95,6 +96,7 @@ describe('manager support components', () => {
     expect(screen.getByText('مریم احمدی')).toBeTruthy()
     rerender(
       <SupportMessageBubble
+        grouped={false}
         message={{
           id: 'm2',
           authorKind: 'platform',

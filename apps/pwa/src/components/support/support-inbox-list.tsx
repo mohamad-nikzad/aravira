@@ -97,7 +97,10 @@ export function SupportInboxList({
   )
 
   return (
-    <main aria-label="درخواست‌های پشتیبانی" className="relative min-h-full bg-background pb-24">
+    <main
+      aria-label="درخواست‌های پشتیبانی"
+      className="relative min-h-full bg-background pb-24"
+    >
       <header className="sticky top-0 z-10 border-b border-line-soft bg-card/95 backdrop-blur">
         <div className="flex items-center justify-between px-4 py-3">
           <div>
@@ -178,7 +181,9 @@ export function SupportInboxList({
                     <h2
                       className={cn(
                         'truncate text-sm',
-                        ticket.managerHasUnread ? 'font-extrabold' : 'font-medium',
+                        ticket.managerHasUnread
+                          ? 'font-extrabold'
+                          : 'font-medium',
                       )}
                     >
                       {ticket.subject}

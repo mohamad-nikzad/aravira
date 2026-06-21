@@ -72,22 +72,16 @@ async function auditPlatformReply(
 
 export const adminSupportTicketsRoute = new Hono<AppEnv>()
   .use('*', requirePlatformAdmin('view_support_tickets'))
-  .get(
-    '/',
-    zValidator('query', adminSupportTicketListQuerySchema),
-    async (c) => ok(c, await listAdminSupportTickets(c.req.valid('query'))),
+  .get('/', zValidator('query', adminSupportTicketListQuerySchema), async (c) =>
+    ok(c, await listAdminSupportTickets(c.req.valid('query'))),
   )
   .get('/summary', async (c) => ok(c, await getAdminSupportTicketSummary()))
-  .get(
-    '/:ticketId',
-    zValidator('param', ticketParamsSchema),
-    async (c) => {
-      const detail = await getAdminSupportTicketDetail(
-        c.req.valid('param').ticketId,
-      )
-      return detail ? ok(c, detail) : error(c, 'تیکت پشتیبانی یافت نشد', 404)
-    },
-  )
+  .get('/:ticketId', zValidator('param', ticketParamsSchema), async (c) => {
+    const detail = await getAdminSupportTicketDetail(
+      c.req.valid('param').ticketId,
+    )
+    return detail ? ok(c, detail) : error(c, 'تیکت پشتیبانی یافت نشد', 404)
+  })
   .post(
     '/:ticketId/read',
     zValidator('param', ticketParamsSchema),
@@ -95,9 +89,7 @@ export const adminSupportTicketsRoute = new Hono<AppEnv>()
       const result = await markSupportTicketReadByPlatform({
         ticketId: c.req.valid('param').ticketId,
       })
-      return result
-        ? ok(c, result)
-        : error(c, 'تیکت پشتیبانی یافت نشد', 404)
+      return result ? ok(c, result) : error(c, 'تیکت پشتیبانی یافت نشد', 404)
     },
   )
   .post(

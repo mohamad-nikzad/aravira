@@ -12,11 +12,7 @@ import {
 } from '#/components/ui/command'
 import { Field, FieldLabel } from '#/components/ui/field'
 import { Input } from '#/components/ui/input'
-import {
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-} from '#/components/ui/popover'
+import { Popover, PopoverAnchor, PopoverContent } from '#/components/ui/popover'
 import { text } from '#/lib/admin-format'
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -152,7 +148,10 @@ function UserPickerSearch({
   return (
     <Field>
       <FieldLabel htmlFor={searchFieldId}>کاربر</FieldLabel>
-      <Popover open={isOpen && debouncedSearch.length > 0} onOpenChange={setIsOpen}>
+      <Popover
+        open={isOpen && debouncedSearch.length > 0}
+        onOpenChange={setIsOpen}
+      >
         <PopoverAnchor asChild>
           <Input
             id={searchFieldId}
@@ -183,10 +182,14 @@ function UserPickerSearch({
                   بارگذاری کاربران ناموفق بود.
                 </div>
               ) : null}
-              {!usersQuery.isLoading && !usersQuery.isError && users.length === 0 ? (
+              {!usersQuery.isLoading &&
+              !usersQuery.isError &&
+              users.length === 0 ? (
                 <CommandEmpty>کاربری یافت نشد.</CommandEmpty>
               ) : null}
-              {!usersQuery.isLoading && !usersQuery.isError && users.length > 0 ? (
+              {!usersQuery.isLoading &&
+              !usersQuery.isError &&
+              users.length > 0 ? (
                 <CommandGroup>
                   {users.map((user) => {
                     const id = text(user.id)
@@ -218,7 +221,10 @@ function UserPickerSearch({
         required={required}
       />
       {selectedUser ? (
-        <SelectedUserSummary user={selectedUser} onClear={handleClearSelection} />
+        <SelectedUserSummary
+          user={selectedUser}
+          onClear={handleClearSelection}
+        />
       ) : null}
     </Field>
   )
@@ -251,11 +257,7 @@ function userLabel(user: UserRow): string {
 }
 
 function userDetails(user: UserRow): string {
-  return [
-    text(user.email),
-    text(user.phoneNumber),
-    `شناسه: ${text(user.id)}`,
-  ]
+  return [text(user.email), text(user.phoneNumber), `شناسه: ${text(user.id)}`]
     .filter(Boolean)
     .join(' · ')
 }

@@ -21,10 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '#/components/ui/select'
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from '#/components/ui/toggle-group'
+import { ToggleGroup, ToggleGroupItem } from '#/components/ui/toggle-group'
 import { formatDate } from '#/lib/admin-format'
 import { cn } from '#/lib/utils'
 
@@ -70,7 +67,10 @@ export function SupportTicketInbox() {
   }
 
   return (
-    <section className="flex flex-col gap-4" aria-label="صندوق تیکت‌های پشتیبانی">
+    <section
+      className="flex flex-col gap-4"
+      aria-label="صندوق تیکت‌های پشتیبانی"
+    >
       <InboxFilterToolbar state={state} setState={setState} onReset={reset} />
 
       {inboxQuery.isLoading ? (
@@ -357,9 +357,7 @@ function InboxFilterSelect({
       <Select
         value={selectValue}
         onValueChange={(nextValue) =>
-          onValueChange(
-            nextValue === inboxSelectEmptySentinel ? '' : nextValue,
-          )
+          onValueChange(nextValue === inboxSelectEmptySentinel ? '' : nextValue)
         }
       >
         <SelectTrigger id={id} className="w-full" aria-label={label}>
@@ -367,7 +365,9 @@ function InboxFilterSelect({
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            <SelectItem value={inboxSelectEmptySentinel}>{emptyLabel}</SelectItem>
+            <SelectItem value={inboxSelectEmptySentinel}>
+              {emptyLabel}
+            </SelectItem>
             {options.map(([optionValue, optionLabel]) => (
               <SelectItem key={optionValue} value={optionValue}>
                 {optionLabel}

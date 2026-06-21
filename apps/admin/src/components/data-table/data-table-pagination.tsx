@@ -32,7 +32,8 @@ export function DataTablePagination({
   const page = pagination.pageIndex + 1
   const rowTotal = totalRows ?? 0
   const showRange = totalRows !== undefined
-  const start = rowTotal === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
+  const start =
+    rowTotal === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
   const end =
     rowTotal === 0
       ? 0
@@ -59,10 +60,7 @@ export function DataTablePagination({
                 onPageSizeChange(Number(value) as PageSizeOption)
               }
             >
-              <SelectTrigger
-                className="h-8 w-20"
-                aria-label="تعداد در هر صفحه"
-              >
+              <SelectTrigger className="h-8 w-20" aria-label="تعداد در هر صفحه">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -83,7 +81,12 @@ export function DataTablePagination({
           variant="outline"
           size="sm"
           disabled={pagination.pageIndex <= 0}
-          onClick={() => onPaginationChange({ ...pagination, pageIndex: pagination.pageIndex - 1 })}
+          onClick={() =>
+            onPaginationChange({
+              ...pagination,
+              pageIndex: pagination.pageIndex - 1,
+            })
+          }
         >
           <ChevronRight data-icon="inline-start" />
           قبلی
@@ -92,7 +95,12 @@ export function DataTablePagination({
           variant="outline"
           size="sm"
           disabled={page >= pageCount}
-          onClick={() => onPaginationChange({ ...pagination, pageIndex: pagination.pageIndex + 1 })}
+          onClick={() =>
+            onPaginationChange({
+              ...pagination,
+              pageIndex: pagination.pageIndex + 1,
+            })
+          }
         >
           بعدی
           <ChevronLeft data-icon="inline-end" />

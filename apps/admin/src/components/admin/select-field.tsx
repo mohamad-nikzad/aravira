@@ -1,10 +1,6 @@
 import { useId, useState } from 'react'
 
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from '#/components/ui/field'
+import { Field, FieldGroup, FieldLabel } from '#/components/ui/field'
 import {
   Select,
   SelectContent,

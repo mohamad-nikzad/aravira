@@ -1,7 +1,5 @@
 import { ApiError } from '@repo/api-client/errors'
-import {
-  getApiV1AdminAuthMeQueryKey,
-} from '@repo/api-client/query'
+import { getApiV1AdminAuthMeQueryKey } from '@repo/api-client/query'
 import { getApiV1AdminAuthMe } from '@repo/api-client/sdk'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
@@ -110,7 +108,11 @@ export function AdminLoginPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             ) : null}
-            <Button className="w-full" type="submit" disabled={loginMutation.isPending}>
+            <Button
+              className="w-full"
+              type="submit"
+              disabled={loginMutation.isPending}
+            >
               <LogIn data-icon="inline-start" />
               ورود
             </Button>

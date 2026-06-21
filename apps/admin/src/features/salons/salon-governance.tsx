@@ -179,7 +179,11 @@ export function NotesPanel({
     <Panel title="یادداشت‌های داخلی">
       <form className="space-y-3" onSubmit={submit}>
         <TextAreaField label="یادداشت" name="body" rows={3} required />
-        <Input name="reason" placeholder="ثبت دلیل برای گزارش ممیزی الزامی است" required />
+        <Input
+          name="reason"
+          placeholder="ثبت دلیل برای گزارش ممیزی الزامی است"
+          required
+        />
         <MutationError error={error} />
         <Button type="submit" disabled={pending}>
           <Plus className="h-4 w-4" />
@@ -187,9 +191,14 @@ export function NotesPanel({
         </Button>
       </form>
       <div className="mt-4 flex flex-col gap-2">
-        {isLoading ? <ScreenSkeleton label="در حال بارگذاری یادداشت‌ها" /> : null}
+        {isLoading ? (
+          <ScreenSkeleton label="در حال بارگذاری یادداشت‌ها" />
+        ) : null}
         {isError ? (
-          <ErrorPanel message="بارگذاری یادداشت‌ها ناموفق بود." onRetry={onRetry} />
+          <ErrorPanel
+            message="بارگذاری یادداشت‌ها ناموفق بود."
+            onRetry={onRetry}
+          />
         ) : null}
         {!isLoading && !isError && notes.length === 0 ? (
           <p className="text-sm text-muted-foreground">
@@ -198,7 +207,10 @@ export function NotesPanel({
         ) : null}
         {!isLoading && !isError
           ? notes.map((note) => (
-              <div key={note.id} className="rounded-md border border-border p-3">
+              <div
+                key={note.id}
+                className="rounded-md border border-border p-3"
+              >
                 <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                   <span>{note.authorName}</span>
                   <span>{formatDate(note.createdAt)}</span>

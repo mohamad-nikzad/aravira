@@ -4,19 +4,10 @@ import {
   patchApiV1AdminCatalogPresetsByIdMutation,
   postApiV1AdminCatalogPresetsMutation,
 } from '@repo/api-client/query'
-import type {
-  AdminCatalogPresetCreateRequest,
-} from '@repo/api-client/types'
+import type { AdminCatalogPresetCreateRequest } from '@repo/api-client/types'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { ColumnDef } from '@tanstack/react-table'
-import {
-  CopyPlus,
-  FolderTree,
-  Pencil,
-  Plus,
-  Save,
-  Trash2,
-} from 'lucide-react'
+import { CopyPlus, FolderTree, Pencil, Plus, Save, Trash2 } from 'lucide-react'
 import { useMemo, useState, useId, type FormEvent, type ReactNode } from 'react'
 
 import { AdminListTable } from '#/components/admin/admin-list-table'
@@ -433,59 +424,59 @@ function CategoryEditor({
   return (
     <Card className="bg-background/40">
       <CardContent className="flex flex-col gap-3 p-3">
-      <div className="grid gap-2 md:grid-cols-[1fr_auto]">
-        <LabeledInput
-          label="دسته"
-          value={category.name}
-          required
-          onChange={(name) => onChange({ ...category, name })}
+        <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+          <LabeledInput
+            label="دسته"
+            value={category.name}
+            required
+            onChange={(name) => onChange({ ...category, name })}
+          />
+          <IconAction
+            label="حذف دسته"
+            disabled={!canRemove}
+            onClick={() => setConfirmRemove(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </IconAction>
+        </div>
+        <RemoveConfirmationDialog
+          open={confirmRemove}
+          message="این دسته و همه موارد تو در تو حذف شوند؟"
+          onConfirm={onRemove}
+          onOpenChange={setConfirmRemove}
         />
-        <IconAction
-          label="حذف دسته"
-          disabled={!canRemove}
-          onClick={() => setConfirmRemove(true)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </IconAction>
-      </div>
-      <RemoveConfirmationDialog
-        open={confirmRemove}
-        message="این دسته و همه موارد تو در تو حذف شوند؟"
-        onConfirm={onRemove}
-        onOpenChange={setConfirmRemove}
-      />
-      <div className="flex flex-col gap-3 ps-0 md:ps-4">
-        {category.families.map((family, familyIndex) => (
-          <FamilyEditor
-            key={familyIndex}
-            family={family}
-            canRemove={category.families.length > 1}
-            onChange={(next) => updateFamily(familyIndex, next)}
-            onRemove={() =>
+        <div className="flex flex-col gap-3 ps-0 md:ps-4">
+          {category.families.map((family, familyIndex) => (
+            <FamilyEditor
+              key={familyIndex}
+              family={family}
+              canRemove={category.families.length > 1}
+              onChange={(next) => updateFamily(familyIndex, next)}
+              onRemove={() =>
+                onChange({
+                  ...category,
+                  families: category.families.filter(
+                    (_, index) => index !== familyIndex,
+                  ),
+                })
+              }
+            />
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
               onChange({
                 ...category,
-                families: category.families.filter(
-                  (_, index) => index !== familyIndex,
-                ),
+                families: [...category.families, defaultFamily()],
               })
             }
-          />
-        ))}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            onChange({
-              ...category,
-              families: [...category.families, defaultFamily()],
-            })
-          }
-        >
-          <Plus className="h-4 w-4" />
-          خانواده
-        </Button>
-      </div>
+          >
+            <Plus className="h-4 w-4" />
+            خانواده
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )
@@ -516,59 +507,59 @@ function FamilyEditor({
   return (
     <Card className="bg-background/45">
       <CardContent className="flex flex-col gap-3 p-3">
-      <div className="grid gap-2 md:grid-cols-[1fr_auto]">
-        <LabeledInput
-          label="خانواده"
-          value={family.name}
-          required
-          onChange={(name) => onChange({ ...family, name })}
+        <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+          <LabeledInput
+            label="خانواده"
+            value={family.name}
+            required
+            onChange={(name) => onChange({ ...family, name })}
+          />
+          <IconAction
+            label="حذف خانواده"
+            disabled={!canRemove}
+            onClick={() => setConfirmRemove(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </IconAction>
+        </div>
+        <RemoveConfirmationDialog
+          open={confirmRemove}
+          message="این خانواده و همه نسخه‌های سرویس تو در تو حذف شوند؟"
+          onConfirm={onRemove}
+          onOpenChange={setConfirmRemove}
         />
-        <IconAction
-          label="حذف خانواده"
-          disabled={!canRemove}
-          onClick={() => setConfirmRemove(true)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </IconAction>
-      </div>
-      <RemoveConfirmationDialog
-        open={confirmRemove}
-        message="این خانواده و همه نسخه‌های سرویس تو در تو حذف شوند؟"
-        onConfirm={onRemove}
-        onOpenChange={setConfirmRemove}
-      />
-      <div className="flex flex-col gap-2">
-        {family.variants.map((variant, variantIndex) => (
-          <VariantEditor
-            key={variantIndex}
-            variant={variant}
-            canRemove={family.variants.length > 1}
-            onChange={(next) => updateVariant(variantIndex, next)}
-            onRemove={() =>
+        <div className="flex flex-col gap-2">
+          {family.variants.map((variant, variantIndex) => (
+            <VariantEditor
+              key={variantIndex}
+              variant={variant}
+              canRemove={family.variants.length > 1}
+              onChange={(next) => updateVariant(variantIndex, next)}
+              onRemove={() =>
+                onChange({
+                  ...family,
+                  variants: family.variants.filter(
+                    (_, index) => index !== variantIndex,
+                  ),
+                })
+              }
+            />
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
               onChange({
                 ...family,
-                variants: family.variants.filter(
-                  (_, index) => index !== variantIndex,
-                ),
+                variants: [...family.variants, defaultVariant()],
               })
             }
-          />
-        ))}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            onChange({
-              ...family,
-              variants: [...family.variants, defaultVariant()],
-            })
-          }
-        >
-          <CopyPlus className="h-4 w-4" />
-          نسخه سرویس
-        </Button>
-      </div>
+          >
+            <CopyPlus className="h-4 w-4" />
+            نسخه سرویس
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )
@@ -662,7 +653,11 @@ function RemoveConfirmationDialog({
           <DialogDescription>{message}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             انصراف
           </Button>
           <Button

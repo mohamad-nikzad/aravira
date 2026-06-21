@@ -22,7 +22,11 @@ export type NotificationChannel =
   | 'bale'
   | 'rubika'
   | 'whatsapp'
-export type NotificationDeliveryStatus = 'pending' | 'sent' | 'failed' | 'skipped'
+export type NotificationDeliveryStatus =
+  | 'pending'
+  | 'sent'
+  | 'failed'
+  | 'skipped'
 export type CreateNotificationDeliveryInput = {
   provider?: string | null
   providerMessageId?: string | null
@@ -74,7 +78,9 @@ export type UpdateNotificationPreferencesInput = {
   smsAlertsEnabled?: boolean
 }
 
-function rowToNotification(row: typeof notifications.$inferSelect): AppNotification {
+function rowToNotification(
+  row: typeof notifications.$inferSelect,
+): AppNotification {
   return {
     id: row.id,
     salonId: row.salonId,
@@ -90,7 +96,7 @@ function rowToNotification(row: typeof notifications.$inferSelect): AppNotificat
 }
 
 function rowToPreferences(
-  row: typeof notificationPreferences.$inferSelect
+  row: typeof notificationPreferences.$inferSelect,
 ): NotificationPreferences {
   return {
     salonId: row.salonId,
@@ -104,7 +110,7 @@ function rowToPreferences(
 }
 
 export async function createNotificationForUser(
-  input: CreateNotificationInput
+  input: CreateNotificationInput,
 ): Promise<AppNotification> {
   const db = getDb()
   const [row] = await db
@@ -124,7 +130,7 @@ export async function createNotificationForUser(
 }
 
 export async function listNotificationsForUser(
-  input: ListNotificationsInput
+  input: ListNotificationsInput,
 ): Promise<AppNotification[]> {
   const db = getDb()
   const conditions = [
@@ -148,7 +154,7 @@ export async function listNotificationsForUser(
 export async function markNotificationRead(
   salonId: string,
   userId: string,
-  notificationId: string
+  notificationId: string,
 ): Promise<AppNotification | undefined> {
   const db = getDb()
   const [row] = await db
@@ -158,8 +164,8 @@ export async function markNotificationRead(
       and(
         eq(notifications.id, notificationId),
         eq(notifications.salonId, salonId),
-        eq(notifications.userId, userId)
-      )
+        eq(notifications.userId, userId),
+      ),
     )
     .returning()
 
@@ -168,7 +174,7 @@ export async function markNotificationRead(
 
 export async function markAllNotificationsRead(
   salonId: string,
-  userId: string
+  userId: string,
 ): Promise<number> {
   const db = getDb()
   const rows = await db
@@ -178,8 +184,8 @@ export async function markAllNotificationsRead(
       and(
         eq(notifications.salonId, salonId),
         eq(notifications.userId, userId),
-        isNull(notifications.readAt)
-      )
+        isNull(notifications.readAt),
+      ),
     )
     .returning({ id: notifications.id })
 
@@ -188,7 +194,7 @@ export async function markAllNotificationsRead(
 
 export async function getNotificationPreferences(
   salonId: string,
-  userId: string
+  userId: string,
 ): Promise<NotificationPreferences> {
   const db = getDb()
   const [row] = await db
@@ -205,8 +211,8 @@ export async function getNotificationPreferences(
     .where(
       and(
         eq(notificationPreferences.salonId, salonId),
-        eq(notificationPreferences.userId, userId)
-      )
+        eq(notificationPreferences.userId, userId),
+      ),
     )
     .limit(1)
 
@@ -220,7 +226,7 @@ export async function getNotificationPreferences(
 export async function updateNotificationPreferences(
   salonId: string,
   userId: string,
-  input: UpdateNotificationPreferencesInput
+  input: UpdateNotificationPreferencesInput,
 ): Promise<NotificationPreferences> {
   const db = getDb()
   const [row] = await db
@@ -256,7 +262,7 @@ export async function dispatchNotification(
   notificationId: string,
   channel: NotificationChannel,
   status: NotificationDeliveryStatus = 'sent',
-  input: CreateNotificationDeliveryInput = {}
+  input: CreateNotificationDeliveryInput = {},
 ): Promise<void> {
   const db = getDb()
   await db.insert(notificationDeliveries).values({

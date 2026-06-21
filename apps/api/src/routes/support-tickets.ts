@@ -55,10 +55,8 @@ export const supportTicketsRoute = new Hono<AppEnv>()
       )
     },
   )
-  .get(
-    '/summary',
-    requireTenant('view_support_tickets'),
-    async (c) => ok(c, await getSalonSupportTicketSummary(c.var.tenant.salonId)),
+  .get('/summary', requireTenant('view_support_tickets'), async (c) =>
+    ok(c, await getSalonSupportTicketSummary(c.var.tenant.salonId)),
   )
   .get(
     '/:ticketId',
@@ -100,9 +98,7 @@ export const supportTicketsRoute = new Hono<AppEnv>()
         salonId: c.var.tenant.salonId,
         ticketId: c.req.valid('param').ticketId,
       })
-      return result
-        ? ok(c, result)
-        : error(c, 'تیکت پشتیبانی یافت نشد', 404)
+      return result ? ok(c, result) : error(c, 'تیکت پشتیبانی یافت نشد', 404)
     },
   )
 

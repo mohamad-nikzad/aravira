@@ -35,7 +35,7 @@ Use a **split env** so you can switch Neon branches without editing secrets:
 
 Scripts load `.env.local` first, then the database file, so the database URLs always match the command you run:
 
-```bash
+````bash
 pnpm install
 pnpm db:check         # verify schema.ts matches checked-in migrations
 pnpm db:push          # schema -> dev branch (default)
@@ -60,10 +60,11 @@ docker compose up -d postgres
 pnpm db:prepare:local   # starts Postgres if needed, reconciles push drift, migrates
 # or, if Postgres is already running:
 pnpm db:reconcile:local && pnpm db:migrate:local
-```
+````
 
 Use `pnpm db:migrate:local` (not bare `pnpm db:migrate`) so Drizzle targets the local database file, not Neon dev.
-pnpm db:push:main     # schema -> production (use with care)
+pnpm db:push:main # schema -> production (use with care)
+
 ```
 
 ## Main branch database automation
@@ -89,3 +90,4 @@ If you move to another provider or a VPS:
 5. Seed if needed with `pnpm db:seed`.
 
 No Neon-specific SDK is required by the app, so the code does not need to change just because the host changes.
+```

@@ -1,9 +1,4 @@
-import {
-  cleanup,
-  fireEvent,
-  screen,
-  waitFor,
-} from '@testing-library/react'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderAdminRoute } from '#/test/render-with-search-route'
@@ -96,16 +91,15 @@ describe('admin settings platform admins', () => {
     cleanup()
   })
 
-  it.each([
-    'platform_viewer',
-    'platform_support',
-    'platform_admin',
-  ] as const)('redirects %s away from settings', async (role) => {
-    const { router } = await renderSettings({ role })
+  it.each(['platform_viewer', 'platform_support', 'platform_admin'] as const)(
+    'redirects %s away from settings',
+    async (role) => {
+      const { router } = await renderSettings({ role })
 
-    expect(router.state.location.pathname).toBe('/overview')
-    expect(generated.listPlatformAdmins).not.toHaveBeenCalled()
-  })
+      expect(router.state.location.pathname).toBe('/overview')
+      expect(generated.listPlatformAdmins).not.toHaveBeenCalled()
+    },
+  )
 
   it('lists and grants platform admin access from Settings with reason and live confirmation', async () => {
     generated.listPlatformAdmins.mockResolvedValue({

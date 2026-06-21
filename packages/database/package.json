@@ -40,9 +40,10 @@
     "db:push": "drizzle-kit push --config=drizzle.config.ts",
     "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
     "db:seed:catalog-presets": "tsx src/seed/catalog-presets-only.ts",
-    "test": "vitest run",
-    "test:unit": "vitest run",
-    "test:integration:support": "RUN_DATABASE_INTEGRATION=1 vitest run src/internal/support-ticket-queries.integration.test.ts"
+    "test": "pnpm run test:unit",
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:integration": "RUN_DATABASE_INTEGRATION=1 vitest run --config vitest.integration.config.ts",
+    "test:integration:support": "RUN_DATABASE_INTEGRATION=1 vitest run --config vitest.integration.config.ts src/internal/support-ticket-queries.integration.test.ts"
   },
   "dependencies": {
     "@repo/salon-core": "workspace:*",

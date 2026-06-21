@@ -1,12 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '#/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 
 export function Panel({
   title,
@@ -23,7 +18,9 @@ export function Panel({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          {icon ? <span className="text-muted-foreground/85">{icon}</span> : null}
+          {icon ? (
+            <span className="text-muted-foreground/85">{icon}</span>
+          ) : null}
           <CardTitle>{title}</CardTitle>
         </div>
         {action}

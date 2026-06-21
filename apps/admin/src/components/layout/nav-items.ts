@@ -45,8 +45,18 @@ export const adminNavGroups: AdminNavGroup[] = [
   {
     title: 'عملیات',
     items: [
-      { title: 'نمای کلی', href: '/overview', icon: Gauge, keywords: ['dashboard', 'metrics', 'home', 'نمای', 'کلی'] },
-      { title: 'سالن‌ها', href: '/salons', icon: Store, keywords: ['tenants', 'status', 'profiles', 'سالن'] },
+      {
+        title: 'نمای کلی',
+        href: '/overview',
+        icon: Gauge,
+        keywords: ['dashboard', 'metrics', 'home', 'نمای', 'کلی'],
+      },
+      {
+        title: 'سالن‌ها',
+        href: '/salons',
+        icon: Store,
+        keywords: ['tenants', 'status', 'profiles', 'سالن'],
+      },
       {
         title: 'تیکت‌های پشتیبانی',
         href: '/support-tickets',
@@ -71,7 +81,12 @@ export const adminNavGroups: AdminNavGroup[] = [
   {
     title: 'نظارت',
     items: [
-      { title: 'گزارش ممیزی', href: '/audit-log', icon: ScrollText, keywords: ['events', 'reasons', 'history', 'ممیزی', 'گزارش'] },
+      {
+        title: 'گزارش ممیزی',
+        href: '/audit-log',
+        icon: ScrollText,
+        keywords: ['events', 'reasons', 'history', 'ممیزی', 'گزارش'],
+      },
       {
         title: 'تنظیمات',
         href: '/settings',
@@ -87,7 +102,12 @@ export const navUserDropdownItems: Array<
   Pick<AdminNavItem, 'title' | 'href' | 'icon' | 'minRole'>
 > = [
   { title: 'گزارش ممیزی', href: '/audit-log', icon: ScrollText },
-  { title: 'تنظیمات', href: '/settings', icon: Settings, minRole: 'platform_owner' },
+  {
+    title: 'تنظیمات',
+    href: '/settings',
+    icon: Settings,
+    minRole: 'platform_owner',
+  },
 ]
 
 export const commandActions: Array<
@@ -128,10 +148,7 @@ export function filterNavGroupsByRole(
 
 export function filterNavItemsByRole<
   T extends { minRole?: PlatformRole; permission?: PlatformPermission },
->(
-  items: T[],
-  role: PlatformRole,
-): T[] {
+>(items: T[], role: PlatformRole): T[] {
   return items.filter(
     (item) =>
       (!item.minRole || hasMinPlatformRole(role, item.minRole)) &&

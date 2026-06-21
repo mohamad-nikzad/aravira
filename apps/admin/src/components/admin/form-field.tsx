@@ -1,11 +1,7 @@
 import { useId, useState } from 'react'
 
 import { Checkbox } from '#/components/ui/checkbox'
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from '#/components/ui/field'
+import { Field, FieldGroup, FieldLabel } from '#/components/ui/field'
 import { Input } from '#/components/ui/input'
 import { Textarea } from '#/components/ui/textarea'
 

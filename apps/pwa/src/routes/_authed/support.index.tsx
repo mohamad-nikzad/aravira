@@ -69,8 +69,7 @@ function SupportIndexShell() {
       tickets={data.items}
       page={page}
       hasNext={
-        data.pagination.total >
-        data.pagination.page * data.pagination.pageSize
+        data.pagination.total > data.pagination.page * data.pagination.pageSize
       }
       onPageChange={setPage}
     />

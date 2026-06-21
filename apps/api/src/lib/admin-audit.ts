@@ -1,7 +1,4 @@
-import {
-  createAdminAuditEvent,
-  type PlatformRole,
-} from '@repo/database/admin'
+import { createAdminAuditEvent, type PlatformRole } from '@repo/database/admin'
 
 type AuditContext = {
   req: { header: (name: string) => string | undefined }
