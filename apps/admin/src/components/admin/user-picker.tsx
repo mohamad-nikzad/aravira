@@ -2,9 +2,22 @@ import { getApiV1AdminUsersOptions } from '@repo/api-client/query'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useId, useRef, useState } from 'react'
 
+import { Button } from '#/components/ui/button'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from '#/components/ui/command'
+import { Field, FieldLabel } from '#/components/ui/field'
 import { Input } from '#/components/ui/input'
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from '#/components/ui/popover'
 import { text } from '#/lib/admin-format'
-import { cn } from '#/lib/utils'
 
 const SEARCH_DEBOUNCE_MS = 300
 const RESULT_PAGE_SIZE = 20
@@ -46,16 +59,14 @@ function UserPickerReadOnly({
   const labelId = useId()
 
   return (
-    <div className="block space-y-1.5 text-sm">
-      <span id={labelId} className="text-muted-foreground">
-        کاربر
-      </span>
+    <Field>
+      <FieldLabel id={labelId}>کاربر</FieldLabel>
       <div
         aria-labelledby={labelId}
         className="rounded-md border border-input bg-muted/30 px-3 py-2"
       >
         <div className="font-medium">{user.name || '-'}</div>
-        <dl className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+        <dl className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
           {user.email ? (
             <div>
               <dt className="sr-only">ایمیل</dt>
@@ -75,7 +86,7 @@ function UserPickerReadOnly({
         </dl>
       </div>
       <input type="hidden" name={name} value={user.userId} />
-    </div>
+    </Field>
   )
 }
 
@@ -86,13 +97,12 @@ function UserPickerSearch({
   name: string
   required?: boolean
 }) {
-  const listboxId = useId()
+  const searchFieldId = useId()
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const debounceRef = useRef<number | undefined>(undefined)
-  const containerRef = useRef<HTMLDivElement>(null)
 
   const usersQuery = useQuery({
     ...getApiV1AdminUsersOptions({
@@ -111,17 +121,6 @@ function UserPickerSearch({
     return () => {
       window.clearTimeout(debounceRef.current)
     }
-  }, [])
-
-  useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handlePointerDown)
-    return () => document.removeEventListener('mousedown', handlePointerDown)
   }, [])
 
   function handleSearchChange(value: string) {
@@ -151,22 +150,67 @@ function UserPickerSearch({
   const selectedUserId = selectedUser ? text(selectedUser.id) : ''
 
   return (
-    <div ref={containerRef} className="relative block space-y-1.5 text-sm">
-      <label htmlFor={`${listboxId}-search`} className="text-muted-foreground">
-        کاربر
-      </label>
-      <Input
-        id={`${listboxId}-search`}
-        value={searchInput}
-        onChange={(event) => handleSearchChange(event.target.value)}
-        onFocus={() => setIsOpen(true)}
-        placeholder="جستجو بر اساس نام، ایمیل، تلفن یا نام کاربری..."
-        autoComplete="off"
-        role="combobox"
-        aria-expanded={isOpen && debouncedSearch.length > 0}
-        aria-controls={listboxId}
-        aria-autocomplete="list"
-      />
+    <Field>
+      <FieldLabel htmlFor={searchFieldId}>کاربر</FieldLabel>
+      <Popover open={isOpen && debouncedSearch.length > 0} onOpenChange={setIsOpen}>
+        <PopoverAnchor asChild>
+          <Input
+            id={searchFieldId}
+            value={searchInput}
+            onChange={(event) => handleSearchChange(event.target.value)}
+            onFocus={() => setIsOpen(true)}
+            placeholder="جستجو بر اساس نام، ایمیل، تلفن یا نام کاربری..."
+            autoComplete="off"
+            role="combobox"
+            aria-expanded={isOpen && debouncedSearch.length > 0}
+            aria-autocomplete="list"
+          />
+        </PopoverAnchor>
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] p-0"
+          align="start"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
+          <Command shouldFilter={false}>
+            <CommandList>
+              {usersQuery.isLoading ? (
+                <div className="px-3 py-2 text-sm text-muted-foreground">
+                  در حال جستجوی کاربران...
+                </div>
+              ) : null}
+              {!usersQuery.isLoading && usersQuery.isError ? (
+                <div className="px-3 py-2 text-sm text-destructive">
+                  بارگذاری کاربران ناموفق بود.
+                </div>
+              ) : null}
+              {!usersQuery.isLoading && !usersQuery.isError && users.length === 0 ? (
+                <CommandEmpty>کاربری یافت نشد.</CommandEmpty>
+              ) : null}
+              {!usersQuery.isLoading && !usersQuery.isError && users.length > 0 ? (
+                <CommandGroup>
+                  {users.map((user) => {
+                    const id = text(user.id)
+                    return (
+                      <CommandItem
+                        key={id}
+                        value={id}
+                        onSelect={() => handleSelect(user)}
+                      >
+                        <div className="flex min-w-0 flex-col gap-0.5">
+                          <span className="font-medium">{userLabel(user)}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {userDetails(user)}
+                          </span>
+                        </div>
+                      </CommandItem>
+                    )
+                  })}
+                </CommandGroup>
+              ) : null}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
       <input
         type="hidden"
         name={name}
@@ -176,16 +220,7 @@ function UserPickerSearch({
       {selectedUser ? (
         <SelectedUserSummary user={selectedUser} onClear={handleClearSelection} />
       ) : null}
-      {isOpen && debouncedSearch.length > 0 ? (
-        <UserPickerDropdown
-          listboxId={listboxId}
-          users={users}
-          isLoading={usersQuery.isLoading}
-          isError={usersQuery.isError}
-          onSelect={handleSelect}
-        />
-      ) : null}
-    </div>
+    </Field>
   )
 }
 
@@ -203,75 +238,10 @@ function SelectedUserSummary({
           <div className="font-medium text-foreground">{userLabel(user)}</div>
           <div className="mt-0.5 truncate">{userDetails(user)}</div>
         </div>
-        <button
-          type="button"
-          className="shrink-0 text-xs font-medium text-foreground underline-offset-4 hover:underline"
-          onClick={onClear}
-        >
+        <Button type="button" variant="link" size="sm" onClick={onClear}>
           تغییر
-        </button>
+        </Button>
       </div>
-    </div>
-  )
-}
-
-function UserPickerDropdown({
-  listboxId,
-  users,
-  isLoading,
-  isError,
-  onSelect,
-}: {
-  listboxId: string
-  users: UserRow[]
-  isLoading: boolean
-  isError: boolean
-  onSelect: (user: UserRow) => void
-}) {
-  return (
-    <div
-      id={listboxId}
-      role="listbox"
-      className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-border bg-popover shadow-md"
-    >
-      {isLoading ? (
-        <div className="px-3 py-2 text-sm text-muted-foreground">
-          در حال جستجوی کاربران...
-        </div>
-      ) : null}
-      {!isLoading && isError ? (
-        <div className="px-3 py-2 text-sm text-destructive">
-          بارگذاری کاربران ناموفق بود.
-        </div>
-      ) : null}
-      {!isLoading && !isError && users.length === 0 ? (
-        <div className="px-3 py-2 text-sm text-muted-foreground">
-          کاربری یافت نشد.
-        </div>
-      ) : null}
-      {!isLoading && !isError
-        ? users.map((user) => {
-            const id = text(user.id)
-            return (
-              <button
-                key={id}
-                type="button"
-                role="option"
-                aria-selected={false}
-                className={cn(
-                  'flex w-full flex-col items-start gap-0.5 border-b border-border/60 px-3 py-2 text-start text-sm last:border-b-0',
-                  'hover:bg-accent hover:text-accent-foreground',
-                )}
-                onClick={() => onSelect(user)}
-              >
-                <span className="font-medium">{userLabel(user)}</span>
-                <span className="text-xs text-muted-foreground">
-                  {userDetails(user)}
-                </span>
-              </button>
-            )
-          })
-        : null}
     </div>
   )
 }

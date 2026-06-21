@@ -165,9 +165,8 @@ describe('admin settings platform admins', () => {
     })
 
     fireEvent.click(await screen.findByRole('option', { name: /Support User/ }))
-    fireEvent.change(screen.getByLabelText('نقش'), {
-      target: { value: 'platform_support' },
-    })
+    fireEvent.click(screen.getByRole('combobox', { name: 'نقش' }))
+    fireEvent.click(await screen.findByRole('option', { name: 'پشتیبان' }))
     fireEvent.change(screen.getByLabelText('دلیل'), {
       target: { value: 'Add support access' },
     })

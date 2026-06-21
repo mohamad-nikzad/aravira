@@ -12,6 +12,10 @@ import { Eye, LockKeyhole, Plus, ShieldCheck, UserRound } from 'lucide-react'
 
 import { AdminListTable } from '#/components/admin/admin-list-table'
 import {
+  CheckboxField,
+  TextAreaField,
+} from '#/components/admin/form-field'
+import {
   LiveConfirmationInput,
   LiveDataWarning,
   liveConfirmationFromForm,
@@ -21,11 +25,11 @@ import {
   MutationSuccess,
   useMutationSuccess,
 } from '#/components/admin/mutation-success'
+import { DetailGrid, Panel } from '#/components/admin/panel'
 import { RoleBadge } from '#/components/admin/role-badge'
-import { TextAreaField } from '#/components/admin/form-field'
+import { SelectField } from '#/components/admin/select-field'
 import { UserPicker } from '#/components/admin/user-picker'
 import { AdminPageHeader } from '#/components/layout/admin-page-header'
-import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import {
   Sheet,
@@ -35,8 +39,9 @@ import {
   SheetTitle,
 } from '#/components/ui/sheet'
 import { useAdminAuth } from '#/context/admin-auth-provider'
+import { BooleanBadge } from '#/components/admin/boolean-badge'
+import { PrimaryCell } from '#/components/admin/primary-cell'
 import { formatDate, text } from '#/lib/admin-format'
-import { cn } from '#/lib/utils'
 
 type RecordRow = Record<string, unknown>
 
@@ -64,7 +69,7 @@ function SettingsScreen() {
   const isPlatformOwner = me.role === 'platform_owner'
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <section className="grid gap-4 lg:grid-cols-2">
         <Panel title="نشست" icon={<UserRound className="h-4 w-4" />}>
           <DetailGrid
@@ -80,7 +85,7 @@ function SettingsScreen() {
           />
         </Panel>
         <Panel title="مدل دسترسی" icon={<LockKeyhole className="h-4 w-4" />}>
-          <div className="space-y-3 text-sm leading-6 text-muted-foreground">
+          <div className="flex flex-col gap-3 text-sm leading-6 text-muted-foreground">
             <p>
               دسترسی ادمین با نقش‌های پلتفرم و نشست کوکی احراز هویت کنترل
               می‌شود.
@@ -255,7 +260,7 @@ function PlatformAdminSheet({
             محافظت از آخرین مالک فعال در سمت سرور اعمال می‌شود.
           </SheetDescription>
         </SheetHeader>
-        <form className="mt-6 space-y-4" onSubmit={submit}>
+        <form className="mt-6 flex flex-col gap-4" onSubmit={submit}>
           <LiveDataWarning
             show={isLiveData}
             message="این تغییر دسترسی روی داده LIVE تولید اعمال می‌شود. برای ادامه LIVE را وارد کنید."
@@ -281,14 +286,11 @@ function PlatformAdminSheet({
             defaultValue={text(source.role) || 'platform_viewer'}
             options={roleOptions}
           />
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              name="active"
-              type="checkbox"
-              defaultChecked={source.active !== false}
-            />
-            دسترسی فعال
-          </label>
+          <CheckboxField
+            label="دسترسی فعال"
+            name="active"
+            defaultChecked={source.active !== false}
+          />
           <TextAreaField label="دلیل" name="reason" rows={3} required />
           <LiveConfirmationInput show={isLiveData} />
           <MutationError error={activeMutation.error} />
@@ -299,58 +301,6 @@ function PlatformAdminSheet({
         </form>
       </SheetContent>
     </Sheet>
-  )
-}
-
-function Panel({
-  title,
-  icon,
-  children,
-}: {
-  title: string
-  icon?: ReactNode
-  children: ReactNode
-}) {
-  return (
-    <section className="rounded-lg border border-border/80 bg-card shadow-sm">
-      <div className="flex items-center gap-2 border-b border-border/80 px-4 py-3">
-        {icon ? <span className="text-muted-foreground/85">{icon}</span> : null}
-        <h2 className="text-sm font-semibold">{title}</h2>
-      </div>
-      <div className="p-4">{children}</div>
-    </section>
-  )
-}
-
-function DetailGrid({ items }: { items: Array<[string, ReactNode]> }) {
-  return (
-    <div className="grid gap-3 rounded-lg border border-border/80 bg-card p-4 sm:grid-cols-2">
-      {items.map(([label, value]) => (
-        <div key={label} className="min-w-0">
-          <div className="text-xs text-muted-foreground">{label}</div>
-          <div className="mt-1 truncate text-sm font-medium">
-            {value || '-'}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function PrimaryCell({
-  title,
-  subtitle,
-}: {
-  title: string
-  subtitle?: string
-}) {
-  return (
-    <div className="min-w-0">
-      <div className="truncate font-medium">{title || '-'}</div>
-      {subtitle ? (
-        <div className="truncate text-xs text-muted-foreground">{subtitle}</div>
-      ) : null}
-    </div>
   )
 }
 
@@ -368,51 +318,6 @@ function RowButton({
       {icon}
       {label}
     </Button>
-  )
-}
-
-function SelectField({
-  label,
-  name,
-  defaultValue,
-  options,
-}: {
-  label: string
-  name: string
-  defaultValue: string
-  options: Array<[string, string]>
-}) {
-  return (
-    <label className={cn('block space-y-1.5 text-sm')}>
-      <span className="text-muted-foreground">{label}</span>
-      <select
-        name={name}
-        defaultValue={defaultValue}
-        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      >
-        {options.map(([value, optionLabel]) => (
-          <option key={value} value={value}>
-            {optionLabel}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-}
-
-function BooleanBadge({
-  value,
-  trueLabel = 'بله',
-  falseLabel = 'خیر',
-}: {
-  value: boolean
-  trueLabel?: string
-  falseLabel?: string
-}) {
-  return (
-    <Badge variant={value ? 'success' : 'outline'}>
-      {value ? trueLabel : falseLabel}
-    </Badge>
   )
 }
 

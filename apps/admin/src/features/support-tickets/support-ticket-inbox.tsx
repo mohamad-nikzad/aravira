@@ -1,15 +1,30 @@
 import type { AdminSupportTicketListItem } from '@repo/api-client/types'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Filter, Inbox, RotateCcw, Search } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Eye, Filter, Inbox, RotateCcw, Search } from 'lucide-react'
+import { useEffect, useId, useState } from 'react'
 
 import { ErrorPanel } from '#/components/admin/error-panel'
+import { EmptyState } from '#/components/admin/empty-state'
 import { ScreenSkeleton } from '#/components/admin/screen-skeleton'
 import { AdminPageHeader } from '#/components/layout/admin-page-header'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
+import { Field, FieldLabel } from '#/components/ui/field'
 import { Input } from '#/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#/components/ui/select'
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from '#/components/ui/toggle-group'
 import { formatDate } from '#/lib/admin-format'
 import { cn } from '#/lib/utils'
 
@@ -55,105 +70,8 @@ export function SupportTicketInbox() {
   }
 
   return (
-    <section className="space-y-4" aria-label="صندوق تیکت‌های پشتیبانی">
-      <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            پالایش صندوق
-          </div>
-          <div
-            className="flex rounded-lg bg-muted p-1"
-            aria-label="دامنه تیکت‌ها"
-          >
-            {(['unresolved', 'all'] as const).map((scope) => (
-              <Button
-                key={scope}
-                type="button"
-                size="sm"
-                variant={state.scope === scope ? 'secondary' : 'ghost'}
-                className="h-7"
-                onClick={() =>
-                  void setState({ scope, status: undefined, page: 1 })
-                }
-              >
-                {scope === 'unresolved' ? 'حل‌نشده‌ها' : 'همه تیکت‌ها'}
-              </Button>
-            ))}
-          </div>
-        </div>
-        <div className="grid gap-2 lg:grid-cols-[minmax(15rem,2fr)_repeat(3,minmax(9rem,1fr))_auto]">
-          <DebouncedInboxSearch
-            key={state.search ?? ''}
-            value={state.search ?? ''}
-            onChange={(search) =>
-              void setState(
-                { search: search || undefined, page: 1 },
-                { replace: true },
-              )
-            }
-          />
-          <label>
-            <span className="sr-only">وضعیت</span>
-            <select
-              aria-label="وضعیت"
-              value={state.status ?? ''}
-              onChange={(event) =>
-                void setState({
-                  status: (event.target.value ||
-                    undefined) as typeof state.status,
-                  scope:
-                    event.target.value === 'resolved' ? 'all' : state.scope,
-                  page: 1,
-                })
-              }
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="">همه وضعیت‌ها</option>
-              {SUPPORT_TICKET_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {supportTicketStatusLabels[status]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="sr-only">دسته‌بندی</span>
-            <select
-              aria-label="دسته‌بندی"
-              value={state.category ?? ''}
-              onChange={(event) =>
-                void setState({
-                  category: (event.target.value ||
-                    undefined) as typeof state.category,
-                  page: 1,
-                })
-              }
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="">همه دسته‌ها</option>
-              {SUPPORT_TICKET_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {supportTicketCategoryLabels[category]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Input
-            aria-label="شناسه سالن"
-            dir="ltr"
-            value={state.salon ?? ''}
-            onChange={(event) =>
-              void setState({ salon: event.target.value || undefined, page: 1 })
-            }
-            placeholder="شناسه سالن"
-          />
-          <Button type="button" variant="outline" onClick={reset}>
-            <RotateCcw className="h-4 w-4" />
-            پاک کردن
-          </Button>
-        </div>
-      </div>
+    <section className="flex flex-col gap-4" aria-label="صندوق تیکت‌های پشتیبانی">
+      <InboxFilterToolbar state={state} setState={setState} onReset={reset} />
 
       {inboxQuery.isLoading ? (
         <ScreenSkeleton label="در حال بارگذاری تیکت‌ها" />
@@ -165,23 +83,21 @@ export function SupportTicketInbox() {
         />
       ) : null}
       {inboxQuery.isSuccess && inboxQuery.data.items.length === 0 ? (
-        <div className="grid min-h-52 place-items-center rounded-xl border border-dashed border-border bg-card p-8 text-center">
-          <div>
-            <Inbox className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-            <p className="font-semibold">تیکتی در این نما نیست</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              فیلترها را تغییر دهید یا صندوق همه تیکت‌ها را ببینید.
-            </p>
-          </div>
-        </div>
+        <EmptyState
+          className="min-h-52"
+          icon={<Inbox />}
+          title="تیکتی در این نما نیست"
+          description="فیلترها را تغییر دهید یا صندوق همه تیکت‌ها را ببینید."
+        />
       ) : null}
       {inboxQuery.isSuccess && inboxQuery.data.items.length > 0 ? (
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-          <div className="hidden grid-cols-[minmax(16rem,2fr)_minmax(10rem,1fr)_8rem_9rem] gap-4 border-b border-border bg-muted/45 px-4 py-2 text-xs font-medium text-muted-foreground md:grid">
+          <div className="hidden grid-cols-[minmax(16rem,2fr)_minmax(10rem,1fr)_8rem_9rem_auto] gap-4 border-b border-border bg-muted/45 px-4 py-2 text-xs font-medium text-muted-foreground md:grid">
             <span>موضوع</span>
             <span>سالن</span>
             <span>وضعیت</span>
             <span>آخرین فعالیت</span>
+            <span className="text-end">عملیات</span>
           </div>
           <div className="divide-y divide-border">
             {inboxQuery.data.items.map((ticket) => (
@@ -234,7 +150,7 @@ function TicketRow({
   return (
     <div
       className={cn(
-        'grid gap-2 px-4 py-3 transition-colors hover:bg-muted/45 md:grid-cols-[minmax(16rem,2fr)_minmax(10rem,1fr)_8rem_9rem] md:items-center md:gap-4',
+        'grid gap-2 px-4 py-3 transition-colors hover:bg-muted/45 md:grid-cols-[minmax(16rem,2fr)_minmax(10rem,1fr)_8rem_9rem_auto] md:items-center md:gap-4',
         ticket.platformHasUnread &&
           'border-s-4 border-s-primary bg-primary/[0.035]',
       )}
@@ -291,7 +207,202 @@ function TicketRow({
       >
         {formatDate(ticket.lastActivityAt)}
       </time>
+      <div className="flex justify-end md:justify-start">
+        <Button asChild size="sm" variant="outline">
+          <Link
+            to="/support-tickets/$ticketId"
+            params={{ ticketId: ticket.id }}
+            search={search}
+          >
+            <Eye data-icon="inline-start" />
+            مشاهده جزئیات
+          </Link>
+        </Button>
+      </div>
     </div>
+  )
+}
+
+function InboxFilterToolbar({
+  state,
+  setState,
+  onReset,
+}: {
+  state: ReturnType<typeof useSupportTicketSearch>[0]
+  setState: ReturnType<typeof useSupportTicketSearch>[1]
+  onReset: () => void
+}) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-col gap-3 border-b border-border/80 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <Filter className="size-4 text-muted-foreground" />
+          پالایش صندوق
+        </CardTitle>
+        <ToggleGroup
+          type="single"
+          value={state.scope}
+          aria-label="دامنه تیکت‌ها"
+          className="w-full rounded-lg bg-muted p-1 sm:w-auto"
+          onValueChange={(scope) => {
+            if (!scope) return
+            void setState({
+              scope: scope as typeof state.scope,
+              status: undefined,
+              page: 1,
+            })
+          }}
+        >
+          <ToggleGroupItem
+            value="unresolved"
+            className="h-8 flex-1 px-3 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm sm:flex-none"
+          >
+            حل‌نشده‌ها
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="all"
+            className="h-8 flex-1 px-3 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm sm:flex-none"
+          >
+            همه تیکت‌ها
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </CardHeader>
+      <CardContent className="pt-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto] xl:items-end">
+          <DebouncedInboxSearch
+            key={state.search ?? ''}
+            value={state.search ?? ''}
+            onChange={(search) =>
+              void setState(
+                { search: search || undefined, page: 1 },
+                { replace: true },
+              )
+            }
+          />
+          <InboxFilterSelect
+            label="وضعیت"
+            emptyLabel="همه وضعیت‌ها"
+            value={state.status ?? ''}
+            onValueChange={(status) =>
+              void setState({
+                status: (status || undefined) as typeof state.status,
+                scope: status === 'resolved' ? 'all' : state.scope,
+                page: 1,
+              })
+            }
+            options={SUPPORT_TICKET_STATUSES.map((status) => [
+              status,
+              supportTicketStatusLabels[status],
+            ])}
+          />
+          <InboxFilterSelect
+            label="دسته‌بندی"
+            emptyLabel="همه دسته‌ها"
+            value={state.category ?? ''}
+            onValueChange={(category) =>
+              void setState({
+                category: (category || undefined) as typeof state.category,
+                page: 1,
+              })
+            }
+            options={SUPPORT_TICKET_CATEGORIES.map((category) => [
+              category,
+              supportTicketCategoryLabels[category],
+            ])}
+          />
+          <SalonIdFilter
+            value={state.salon ?? ''}
+            onChange={(salon) =>
+              void setState({ salon: salon || undefined, page: 1 })
+            }
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 w-full xl:w-auto"
+            onClick={onReset}
+          >
+            <RotateCcw data-icon="inline-start" />
+            پاک کردن
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+const inboxSelectEmptySentinel = '__empty__'
+
+function InboxFilterSelect({
+  label,
+  emptyLabel,
+  value,
+  onValueChange,
+  options,
+}: {
+  label: string
+  emptyLabel: string
+  value: string
+  onValueChange: (value: string) => void
+  options: Array<[string, string]>
+}) {
+  const id = useId()
+  const selectValue = value || inboxSelectEmptySentinel
+
+  return (
+    <Field className="min-w-0 gap-1.5">
+      <FieldLabel htmlFor={id} className="text-xs text-muted-foreground">
+        {label}
+      </FieldLabel>
+      <Select
+        value={selectValue}
+        onValueChange={(nextValue) =>
+          onValueChange(
+            nextValue === inboxSelectEmptySentinel ? '' : nextValue,
+          )
+        }
+      >
+        <SelectTrigger id={id} className="w-full" aria-label={label}>
+          <SelectValue placeholder={emptyLabel} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value={inboxSelectEmptySentinel}>{emptyLabel}</SelectItem>
+            {options.map(([optionValue, optionLabel]) => (
+              <SelectItem key={optionValue} value={optionValue}>
+                {optionLabel}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </Field>
+  )
+}
+
+function SalonIdFilter({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  const id = useId()
+
+  return (
+    <Field className="min-w-0 gap-1.5">
+      <FieldLabel htmlFor={id} className="text-xs text-muted-foreground">
+        شناسه سالن
+      </FieldLabel>
+      <Input
+        id={id}
+        dir="ltr"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="UUID سالن"
+        className="font-mono text-xs"
+      />
+    </Field>
   )
 }
 
@@ -302,6 +413,7 @@ function DebouncedInboxSearch({
   value: string
   onChange: (value: string) => void
 }) {
+  const id = useId()
   const [draft, setDraft] = useState(value)
 
   useEffect(() => {
@@ -313,15 +425,20 @@ function DebouncedInboxSearch({
   }, [draft, onChange, value])
 
   return (
-    <label className="relative block">
-      <span className="sr-only">جستجوی موضوع یا نام سالن</span>
-      <Search className="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      <Input
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        className="pe-9"
-        placeholder="جستجوی موضوع یا نام سالن..."
-      />
-    </label>
+    <Field className="min-w-0 gap-1.5 xl:col-span-1">
+      <FieldLabel htmlFor={id} className="text-xs text-muted-foreground">
+        جستجو
+      </FieldLabel>
+      <div className="relative">
+        <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          id={id}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          className="ps-9"
+          placeholder="موضوع یا نام سالن..."
+        />
+      </div>
+    </Field>
   )
 }

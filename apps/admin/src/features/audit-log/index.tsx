@@ -9,10 +9,13 @@ import { DataTable } from '#/components/data-table/data-table'
 import { DataTablePagination } from '#/components/data-table/data-table-pagination'
 import { DataTableToolbar } from '#/components/data-table/data-table-toolbar'
 import { ErrorPanel } from '#/components/admin/error-panel'
+import { PrimaryCell } from '#/components/admin/primary-cell'
 import { RoleBadge } from '#/components/admin/role-badge'
 import { ScreenSkeleton } from '#/components/admin/screen-skeleton'
 import { AdminPageHeader } from '#/components/layout/admin-page-header'
 import { Button } from '#/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
+import { Field, FieldLabel } from '#/components/ui/field'
 import { Input } from '#/components/ui/input'
 import { formatDate, text } from '#/lib/admin-format'
 import { normalizePageSize } from '#/lib/admin-search-schemas'
@@ -145,7 +148,7 @@ export function AuditLogScreen() {
   const pageCount = Math.max(1, Math.ceil(total / state.pageSize))
 
   return (
-    <section className="space-y-3">
+    <section className="flex flex-col gap-3">
       <DataTableToolbar
         query={state.search}
         onQueryChange={(search) => setState({ search, page: 1 })}
@@ -210,12 +213,12 @@ function AuditFilters({
   onChange: (next: Partial<AuditLogUrlState>) => void
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-3">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <Filter className="h-4 w-4 text-muted-foreground" />
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b-0 pb-0">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <Filter className="text-muted-foreground" />
           فیلترهای ممیزی
-        </div>
+        </CardTitle>
         <Button
           type="button"
           variant="ghost"
@@ -230,15 +233,16 @@ function AuditFilters({
             })
           }
         >
-          <RotateCcw className="h-4 w-4" />
+          <RotateCcw data-icon="inline-start" />
           پاک کردن فیلترها
         </Button>
-      </div>
-      <div className="grid gap-2 md:grid-cols-4">
+      </CardHeader>
+      <CardContent className="grid gap-2 md:grid-cols-4">
         {filterFields.map(([field, label]) => (
-          <label key={field} className="block space-y-1.5 text-sm">
-            <span className="text-muted-foreground">{label}</span>
+          <Field key={field}>
+            <FieldLabel htmlFor={`audit-filter-${field}`}>{label}</FieldLabel>
             <Input
+              id={`audit-filter-${field}`}
               value={state[field]}
               onChange={(event) =>
                 onChange({ [field]: event.target.value, page: 1 })
@@ -246,10 +250,10 @@ function AuditFilters({
               placeholder={label}
               dir="ltr"
             />
-          </label>
+          </Field>
         ))}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -258,24 +262,6 @@ function compactParams(params: AuditLogParams): AuditLogParams {
     Object.entries(params).filter(([, value]) => value !== ''),
   ) as AuditLogParams
 }
-
-function PrimaryCell({
-  title,
-  subtitle,
-}: {
-  title: string
-  subtitle?: string
-}) {
-  return (
-    <div className="min-w-0">
-      <div className="truncate font-medium">{title || '-'}</div>
-      {subtitle ? (
-        <div className="truncate text-xs text-muted-foreground">{subtitle}</div>
-      ) : null}
-    </div>
-  )
-}
-
 function shortId(value: unknown) {
   const id = text(value)
   if (!id) return ''

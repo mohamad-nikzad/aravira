@@ -6,7 +6,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { useEffect } from 'react'
 
 import { CommandMenu } from '#/components/command-menu'
@@ -64,21 +64,8 @@ function renderCommandMenu() {
 }
 
 describe('CommandMenu', () => {
-  beforeEach(() => {
-    vi.stubGlobal(
-      'ResizeObserver',
-      class {
-        observe() {}
-        unobserve() {}
-        disconnect() {}
-      },
-    )
-    Element.prototype.scrollIntoView = vi.fn()
-  })
-
   afterEach(() => {
     cleanup()
-    vi.unstubAllGlobals()
   })
 
   it('opens the command dialog', async () => {

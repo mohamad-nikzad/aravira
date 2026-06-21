@@ -6,6 +6,8 @@ import {
   renderAdminRoute,
 } from '#/test/render-with-search-route'
 
+import { supportTicketCategoryLabels } from './support-ticket-labels'
+
 const api = vi.hoisted(() => ({
   list: vi.fn(),
   detail: vi.fn(),
@@ -115,12 +117,14 @@ describe('admin Support Ticket inbox', () => {
 
     expect(await screen.findByText('مشکل در رزرو')).toBeTruthy()
     expect(screen.getByLabelText('خوانده‌نشده')).toBeTruthy()
+    const detailLink = screen.getByRole('link', { name: 'مشاهده جزئیات' })
+    expect(detailLink.getAttribute('href')).toContain(ticketId)
     const salonLink = screen.getByRole('link', { name: 'سالن آفتاب' })
     expect(salonLink.getAttribute('href')).toBe(`/salons/${salonId}`)
     expect(salonLink.querySelector('a')).toBeNull()
 
     fireEvent.change(
-      screen.getByPlaceholderText('جستجوی موضوع یا نام سالن...'),
+      screen.getByPlaceholderText('موضوع یا نام سالن...'),
       {
         target: { value: ' آفتاب ' },
       },
@@ -133,13 +137,17 @@ describe('admin Support Ticket inbox', () => {
       { timeout: 1_000 },
     )
 
-    fireEvent.change(screen.getByLabelText('دسته‌بندی'), {
-      target: { value: 'question' },
-    })
+    fireEvent.click(screen.getByRole('combobox', { name: 'دسته‌بندی' }))
+    fireEvent.click(
+      await screen.findByRole('option', {
+        name: supportTicketCategoryLabels.question,
+      }),
+    )
     await waitFor(() =>
       expect(locationSearch(router)).toContain('category=question'),
     )
-    fireEvent.click(screen.getByRole('button', { name: 'بعدی' }))
+    expect(await screen.findByText('مشکل در رزرو')).toBeTruthy()
+    fireEvent.click(await screen.findByRole('button', { name: 'بعدی' }))
     await waitFor(() => expect(locationSearch(router)).toContain('page=2'))
   })
 

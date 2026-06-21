@@ -1,6 +1,7 @@
 import { CircleAlert } from 'lucide-react'
 
 import { FormField } from '#/components/admin/form-field'
+import { Alert, AlertDescription } from '#/components/ui/alert'
 
 export function LiveDataWarning({
   show,
@@ -11,10 +12,10 @@ export function LiveDataWarning({
 }) {
   if (!show) return null
   return (
-    <div className="flex items-start gap-2 rounded-md border border-destructive/35 bg-destructive/10 p-3 text-sm text-destructive">
-      <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-      <p className="leading-6">{message}</p>
-    </div>
+    <Alert>
+      <CircleAlert data-icon="inline-start" />
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   )
 }
 

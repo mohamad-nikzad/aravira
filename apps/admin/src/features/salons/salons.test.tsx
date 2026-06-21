@@ -231,9 +231,8 @@ describe('salons feature', () => {
       screen.getByText(/تغییر وضعیت سالن روی داده‌های زنده تولیدی اعمال می‌شود/),
     ).toBeTruthy()
 
-    fireEvent.change(screen.getByLabelText('وضعیت'), {
-      target: { value: 'suspended' },
-    })
+    fireEvent.click(screen.getByRole('combobox', { name: 'وضعیت' }))
+    fireEvent.click(await screen.findByRole('option', { name: 'تعلیق‌شده' }))
     fireEvent.change(screen.getByLabelText('دلیل'), {
       target: { value: 'Policy review' },
     })

@@ -1,12 +1,13 @@
 import { hasPlatformPermission } from '@repo/auth/platform'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { LoaderCircle, Moon, RefreshCw, Search, Sun, TicketCheck } from 'lucide-react'
+import { Moon, RefreshCw, Search, Sun, TicketCheck } from 'lucide-react'
 
 import { Button } from '#/components/ui/button'
 import { IconButton } from '#/components/ui/icon-button'
 import { Separator } from '#/components/ui/separator'
 import { SidebarTrigger } from '#/components/ui/sidebar'
+import { Spinner } from '#/components/ui/spinner'
 import { useAdminAuth } from '#/context/admin-auth-provider'
 import { useSearch } from '#/context/search-provider'
 import { useTheme } from '#/context/theme-provider'
@@ -51,7 +52,7 @@ export function SupportTicketHeaderIndicator({
 function SupportTicketHeaderPending() {
   return (
     <IconButton label="در حال دریافت خلاصه تیکت‌های پشتیبانی" disabled>
-      <LoaderCircle className="h-4 w-4 animate-spin" />
+      <Spinner />
     </IconButton>
   )
 }

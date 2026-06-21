@@ -6,10 +6,12 @@ import { getApiV1AdminAuthMe } from '@repo/api-client/sdk'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { LogIn, ShieldAlert } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 
+import { Alert, AlertDescription } from '#/components/ui/alert'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent } from '#/components/ui/card'
+import { Field, FieldGroup, FieldLabel } from '#/components/ui/field'
 import { Input } from '#/components/ui/input'
 
 const INVALID_CREDENTIALS_MESSAGE = 'شماره تلفن یا رمز عبور نادرست است.'
@@ -32,6 +34,8 @@ async function signIn(input: { phoneNumber: string; password: string }) {
 export function AdminLoginPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const phoneFieldId = useId()
+  const passwordFieldId = useId()
   const [error, setError] = useState('')
   const loginMutation = useMutation({
     mutationFn: async (input: { phoneNumber: string; password: string }) => {
@@ -77,18 +81,37 @@ export function AdminLoginPage() {
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             برای ادامه با حساب مدیر پلتفرم وارد شوید.
           </p>
-          <form className="mt-6 space-y-4" onSubmit={submit}>
-            <label className="block space-y-1.5 text-sm">
-              <span className="text-muted-foreground">شماره تلفن</span>
-              <Input name="phoneNumber" dir="ltr" inputMode="tel" autoComplete="username" required />
-            </label>
-            <label className="block space-y-1.5 text-sm">
-              <span className="text-muted-foreground">رمز عبور</span>
-              <Input name="password" type="password" autoComplete="current-password" required />
-            </label>
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <form className="mt-6 flex flex-col gap-4" onSubmit={submit}>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor={phoneFieldId}>شماره تلفن</FieldLabel>
+                <Input
+                  id={phoneFieldId}
+                  name="phoneNumber"
+                  dir="ltr"
+                  inputMode="tel"
+                  autoComplete="username"
+                  required
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor={passwordFieldId}>رمز عبور</FieldLabel>
+                <Input
+                  id={passwordFieldId}
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                />
+              </Field>
+            </FieldGroup>
+            {error ? (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
             <Button className="w-full" type="submit" disabled={loginMutation.isPending}>
-              <LogIn className="h-4 w-4" />
+              <LogIn data-icon="inline-start" />
               ورود
             </Button>
           </form>

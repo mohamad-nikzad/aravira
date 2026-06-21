@@ -4,6 +4,8 @@ import type { ColumnDef } from '@tanstack/react-table'
 import { Eye } from 'lucide-react'
 import { useMemo } from 'react'
 
+import { BooleanBadge } from '#/components/admin/boolean-badge'
+import { PrimaryCell } from '#/components/admin/primary-cell'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { formatCurrency, formatDate, number, text } from '#/lib/admin-format'
@@ -298,42 +300,12 @@ export function truthy(value: unknown): boolean {
   return value === true || value === 'true' || value === 1
 }
 
-export function PrimaryCell({
-  title,
-  subtitle,
-}: {
-  title: string
-  subtitle?: string
-}) {
-  return (
-    <div className="min-w-0">
-      <div className="truncate font-medium">{title || '-'}</div>
-      {subtitle ? (
-        <div className="truncate text-xs text-muted-foreground">{subtitle}</div>
-      ) : null}
-    </div>
-  )
-}
+export { BooleanBadge } from '#/components/admin/boolean-badge'
+export { PrimaryCell } from '#/components/admin/primary-cell'
 
 export function StatusBadge({ status }: { status: string }) {
   if (status === 'active') return <Badge variant="success">فعال</Badge>
   if (status === 'suspended') return <Badge variant="warning">تعلیق‌شده</Badge>
   if (status === 'archived') return <Badge variant="danger">آرشیوشده</Badge>
   return <Badge>{status || 'نامشخص'}</Badge>
-}
-
-export function BooleanBadge({
-  value,
-  trueLabel = 'بله',
-  falseLabel = 'خیر',
-}: {
-  value: boolean
-  trueLabel?: string
-  falseLabel?: string
-}) {
-  return (
-    <Badge variant={value ? 'success' : 'outline'}>
-      {value ? trueLabel : falseLabel}
-    </Badge>
-  )
 }

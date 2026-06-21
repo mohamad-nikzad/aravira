@@ -7,6 +7,7 @@ import type {
 import { Plus, RefreshCw } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 
+import { SelectField } from '#/components/admin/select-field'
 import { TextAreaField } from '#/components/admin/form-field'
 import {
   LiveConfirmationInput,
@@ -76,7 +77,7 @@ export function StatusForm({
 
   return (
     <Panel title="تغییر وضعیت">
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
           <span className="text-sm text-muted-foreground">وضعیت فعلی</span>
           <StatusBadge status={current} />
@@ -98,7 +99,7 @@ export function StatusForm({
             </DialogHeader>
             <form
               aria-label="تغییر وضعیت سالن"
-              className="space-y-3"
+              className="flex flex-col gap-3"
               onSubmit={submit}
             >
               <LiveDataWarning
@@ -185,7 +186,7 @@ export function NotesPanel({
           افزودن یادداشت
         </Button>
       </form>
-      <div className="mt-4 space-y-2">
+      <div className="mt-4 flex flex-col gap-2">
         {isLoading ? <ScreenSkeleton label="در حال بارگذاری یادداشت‌ها" /> : null}
         {isError ? (
           <ErrorPanel message="بارگذاری یادداشت‌ها ناموفق بود." onRetry={onRetry} />
@@ -208,34 +209,5 @@ export function NotesPanel({
           : null}
       </div>
     </Panel>
-  )
-}
-
-function SelectField({
-  label,
-  name,
-  defaultValue,
-  options,
-}: {
-  label: string
-  name: string
-  defaultValue: string
-  options: Array<[string, string]>
-}) {
-  return (
-    <label className="block space-y-1.5 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <select
-        name={name}
-        defaultValue={defaultValue}
-        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      >
-        {options.map(([value, optionLabel]) => (
-          <option key={value} value={value}>
-            {optionLabel}
-          </option>
-        ))}
-      </select>
-    </label>
   )
 }

@@ -35,6 +35,25 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+vi.stubGlobal('ResizeObserver', ResizeObserverMock)
+Element.prototype.scrollIntoView = vi.fn()
+
+if (!HTMLElement.prototype.hasPointerCapture) {
+  HTMLElement.prototype.hasPointerCapture = () => false
+}
+if (!HTMLElement.prototype.setPointerCapture) {
+  HTMLElement.prototype.setPointerCapture = () => undefined
+}
+if (!HTMLElement.prototype.releasePointerCapture) {
+  HTMLElement.prototype.releasePointerCapture = () => undefined
+}
+
 beforeEach(() => {
   window.localStorage.clear()
   vi.clearAllMocks()

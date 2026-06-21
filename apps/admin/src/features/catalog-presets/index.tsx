@@ -17,10 +17,13 @@ import {
   Save,
   Trash2,
 } from 'lucide-react'
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useMemo, useState, useId, type FormEvent, type ReactNode } from 'react'
 
 import { AdminListTable } from '#/components/admin/admin-list-table'
+import { BooleanBadge } from '#/components/admin/boolean-badge'
+import { PrimaryCell } from '#/components/admin/primary-cell'
 import {
+  CheckboxField,
   FormField,
   TextAreaField,
 } from '#/components/admin/form-field'
@@ -37,6 +40,7 @@ import {
 import { AdminPageHeader } from '#/components/layout/admin-page-header'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -46,6 +50,7 @@ import {
   DialogTitle,
 } from '#/components/ui/dialog'
 import { Input } from '#/components/ui/input'
+import { Field, FieldLabel } from '#/components/ui/field'
 import { useAdminAuth } from '#/context/admin-auth-provider'
 import { number, text } from '#/lib/admin-format'
 import { cn } from '#/lib/utils'
@@ -295,7 +300,7 @@ function CatalogPresetForm({
   }
 
   return (
-    <form className="space-y-5" onSubmit={submit}>
+    <form className="flex flex-col gap-5" onSubmit={submit}>
       <LiveDataWarning
         show={isLiveData}
         message="این تغییر روی داده LIVE تولید اعمال می‌شود. قبل از ذخیره، الگوی کاتالوگ و ساختار دسته، خانواده و نسخه سرویس را بررسی کنید."
@@ -319,15 +324,11 @@ function CatalogPresetForm({
           type="number"
           defaultValue={String(number(source.sortOrder))}
         />
-        <label className="flex items-end gap-2 pb-2 text-sm">
-          <input
-            name="isActive"
-            type="checkbox"
-            defaultChecked={source.isActive !== false}
-            className="h-4 w-4 accent-foreground"
-          />
-          فعال
-        </label>
+        <CheckboxField
+          label="فعال"
+          name="isActive"
+          defaultChecked={source.isActive !== false}
+        />
       </section>
       <TextAreaField
         label="توضیحات"
@@ -371,12 +372,12 @@ function TreeEditor({
   }
 
   return (
-    <section className="space-y-3 rounded-lg border border-border/80 bg-background/40 p-3">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <Card>
+      <CardHeader className="flex flex-col gap-3 border-b-0 pb-0 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 items-center gap-2">
-          <FolderTree className="h-4 w-4 text-muted-foreground" />
+          <FolderTree className="text-muted-foreground" />
           <div>
-            <h2 className="text-sm font-semibold">درخت قالب سرویس</h2>
+            <CardTitle className="text-sm">درخت قالب سرویس</CardTitle>
             <p className="text-xs text-muted-foreground">
               دسته {'->'} خانواده {'->'} نسخه سرویس
             </p>
@@ -391,8 +392,8 @@ function TreeEditor({
           <Plus className="h-4 w-4" />
           دسته
         </Button>
-      </div>
-      <div className="space-y-3">
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
         {tree.map((category, categoryIndex) => (
           <CategoryEditor
             key={categoryIndex}
@@ -402,8 +403,8 @@ function TreeEditor({
             onRemove={() => removeCategory(categoryIndex)}
           />
         ))}
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -430,7 +431,8 @@ function CategoryEditor({
   }
 
   return (
-    <div className="space-y-3 rounded-md border border-border bg-card p-3">
+    <Card className="bg-background/40">
+      <CardContent className="flex flex-col gap-3 p-3">
       <div className="grid gap-2 md:grid-cols-[1fr_auto]">
         <LabeledInput
           label="دسته"
@@ -452,7 +454,7 @@ function CategoryEditor({
         onConfirm={onRemove}
         onOpenChange={setConfirmRemove}
       />
-      <div className="space-y-3 ps-0 md:ps-4">
+      <div className="flex flex-col gap-3 ps-0 md:ps-4">
         {category.families.map((family, familyIndex) => (
           <FamilyEditor
             key={familyIndex}
@@ -484,7 +486,8 @@ function CategoryEditor({
           خانواده
         </Button>
       </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -511,7 +514,8 @@ function FamilyEditor({
   }
 
   return (
-    <div className="space-y-3 rounded-md border border-border/80 bg-background/45 p-3">
+    <Card className="bg-background/45">
+      <CardContent className="flex flex-col gap-3 p-3">
       <div className="grid gap-2 md:grid-cols-[1fr_auto]">
         <LabeledInput
           label="خانواده"
@@ -533,7 +537,7 @@ function FamilyEditor({
         onConfirm={onRemove}
         onOpenChange={setConfirmRemove}
       />
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         {family.variants.map((variant, variantIndex) => (
           <VariantEditor
             key={variantIndex}
@@ -565,7 +569,8 @@ function FamilyEditor({
           نسخه سرویس
         </Button>
       </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -701,39 +706,6 @@ function TreeSummary({ tree }: { tree: unknown }) {
   )
 }
 
-function PrimaryCell({
-  title,
-  subtitle,
-}: {
-  title: string
-  subtitle?: string
-}) {
-  return (
-    <div className="min-w-0">
-      <div className="truncate font-medium">{title || '-'}</div>
-      {subtitle ? (
-        <div className="truncate text-xs text-muted-foreground">{subtitle}</div>
-      ) : null}
-    </div>
-  )
-}
-
-function BooleanBadge({
-  value,
-  trueLabel,
-  falseLabel,
-}: {
-  value: boolean
-  trueLabel: string
-  falseLabel: string
-}) {
-  return value ? (
-    <Badge variant="success">{trueLabel}</Badge>
-  ) : (
-    <Badge variant="outline">{falseLabel}</Badge>
-  )
-}
-
 function LabeledInput({
   label,
   value,
@@ -747,16 +719,21 @@ function LabeledInput({
   required?: boolean
   onChange: (value: string) => void
 }) {
+  const id = useId()
+
   return (
-    <label className="block space-y-1 text-xs text-muted-foreground">
-      <span>{label}</span>
+    <Field>
+      <FieldLabel htmlFor={id} className="text-xs text-muted-foreground">
+        {label}
+      </FieldLabel>
       <Input
+        id={id}
         type={type}
         value={value}
         required={required}
         onChange={(event) => onChange(event.currentTarget.value)}
       />
-    </label>
+    </Field>
   )
 }
 

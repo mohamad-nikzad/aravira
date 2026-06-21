@@ -2,6 +2,15 @@ import type { PaginationState } from '@tanstack/react-table'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { Button } from '#/components/ui/button'
+import { Field, FieldLabel } from '#/components/ui/field'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#/components/ui/select'
 import {
   PAGE_SIZE_OPTIONS,
   type PageSizeOption,
@@ -42,23 +51,31 @@ export function DataTablePagination({
           </div>
         )}
         {onPageSizeChange ? (
-          <label className="flex items-center gap-2">
-            <span>تعداد در هر صفحه</span>
-            <select
-              value={pagination.pageSize}
-              onChange={(event) =>
-                onPageSizeChange(Number(event.target.value) as PageSizeOption)
+          <Field orientation="horizontal" className="items-center">
+            <FieldLabel>تعداد در هر صفحه</FieldLabel>
+            <Select
+              value={String(pagination.pageSize)}
+              onValueChange={(value) =>
+                onPageSizeChange(Number(value) as PageSizeOption)
               }
-              aria-label="تعداد در هر صفحه"
-              className="h-8 rounded-md border border-input bg-background px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </label>
+              <SelectTrigger
+                className="h-8 w-20"
+                aria-label="تعداد در هر صفحه"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
         ) : null}
       </div>
       <div className="flex items-center gap-2">
@@ -68,7 +85,7 @@ export function DataTablePagination({
           disabled={pagination.pageIndex <= 0}
           onClick={() => onPaginationChange({ ...pagination, pageIndex: pagination.pageIndex - 1 })}
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight data-icon="inline-start" />
           قبلی
         </Button>
         <Button
@@ -78,7 +95,7 @@ export function DataTablePagination({
           onClick={() => onPaginationChange({ ...pagination, pageIndex: pagination.pageIndex + 1 })}
         >
           بعدی
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft data-icon="inline-end" />
         </Button>
       </div>
     </div>

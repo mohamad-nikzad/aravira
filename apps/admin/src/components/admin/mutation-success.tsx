@@ -1,4 +1,7 @@
+import { CircleCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
+
+import { Alert, AlertDescription } from '#/components/ui/alert'
 
 export function useMutationSuccess() {
   const [message, setMessage] = useState<string | null>(null)
@@ -19,8 +22,9 @@ export function useMutationSuccess() {
 export function MutationSuccess({ message }: { message: string | null }) {
   if (!message) return null
   return (
-    <p className="text-sm text-success" role="status">
-      {message}
-    </p>
+    <Alert className="border-success/50 text-success [&>svg]:text-success">
+      <CircleCheck data-icon="inline-start" />
+      <AlertDescription role="status">{message}</AlertDescription>
+    </Alert>
   )
 }

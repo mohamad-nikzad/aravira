@@ -6,6 +6,7 @@ import ReactDOM from 'react-dom/client'
 import { DirectionProvider } from '#/context/direction-provider'
 import { SearchProvider } from '#/context/search-provider'
 import { ThemeProvider } from '#/context/theme-provider'
+import { Toaster } from '#/components/ui/sonner'
 import { queryClient } from '#/lib/query-client'
 import { getRouter } from '#/router'
 
@@ -22,6 +23,7 @@ if (!rootElement.innerHTML) {
         <ThemeProvider>
           <SearchProvider>
             <RouterProvider router={router} />
+            <Toaster richColors position="top-center" />
           </SearchProvider>
         </ThemeProvider>
       </DirectionProvider>

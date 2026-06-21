@@ -10,15 +10,18 @@ import { Link, useParams, useSearch } from '@tanstack/react-router'
 import {
   ArrowRight,
   CheckCircle2,
+  CircleAlert,
   LockKeyhole,
   MessageSquareText,
   Send,
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react'
 
 import { ErrorPanel } from '#/components/admin/error-panel'
+import { MutationError } from '#/components/admin/mutation-error'
 import { ScreenSkeleton } from '#/components/admin/screen-skeleton'
 import { AdminPageHeader } from '#/components/layout/admin-page-header'
+import { Alert, AlertDescription } from '#/components/ui/alert'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import {
@@ -30,6 +33,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#/components/ui/dialog'
+import { Field, FieldLabel } from '#/components/ui/field'
+import { Textarea } from '#/components/ui/textarea'
 import { formatDate } from '#/lib/admin-format'
 import { cn } from '#/lib/utils'
 
@@ -144,6 +149,7 @@ export function SupportTicketDetail({
   canResolve: boolean
   inboxSearch?: Parameters<typeof compactSupportTicketSearch>[0]
 }) {
+  const replyFieldId = useId()
   const [resolveOpen, setResolveOpen] = useState(false)
   const [body, setBody] = useState('')
   const [resultingStatus, setResultingStatus] =
@@ -225,9 +231,12 @@ export function SupportTicketDetail({
             ))}
           </ol>
           {detail.truncated ? (
-            <p className="border-t border-warning/30 bg-warning/10 px-4 py-2 text-xs text-warning">
-              بخشی از پیام‌های قدیمی‌تر در این نما نمایش داده نشده است.
-            </p>
+            <Alert className="rounded-none border-x-0 border-b-0 border-warning/30 bg-warning/10 text-warning [&>svg]:text-warning">
+              <CircleAlert data-icon="inline-start" />
+              <AlertDescription className="text-xs">
+                بخشی از پیام‌های قدیمی‌تر در این نما نمایش داده نشده است.
+              </AlertDescription>
+            </Alert>
           ) : null}
           {canReply ? (
             <form
@@ -243,28 +252,33 @@ export function SupportTicketDetail({
                 </span>
                 <span dir="ltr">{currentAdmin.id}</span>
               </div>
-              <label className="block">
-                <span className="sr-only">متن پاسخ</span>
-                <textarea
+              <Field>
+                <FieldLabel htmlFor={replyFieldId} className="sr-only">
+                  متن پاسخ
+                </FieldLabel>
+                <Textarea
+                  id={replyFieldId}
                   aria-label="متن پاسخ"
                   value={body}
                   maxLength={4000}
                   rows={5}
                   onChange={(event) => setBody(event.target.value)}
                   placeholder="پاسخ پشتیبانی را بنویسید..."
-                  className="w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm leading-7 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring"
                 />
-              </label>
+              </Field>
               {ticket.category === 'feature_request' ? (
-                <p className="mt-2 rounded-md border border-warning/25 bg-warning/10 px-3 py-2 text-xs leading-6 text-warning">
-                  حل این گفت‌وگو به معنی پذیرش، زمان‌بندی یا تحویل این پیشنهاد
-                  قابلیت نیست.
-                </p>
+                <Alert className="mt-2 border-warning/25 bg-warning/10 text-warning [&>svg]:text-warning">
+                  <CircleAlert data-icon="inline-start" />
+                  <AlertDescription className="text-xs leading-6">
+                    حل این گفت‌وگو به معنی پذیرش، زمان‌بندی یا تحویل این پیشنهاد
+                    قابلیت نیست.
+                  </AlertDescription>
+                </Alert>
               ) : null}
               {replyMutation.isError ? (
-                <p role="alert" className="mt-2 text-sm text-destructive">
-                  ارسال پاسخ ناموفق بود. دوباره تلاش کنید.
-                </p>
+                <div className="mt-2">
+                  <MutationError error={replyMutation.error} />
+                </div>
               ) : null}
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button
@@ -349,9 +363,7 @@ export function SupportTicketDetail({
             </DialogDescription>
           </DialogHeader>
           {resolveMutation.isError ? (
-            <p role="alert" className="text-sm text-destructive">
-              حل تیکت ناموفق بود. دوباره تلاش کنید.
-            </p>
+            <MutationError error={resolveMutation.error} />
           ) : null}
           <DialogFooter>
             <DialogClose asChild>

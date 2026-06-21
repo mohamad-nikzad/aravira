@@ -1,6 +1,13 @@
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '#/components/ui/card'
+
 export function Panel({
   title,
   icon,
@@ -13,16 +20,16 @@ export function Panel({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-lg border border-border/80 bg-card shadow-sm">
-      <div className="flex items-center justify-between gap-2 border-b border-border/80 px-4 py-3">
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {icon ? <span className="text-muted-foreground/85">{icon}</span> : null}
-          <h2 className="text-sm font-semibold">{title}</h2>
+          <CardTitle>{title}</CardTitle>
         </div>
         {action}
-      </div>
-      <div className="p-4">{children}</div>
-    </section>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
   )
 }
 
@@ -54,7 +61,7 @@ export function CompactRows({
   if (rows.length === 0)
     return <p className="text-sm text-muted-foreground">{empty}</p>
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-2">
       {rows.map((row, index) => {
         const content = (
           <div className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-background/35 px-3 py-2.5">
