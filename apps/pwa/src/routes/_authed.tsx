@@ -8,6 +8,11 @@ import {
 import { authQueryKey } from '#/lib/auth'
 import type { AuthSession } from '#/lib/auth'
 import { BottomNav } from '#/components/bottom-nav'
+import { cn } from '@repo/ui/utils'
+
+function isSupportTicketDetail(pathname: string) {
+  return pathname.startsWith('/support/') && pathname !== '/support/new'
+}
 
 export const Route = createFileRoute('/_authed')({
   beforeLoad: async ({ context, location }) => {
@@ -40,14 +45,21 @@ export const Route = createFileRoute('/_authed')({
 
 function AuthedLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const hideChrome = pathname.startsWith('/onboarding')
+  const hideBottomNav =
+    pathname.startsWith('/onboarding') || isSupportTicketDetail(pathname)
+  const fullHeightMain = isSupportTicketDetail(pathname)
 
   return (
     <div className="flex h-dvh flex-col bg-background">
-      <main className="flex-1 overflow-auto">
+      <main
+        className={cn(
+          'flex-1',
+          fullHeightMain ? 'min-h-0 overflow-hidden' : 'overflow-auto',
+        )}
+      >
         <Outlet />
       </main>
-      {!hideChrome && <BottomNav />}
+      {!hideBottomNav && <BottomNav />}
     </div>
   )
 }
