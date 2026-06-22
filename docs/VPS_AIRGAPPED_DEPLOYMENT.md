@@ -162,7 +162,11 @@ Release process target:
 
 For PWA releases, set `VITE_PWA_ASSET_VERSION` from `SALUNA_PWA_VERSION` or
 `SALUNA_PWA_IMAGE_TAG`. Do not leave it tied to a global date release once
-per-app versions are adopted.
+per-app versions are adopted. Any icon change must ship with a new PWA version
+or image tag so browsers fetch the versioned manifest and icon URLs instead of
+their year-long cached copies. Some platforms snapshot the home-screen icon at
+install time, so existing users may still need to remove and reinstall the PWA
+to see an updated icon.
 
 ## Better Options
 

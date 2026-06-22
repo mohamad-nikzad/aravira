@@ -1,7 +1,7 @@
 ---
 id: BL-0029
 title: Version PWA install icons and manifest asset URLs
-status: inbox
+status: done
 type: bug
 priority: medium
 size: small
@@ -32,15 +32,15 @@ icon and manifest URLs in `index.html` and `manifest.webmanifest`, and ensure
 
 ## Acceptance Criteria
 
-- [ ] `index.html` icon, favicon, and `apple-touch-icon` links include the PWA asset
+- [x] `index.html` icon, favicon, and `apple-touch-icon` links include the PWA asset
       version query param (or use versioned filenames generated at build time).
-- [ ] Every `icons` entry in `manifest.webmanifest` uses the same versioning strategy.
-- [ ] Shortcut icons in the manifest are versioned.
-- [ ] SW precache covers the same icon URLs the manifest and HTML expose (no drift
+- [x] Every `icons` entry in `manifest.webmanifest` uses the same versioning strategy.
+- [x] Shortcut icons in the manifest are versioned.
+- [x] SW precache covers the same icon URLs the manifest and HTML expose (no drift
       between versioned and unversioned paths).
-- [ ] Deploy docs note that installed users may still need to reinstall for home screen
+- [x] Deploy docs note that installed users may still need to reinstall for home screen
       icon updates on some platforms, even after this fix.
-- [ ] After bumping `VITE_PWA_ASSET_VERSION` and deploying, a fresh browser session
+- [x] After bumping `VITE_PWA_ASSET_VERSION` and deploying, a fresh browser session
       fetches updated icon assets instead of serving year-long cached copies.
 
 ## Notes

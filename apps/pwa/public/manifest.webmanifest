@@ -17,53 +17,53 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/icons/icon-72x72.png",
+      "src": "/icons/icon-72x72.png?v=__PWA_ASSET_VERSION__",
       "sizes": "72x72",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-96x96.png",
+      "src": "/icons/icon-96x96.png?v=__PWA_ASSET_VERSION__",
       "sizes": "96x96",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-128x128.png",
+      "src": "/icons/icon-128x128.png?v=__PWA_ASSET_VERSION__",
       "sizes": "128x128",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-144x144.png",
+      "src": "/icons/icon-144x144.png?v=__PWA_ASSET_VERSION__",
       "sizes": "144x144",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-152x152.png",
+      "src": "/icons/icon-152x152.png?v=__PWA_ASSET_VERSION__",
       "sizes": "152x152",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "/icons/icon-192x192.png?v=__PWA_ASSET_VERSION__",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-384x384.png",
+      "src": "/icons/icon-384x384.png?v=__PWA_ASSET_VERSION__",
       "sizes": "384x384",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "/icons/icon-512x512.png?v=__PWA_ASSET_VERSION__",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-maskable-192x192.png",
+      "src": "/icons/icon-maskable-192x192.png?v=__PWA_ASSET_VERSION__",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icons/icon-maskable-512x512.png",
+      "src": "/icons/icon-maskable-512x512.png?v=__PWA_ASSET_VERSION__",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -92,7 +92,7 @@
       "url": "/calendar",
       "icons": [
         {
-          "src": "/icons/icon-96x96.png",
+          "src": "/icons/icon-96x96.png?v=__PWA_ASSET_VERSION__",
           "sizes": "96x96"
         }
       ]
@@ -103,7 +103,7 @@
       "url": "/clients",
       "icons": [
         {
-          "src": "/icons/icon-96x96.png",
+          "src": "/icons/icon-96x96.png?v=__PWA_ASSET_VERSION__",
           "sizes": "96x96"
         }
       ]
@@ -114,7 +114,7 @@
       "url": "/today",
       "icons": [
         {
-          "src": "/icons/icon-96x96.png",
+          "src": "/icons/icon-96x96.png?v=__PWA_ASSET_VERSION__",
           "sizes": "96x96"
         }
       ]

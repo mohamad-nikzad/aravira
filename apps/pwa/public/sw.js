@@ -1,6 +1,6 @@
 const PWA_ASSET_VERSION =
-  new URL(self.location.href).searchParams.get('v') || '2026-05-26-v1'
-const SW_VERSION = `2026-05-26-v1-${PWA_ASSET_VERSION}`
+  new URL(self.location.href).searchParams.get('v') || '2026-06-22-saluna-v2'
+const SW_VERSION = `2026-06-22-v2-${PWA_ASSET_VERSION}`
 const STATIC_CACHE_NAME = `aravira-static-${SW_VERSION}`
 const NAVIGATION_CACHE_NAME = `aravira-pages-${SW_VERSION}`
 const MEDIA_CACHE_NAME = `aravira-media-${SW_VERSION}`
@@ -20,8 +20,16 @@ function withAssetVersion(path) {
 const PRECACHE_ASSETS = [
   withAssetVersion('/manifest.webmanifest'),
   withAssetVersion('/favicon.ico'),
+  withAssetVersion('/favicon-16x16.png'),
+  withAssetVersion('/favicon-32x32.png'),
   withAssetVersion('/apple-touch-icon.png'),
+  withAssetVersion('/icons/icon-72x72.png'),
+  withAssetVersion('/icons/icon-96x96.png'),
+  withAssetVersion('/icons/icon-128x128.png'),
+  withAssetVersion('/icons/icon-144x144.png'),
+  withAssetVersion('/icons/icon-152x152.png'),
   withAssetVersion('/icons/icon-192x192.png'),
+  withAssetVersion('/icons/icon-384x384.png'),
   withAssetVersion('/icons/icon-512x512.png'),
   withAssetVersion('/icons/icon-maskable-192x192.png'),
   withAssetVersion('/icons/icon-maskable-512x512.png'),
