@@ -1,6 +1,6 @@
 # Backlog Index
 
-Last organized: 2026-06-22 (BL-0015 moved to done)
+Last organized: 2026-06-23 (BL-0031–BL-0040 added to inbox)
 
 ## Now
 
@@ -17,6 +17,16 @@ No active backlog items.
 
 ## Inbox
 
+- [BL-0031 Assisted Salon Setup and handoff](inbox/BL-0031-assisted-salon-setup-and-handoff.md)
+- [BL-0032 Create and recognize a Setup Salon](inbox/BL-0032-create-and-recognize-setup-salon.md)
+- [BL-0033 Configure Setup Salon hours and Presence](inbox/BL-0033-configure-setup-salon-hours-and-presence.md)
+- [BL-0034 Configure the Setup Salon service catalog](inbox/BL-0034-configure-setup-salon-service-catalog.md)
+- [BL-0035 Create and claim unclaimed Staff Profiles](inbox/BL-0035-create-and-claim-unclaimed-staff-profiles.md)
+- [BL-0036 Transfer verified staff access between salons](inbox/BL-0036-transfer-verified-staff-access-between-salons.md)
+- [BL-0037 Add and import Setup Salon Clients](inbox/BL-0037-add-and-import-setup-salon-clients.md)
+- [BL-0038 Hand a Setup Salon to a new owner](inbox/BL-0038-hand-off-setup-salon-to-new-owner.md)
+- [BL-0039 Harden Salon Handoff for existing identities and retries](inbox/BL-0039-harden-salon-handoff-existing-identities-and-retries.md)
+- [BL-0040 Add audited Platform Owner Override](inbox/BL-0040-add-audited-platform-owner-override.md)
 - [BL-0011 Campaign support](inbox/BL-0011-campaign-support.md)
 - [BL-0012 Native app after PWA V1](inbox/BL-0012-native-app-after-pwa-v1.md)
 - [BL-0013 Factor generation for appointments](inbox/BL-0013-factor-generation-for-appointments.md)

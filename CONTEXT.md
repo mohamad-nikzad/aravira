@@ -76,9 +76,29 @@ An entry from the manager's phone address book. May become a `Client` after impo
 _Avoid_: client, مخاطب (use only in UI copy for the phone picker, not in domain language)
 
 **Client Import**:
-Bulk or single flow that turns `Device Contact` data (VCF file or Contact Picker) into new `Client` rows, with dedup against existing salon phones.
+Bulk or single flow that turns owner-supplied VCF or CSV data, or `Device Contact` data from Contact Picker, into new `Client` rows, with dedup against existing salon phones. Assisted imports begin with a duplicate/error preview and create records only after explicit confirmation.
 
 ### Salon
+
+**Assisted Salon Setup**:
+A path in which authorized platform staff creates and prepares a `Setup Salon`, then hands it to the verified `Salon Owner`.
+_Avoid_: admin onboarding, impersonation
+
+**Setup Salon**:
+A non-public salon created by authorized platform staff for preparation before it has a verified owner. It records the intended owner's phone, editable until handoff, while platform staff prepares its hours, catalog, Staff Profiles, Salon Presence, and Clients.
+_Avoid_: draft workspace, Setup Case
+
+**Salon Handoff**:
+The one-time transfer of a `Setup Salon` to its intended `Salon Owner`. The owner verifies their phone and establishes login access; the salon becomes active and ordinary platform setup access ends without a separate review step.
+_Avoid_: owner approval, setup review, Setup Handoff
+
+**Salon Owner**:
+The person who verifies their own identity and assumes ownership through self-service signup or `Salon Handoff`. Platform staff may prepare a salon but never assume this identity.
+_Avoid_: account owner, admin-created owner
+
+**Platform Owner Override**:
+A reasoned action by a `Platform Owner` on an active salon after `Salon Handoff`. It is always attributable and excludes authentication secrets, session takeover, and acting as another user.
+_Avoid_: unrestricted access, super admin, impersonation, break-glass login
 
 **Salon Working Days**:
 Salon-level open-day mask — which weekdays the salon is open. DB: `business_settings.working_days`. Coarse gate above per-staff `staff_schedules`.
@@ -86,6 +106,20 @@ Salon-level open-day mask — which weekdays the salon is open. DB: `business_se
 **Salon Presence**:
 Public contact surface: address, map links, and social links. DB: typed nullable columns on `salon_profile`. Persian UI: `حضور آنلاین`.
 _Avoid_: contact info, social block
+
+### Staff
+
+**Staff Profile**:
+A salon-owned record for a person who provides services, including their display identity, schedule, and capabilities. A Staff Profile may exist without login access.
+_Avoid_: staff account, employee user
+
+**Staff Account Claim**:
+The act by which a staff member verifies their own identity and connects their login access to an existing `Staff Profile`. Neither a salon manager nor platform staff may claim an account on the staff member's behalf.
+_Avoid_: staff activation, admin-created login
+
+**Staff Access Transfer**:
+A staff member's verified move of their login access from one salon's `Staff Profile` to another's. The previous salon retains its Staff Profile and operational history without the person's login access; one staff identity may be claimed by only one salon at a time.
+_Avoid_: staff migration, profile transfer, admin reassignment
 
 ### Product Support
 
