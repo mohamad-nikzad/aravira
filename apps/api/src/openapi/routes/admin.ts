@@ -33,6 +33,9 @@ import {
   adminSetupSalonCreateBodySchema,
   adminSetupSalonResponseSchema,
   adminSetupSalonConfigurationResponseSchema,
+  adminSetupStaffCreateBodySchema,
+  adminSetupStaffCreateResponseSchema,
+  adminSetupStaffListResponseSchema,
   adminSetupHoursPatchBodySchema,
   adminSetupHoursResponseSchema,
   adminSetupPresencePatchBodySchema,
@@ -333,6 +336,57 @@ export const updateAdminSetupSalonPresenceRoute = createRoute({
       description: 'Updated Setup Salon presence',
       content: {
         'application/json': { schema: adminSetupPresenceResponseSchema },
+      },
+    },
+    400: validationResponse,
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+    404: notFoundResponse,
+    409: conflictResponse,
+  },
+})
+
+export const getAdminSetupStaffRoute = createRoute({
+  method: 'get',
+  path: '/salons/{id}/setup/staff',
+  tags: ['Admin'],
+  summary: 'List prepared Staff Profiles',
+  security: adminSecurity,
+  request: { params: idParamSchema },
+  responses: {
+    200: {
+      description: 'Prepared Staff Profiles',
+      content: {
+        'application/json': { schema: adminSetupStaffListResponseSchema },
+      },
+    },
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+    404: notFoundResponse,
+    409: conflictResponse,
+  },
+})
+
+export const createAdminSetupStaffRoute = createRoute({
+  method: 'post',
+  path: '/salons/{id}/setup/staff',
+  tags: ['Admin'],
+  summary: 'Create an unclaimed Staff Profile',
+  security: adminSecurity,
+  request: {
+    params: idParamSchema,
+    body: {
+      required: true,
+      content: {
+        'application/json': { schema: adminSetupStaffCreateBodySchema },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Unclaimed Staff Profile created',
+      content: {
+        'application/json': { schema: adminSetupStaffCreateResponseSchema },
       },
     },
     400: validationResponse,

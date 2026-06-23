@@ -55,6 +55,11 @@ import {
   updateBusinessSettings,
 } from '@repo/database/settings'
 import {
+  createSetupStaffProfile,
+  listSetupStaffProfiles,
+  validateActiveServiceIds,
+} from '@repo/database/staff'
+import {
   getSalonPresence,
   updateSalonPresence,
 } from '@repo/database/salon-profile'
@@ -72,6 +77,7 @@ import {
 } from '@repo/salon-core/forms/service'
 import type { Service } from '@repo/salon-core/types'
 import { phoneSchema } from '@repo/salon-core/forms/primitives'
+import { normalizeCalendarColorId } from '@repo/salon-core/calendar-colors'
 import { businessSettingsSchema } from '@repo/salon-core/forms/settings'
 import { presencePatchSchema } from '@repo/salon-core/forms/presence'
 import type { AppEnv } from '../factory'
@@ -121,6 +127,22 @@ const setupMutationMetaSchema = z.object({
 
 const setupHoursBodySchema = businessSettingsSchema.and(setupMutationMetaSchema)
 const setupPresenceBodySchema = presencePatchSchema.and(setupMutationMetaSchema)
+const setupStaffScheduleSchema = z.object({
+  dayOfWeek: z.number().int().min(0).max(6),
+  active: z.boolean(),
+  workingStart: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  workingEnd: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+})
+const setupStaffCreateBodySchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  phone: phoneSchema,
+  color: z.string().trim().min(1).max(40),
+  active: z.boolean().default(true),
+  serviceIds: z.array(z.string().uuid()).nullable(),
+  schedule: z.array(setupStaffScheduleSchema).max(7),
+  reason: reasonSchema,
+  liveConfirmation: z.string().trim().optional(),
+})
 const setupCatalogPresetBodySchema = applyCatalogPresetBodySchema.and(
   setupMutationMetaSchema,
 )
@@ -405,6 +427,87 @@ export const adminRoute = new Hono<AppEnv>()
         request: auditMeta(c),
       })
       return ok(c, { presence })
+    },
+  )
+  .get(
+    '/salons/:id/setup/staff',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      return ok(c, { staff: await listSetupStaffProfiles(id) })
+    },
+  )
+  .post(
+    '/salons/:id/setup/staff',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('json', setupStaffCreateBodySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
+      if (liveError) return liveError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      if (
+        new Set(body.schedule.map((row) => row.dayOfWeek)).size !==
+        body.schedule.length
+      ) {
+        return error(c, 'برای هر روز فقط یک برنامه ثبت کنید', 400)
+      }
+      if (
+        body.schedule.some(
+          (row) => row.active && row.workingStart >= row.workingEnd,
+        )
+      ) {
+        return error(c, 'ساعت پایان باید بعد از ساعت شروع باشد', 400)
+      }
+      if (
+        body.serviceIds &&
+        !(await validateActiveServiceIds(body.serviceIds, id))
+      ) {
+        return error(c, 'یکی از خدمات انتخاب‌شده معتبر یا فعال نیست', 400)
+      }
+      try {
+        const profile = await createSetupStaffProfile({
+          salonId: id,
+          name: body.name,
+          phone: body.phone,
+          color: normalizeCalendarColorId(body.color),
+          active: body.active,
+          schedule: body.schedule,
+          serviceIds: body.serviceIds,
+        })
+        await writeAudit({
+          actorUserId: c.var.platformAdmin.userId,
+          actorPlatformRole: c.var.platformAdmin.role,
+          action: 'salon.setup.staff_profile.create',
+          targetType: 'staff_profile',
+          targetId: profile.id,
+          salonId: id,
+          reason: body.reason,
+          metadata: {
+            phone: '[REDACTED]',
+            serviceCount: body.serviceIds?.length ?? 0,
+            scheduleDays: body.schedule.length,
+          },
+          request: auditMeta(c),
+        })
+        return created(c, { profile })
+      } catch (err) {
+        const message = err instanceof Error ? err.message.toLowerCase() : ''
+        if (message.includes('unique') || message.includes('duplicate')) {
+          return error(
+            c,
+            'برای این شماره قبلاً پروفایل پرسنل ساخته شده است',
+            409,
+          )
+        }
+        throw err
+      }
     },
   )
   .get(

@@ -15,6 +15,8 @@ const generated = vi.hoisted(() => ({
   getServices: vi.fn(),
   getSetup: vi.fn(),
   getSetupCatalog: vi.fn(),
+  getSetupStaff: vi.fn(),
+  mutateSetupStaff: vi.fn(),
   mutateSetupCatalog: vi.fn(),
   patchSetupHours: vi.fn(),
   patchSetupPresence: vi.fn(),
@@ -124,6 +126,13 @@ vi.mock('@repo/api-client/query', () => ({
   getApiV1AdminSalonsByIdSetupCatalogQueryKey: (options: unknown) => [
     { _id: 'salon-setup-catalog', options },
   ],
+  getApiV1AdminSalonsByIdSetupStaffOptions: (options: unknown) => ({
+    queryKey: ['salon-setup-staff', options],
+    queryFn: () => generated.getSetupStaff(options),
+  }),
+  getApiV1AdminSalonsByIdSetupStaffQueryKey: (options: unknown) => [
+    { _id: 'salon-setup-staff', options },
+  ],
   getApiV1AdminSalonsByIdClientsOptions: (options: unknown) => ({
     queryKey: ['salon-clients', options],
     queryFn: () => generated.getClients(options),
@@ -177,6 +186,9 @@ vi.mock('@repo/api-client/query', () => ({
   postApiV1AdminSalonsByIdSetupCatalogAddonsMutation: () => ({
     mutationFn: generated.mutateSetupCatalog,
   }),
+  postApiV1AdminSalonsByIdSetupStaffMutation: () => ({
+    mutationFn: generated.mutateSetupStaff,
+  }),
   patchApiV1AdminSalonsByIdSetupCatalogAddonsByEntityIdMutation: () => ({
     mutationFn: generated.mutateSetupCatalog,
   }),
@@ -202,6 +214,9 @@ describe('salons feature', () => {
     generated.getServices.mockReset()
     generated.getSetup.mockReset()
     generated.getSetupCatalog.mockReset()
+    generated.getSetupStaff.mockReset()
+    generated.getSetupStaff.mockResolvedValue({ staff: [] })
+    generated.mutateSetupStaff.mockReset()
     generated.getSetupCatalog.mockResolvedValue({
       categories: [],
       families: [],
@@ -525,6 +540,74 @@ describe('salons feature', () => {
         reason: 'Use starter preset',
       },
     })
+  })
+
+  it('creates a scheduled unclaimed Staff Profile without asking for credentials', async () => {
+    generated.getSalon.mockResolvedValue({
+      salon: { id: salonId, name: 'Setup Aftab', status: 'setup' },
+      members: [],
+      stats: { services: 1, appointments: 0 },
+    })
+    generated.getNotes.mockResolvedValue({ notes: [] })
+    generated.getSetup.mockResolvedValue({
+      hours: {
+        workingStart: '09:00',
+        workingEnd: '19:00',
+        slotDurationMinutes: 30,
+        workingDays: 126,
+      },
+      presence: {
+        address: null,
+        mapGoogle: null,
+        mapNeshan: null,
+        mapBalad: null,
+        socialInstagram: null,
+        socialTelegram: null,
+        socialWhatsapp: null,
+        website: null,
+      },
+    })
+    generated.getSetupCatalog.mockResolvedValue({
+      categories: [],
+      families: [],
+      services: [
+        {
+          id: '66666666-6666-4666-8666-666666666666',
+          name: 'رنگ مو',
+          active: true,
+        },
+      ],
+      addons: [],
+      presets: [],
+    })
+    generated.mutateSetupStaff.mockResolvedValue({ profile: { id: 'p1' } })
+
+    await renderSalonDetail(`/salons/${salonId}?tab=setup`)
+
+    fireEvent.change(await screen.findByLabelText('نام نمایشی'), {
+      target: { value: 'سارا' },
+    })
+    fireEvent.change(screen.getByLabelText('شماره موبایل'), {
+      target: { value: '09121234567' },
+    })
+    fireEvent.click(screen.getByText('رنگ مو'))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'ساخت پروفایل بدون حساب کاربری' }),
+    )
+
+    await waitFor(() => expect(generated.mutateSetupStaff).toHaveBeenCalled())
+    expect(generated.mutateSetupStaff.mock.calls[0]?.[0]).toEqual({
+      path: { id: salonId },
+      body: expect.objectContaining({
+        name: 'سارا',
+        phone: '09121234567',
+        serviceIds: ['66666666-6666-4666-8666-666666666666'],
+        schedule: expect.arrayContaining([
+          expect.objectContaining({ dayOfWeek: 0, active: true }),
+        ]),
+      }),
+    })
+    expect(screen.queryByLabelText(/رمز عبور/)).toBeNull()
   })
 
   it('hides Setup Salon editing from platform support', async () => {

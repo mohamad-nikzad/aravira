@@ -1,5 +1,8 @@
 import type { Appointment, Client, Service, User } from '@repo/salon-core/types'
-import { SCHEDULE_CONFLICT_CODES, isBlockingAppointmentStatus } from '@repo/salon-core/appointment-conflict'
+import {
+  SCHEDULE_CONFLICT_CODES,
+  isBlockingAppointmentStatus,
+} from '@repo/salon-core/appointment-conflict'
 import {
   durationMinutesFromRange,
   endTimeFromDuration,
@@ -16,10 +19,13 @@ import {
 } from './service-queries'
 import {
   checkStaffAvailabilityForAppointment,
+  getAllStaff,
   staffMayPerformService,
 } from './staff-queries'
-import { getUserById } from './user-queries'
-import { getScheduleOverlapFlags, validateAppointmentAddonIds } from './appointment-queries'
+import {
+  getScheduleOverlapFlags,
+  validateAppointmentAddonIds,
+} from './appointment-queries'
 
 type SnapshotKeys =
   | 'bookedServiceName'
@@ -29,11 +35,16 @@ type SnapshotKeys =
   | 'bookedTotalPrice'
   | 'bookedAddonCount'
   | 'bookedAddons'
-type AppointmentCommand = Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | SnapshotKeys> & {
+type AppointmentCommand = Omit<
+  Appointment,
+  'id' | 'createdAt' | 'updatedAt' | SnapshotKeys
+> & {
   id?: string
   addonIds?: string[]
 }
-type AppointmentPatch = Partial<Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | SnapshotKeys>> & {
+type AppointmentPatch = Partial<
+  Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | SnapshotKeys>
+> & {
   addonIds?: string[]
 }
 
@@ -64,17 +75,17 @@ export type UpdateAppointmentIntakeResult =
     }
   | AppointmentIntakeFailure
 
-function fail(status: number, error: string, code?: string): AppointmentIntakeFailure {
+function fail(
+  status: number,
+  error: string,
+  code?: string,
+): AppointmentIntakeFailure {
   return { ok: false, status, error, ...(code ? { code } : {}) }
 }
 
 function positiveDurationMinutes(raw: unknown): number | null {
   const value =
-    typeof raw === 'number'
-      ? raw
-      : typeof raw === 'string'
-        ? Number(raw)
-        : NaN
+    typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN
 
   return Number.isFinite(value) && value > 0 ? value : null
 }
@@ -84,7 +95,9 @@ function explicitEndTime(raw: unknown): string | null {
 }
 
 function explicitAddonIds(raw: unknown): string[] | null {
-  return Array.isArray(raw) && raw.every((item) => typeof item === 'string') ? raw : null
+  return Array.isArray(raw) && raw.every((item) => typeof item === 'string')
+    ? raw
+    : null
 }
 
 async function validateSelectedAddons(input: {
@@ -99,10 +112,16 @@ async function validateSelectedAddons(input: {
   }
   if (input.addonIds.length === 0) return true
 
-  const matchingAddons = await getActiveServiceAddonsForService(input.serviceId, input.salonId)
+  const matchingAddons = await getActiveServiceAddonsForService(
+    input.serviceId,
+    input.salonId,
+  )
   const matchingIds = new Set(matchingAddons.map((addon) => addon.id))
   if (input.addonIds.some((id) => !matchingIds.has(id))) {
-    return fail(400, 'یکی از افزودنی‌های انتخاب‌شده برای این خدمت قابل استفاده نیست')
+    return fail(
+      400,
+      'یکی از افزودنی‌های انتخاب‌شده برای این خدمت قابل استفاده نیست',
+    )
   }
   return true
 }
@@ -113,7 +132,10 @@ async function bookedTotalDuration(input: {
   addonIds: string[]
 }): Promise<number> {
   if (input.addonIds.length === 0) return input.service.duration
-  const matchingAddons = await getActiveServiceAddonsForService(input.service.id, input.salonId)
+  const matchingAddons = await getActiveServiceAddonsForService(
+    input.service.id,
+    input.salonId,
+  )
   const selectedIds = new Set(input.addonIds)
   return (
     input.service.duration +
@@ -136,11 +158,16 @@ async function validateReferences(input: {
   if (!service || !service.active) {
     return fail(404, 'خدمت یافت نشد')
   }
-  if (service.kind === 'combo' && !(await validateComboServiceIsBookable(input.serviceId, input.salonId))) {
+  if (
+    service.kind === 'combo' &&
+    !(await validateComboServiceIsBookable(input.serviceId, input.salonId))
+  ) {
     return fail(400, 'پکیج انتخاب‌شده هنوز ترکیب خدمات ندارد.')
   }
 
-  const staff = await getUserById(input.staffId)
+  const staff = (await getAllStaff(input.salonId)).find(
+    (candidate) => candidate.id === input.staffId,
+  )
   if (!staff || staff.salonId !== input.salonId || staff.role !== 'staff') {
     return fail(404, 'پرسنل یافت نشد')
   }
@@ -150,7 +177,11 @@ async function validateReferences(input: {
     return fail(404, 'مشتری یافت نشد')
   }
 
-  const staffOk = await staffMayPerformService(input.staffId, input.serviceId, input.salonId)
+  const staffOk = await staffMayPerformService(
+    input.staffId,
+    input.serviceId,
+    input.salonId,
+  )
   if (!staffOk) {
     return fail(400, 'این پرسنل برای خدمت انتخاب‌شده تعریف نشده است.')
   }
@@ -172,7 +203,7 @@ async function validateBlockingSchedule(input: {
     input.staffId,
     input.date,
     input.startTime,
-    input.endTime
+    input.endTime,
   )
   if (!availability.ok) {
     return fail(409, availability.error, availability.code)
@@ -185,20 +216,20 @@ async function validateBlockingSchedule(input: {
     input.date,
     input.startTime,
     input.endTime,
-    input.excludeId
+    input.excludeId,
   )
   if (overlaps.staffConflict) {
     return fail(
       409,
       'پرسنل انتخاب‌شده در این بازه زمانی نوبت فعال دیگری دارد.',
-      SCHEDULE_CONFLICT_CODES.STAFF_OVERLAP
+      SCHEDULE_CONFLICT_CODES.STAFF_OVERLAP,
     )
   }
   if (overlaps.clientConflict) {
     return fail(
       409,
       'این مشتری در این بازه زمانی نوبت فعال دیگری دارد.',
-      SCHEDULE_CONFLICT_CODES.CLIENT_OVERLAP
+      SCHEDULE_CONFLICT_CODES.CLIENT_OVERLAP,
     )
   }
 
@@ -241,7 +272,11 @@ export async function validateCreateAppointmentIntake(input: {
     clientId: refs.client.id,
   })
   if (!placeholderUsage.ok) {
-    return fail(placeholderUsage.status, placeholderUsage.error, placeholderUsage.code)
+    return fail(
+      placeholderUsage.status,
+      placeholderUsage.error,
+      placeholderUsage.code,
+    )
   }
 
   const addonIds = explicitAddonIds(input.addonIds) ?? []
@@ -318,16 +353,24 @@ export async function validateUpdateAppointmentIntake(input: {
   }
 }): Promise<UpdateAppointmentIntakeResult> {
   const { existing, body } = input
-  const effectiveStart = typeof body.startTime === 'string' ? body.startTime : existing.startTime
-  const resolvedServiceId = typeof body.serviceId === 'string' ? body.serviceId : existing.serviceId
-  const resolvedStaffId = typeof body.staffId === 'string' ? body.staffId : existing.staffId
-  const resolvedClientId = typeof body.clientId === 'string' ? body.clientId : existing.clientId
+  const effectiveStart =
+    typeof body.startTime === 'string' ? body.startTime : existing.startTime
+  const resolvedServiceId =
+    typeof body.serviceId === 'string' ? body.serviceId : existing.serviceId
+  const resolvedStaffId =
+    typeof body.staffId === 'string' ? body.staffId : existing.staffId
+  const resolvedClientId =
+    typeof body.clientId === 'string' ? body.clientId : existing.clientId
   const resolvedDate = typeof body.date === 'string' ? body.date : existing.date
 
   const duration = positiveDurationMinutes(body.durationMinutes)
-  const startChanged = typeof body.startTime === 'string' && body.startTime !== existing.startTime
-  const serviceChanged = typeof body.serviceId === 'string' && body.serviceId !== existing.serviceId
-  const existingAddonIds = (existing.bookedAddons ?? []).map((line) => line.serviceAddonId)
+  const startChanged =
+    typeof body.startTime === 'string' && body.startTime !== existing.startTime
+  const serviceChanged =
+    typeof body.serviceId === 'string' && body.serviceId !== existing.serviceId
+  const existingAddonIds = (existing.bookedAddons ?? []).map(
+    (line) => line.serviceAddonId,
+  )
   const addonIds = explicitAddonIds(body.addonIds)
   const addonIdsChanged =
     addonIds != null && !sameAddonIds(addonIds, existingAddonIds)
@@ -367,7 +410,7 @@ export async function validateUpdateAppointmentIntake(input: {
             salonId: input.salonId,
             service: baseService,
             addonIds: selectedAddonIds,
-          })
+          }),
         )
       }
     }
@@ -380,8 +423,9 @@ export async function validateUpdateAppointmentIntake(input: {
       effectiveStart,
       Math.max(
         5,
-        existing.bookedTotalDuration ?? durationMinutesFromRange(existing.startTime, existing.endTime)
-      )
+        existing.bookedTotalDuration ??
+          durationMinutesFromRange(existing.startTime, existing.endTime),
+      ),
     )
   }
 
@@ -404,11 +448,17 @@ export async function validateUpdateAppointmentIntake(input: {
     appointmentId: input.appointmentId,
   })
   if (!placeholderUsage.ok) {
-    return fail(placeholderUsage.status, placeholderUsage.error, placeholderUsage.code)
+    return fail(
+      placeholderUsage.status,
+      placeholderUsage.error,
+      placeholderUsage.code,
+    )
   }
 
   const resolvedStatus =
-    typeof body.status === 'string' ? (body.status as Appointment['status']) : existing.status
+    typeof body.status === 'string'
+      ? (body.status as Appointment['status'])
+      : existing.status
 
   if (isBlockingAppointmentStatus(resolvedStatus)) {
     const schedule = await validateBlockingSchedule({
@@ -430,7 +480,8 @@ export async function validateUpdateAppointmentIntake(input: {
   if (addonIdsChanged) patch.addonIds = addonIds ?? []
   if (body.date !== undefined) patch.date = body.date as string
   if (typeof body.startTime === 'string') patch.startTime = body.startTime
-  if (body.status !== undefined) patch.status = body.status as Appointment['status']
+  if (body.status !== undefined)
+    patch.status = body.status as Appointment['status']
   if (body.notes !== undefined) patch.notes = body.notes as string | undefined
 
   return {

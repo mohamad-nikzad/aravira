@@ -40,6 +40,7 @@ import { CompactRows, DetailGrid, Panel } from '#/components/admin/panel'
 import { SalonTenantDataTabs } from './salon-tenant-tabs'
 import { SalonSetupEditor } from './salon-setup-editor'
 import { SalonSetupCatalog } from './salon-setup-catalog'
+import { SalonSetupStaff } from './salon-setup-staff'
 import {
   useSalonDetailUrlState,
   type SalonDetailSection,
@@ -319,6 +320,7 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
                   }
                 />
                 <SalonSetupCatalog salonId={salonId} isLiveData={isLiveData} />
+                <SalonSetupStaff salonId={salonId} isLiveData={isLiveData} />
               </div>
             ) : null}
           </TabsContent>

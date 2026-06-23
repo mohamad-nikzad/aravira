@@ -16,6 +16,7 @@ import {
   account,
   member,
   salonMember,
+  staffProfiles,
   staffSchedules,
   staffServices,
   user,
@@ -53,7 +54,29 @@ export async function getAllStaff(salonId: string): Promise<User[]> {
       ),
     )
     .orderBy(asc(user.name))
-  const rows = joined.map(rowToUser)
+  const legacyRows = joined.map(rowToUser)
+  const preparedRows: User[] = (
+    await db
+      .select()
+      .from(staffProfiles)
+      .where(eq(staffProfiles.salonId, salonId))
+      .orderBy(asc(staffProfiles.name))
+  )
+    .filter((row) => row.active && row.userId === null)
+    .map((row) => ({
+      id: row.id,
+      salonId: row.salonId,
+      name: row.name,
+      fullName: row.name,
+      nickname: null,
+      phone: row.phone,
+      role: 'staff' as const,
+      color: row.color,
+      createdAt: row.createdAt,
+    }))
+  const rows = [...legacyRows, ...preparedRows].sort((a, b) =>
+    a.name.localeCompare(b.name, 'fa'),
+  )
   if (rows.length === 0) return []
 
   const ids = rows.map((r) => r.id)
@@ -315,16 +338,16 @@ export async function getUserWithServiceIds(
   id: string,
   salonId: string,
 ): Promise<User | undefined> {
+  const db = getDb()
   const base = await getUserById(id)
   if (!base || base.salonId !== salonId) return undefined
-  const db = getDb()
   const links = await db
     .select({ serviceId: staffServices.serviceId })
     .from(staffServices)
     .where(
       and(
         eq(staffServices.salonId, salonId),
-        eq(staffServices.staffUserId, id),
+        eq(staffServices.staffUserId, base.id),
       ),
     )
   if (links.length === 0) {

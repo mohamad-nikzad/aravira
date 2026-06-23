@@ -19,3 +19,9 @@ export {
 export { getUserById } from './internal/user-queries'
 export { getBusinessSettings } from './internal/settings-queries'
 export { validateActiveServiceIds } from './internal/service-queries'
+export {
+  claimStaffProfile,
+  createSetupStaffProfile,
+  getStaffProfileForUser,
+  listSetupStaffProfiles,
+} from './setup-staff'

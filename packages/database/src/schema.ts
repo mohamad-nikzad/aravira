@@ -339,6 +339,40 @@ export const salonMember = pgTable(
   ],
 )
 
+/**
+ * Salon-owned operational identity for staff prepared before login access.
+ * Legacy staff continue to use their user id as the operational staff id;
+ * prepared profiles use this row's id for schedules, capabilities, and
+ * appointments until claim atomically migrates those references to the user.
+ */
+export const staffProfiles = pgTable(
+  'staff_profiles',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id').references(() => user.id, { onDelete: 'set null' }),
+    name: text('name').notNull(),
+    phone: text('phone').notNull(),
+    color: text('color').notNull(),
+    active: boolean('active').notNull().default(true),
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('staff_profiles_salon_id_phone_unique').on(t.salonId, t.phone),
+    uniqueIndex('staff_profiles_user_id_unique').on(t.userId),
+    index('staff_profiles_phone_active_idx').on(t.phone, t.active),
+    index('staff_profiles_salon_id_active_idx').on(t.salonId, t.active),
+  ],
+)
+
 export const supportTickets = pgTable(
   'support_tickets',
   {
@@ -450,9 +484,7 @@ export const staffSchedules = pgTable(
     salonId: uuid('salon_id')
       .notNull()
       .references(() => organization.id, { onDelete: 'cascade' }),
-    staffId: uuid('staff_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
+    staffId: uuid('staff_id').notNull(),
     dayOfWeek: integer('day_of_week').notNull(),
     workingStart: text('working_start').notNull(),
     workingEnd: text('working_end').notNull(),
@@ -765,9 +797,7 @@ export const resources = pgTable(
 export const staffServices = pgTable(
   'staff_services',
   {
-    staffUserId: uuid('staff_user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
+    staffUserId: uuid('staff_user_id').notNull(),
     serviceId: uuid('service_id')
       .notNull()
       .references(() => services.id, { onDelete: 'cascade' }),
@@ -844,9 +874,7 @@ export const appointments = pgTable(
     clientId: uuid('client_id')
       .notNull()
       .references(() => clients.id, { onDelete: 'restrict' }),
-    staffId: uuid('staff_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'restrict' }),
+    staffId: uuid('staff_id').notNull(),
     serviceId: uuid('service_id')
       .notNull()
       .references(() => services.id, { onDelete: 'restrict' }),
@@ -1192,9 +1220,7 @@ export const appointmentRequests = pgTable(
       .notNull()
       .references(() => services.id, { onDelete: 'restrict' }),
     /** Null at submit; set when manager approves. */
-    staffId: uuid('staff_id').references(() => user.id, {
-      onDelete: 'set null',
-    }),
+    staffId: uuid('staff_id'),
     requestedDate: text('requested_date').notNull(),
     requestedStartTime: text('requested_start_time').notNull(),
     requestedEndTime: text('requested_end_time').notNull(),

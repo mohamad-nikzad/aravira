@@ -35,6 +35,8 @@ vi.mock('@repo/database/onboarding', () => ({
 }))
 
 vi.mock('@repo/database/staff', () => ({
+  claimStaffProfile: vi.fn(),
+  getStaffProfileForUser: vi.fn(),
   getUserWithServiceIds: vi.fn(),
 }))
 
@@ -76,7 +78,11 @@ import { adminAuth, auth as authServer } from '@repo/auth/server'
 import { getDb } from '@repo/database/client'
 import { getManagerOnboardingFlags } from '@repo/database/onboarding'
 import { getMemberForUser } from '@repo/database/members'
-import { getUserWithServiceIds } from '@repo/database/staff'
+import {
+  claimStaffProfile,
+  getStaffProfileForUser,
+  getUserWithServiceIds,
+} from '@repo/database/staff'
 
 process.env.NODE_ENV = 'test'
 process.env.DATABASE_URL = 'postgres://stub'
@@ -123,6 +129,8 @@ beforeEach(() => {
   ;(
     getDb() as unknown as { __setSelectRows: (rows: unknown[]) => void }
   ).__setSelectRows([])
+  vi.mocked(claimStaffProfile).mockResolvedValue({ status: 'none' })
+  vi.mocked(getStaffProfileForUser).mockResolvedValue(undefined as never)
 })
 
 describe('auth signup route', () => {
@@ -500,6 +508,114 @@ describe('Better Auth passthrough routes', () => {
 })
 
 describe('OTP signup continuation routes', () => {
+  it('claims the matching Staff Profile only after successful OTP verification', async () => {
+    vi.mocked(authServer.handler).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: true,
+          user: {
+            id: 'u1',
+            phoneNumber: '09121234567',
+            phoneNumberVerified: true,
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ) as never,
+    )
+    vi.mocked(claimStaffProfile).mockResolvedValue({
+      status: 'claimed',
+      profileId: 'profile-1',
+      salonId: 'salon-1',
+    })
+
+    const res = await app.request('/api/v1/auth/phone-number/verify', {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify({ phoneNumber: '09121234567', code: '123456' }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(claimStaffProfile).toHaveBeenCalledWith({
+      userId: 'u1',
+      phone: '09121234567',
+    })
+  })
+
+  it('rejects an ambiguous Staff Profile claim after OTP without identity detail', async () => {
+    vi.mocked(authServer.handler).mockResolvedValue(
+      new Response(JSON.stringify({ status: true, user: { id: 'u1' } }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }) as never,
+    )
+    vi.mocked(claimStaffProfile).mockResolvedValue({
+      status: 'rejected',
+      reason: 'ambiguous',
+    })
+
+    const res = await app.request('/api/v1/auth/phone-number/verify', {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify({ phoneNumber: '09121234567', code: '123456' }),
+    })
+
+    expect(res.status).toBe(409)
+    expect(await res.json()).toMatchObject({ code: 'STAFF_CLAIM_AMBIGUOUS' })
+  })
+
+  it('lets a newly claimed staff member establish their own password', async () => {
+    vi.mocked(authServer.api.getSession).mockResolvedValue({
+      user: { id: 'u1' },
+    } as never)
+    vi.mocked(getStaffProfileForUser).mockResolvedValue({
+      id: 'profile-1',
+    } as never)
+
+    const res = await app.request('/api/v1/auth/staff-claim/password', {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify({ password: 'secret123' }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(authServer.api.setPassword).toHaveBeenCalledWith({
+      body: { newPassword: 'secret123' },
+      headers: expect.any(Headers),
+    })
+  })
+
+  it('reuses a claimed identity that already has a password without replacing it', async () => {
+    vi.mocked(authServer.api.getSession).mockResolvedValue({
+      user: { id: 'u1' },
+    } as never)
+    vi.mocked(getMemberForUser).mockResolvedValue({
+      userId: 'u1',
+      organizationId: 'salon-1',
+      role: 'member',
+    } as never)
+    vi.mocked(getStaffProfileForUser).mockResolvedValue({
+      id: 'profile-1',
+    } as never)
+    vi.mocked(getUserWithServiceIds).mockResolvedValue({
+      id: 'u1',
+      salonId: 'salon-1',
+      name: 'Sara',
+      phone: '09121234567',
+      role: 'staff',
+      color: 'mint',
+      createdAt: new Date(),
+    })
+    ;(
+      getDb() as unknown as { __setSelectRows: (rows: unknown[]) => void }
+    ).__setSelectRows([{ id: 'credential-1' }])
+
+    const res = await app.request('/api/v1/auth/me', { headers: jsonHeaders() })
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ status: 'ready' })
+    expect(authServer.api.setPassword).not.toHaveBeenCalled()
+  })
+
   it('sets the password and real manager name for an OTP-created account', async () => {
     vi.mocked(authServer.api.getSession).mockResolvedValue({
       user: {

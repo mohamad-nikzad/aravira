@@ -129,6 +129,7 @@ import {
   createAdminSetupCategoryRoute,
   createAdminSetupFamilyRoute,
   createAdminSetupServiceRoute,
+  createAdminSetupStaffRoute,
   createAdminSalonNoteRoute,
   createSetupSalonRoute,
   createAdminUserNoteRoute,
@@ -139,6 +140,7 @@ import {
   getAdminRuntimeRoute,
   getAdminSalonRoute,
   getAdminSetupSalonConfigurationRoute,
+  getAdminSetupStaffRoute,
   getAdminSetupCatalogRoute,
   getAdminUserRoute,
   listAdminAuditLogRoute,
@@ -1155,6 +1157,8 @@ export const contractApp = new OpenAPIHono()
         updateAdminSetupSalonPresenceRoute,
         updateAdminSetupSalonPresenceStub,
       )
+      .openapi(getAdminSetupStaffRoute, setupCatalogMutationStub)
+      .openapi(createAdminSetupStaffRoute, setupCatalogMutationStub)
       .openapi(getAdminSetupCatalogRoute, getAdminSetupCatalogStub)
       .openapi(applyAdminSetupCatalogPresetRoute, setupCatalogMutationStub)
       .openapi(createAdminSetupCategoryRoute, setupCatalogMutationStub)

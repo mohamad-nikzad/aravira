@@ -88,7 +88,10 @@ export const Route = createFileRoute('/signup')({
     if (!session) {
       throw redirect({ to: '/auth' })
     }
-    if (session && session.status !== 'needs_workspace') {
+    if (session.status === 'needs_staff_password') {
+      throw redirect({ to: '/auth' })
+    }
+    if (session.status !== 'needs_workspace') {
       throw redirect({ to: homePathForRole(session.user.role) })
     }
   },
@@ -213,7 +216,7 @@ function SignupPage() {
     meta: { skipToast: true },
     onSuccess: async () => {
       const session = await refresh()
-      if (session?.status !== 'needs_workspace' && session?.user) {
+      if (session?.status === 'ready' && session.user) {
         setUser(session.user)
         await invalidateNewWorkspaceQueries()
         await navigate({ to: '/onboarding/welcome' })

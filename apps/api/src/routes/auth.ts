@@ -23,12 +23,17 @@ import { STAFF_COLORS } from '@repo/salon-core/types'
 import {
   preWorkspaceAccountSchema,
   preWorkspaceSchema,
+  newPasswordSchema,
   resetPasswordSchema,
   signupSchema,
 } from '@repo/salon-core/forms/auth'
 import { phoneSchema } from '@repo/salon-core/forms/primitives'
 import { getManagerOnboardingFlags } from '@repo/database/onboarding'
-import { getUserWithServiceIds } from '@repo/database/staff'
+import {
+  claimStaffProfile,
+  getStaffProfileForUser,
+  getUserWithServiceIds,
+} from '@repo/database/staff'
 import { getMemberForUser } from '@repo/database/members'
 import { mapRole } from '@repo/auth/permissions'
 import type { AppEnv } from '../factory'
@@ -43,6 +48,7 @@ const verifyPasswordResetOtpSchema = z.object({
   phoneNumber: phoneSchema,
   otp: z.string().length(6),
 })
+const staffClaimPasswordSchema = z.object({ password: newPasswordSchema })
 
 function phoneToEmail(phone: string): string {
   return `${phone}@${brand.emailLocalDomain}`
@@ -157,6 +163,59 @@ function handleAuthRequest(c: Parameters<typeof ok>[0]) {
   return requestAuth.handler(c.req.raw)
 }
 
+async function verifyPhoneAndClaim(c: Parameters<typeof ok>[0]) {
+  const parsed = phoneOtpRequestSchema
+    .extend({ code: z.string().length(6) })
+    .safeParse(
+      await c.req.raw
+        .clone()
+        .json()
+        .catch(() => null),
+    )
+  const requestAuth = getAuthForRequest(c.req.raw)
+  if (!requestAuth) return error(c, 'مبدأ درخواست مجاز نیست', 403)
+  if (
+    parsed.success &&
+    !isAuthOtpLoginEnabled() &&
+    (await isCompletedAccount(parsed.data.phoneNumber))
+  ) {
+    return error(
+      c,
+      'ورود با کد پیامکی موقتاً غیرفعال است',
+      403,
+      'OTP_LOGIN_DISABLED',
+    )
+  }
+  const response = await requestAuth.handler(c.req.raw)
+  if (!response.ok || !parsed.success) return response
+
+  const payload = (await response
+    .clone()
+    .json()
+    .catch(() => null)) as { user?: { id?: string } } | null
+  const userId = payload?.user?.id
+  if (!userId) return response
+  const claim = await claimStaffProfile({
+    userId,
+    phone: parsed.data.phoneNumber,
+  })
+  if (claim.status !== 'rejected') return response
+
+  const messages = {
+    ambiguous:
+      'بیش از یک پروفایل برای این شماره یافت شد؛ با پشتیبانی تماس بگیرید',
+    already_claimed: 'این پروفایل قبلاً به حساب دیگری متصل شده است',
+    ineligible: 'این حساب در حال حاضر امکان اتصال به این پروفایل را ندارد',
+    phone_mismatch: 'شماره تاییدشده با پروفایل پرسنل مطابقت ندارد',
+  } as const
+  return error(
+    c,
+    messages[claim.reason],
+    409,
+    `STAFF_CLAIM_${claim.reason.toUpperCase()}`,
+  )
+}
+
 async function getOrganizationById(db: ReturnType<typeof getDb>, id: string) {
   const rows = await db
     .select({
@@ -229,6 +288,18 @@ export const authRoute = new Hono<AppEnv>()
     const role = mapRole(member.role)
     const userId = member.userId
     const salonId = member.organizationId
+    const claimedProfile = await getStaffProfileForUser(userId)
+    if (claimedProfile && !(await hasCredentialPassword(userId))) {
+      return ok(c, {
+        status: 'needs_staff_password',
+        user: {
+          id: claimedProfile.id,
+          name: claimedProfile.name,
+          phone: claimedProfile.phone,
+          salonId: claimedProfile.salonId,
+        },
+      })
+    }
     const user = await getUserWithServiceIds(userId, salonId)
     if (!user) return error(c, 'وارد نشده‌اید', 401)
 
@@ -247,7 +318,34 @@ export const authRoute = new Hono<AppEnv>()
     return ok(c, { status: 'ready', user: { ...user, role } })
   })
   .post('/phone-number/send-otp', guardOtpLogin)
-  .post('/phone-number/verify', guardOtpLogin)
+  .post('/phone-number/verify', verifyPhoneAndClaim)
+  .post(
+    '/staff-claim/password',
+    zValidator('json', staffClaimPasswordSchema),
+    async (c) => {
+      const sessionUser = await getSessionUser(c)
+      if (!sessionUser) return error(c, 'وارد نشده‌اید', 401)
+      const profile = await getStaffProfileForUser(sessionUser.id)
+      if (!profile) return error(c, 'پروفایل پرسنل یافت نشد', 404)
+      if (await hasCredentialPassword(sessionUser.id)) {
+        return ok(c, { success: true })
+      }
+      try {
+        await auth.api.setPassword({
+          body: { newPassword: c.req.valid('json').password },
+          headers: c.req.raw.headers,
+        })
+      } catch (err) {
+        const code = getBetterAuthErrorCode(err)
+        if (code === 'PASSWORD_ALREADY_SET') return ok(c, { success: true })
+        if (code === 'PASSWORD_TOO_SHORT') {
+          return error(c, 'رمز عبور باید حداقل ۸ کاراکتر باشد', 400, code)
+        }
+        throw err
+      }
+      return ok(c, { success: true })
+    },
+  )
   .post('/reset-password', async (c) => {
     const parsed = resetPasswordSchema.safeParse(
       await c.req.raw

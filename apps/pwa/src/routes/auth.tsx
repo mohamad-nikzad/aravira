@@ -43,6 +43,7 @@ type AuthMode =
   | 'otp'
   | 'recoveryOtp'
   | 'recoveryPassword'
+  | 'staffPassword'
 type OtpIntent = 'login' | 'register'
 
 /** Only honor internal relative paths to avoid open-redirect. */
@@ -64,7 +65,11 @@ export const Route = createFileRoute('/auth')({
     const session = await context.queryClient.ensureQueryData<AuthSession>({
       queryKey: authQueryKey,
     })
-    if (session && session.status !== 'needs_workspace') {
+    if (
+      session &&
+      session.status !== 'needs_workspace' &&
+      session.status !== 'needs_staff_password'
+    ) {
       const { user } = session
       const safe = safeInternalRedirect(search.redirect)
       if (safe) throw redirect({ href: safe })
@@ -77,7 +82,7 @@ export const Route = createFileRoute('/auth')({
 function AuthPage() {
   const navigate = useNavigate()
   const { redirect: redirectTo } = Route.useSearch()
-  const { refresh, setUser } = useAuth()
+  const { session: authSession, refresh, setUser } = useAuth()
   const showDemoCredentials = import.meta.env.DEV
   const [mode, setMode] = useState<AuthMode>('phone')
   const [otpIntent, setOtpIntent] = useState<OtpIntent>('login')
@@ -114,6 +119,7 @@ function AuthPage() {
   const isPasswordMode = mode === 'password'
   const isRecoveryOtp = mode === 'recoveryOtp'
   const isRecoveryPassword = mode === 'recoveryPassword'
+  const isStaffPassword = mode === 'staffPassword'
   const isRegistering = otpIntent === 'register'
 
   const login = useMutation({
@@ -192,6 +198,12 @@ function AuthPage() {
         await navigate({ to: '/signup', replace: true })
         return
       }
+      if (session?.status === 'needs_staff_password') {
+        setNewPassword('')
+        setConfirmPassword('')
+        setMode('staffPassword')
+        return
+      }
       if (session?.user) {
         setUser(session.user)
         if (safe) await navigate({ href: safe })
@@ -241,6 +253,22 @@ function AuthPage() {
       setRecoveryError(null)
       setSuccessMessage('رمز عبور با موفقیت تغییر کرد. اکنون وارد شوید.')
       setMode('password')
+    },
+  })
+
+  const completeStaffClaim = useMutation({
+    mutationFn: () => api.auth.completeStaffClaim({ password: newPassword }),
+    meta: { skipToast: true },
+    onSuccess: async () => {
+      const session = await refresh()
+      if (!session || session.status !== 'ready') {
+        setRecoveryError('تکمیل حساب انجام نشد. دوباره تلاش کنید.')
+        return
+      }
+      setUser(session.user)
+      const safe = safeInternalRedirect(redirectTo)
+      if (safe) await navigate({ href: safe })
+      else await navigate({ to: homePathForRole(session.user.role) })
     },
   })
 
@@ -374,6 +402,12 @@ function AuthPage() {
   }
 
   useEffect(() => {
+    if (authSession?.status === 'needs_staff_password') {
+      setMode('staffPassword')
+    }
+  }, [authSession?.status])
+
+  useEffect(() => {
     clearErrors()
     setOtpError(null)
     setRecoveryError(null)
@@ -409,12 +443,15 @@ function AuthPage() {
       setRecoveryError(formMessages.passwordMismatch)
       return
     }
-    resetPassword.mutate(undefined, {
+    const mutation = isStaffPassword ? completeStaffClaim : resetPassword
+    mutation.mutate(undefined, {
       onError: (err) =>
         setRecoveryError(
           getMutationErrorMessage(
             err,
-            'تغییر رمز انجام نشد. دوباره کد بازیابی بگیرید.',
+            isStaffPassword
+              ? 'ثبت رمز عبور انجام نشد.'
+              : 'تغییر رمز انجام نشد. دوباره کد بازیابی بگیرید.',
           ),
         ),
     })
@@ -426,7 +463,8 @@ function AuthPage() {
     phoneStatus.isPending ||
     requestPasswordReset.isPending ||
     verifyPasswordResetOtp.isPending ||
-    resetPassword.isPending
+    resetPassword.isPending ||
+    completeStaffClaim.isPending
 
   return (
     <main className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-background p-4">
@@ -447,8 +485,10 @@ function AuthPage() {
                 ? 'ورود یا ثبت‌نام'
                 : isPasswordMode
                   ? 'ورود با رمز عبور'
-                  : isRecoveryPassword
-                    ? 'انتخاب رمز عبور جدید'
+                  : isRecoveryPassword || isStaffPassword
+                    ? isStaffPassword
+                      ? 'رمز عبور خودتان را بسازید'
+                      : 'انتخاب رمز عبور جدید'
                     : isRecoveryOtp
                       ? 'بازیابی رمز عبور'
                       : isRegistering
@@ -460,7 +500,7 @@ function AuthPage() {
                 ? 'برای شروع فقط شماره موبایل‌تان را وارد کنید'
                 : isPasswordMode
                   ? 'رمز عبور را وارد کنید.'
-                  : isRecoveryPassword
+                  : isRecoveryPassword || isStaffPassword
                     ? 'رمز جدید را وارد و تایید کنید.'
                     : isRecoveryOtp
                       ? 'کد بازیابی پیامک‌شده را وارد کنید.'
@@ -594,7 +634,7 @@ function AuthPage() {
                     </button>
                   </div>
                 </div>
-              ) : isRecoveryPassword ? (
+              ) : isRecoveryPassword || isStaffPassword ? (
                 <div className="space-y-4">
                   <Field>
                     <FieldLabel htmlFor="new-password">
@@ -683,17 +723,17 @@ function AuthPage() {
                     </Button>
                   ) : null}
                 </>
-              ) : isRecoveryPassword ? (
+              ) : isRecoveryPassword || isStaffPassword ? (
                 <Button
                   type="button"
                   className="w-full h-12 rounded-xl text-base font-semibold touch-manipulation shadow-sm"
                   disabled={isBusy}
                   onClick={submitNewPassword}
                 >
-                  {resetPassword.isPending ? (
+                  {resetPassword.isPending || completeStaffClaim.isPending ? (
                     <Spinner className="ml-2" />
                   ) : null}
-                  ثبت رمز عبور جدید
+                  {isStaffPassword ? 'ثبت رمز و ورود' : 'ثبت رمز عبور جدید'}
                 </Button>
               ) : (
                 <>

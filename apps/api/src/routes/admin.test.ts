@@ -59,6 +59,12 @@ vi.mock('@repo/database/salon-profile', () => ({
   updateSalonPresence: vi.fn(),
 }))
 
+vi.mock('@repo/database/staff', () => ({
+  createSetupStaffProfile: vi.fn(),
+  listSetupStaffProfiles: vi.fn(),
+  validateActiveServiceIds: vi.fn(),
+}))
+
 vi.mock('@repo/database/catalog-presets', () => ({
   applyCatalogPreset: vi.fn(),
   listActiveCatalogPresets: vi.fn(),
@@ -112,6 +118,11 @@ import {
   updateSalonPresence,
 } from '@repo/database/salon-profile'
 import { applyCatalogPreset } from '@repo/database/catalog-presets'
+import {
+  createSetupStaffProfile,
+  listSetupStaffProfiles,
+  validateActiveServiceIds,
+} from '@repo/database/staff'
 import {
   createService,
   createServiceCategory,
@@ -404,6 +415,75 @@ describe('admin runtime data source', () => {
       mapGoogle: 'https://maps.app.goo.gl/abc',
       socialInstagram: '@aftab',
       website: undefined,
+    })
+  })
+
+  it('creates and lists an unclaimed Staff Profile without credentials', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: { id: salonId, status: 'setup' },
+    } as never)
+    vi.mocked(validateActiveServiceIds).mockResolvedValue(true)
+    vi.mocked(createSetupStaffProfile).mockResolvedValue({
+      id: '55555555-5555-4555-8555-555555555555',
+      salonId,
+      userId: null,
+      name: 'سارا',
+      phone: '09121234567',
+      color: 'mint',
+      active: true,
+    } as never)
+    vi.mocked(listSetupStaffProfiles).mockResolvedValue([
+      { id: '55555555-5555-4555-8555-555555555555', claimed: false },
+    ] as never)
+
+    const body = {
+      name: 'سارا',
+      phone: '09121234567',
+      color: 'mint',
+      active: true,
+      serviceIds: ['66666666-6666-4666-8666-666666666666'],
+      schedule: [
+        {
+          dayOfWeek: 0,
+          active: true,
+          workingStart: '09:00',
+          workingEnd: '17:00',
+        },
+      ],
+      reason: 'آماده سازی پرسنل',
+      liveConfirmation: 'LIVE',
+    }
+    const createRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/staff`,
+      {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+    )
+    expect(createRes.status).toBe(201)
+    expect(createSetupStaffProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        salonId,
+        name: 'سارا',
+        phone: '09121234567',
+        serviceIds: body.serviceIds,
+      }),
+    )
+    expect(createAdminAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'salon.setup.staff_profile.create',
+        metadata: expect.objectContaining({ phone: '[REDACTED]' }),
+      }),
+    )
+
+    const listRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/staff`,
+      { headers: authHeaders },
+    )
+    expect(listRes.status).toBe(200)
+    expect(await listRes.json()).toEqual({
+      staff: [{ id: '55555555-5555-4555-8555-555555555555', claimed: false }],
     })
   })
 

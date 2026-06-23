@@ -249,6 +249,34 @@ export const adminSetupSalonConfigurationResponseSchema = z
   .object({ hours: adminSetupHoursSchema, presence: adminSetupPresenceSchema })
   .openapi('AdminSetupSalonConfigurationResponse')
 
+const adminSetupStaffScheduleSchema = z.object({
+  dayOfWeek: z.number().int().min(0).max(6),
+  active: z.boolean(),
+  workingStart: z.string(),
+  workingEnd: z.string(),
+})
+
+export const adminSetupStaffCreateBodySchema = z
+  .object({
+    name: z.string().min(1).max(120),
+    phone: z.string().regex(/^09\d{9}$/),
+    color: z.string(),
+    active: z.boolean(),
+    serviceIds: z.array(z.string()).nullable(),
+    schedule: z.array(adminSetupStaffScheduleSchema).max(7),
+    reason: adminReasonSchema,
+    liveConfirmation: z.string().optional(),
+  })
+  .openapi('AdminSetupStaffCreateRequest')
+
+export const adminSetupStaffListResponseSchema = z
+  .object({ staff: z.array(anyRecordSchema) })
+  .openapi('AdminSetupStaffListResponse')
+
+export const adminSetupStaffCreateResponseSchema = z
+  .object({ profile: anyRecordSchema })
+  .openapi('AdminSetupStaffCreateResponse')
+
 const adminSetupMutationMetaShape = {
   reason: adminReasonSchema,
   liveConfirmation: z.string().optional(),

@@ -138,6 +138,34 @@ export type AdminSetupSalonPresencePatchRequest = {
     liveConfirmation?: string;
 };
 
+export type AdminSetupStaffListResponse = {
+    staff: Array<{
+        [key: string]: unknown;
+    }>;
+};
+
+export type AdminSetupStaffCreateResponse = {
+    profile: {
+        [key: string]: unknown;
+    };
+};
+
+export type AdminSetupStaffCreateRequest = {
+    name: string;
+    phone: string;
+    color: string;
+    active: boolean;
+    serviceIds: Array<string> | null;
+    schedule: Array<{
+        dayOfWeek: number;
+        active: boolean;
+        workingStart: string;
+        workingEnd: string;
+    }>;
+    reason: string;
+    liveConfirmation?: string;
+};
+
 export type AdminSetupCatalogResponse = {
     categories: Array<{
         [key: string]: unknown;
@@ -2060,6 +2088,88 @@ export type PatchApiV1AdminSalonsByIdSetupPresenceResponses = {
 };
 
 export type PatchApiV1AdminSalonsByIdSetupPresenceResponse = PatchApiV1AdminSalonsByIdSetupPresenceResponses[keyof PatchApiV1AdminSalonsByIdSetupPresenceResponses];
+
+export type GetApiV1AdminSalonsByIdSetupStaffData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/salons/{id}/setup/staff';
+};
+
+export type GetApiV1AdminSalonsByIdSetupStaffErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user is not an active platform admin or lacks permission
+     */
+    403: ApiError;
+    /**
+     * Admin resource not found
+     */
+    404: ApiError;
+    /**
+     * Mutation violates platform admin safety rules
+     */
+    409: ApiError;
+};
+
+export type GetApiV1AdminSalonsByIdSetupStaffError = GetApiV1AdminSalonsByIdSetupStaffErrors[keyof GetApiV1AdminSalonsByIdSetupStaffErrors];
+
+export type GetApiV1AdminSalonsByIdSetupStaffResponses = {
+    /**
+     * Prepared Staff Profiles
+     */
+    200: AdminSetupStaffListResponse;
+};
+
+export type GetApiV1AdminSalonsByIdSetupStaffResponse = GetApiV1AdminSalonsByIdSetupStaffResponses[keyof GetApiV1AdminSalonsByIdSetupStaffResponses];
+
+export type PostApiV1AdminSalonsByIdSetupStaffData = {
+    body: AdminSetupStaffCreateRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/salons/{id}/setup/staff';
+};
+
+export type PostApiV1AdminSalonsByIdSetupStaffErrors = {
+    /**
+     * Invalid request body or query
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user is not an active platform admin or lacks permission
+     */
+    403: ApiError;
+    /**
+     * Admin resource not found
+     */
+    404: ApiError;
+    /**
+     * Mutation violates platform admin safety rules
+     */
+    409: ApiError;
+};
+
+export type PostApiV1AdminSalonsByIdSetupStaffError = PostApiV1AdminSalonsByIdSetupStaffErrors[keyof PostApiV1AdminSalonsByIdSetupStaffErrors];
+
+export type PostApiV1AdminSalonsByIdSetupStaffResponses = {
+    /**
+     * Unclaimed Staff Profile created
+     */
+    201: AdminSetupStaffCreateResponse;
+};
+
+export type PostApiV1AdminSalonsByIdSetupStaffResponse = PostApiV1AdminSalonsByIdSetupStaffResponses[keyof PostApiV1AdminSalonsByIdSetupStaffResponses];
 
 export type GetApiV1AdminSalonsByIdSetupCatalogData = {
     body?: never;

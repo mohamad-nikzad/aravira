@@ -16,6 +16,10 @@ export type MeResponse =
       status: 'needs_workspace'
       user: PreWorkspaceUser
     }
+  | {
+      status: 'needs_staff_password'
+      user: PreWorkspaceUser & { salonId: string }
+    }
 
 export type LoginResponse = { user: User }
 
@@ -77,6 +81,9 @@ export function createAuthApi(client: ApiClient) {
       if (response.status === 'needs_workspace') {
         throw new Error('authenticated user has no workspace')
       }
+      if (response.status === 'needs_staff_password') {
+        throw new Error('staff claim requires password')
+      }
       return { user: response.user }
     },
     sendPhoneOtp(input: { phone: string }) {
@@ -98,6 +105,12 @@ export function createAuthApi(client: ApiClient) {
           method: 'POST',
           body: { phoneNumber: input.phone, code: input.code },
         },
+      )
+    },
+    completeStaffClaim(input: { password: string }) {
+      return client.request<{ success: boolean }>(
+        endpoints.auth.completeStaffClaim,
+        { method: 'POST', body: input },
       )
     },
     requestPasswordReset(input: { phone: string }) {
@@ -150,7 +163,10 @@ export function createAuthApi(client: ApiClient) {
         redirectTo?: string
       }>(endpoints.auth.signup, { method: 'POST', body: input })
       const response = await me()
-      if (response.status === 'needs_workspace') {
+      if (
+        response.status === 'needs_workspace' ||
+        response.status === 'needs_staff_password'
+      ) {
         throw new Error('signup did not create a workspace')
       }
       const { user } = response

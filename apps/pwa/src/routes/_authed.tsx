@@ -28,6 +28,9 @@ export const Route = createFileRoute('/_authed')({
     if (session.status === 'needs_workspace') {
       throw redirect({ to: '/signup' })
     }
+    if (session.status === 'needs_staff_password') {
+      throw redirect({ to: '/auth' })
+    }
 
     const { user } = session
     if (

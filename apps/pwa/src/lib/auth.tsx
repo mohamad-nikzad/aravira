@@ -96,7 +96,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const session = query.data ?? null
   const user =
-    session?.status === 'needs_workspace' ? null : (session?.user ?? null)
+    session?.status === 'needs_workspace' ||
+    session?.status === 'needs_staff_password'
+      ? null
+      : (session?.user ?? null)
   const preWorkspaceUser =
     session?.status === 'needs_workspace' ? session.user : null
 
