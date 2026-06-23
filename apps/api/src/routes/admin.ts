@@ -32,6 +32,25 @@ import {
   type PlatformRole,
 } from '@repo/database/admin'
 import {
+  CatalogReferenceError,
+  createService,
+  createServiceAddon,
+  createServiceCategory,
+  createServiceFamily,
+  getAllServiceAddons,
+  getAllServiceCategories,
+  getAllServiceFamilies,
+  getAllServices,
+  updateService,
+  updateServiceAddon,
+  updateServiceCategory,
+  updateServiceFamily,
+} from '@repo/database/services'
+import {
+  applyCatalogPreset,
+  listActiveCatalogPresets,
+} from '@repo/database/catalog-presets'
+import {
   getBusinessSettings,
   updateBusinessSettings,
 } from '@repo/database/settings'
@@ -40,6 +59,18 @@ import {
   updateSalonPresence,
 } from '@repo/database/salon-profile'
 import { presetTreeSchema } from '@repo/salon-core/forms/catalog-preset'
+import { applyCatalogPresetBodySchema } from '@repo/salon-core/forms/catalog-preset'
+import {
+  serviceAddonCreateSchema,
+  serviceAddonUpdateSchema,
+  serviceCategoryCreateSchema,
+  serviceCategoryUpdateSchema,
+  serviceCreateSchema,
+  serviceFamilyCreateSchema,
+  serviceFamilyUpdateSchema,
+  serviceUpdateSchema,
+} from '@repo/salon-core/forms/service'
+import type { Service } from '@repo/salon-core/types'
 import { phoneSchema } from '@repo/salon-core/forms/primitives'
 import { businessSettingsSchema } from '@repo/salon-core/forms/settings'
 import { presencePatchSchema } from '@repo/salon-core/forms/presence'
@@ -90,6 +121,39 @@ const setupMutationMetaSchema = z.object({
 
 const setupHoursBodySchema = businessSettingsSchema.and(setupMutationMetaSchema)
 const setupPresenceBodySchema = presencePatchSchema.and(setupMutationMetaSchema)
+const setupCatalogPresetBodySchema = applyCatalogPresetBodySchema.and(
+  setupMutationMetaSchema,
+)
+const setupCategoryCreateBodySchema = serviceCategoryCreateSchema.and(
+  setupMutationMetaSchema,
+)
+const setupCategoryUpdateBodySchema = serviceCategoryUpdateSchema.and(
+  setupMutationMetaSchema,
+)
+const setupFamilyCreateBodySchema = serviceFamilyCreateSchema.and(
+  setupMutationMetaSchema,
+)
+const setupFamilyUpdateBodySchema = serviceFamilyUpdateSchema.and(
+  setupMutationMetaSchema,
+)
+const setupServiceCreateBodySchema = serviceCreateSchema.and(
+  setupMutationMetaSchema,
+)
+const setupServiceUpdateBodySchema = serviceUpdateSchema.and(
+  setupMutationMetaSchema,
+)
+const setupAddonCreateBodySchema = serviceAddonCreateSchema.and(
+  setupMutationMetaSchema,
+)
+const setupAddonUpdateBodySchema = serviceAddonUpdateSchema.and(
+  setupMutationMetaSchema,
+)
+const setupCatalogEntityParamSchema = idParamSchema.extend({
+  entityId: z.string().min(1),
+})
+const setupCatalogPresetParamSchema = idParamSchema.extend({
+  presetId: z.string().uuid(),
+})
 
 const noteBodySchema = z.object({
   body: z.string().trim().min(1).max(5000),
@@ -164,6 +228,35 @@ async function requireSetupSalon(c: Parameters<typeof error>[0], id: string) {
       'ویرایش راه‌اندازی فقط برای سالن در وضعیت راه‌اندازی ممکن است',
       409,
     )
+  }
+  return null
+}
+
+function setupCatalogError(c: Parameters<typeof error>[0], err: unknown) {
+  const message = err instanceof Error ? err.message : ''
+  if (message.includes('not found or inactive')) {
+    return error(c, 'قالب خدمات یافت نشد یا فعال نیست', 404)
+  }
+  if (message.includes('selection is empty')) {
+    return error(c, 'حداقل یک خدمت از قالب انتخاب کنید', 400)
+  }
+  if (message.includes('collides with existing categories')) {
+    return error(c, 'یکی از دسته‌های قالب قبلاً در سالن وجود دارد', 409)
+  }
+  if (message.includes('unique') || message.includes('duplicate')) {
+    return error(c, 'رکوردی با این نام قبلاً در کاتالوگ وجود دارد', 409)
+  }
+  if (message.includes('must be non-negative')) {
+    return error(c, 'قیمت و زمان نمی‌توانند منفی باشند', 400)
+  }
+  if (message.includes('must be positive')) {
+    return error(c, 'قیمت یا زمان افزوده باید بیشتر از صفر باشد', 400)
+  }
+  if (message.includes('scope not found') || message.includes('not found')) {
+    return error(c, 'مرجع انتخاب‌شده در کاتالوگ یافت نشد', 400)
+  }
+  if (err instanceof CatalogReferenceError) {
+    return error(c, 'دسته یا گروه انتخاب‌شده معتبر نیست', 400)
   }
   return null
 }
@@ -312,6 +405,353 @@ export const adminRoute = new Hono<AppEnv>()
         request: auditMeta(c),
       })
       return ok(c, { presence })
+    },
+  )
+  .get(
+    '/salons/:id/setup/catalog',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      const [categories, families, services, addons, presets] =
+        await Promise.all([
+          getAllServiceCategories(id, true),
+          getAllServiceFamilies(id, true),
+          getAllServices(id, true),
+          getAllServiceAddons(id, true),
+          listActiveCatalogPresets(id),
+        ])
+      return ok(c, { categories, families, services, addons, presets })
+    },
+  )
+  .post(
+    '/salons/:id/setup/catalog/presets/:presetId/apply',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', setupCatalogPresetParamSchema),
+    zValidator('json', setupCatalogPresetBodySchema),
+    async (c) => {
+      const { id, presetId } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
+      if (liveError) return liveError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      try {
+        const result = await applyCatalogPreset({
+          salonId: id,
+          presetId,
+          selection: body.selection,
+        })
+        await writeAudit({
+          actorUserId: c.var.platformAdmin.userId,
+          actorPlatformRole: c.var.platformAdmin.role,
+          action: 'salon.setup.catalog_preset.apply',
+          targetType: 'catalog_preset',
+          targetId: presetId,
+          salonId: id,
+          reason: body.reason,
+          metadata: result,
+          request: auditMeta(c),
+        })
+        return ok(c, result)
+      } catch (err) {
+        const mapped = setupCatalogError(c, err)
+        if (mapped) return mapped
+        throw err
+      }
+    },
+  )
+  .post(
+    '/salons/:id/setup/catalog/categories',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('json', setupCategoryCreateBodySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
+      if (liveError) return liveError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      try {
+        const category = await createServiceCategory({
+          salonId: id,
+          name: body.name,
+          active: body.active,
+        })
+        await writeAudit({
+          actorUserId: c.var.platformAdmin.userId,
+          actorPlatformRole: c.var.platformAdmin.role,
+          action: 'salon.setup.catalog_category.create',
+          targetType: 'service_category',
+          targetId: category.id,
+          salonId: id,
+          reason: body.reason,
+          request: auditMeta(c),
+        })
+        return created(c, { category })
+      } catch (err) {
+        const mapped = setupCatalogError(c, err)
+        if (mapped) return mapped
+        throw err
+      }
+    },
+  )
+  .patch(
+    '/salons/:id/setup/catalog/categories/:entityId',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', setupCatalogEntityParamSchema),
+    zValidator('json', setupCategoryUpdateBodySchema),
+    async (c) => {
+      const { id, entityId } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
+      if (liveError) return liveError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      const { reason, liveConfirmation: _live, ...patch } = body
+      try {
+        const category = await updateServiceCategory(entityId, id, patch)
+        if (!category) return error(c, 'دسته خدمات یافت نشد', 404)
+        await writeAudit({
+          actorUserId: c.var.platformAdmin.userId,
+          actorPlatformRole: c.var.platformAdmin.role,
+          action: 'salon.setup.catalog_category.update',
+          targetType: 'service_category',
+          targetId: entityId,
+          salonId: id,
+          reason,
+          metadata: { fields: Object.keys(patch) },
+          request: auditMeta(c),
+        })
+        return ok(c, { category })
+      } catch (err) {
+        const mapped = setupCatalogError(c, err)
+        if (mapped) return mapped
+        throw err
+      }
+    },
+  )
+  .post(
+    '/salons/:id/setup/catalog/families',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('json', setupFamilyCreateBodySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
+      if (liveError) return liveError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      try {
+        const family = await createServiceFamily({
+          salonId: id,
+          categoryId: body.categoryId,
+          name: body.name,
+          active: body.active,
+        })
+        await writeAudit({
+          actorUserId: c.var.platformAdmin.userId,
+          actorPlatformRole: c.var.platformAdmin.role,
+          action: 'salon.setup.catalog_family.create',
+          targetType: 'service_family',
+          targetId: family.id,
+          salonId: id,
+          reason: body.reason,
+          request: auditMeta(c),
+        })
+        return created(c, { family })
+      } catch (err) {
+        const mapped = setupCatalogError(c, err)
+        if (mapped) return mapped
+        throw err
+      }
+    },
+  )
+  .patch(
+    '/salons/:id/setup/catalog/families/:entityId',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', setupCatalogEntityParamSchema),
+    zValidator('json', setupFamilyUpdateBodySchema),
+    async (c) => {
+      const { id, entityId } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
+      if (liveError) return liveError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      const { reason, liveConfirmation: _live, ...patch } = body
+      try {
+        const family = await updateServiceFamily(entityId, id, patch)
+        if (!family) return error(c, 'گروه خدمات یافت نشد', 404)
+        await writeAudit({
+          actorUserId: c.var.platformAdmin.userId,
+          actorPlatformRole: c.var.platformAdmin.role,
+          action: 'salon.setup.catalog_family.update',
+          targetType: 'service_family',
+          targetId: entityId,
+          salonId: id,
+          reason,
+          metadata: { fields: Object.keys(patch) },
+          request: auditMeta(c),
+        })
+        return ok(c, { family })
+      } catch (err) {
+        const mapped = setupCatalogError(c, err)
+        if (mapped) return mapped
+        throw err
+      }
+    },
+  )
+  .post(
+    '/salons/:id/setup/catalog/services',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('json', setupServiceCreateBodySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
+      if (liveError) return liveError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      try {
+        const service = await createService({
+          salonId: id,
+          name: body.name,
+          categoryId: body.categoryId,
+          familyId: body.familyId ?? null,
+          duration: body.duration,
+          price: body.price,
+          color: body.color,
+          active: body.active,
+          description: body.description,
+          kind: body.kind,
+        })
+        await writeAudit({
+          actorUserId: c.var.platformAdmin.userId,
+          actorPlatformRole: c.var.platformAdmin.role,
+          action: 'salon.setup.service_variant.create',
+          targetType: 'service',
+          targetId: service.id,
+          salonId: id,
+          reason: body.reason,
+          request: auditMeta(c),
+        })
+        return created(c, { service })
+      } catch (err) {
+        const mapped = setupCatalogError(c, err)
+        if (mapped) return mapped
+        throw err
+      }
+    },
+  )
+  .patch(
+    '/salons/:id/setup/catalog/services/:entityId',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', setupCatalogEntityParamSchema),
+    zValidator('json', setupServiceUpdateBodySchema),
+    async (c) => {
+      const { id, entityId } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
+      if (liveError) return liveError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      const { reason, liveConfirmation: _live, ...input } = body
+      const patch: Partial<Service> = { ...input }
+      if (input.familyId !== undefined) patch.familyId = input.familyId ?? null
+      try {
+        const service = await updateService(entityId, id, patch)
+        if (!service) return error(c, 'خدمت یافت نشد', 404)
+        await writeAudit({
+          actorUserId: c.var.platformAdmin.userId,
+          actorPlatformRole: c.var.platformAdmin.role,
+          action: 'salon.setup.service_variant.update',
+          targetType: 'service',
+          targetId: entityId,
+          salonId: id,
+          reason,
+          metadata: { fields: Object.keys(patch) },
+          request: auditMeta(c),
+        })
+        return ok(c, { service })
+      } catch (err) {
+        const mapped = setupCatalogError(c, err)
+        if (mapped) return mapped
+        throw err
+      }
+    },
+  )
+  .post(
+    '/salons/:id/setup/catalog/addons',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('json', setupAddonCreateBodySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
+      if (liveError) return liveError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      const { reason, liveConfirmation: _live, id: _clientId, ...input } = body
+      try {
+        const addon = await createServiceAddon({ ...input, salonId: id })
+        await writeAudit({
+          actorUserId: c.var.platformAdmin.userId,
+          actorPlatformRole: c.var.platformAdmin.role,
+          action: 'salon.setup.service_addon.create',
+          targetType: 'service_addon',
+          targetId: addon.id,
+          salonId: id,
+          reason,
+          request: auditMeta(c),
+        })
+        return created(c, { addon })
+      } catch (err) {
+        const mapped = setupCatalogError(c, err)
+        if (mapped) return mapped
+        throw err
+      }
+    },
+  )
+  .patch(
+    '/salons/:id/setup/catalog/addons/:entityId',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', setupCatalogEntityParamSchema),
+    zValidator('json', setupAddonUpdateBodySchema),
+    async (c) => {
+      const { id, entityId } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
+      if (liveError) return liveError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      const { reason, liveConfirmation: _live, ...patch } = body
+      try {
+        const addon = await updateServiceAddon(entityId, id, patch)
+        if (!addon) return error(c, 'افزودنی یافت نشد', 404)
+        await writeAudit({
+          actorUserId: c.var.platformAdmin.userId,
+          actorPlatformRole: c.var.platformAdmin.role,
+          action: 'salon.setup.service_addon.update',
+          targetType: 'service_addon',
+          targetId: entityId,
+          salonId: id,
+          reason,
+          metadata: { fields: Object.keys(patch) },
+          request: auditMeta(c),
+        })
+        return ok(c, { addon })
+      } catch (err) {
+        const mapped = setupCatalogError(c, err)
+        if (mapped) return mapped
+        throw err
+      }
     },
   )
   .get(

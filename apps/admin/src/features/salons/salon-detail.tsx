@@ -39,6 +39,7 @@ import { NotesPanel, StatusForm } from './salon-governance'
 import { CompactRows, DetailGrid, Panel } from '#/components/admin/panel'
 import { SalonTenantDataTabs } from './salon-tenant-tabs'
 import { SalonSetupEditor } from './salon-setup-editor'
+import { SalonSetupCatalog } from './salon-setup-catalog'
 import {
   useSalonDetailUrlState,
   type SalonDetailSection,
@@ -296,23 +297,29 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
               />
             ) : null}
             {setupQuery.data ? (
-              <SalonSetupEditor
-                configuration={setupQuery.data}
-                hoursError={hoursMutation.error}
-                presenceError={presenceMutation.error}
-                hoursPending={hoursMutation.isPending}
-                presencePending={presenceMutation.isPending}
-                isLiveData={isLiveData}
-                onSaveHours={(body, options) =>
-                  hoursMutation.mutate({ path: { id: salonId }, body }, options)
-                }
-                onSavePresence={(body, options) =>
-                  presenceMutation.mutate(
-                    { path: { id: salonId }, body },
-                    options,
-                  )
-                }
-              />
+              <div className="space-y-4">
+                <SalonSetupEditor
+                  configuration={setupQuery.data}
+                  hoursError={hoursMutation.error}
+                  presenceError={presenceMutation.error}
+                  hoursPending={hoursMutation.isPending}
+                  presencePending={presenceMutation.isPending}
+                  isLiveData={isLiveData}
+                  onSaveHours={(body, options) =>
+                    hoursMutation.mutate(
+                      { path: { id: salonId }, body },
+                      options,
+                    )
+                  }
+                  onSavePresence={(body, options) =>
+                    presenceMutation.mutate(
+                      { path: { id: salonId }, body },
+                      options,
+                    )
+                  }
+                />
+                <SalonSetupCatalog salonId={salonId} isLiveData={isLiveData} />
+              </div>
             ) : null}
           </TabsContent>
         ) : null}

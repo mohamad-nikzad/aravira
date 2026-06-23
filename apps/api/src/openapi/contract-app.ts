@@ -123,7 +123,12 @@ import {
   getPublicSalonRoute,
 } from './routes/public'
 import {
+  applyAdminSetupCatalogPresetRoute,
   createAdminCatalogPresetRoute,
+  createAdminSetupAddonRoute,
+  createAdminSetupCategoryRoute,
+  createAdminSetupFamilyRoute,
+  createAdminSetupServiceRoute,
   createAdminSalonNoteRoute,
   createSetupSalonRoute,
   createAdminUserNoteRoute,
@@ -134,6 +139,7 @@ import {
   getAdminRuntimeRoute,
   getAdminSalonRoute,
   getAdminSetupSalonConfigurationRoute,
+  getAdminSetupCatalogRoute,
   getAdminUserRoute,
   listAdminAuditLogRoute,
   listAdminCatalogPresetsRoute,
@@ -154,6 +160,10 @@ import {
   updateAdminSalonStatusRoute,
   updateAdminSetupSalonHoursRoute,
   updateAdminSetupSalonPresenceRoute,
+  updateAdminSetupAddonRoute,
+  updateAdminSetupCategoryRoute,
+  updateAdminSetupFamilyRoute,
+  updateAdminSetupServiceRoute,
   updatePlatformAdminRoute,
 } from './routes/admin'
 
@@ -500,6 +510,16 @@ const updateAdminSetupSalonHoursStub: RouteHandler<
 const updateAdminSetupSalonPresenceStub: RouteHandler<
   typeof updateAdminSetupSalonPresenceRoute
 > = (c) => c.json({ presence: setupPresenceStub }, 200)
+
+const getAdminSetupCatalogStub: RouteHandler<
+  typeof getAdminSetupCatalogRoute
+> = (c) =>
+  c.json(
+    { categories: [], families: [], services: [], addons: [], presets: [] },
+    200,
+  )
+
+const setupCatalogMutationStub = (c: any) => c.json({}, 200)
 
 const listAdminSalonClientsStub: RouteHandler<
   typeof listAdminSalonClientsRoute
@@ -1135,6 +1155,16 @@ export const contractApp = new OpenAPIHono()
         updateAdminSetupSalonPresenceRoute,
         updateAdminSetupSalonPresenceStub,
       )
+      .openapi(getAdminSetupCatalogRoute, getAdminSetupCatalogStub)
+      .openapi(applyAdminSetupCatalogPresetRoute, setupCatalogMutationStub)
+      .openapi(createAdminSetupCategoryRoute, setupCatalogMutationStub)
+      .openapi(updateAdminSetupCategoryRoute, setupCatalogMutationStub)
+      .openapi(createAdminSetupFamilyRoute, setupCatalogMutationStub)
+      .openapi(updateAdminSetupFamilyRoute, setupCatalogMutationStub)
+      .openapi(createAdminSetupServiceRoute, setupCatalogMutationStub)
+      .openapi(updateAdminSetupServiceRoute, setupCatalogMutationStub)
+      .openapi(createAdminSetupAddonRoute, setupCatalogMutationStub)
+      .openapi(updateAdminSetupAddonRoute, setupCatalogMutationStub)
       .openapi(listAdminSalonClientsRoute, listAdminSalonClientsStub)
       .openapi(listAdminSalonAppointmentsRoute, listAdminSalonAppointmentsStub)
       .openapi(

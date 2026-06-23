@@ -14,6 +14,8 @@ const generated = vi.hoisted(() => ({
   getStaff: vi.fn(),
   getServices: vi.fn(),
   getSetup: vi.fn(),
+  getSetupCatalog: vi.fn(),
+  mutateSetupCatalog: vi.fn(),
   patchSetupHours: vi.fn(),
   patchSetupPresence: vi.fn(),
   patchStatus: vi.fn(),
@@ -115,6 +117,13 @@ vi.mock('@repo/api-client/query', () => ({
   getApiV1AdminSalonsByIdSetupQueryKey: (options: unknown) => [
     { _id: 'salon-setup', options },
   ],
+  getApiV1AdminSalonsByIdSetupCatalogOptions: (options: unknown) => ({
+    queryKey: ['salon-setup-catalog', options],
+    queryFn: () => generated.getSetupCatalog(options),
+  }),
+  getApiV1AdminSalonsByIdSetupCatalogQueryKey: (options: unknown) => [
+    { _id: 'salon-setup-catalog', options },
+  ],
   getApiV1AdminSalonsByIdClientsOptions: (options: unknown) => ({
     queryKey: ['salon-clients', options],
     queryFn: () => generated.getClients(options),
@@ -144,6 +153,33 @@ vi.mock('@repo/api-client/query', () => ({
   patchApiV1AdminSalonsByIdSetupPresenceMutation: () => ({
     mutationFn: generated.patchSetupPresence,
   }),
+  postApiV1AdminSalonsByIdSetupCatalogPresetsByPresetIdApplyMutation: () => ({
+    mutationFn: generated.mutateSetupCatalog,
+  }),
+  postApiV1AdminSalonsByIdSetupCatalogCategoriesMutation: () => ({
+    mutationFn: generated.mutateSetupCatalog,
+  }),
+  patchApiV1AdminSalonsByIdSetupCatalogCategoriesByEntityIdMutation: () => ({
+    mutationFn: generated.mutateSetupCatalog,
+  }),
+  postApiV1AdminSalonsByIdSetupCatalogFamiliesMutation: () => ({
+    mutationFn: generated.mutateSetupCatalog,
+  }),
+  patchApiV1AdminSalonsByIdSetupCatalogFamiliesByEntityIdMutation: () => ({
+    mutationFn: generated.mutateSetupCatalog,
+  }),
+  postApiV1AdminSalonsByIdSetupCatalogServicesMutation: () => ({
+    mutationFn: generated.mutateSetupCatalog,
+  }),
+  patchApiV1AdminSalonsByIdSetupCatalogServicesByEntityIdMutation: () => ({
+    mutationFn: generated.mutateSetupCatalog,
+  }),
+  postApiV1AdminSalonsByIdSetupCatalogAddonsMutation: () => ({
+    mutationFn: generated.mutateSetupCatalog,
+  }),
+  patchApiV1AdminSalonsByIdSetupCatalogAddonsByEntityIdMutation: () => ({
+    mutationFn: generated.mutateSetupCatalog,
+  }),
   postApiV1AdminSalonsMutation: () => ({
     mutationFn: generated.postSalon,
   }),
@@ -165,6 +201,15 @@ describe('salons feature', () => {
     generated.getStaff.mockReset()
     generated.getServices.mockReset()
     generated.getSetup.mockReset()
+    generated.getSetupCatalog.mockReset()
+    generated.getSetupCatalog.mockResolvedValue({
+      categories: [],
+      families: [],
+      services: [],
+      addons: [],
+      presets: [],
+    })
+    generated.mutateSetupCatalog.mockReset()
     generated.patchSetupHours.mockReset()
     generated.patchSetupPresence.mockReset()
     generated.patchStatus.mockReset()
@@ -391,6 +436,95 @@ describe('salons feature', () => {
         }),
       }),
     )
+  })
+
+  it('applies a preset and creates catalog records in the Setup Salon workspace', async () => {
+    generated.getSalon.mockResolvedValue({
+      salon: { id: salonId, name: 'Setup Aftab', status: 'setup' },
+      members: [],
+      stats: { services: 0, appointments: 0 },
+    })
+    generated.getNotes.mockResolvedValue({ notes: [] })
+    generated.getSetup.mockResolvedValue({
+      hours: {
+        workingStart: '09:00',
+        workingEnd: '19:00',
+        slotDurationMinutes: 30,
+        workingDays: 126,
+      },
+      presence: {
+        address: null,
+        mapGoogle: null,
+        mapNeshan: null,
+        mapBalad: null,
+        socialInstagram: null,
+        socialTelegram: null,
+        socialWhatsapp: null,
+        website: null,
+      },
+    })
+    generated.getSetupCatalog.mockResolvedValue({
+      categories: [],
+      families: [],
+      services: [],
+      addons: [],
+      presets: [
+        {
+          id: '22222222-2222-4222-8222-222222222222',
+          name: 'قالب مو',
+          tree: [{ families: [{ variants: [{ name: 'رنگ مو' }] }] }],
+        },
+      ],
+    })
+    generated.mutateSetupCatalog.mockResolvedValue({})
+
+    await renderSalonDetail(`/salons/${salonId}?tab=setup`)
+
+    const categoryName = await screen.findByLabelText('دسته جدید')
+    const categoryForm = categoryName.closest('form')!
+    fireEvent.change(categoryName, { target: { value: 'مو' } })
+    fireEvent.change(categoryForm.querySelector('[name="reason"]')!, {
+      target: { value: 'Prepare categories' },
+    })
+    fireEvent.submit(categoryForm)
+
+    await waitFor(() => expect(generated.mutateSetupCatalog).toHaveBeenCalled())
+    expect(generated.mutateSetupCatalog.mock.calls[0]?.[0]).toEqual({
+      path: { id: salonId },
+      body: {
+        name: 'مو',
+        active: true,
+        reason: 'Prepare categories',
+      },
+    })
+
+    const presetButton = screen.getByRole('button', {
+      name: 'اعمال همه خدمات قالب',
+    })
+    const presetForm = presetButton.closest('form')!
+    fireEvent.change(presetForm.querySelector('[name="reason"]')!, {
+      target: { value: 'Use starter preset' },
+    })
+    fireEvent.click(presetButton)
+
+    await waitFor(() =>
+      expect(generated.mutateSetupCatalog).toHaveBeenCalledTimes(2),
+    )
+    expect(generated.mutateSetupCatalog.mock.calls[1]?.[0]).toEqual({
+      path: {
+        id: salonId,
+        presetId: '22222222-2222-4222-8222-222222222222',
+      },
+      body: {
+        selection: [
+          {
+            categoryIndex: 0,
+            families: [{ familyIndex: 0, variantIndices: [0] }],
+          },
+        ],
+        reason: 'Use starter preset',
+      },
+    })
   })
 
   it('hides Setup Salon editing from platform support', async () => {

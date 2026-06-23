@@ -272,6 +272,155 @@ export const adminSetupPresenceResponseSchema = z
   .object({ presence: adminSetupPresenceSchema })
   .openapi('AdminSetupSalonPresenceResponse')
 
+const adminSetupCatalogMutationMetaShape = {
+  reason: adminReasonSchema,
+  liveConfirmation: z.string().optional(),
+}
+
+const adminSetupCatalogScopeSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('category'), categoryId: z.string() }),
+  z.object({ type: z.literal('family'), familyId: z.string() }),
+  z.object({ type: z.literal('service'), serviceId: z.string() }),
+])
+
+export const adminSetupCatalogResponseSchema = z
+  .object({
+    categories: z.array(anyRecordSchema),
+    families: z.array(anyRecordSchema),
+    services: z.array(anyRecordSchema),
+    addons: z.array(anyRecordSchema),
+    presets: z.array(anyRecordSchema),
+  })
+  .openapi('AdminSetupCatalogResponse')
+
+export const adminSetupCatalogPresetApplyBodySchema = z
+  .object({
+    selection: z.array(
+      z.object({
+        categoryIndex: z.number().int().nonnegative(),
+        families: z.array(
+          z.object({
+            familyIndex: z.number().int().nonnegative(),
+            variantIndices: z.array(z.number().int().nonnegative()),
+          }),
+        ),
+      }),
+    ),
+    ...adminSetupCatalogMutationMetaShape,
+  })
+  .openapi('AdminSetupCatalogPresetApplyRequest')
+
+export const adminSetupCategoryCreateBodySchema = z
+  .object({
+    name: z.string(),
+    active: z.boolean().optional(),
+    ...adminSetupCatalogMutationMetaShape,
+  })
+  .openapi('AdminSetupCategoryCreateRequest')
+
+export const adminSetupCategoryUpdateBodySchema = z
+  .object({
+    name: z.string().optional(),
+    active: z.boolean().optional(),
+    ...adminSetupCatalogMutationMetaShape,
+  })
+  .openapi('AdminSetupCategoryUpdateRequest')
+
+export const adminSetupFamilyCreateBodySchema = z
+  .object({
+    categoryId: z.string(),
+    name: z.string(),
+    active: z.boolean().optional(),
+    ...adminSetupCatalogMutationMetaShape,
+  })
+  .openapi('AdminSetupFamilyCreateRequest')
+
+export const adminSetupFamilyUpdateBodySchema = z
+  .object({
+    categoryId: z.string().optional(),
+    name: z.string().optional(),
+    active: z.boolean().optional(),
+    ...adminSetupCatalogMutationMetaShape,
+  })
+  .openapi('AdminSetupFamilyUpdateRequest')
+
+const adminSetupServiceShape = {
+  name: z.string(),
+  categoryId: z.string(),
+  familyId: z.string().nullable().optional(),
+  duration: z.number().int().positive(),
+  price: z.number().int().nonnegative(),
+  color: z.string(),
+  active: z.boolean().optional(),
+  description: z.string().optional(),
+  kind: z.enum(['standard', 'combo']).optional(),
+}
+
+export const adminSetupServiceCreateBodySchema = z
+  .object({
+    ...adminSetupServiceShape,
+    ...adminSetupCatalogMutationMetaShape,
+  })
+  .openapi('AdminSetupServiceCreateRequest')
+
+export const adminSetupServiceUpdateBodySchema = z
+  .object({
+    name: z.string().optional(),
+    categoryId: z.string().optional(),
+    familyId: z.string().nullable().optional(),
+    duration: z.number().int().positive().optional(),
+    price: z.number().int().nonnegative().optional(),
+    color: z.string().optional(),
+    active: z.boolean().optional(),
+    description: z.string().optional(),
+    kind: z.enum(['standard', 'combo']).optional(),
+    ...adminSetupCatalogMutationMetaShape,
+  })
+  .openapi('AdminSetupServiceUpdateRequest')
+
+const adminSetupAddonShape = {
+  name: z.string(),
+  priceDelta: z.number().int().nonnegative(),
+  durationDelta: z.number().int().nonnegative(),
+  active: z.boolean().optional(),
+  sortOrder: z.number().int().nonnegative().optional(),
+  description: z.string().optional(),
+  color: z.string().nullable().optional(),
+  scopes: z.array(adminSetupCatalogScopeSchema).optional(),
+}
+
+export const adminSetupAddonCreateBodySchema = z
+  .object({
+    ...adminSetupAddonShape,
+    ...adminSetupCatalogMutationMetaShape,
+  })
+  .openapi('AdminSetupAddonCreateRequest')
+
+export const adminSetupAddonUpdateBodySchema = z
+  .object({
+    name: z.string().optional(),
+    priceDelta: z.number().int().nonnegative().optional(),
+    durationDelta: z.number().int().nonnegative().optional(),
+    active: z.boolean().optional(),
+    sortOrder: z.number().int().nonnegative().optional(),
+    description: z.string().optional(),
+    color: z.string().nullable().optional(),
+    scopes: z.array(adminSetupCatalogScopeSchema).optional(),
+    ...adminSetupCatalogMutationMetaShape,
+  })
+  .openapi('AdminSetupAddonUpdateRequest')
+
+export const adminSetupCatalogMutationResponseSchema = z
+  .object({
+    category: anyRecordSchema.optional(),
+    family: anyRecordSchema.optional(),
+    service: anyRecordSchema.optional(),
+    addon: anyRecordSchema.optional(),
+    importedCategoryIds: z.array(z.string()).optional(),
+    importedVariantIds: z.array(z.string()).optional(),
+  })
+  .openapi('AdminSetupCatalogMutationResponse')
+
 export const adminNoteCreateBodySchema = z
   .object({
     body: z.string().min(1).max(5000),

@@ -59,6 +59,27 @@ vi.mock('@repo/database/salon-profile', () => ({
   updateSalonPresence: vi.fn(),
 }))
 
+vi.mock('@repo/database/catalog-presets', () => ({
+  applyCatalogPreset: vi.fn(),
+  listActiveCatalogPresets: vi.fn(),
+}))
+
+vi.mock('@repo/database/services', () => ({
+  CatalogReferenceError: class CatalogReferenceError extends Error {},
+  createService: vi.fn(),
+  createServiceAddon: vi.fn(),
+  createServiceCategory: vi.fn(),
+  createServiceFamily: vi.fn(),
+  getAllServiceAddons: vi.fn(),
+  getAllServiceCategories: vi.fn(),
+  getAllServiceFamilies: vi.fn(),
+  getAllServices: vi.fn(),
+  updateService: vi.fn(),
+  updateServiceAddon: vi.fn(),
+  updateServiceCategory: vi.fn(),
+  updateServiceFamily: vi.fn(),
+}))
+
 import { auth as authServer } from '@repo/auth/server'
 import {
   createAdminAuditEvent,
@@ -90,6 +111,16 @@ import {
   getSalonPresence,
   updateSalonPresence,
 } from '@repo/database/salon-profile'
+import { applyCatalogPreset } from '@repo/database/catalog-presets'
+import {
+  createService,
+  createServiceCategory,
+  getAllServiceAddons,
+  getAllServiceCategories,
+  getAllServiceFamilies,
+  getAllServices,
+  updateService,
+} from '@repo/database/services'
 
 process.env.NODE_ENV = 'test'
 process.env.DATABASE_URL = 'postgres://stub'
@@ -424,6 +455,150 @@ describe('admin runtime data source', () => {
     expect(forbiddenRes.status).toBe(403)
     expect(updateBusinessSettings).not.toHaveBeenCalled()
     expect(updateSalonPresence).not.toHaveBeenCalled()
+  })
+
+  it('applies a CatalogPreset and manually edits a Setup Salon catalog', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: { id: salonId, status: 'setup' },
+      members: [],
+      stats: {},
+    } as never)
+    vi.mocked(getAllServiceCategories).mockResolvedValue([])
+    vi.mocked(getAllServiceFamilies).mockResolvedValue([])
+    vi.mocked(getAllServices).mockResolvedValue([])
+    vi.mocked(getAllServiceAddons).mockResolvedValue([])
+    vi.mocked(applyCatalogPreset).mockResolvedValue({
+      importedCategoryIds: ['category-1'],
+      importedVariantIds: ['service-1'],
+    })
+    vi.mocked(createServiceCategory).mockResolvedValue({
+      id: 'category-1',
+      name: 'مو',
+      active: true,
+    } as never)
+    vi.mocked(createService).mockResolvedValue({ id: 'service-1' } as never)
+    vi.mocked(updateService).mockResolvedValue({ id: 'service-1' } as never)
+
+    const presetRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/catalog/presets/${presetId}/apply`,
+      {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          selection: [
+            {
+              categoryIndex: 0,
+              families: [{ familyIndex: 0, variantIndices: [0] }],
+            },
+          ],
+          reason: 'Prepare service menu',
+          liveConfirmation: 'LIVE',
+        }),
+      },
+    )
+    const categoryRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/catalog/categories`,
+      {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'مو',
+          reason: 'Add category',
+          liveConfirmation: 'LIVE',
+        }),
+      },
+    )
+    const serviceRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/catalog/services`,
+      {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'رنگ مو',
+          categoryId: 'category-1',
+          duration: 60,
+          price: 1200000,
+          color: 'rose',
+          reason: 'Add service',
+          liveConfirmation: 'LIVE',
+        }),
+      },
+    )
+    const editRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/catalog/services/service-1`,
+      {
+        method: 'PATCH',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          price: 1400000,
+          reason: 'Correct price',
+          liveConfirmation: 'LIVE',
+        }),
+      },
+    )
+
+    expect(presetRes.status).toBe(200)
+    expect(categoryRes.status).toBe(201)
+    expect(serviceRes.status).toBe(201)
+    expect(editRes.status).toBe(200)
+    expect(applyCatalogPreset).toHaveBeenCalledWith(
+      expect.objectContaining({ salonId, presetId }),
+    )
+    expect(updateService).toHaveBeenCalledWith('service-1', salonId, {
+      price: 1400000,
+    })
+  })
+
+  it('rejects setup catalog validation, unauthorized roles, and active salons', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: { id: salonId, status: 'active' },
+      members: [],
+      stats: {},
+    } as never)
+    const lifecycleRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/catalog/categories`,
+      {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'مو',
+          reason: 'Add category',
+          liveConfirmation: 'LIVE',
+        }),
+      },
+    )
+    expect(lifecycleRes.status).toBe(409)
+
+    const validationRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/catalog/services`,
+      {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Invalid',
+          categoryId: '',
+          duration: 0,
+          price: -1,
+          color: 'rose',
+          reason: 'Invalid service',
+          liveConfirmation: 'LIVE',
+        }),
+      },
+    )
+    expect(validationRes.status).toBe(400)
+
+    vi.mocked(getPlatformAdminForUser).mockResolvedValue({
+      id: 'platform-viewer-1',
+      userId: 'admin-user-1',
+      role: 'platform_viewer',
+      active: true,
+    } as never)
+    const forbiddenRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/catalog`,
+      { headers: authHeaders },
+    )
+    expect(forbiddenRes.status).toBe(403)
+    expect(createServiceCategory).not.toHaveBeenCalled()
   })
 
   it('lists and reads admin salons', async () => {

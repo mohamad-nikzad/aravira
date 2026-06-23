@@ -37,6 +37,17 @@ import {
   adminSetupHoursResponseSchema,
   adminSetupPresencePatchBodySchema,
   adminSetupPresenceResponseSchema,
+  adminSetupAddonCreateBodySchema,
+  adminSetupAddonUpdateBodySchema,
+  adminSetupCatalogMutationResponseSchema,
+  adminSetupCatalogPresetApplyBodySchema,
+  adminSetupCatalogResponseSchema,
+  adminSetupCategoryCreateBodySchema,
+  adminSetupCategoryUpdateBodySchema,
+  adminSetupFamilyCreateBodySchema,
+  adminSetupFamilyUpdateBodySchema,
+  adminSetupServiceCreateBodySchema,
+  adminSetupServiceUpdateBodySchema,
   adminStatusUpdateBodySchema,
   adminSupportAppointmentRequestsResponseSchema,
   adminSupportAppointmentsResponseSchema,
@@ -46,6 +57,12 @@ import {
 } from '../schemas/admin'
 
 const adminSecurity = tenantSecurity
+const setupCatalogEntityParamSchema = idParamSchema.extend({
+  entityId: z.string(),
+})
+const setupCatalogPresetParamSchema = idParamSchema.extend({
+  presetId: z.string(),
+})
 
 const unauthorizedResponse = {
   description: 'Missing or invalid session',
@@ -324,6 +341,137 @@ export const updateAdminSetupSalonPresenceRoute = createRoute({
     404: notFoundResponse,
     409: conflictResponse,
   },
+})
+
+export const getAdminSetupCatalogRoute = createRoute({
+  method: 'get',
+  path: '/salons/{id}/setup/catalog',
+  tags: ['Admin'],
+  summary: 'Get the Setup Salon service catalog workspace',
+  security: adminSecurity,
+  request: { params: idParamSchema },
+  responses: {
+    200: {
+      description: 'Setup Salon catalog',
+      content: {
+        'application/json': { schema: adminSetupCatalogResponseSchema },
+      },
+    },
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+    404: notFoundResponse,
+    409: conflictResponse,
+  },
+})
+
+function setupCatalogMutationRoute(input: {
+  method: 'post' | 'patch'
+  path: string
+  summary: string
+  params: z.ZodObject<any>
+  body: z.ZodType
+}) {
+  return createRoute({
+    method: input.method,
+    path: input.path,
+    tags: ['Admin'],
+    summary: input.summary,
+    security: adminSecurity,
+    request: {
+      params: input.params,
+      body: {
+        required: true,
+        content: { 'application/json': { schema: input.body } },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Updated setup catalog',
+        content: {
+          'application/json': {
+            schema: adminSetupCatalogMutationResponseSchema,
+          },
+        },
+      },
+      201: {
+        description: 'Created setup catalog record',
+        content: {
+          'application/json': {
+            schema: adminSetupCatalogMutationResponseSchema,
+          },
+        },
+      },
+      400: validationResponse,
+      401: unauthorizedResponse,
+      403: forbiddenResponse,
+      404: notFoundResponse,
+      409: conflictResponse,
+    },
+  })
+}
+
+export const applyAdminSetupCatalogPresetRoute = setupCatalogMutationRoute({
+  method: 'post',
+  path: '/salons/{id}/setup/catalog/presets/{presetId}/apply',
+  summary: 'Apply a CatalogPreset to a Setup Salon',
+  params: setupCatalogPresetParamSchema,
+  body: adminSetupCatalogPresetApplyBodySchema,
+})
+export const createAdminSetupCategoryRoute = setupCatalogMutationRoute({
+  method: 'post',
+  path: '/salons/{id}/setup/catalog/categories',
+  summary: 'Create a Setup Salon service category',
+  params: idParamSchema,
+  body: adminSetupCategoryCreateBodySchema,
+})
+export const updateAdminSetupCategoryRoute = setupCatalogMutationRoute({
+  method: 'patch',
+  path: '/salons/{id}/setup/catalog/categories/{entityId}',
+  summary: 'Update a Setup Salon service category',
+  params: setupCatalogEntityParamSchema,
+  body: adminSetupCategoryUpdateBodySchema,
+})
+export const createAdminSetupFamilyRoute = setupCatalogMutationRoute({
+  method: 'post',
+  path: '/salons/{id}/setup/catalog/families',
+  summary: 'Create a Setup Salon service family',
+  params: idParamSchema,
+  body: adminSetupFamilyCreateBodySchema,
+})
+export const updateAdminSetupFamilyRoute = setupCatalogMutationRoute({
+  method: 'patch',
+  path: '/salons/{id}/setup/catalog/families/{entityId}',
+  summary: 'Update a Setup Salon service family',
+  params: setupCatalogEntityParamSchema,
+  body: adminSetupFamilyUpdateBodySchema,
+})
+export const createAdminSetupServiceRoute = setupCatalogMutationRoute({
+  method: 'post',
+  path: '/salons/{id}/setup/catalog/services',
+  summary: 'Create a Setup Salon ServiceVariant',
+  params: idParamSchema,
+  body: adminSetupServiceCreateBodySchema,
+})
+export const updateAdminSetupServiceRoute = setupCatalogMutationRoute({
+  method: 'patch',
+  path: '/salons/{id}/setup/catalog/services/{entityId}',
+  summary: 'Update a Setup Salon ServiceVariant',
+  params: setupCatalogEntityParamSchema,
+  body: adminSetupServiceUpdateBodySchema,
+})
+export const createAdminSetupAddonRoute = setupCatalogMutationRoute({
+  method: 'post',
+  path: '/salons/{id}/setup/catalog/addons',
+  summary: 'Create a Setup Salon service add-on',
+  params: idParamSchema,
+  body: adminSetupAddonCreateBodySchema,
+})
+export const updateAdminSetupAddonRoute = setupCatalogMutationRoute({
+  method: 'patch',
+  path: '/salons/{id}/setup/catalog/addons/{entityId}',
+  summary: 'Update a Setup Salon service add-on',
+  params: setupCatalogEntityParamSchema,
+  body: adminSetupAddonUpdateBodySchema,
 })
 
 export const listAdminSalonClientsRoute = getSalonListRoute(
