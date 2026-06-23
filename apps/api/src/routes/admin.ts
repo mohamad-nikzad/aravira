@@ -31,8 +31,18 @@ import {
   upsertPlatformAdmin,
   type PlatformRole,
 } from '@repo/database/admin'
+import {
+  getBusinessSettings,
+  updateBusinessSettings,
+} from '@repo/database/settings'
+import {
+  getSalonPresence,
+  updateSalonPresence,
+} from '@repo/database/salon-profile'
 import { presetTreeSchema } from '@repo/salon-core/forms/catalog-preset'
 import { phoneSchema } from '@repo/salon-core/forms/primitives'
+import { businessSettingsSchema } from '@repo/salon-core/forms/settings'
+import { presencePatchSchema } from '@repo/salon-core/forms/presence'
 import type { AppEnv } from '../factory'
 import { getEnv } from '../env'
 import { requirePlatformAdmin } from '../middleware/auth'
@@ -72,6 +82,14 @@ const setupSalonBodySchema = z.object({
   reason: reasonSchema,
   liveConfirmation: z.string().trim().optional(),
 })
+
+const setupMutationMetaSchema = z.object({
+  reason: reasonSchema,
+  liveConfirmation: z.string().trim().optional(),
+})
+
+const setupHoursBodySchema = businessSettingsSchema.and(setupMutationMetaSchema)
+const setupPresenceBodySchema = presencePatchSchema.and(setupMutationMetaSchema)
 
 const noteBodySchema = z.object({
   body: z.string().trim().min(1).max(5000),
@@ -137,6 +155,19 @@ async function requireExistingSalon(
   return error(c, 'سالن یافت نشد', 404)
 }
 
+async function requireSetupSalon(c: Parameters<typeof error>[0], id: string) {
+  const result = await getAdminSalon(id)
+  if (!result) return error(c, 'سالن یافت نشد', 404)
+  if (result.salon.status !== 'setup') {
+    return error(
+      c,
+      'ویرایش راه‌اندازی فقط برای سالن در وضعیت راه‌اندازی ممکن است',
+      409,
+    )
+  }
+  return null
+}
+
 export const adminRoute = new Hono<AppEnv>()
   .use('*', requirePlatformAdmin('view_admin'))
   .get('/auth/me', async (c) => {
@@ -192,6 +223,95 @@ export const adminRoute = new Hono<AppEnv>()
       const result = await getAdminSalon(c.req.valid('param').id)
       if (!result) return error(c, 'سالن یافت نشد', 404)
       return ok(c, result)
+    },
+  )
+  .get(
+    '/salons/:id/setup',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      const [hours, presence] = await Promise.all([
+        getBusinessSettings(id),
+        getSalonPresence(id),
+      ])
+      return ok(c, { hours, presence })
+    },
+  )
+  .patch(
+    '/salons/:id/setup/hours',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('json', setupHoursBodySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveConfirmationError = requireLiveConfirmation(
+        c,
+        body.liveConfirmation,
+      )
+      if (liveConfirmationError) return liveConfirmationError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      const hours = await updateBusinessSettings(id, {
+        ...(body.workingStart !== undefined
+          ? { workingStart: body.workingStart }
+          : {}),
+        ...(body.workingEnd !== undefined
+          ? { workingEnd: body.workingEnd }
+          : {}),
+        ...(body.slotDurationMinutes !== undefined
+          ? { slotDurationMinutes: body.slotDurationMinutes }
+          : {}),
+        ...(body.workingDays !== undefined
+          ? { workingDays: body.workingDays }
+          : {}),
+      })
+      await writeAudit({
+        actorUserId: c.var.platformAdmin.userId,
+        actorPlatformRole: c.var.platformAdmin.role,
+        action: 'salon.setup.hours.update',
+        targetType: 'salon',
+        targetId: id,
+        salonId: id,
+        reason: body.reason,
+        metadata: { workingDays: hours.workingDays },
+        request: auditMeta(c),
+      })
+      return ok(c, { hours })
+    },
+  )
+  .patch(
+    '/salons/:id/setup/presence',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('json', setupPresenceBodySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveConfirmationError = requireLiveConfirmation(
+        c,
+        body.liveConfirmation,
+      )
+      if (liveConfirmationError) return liveConfirmationError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      const { reason, liveConfirmation: _liveConfirmation, ...payload } = body
+      const presence = await updateSalonPresence(id, payload)
+      await writeAudit({
+        actorUserId: c.var.platformAdmin.userId,
+        actorPlatformRole: c.var.platformAdmin.role,
+        action: 'salon.setup.presence.update',
+        targetType: 'salon',
+        targetId: id,
+        salonId: id,
+        reason,
+        metadata: { fields: Object.keys(payload) },
+        request: auditMeta(c),
+      })
+      return ok(c, { presence })
     },
   )
   .get(

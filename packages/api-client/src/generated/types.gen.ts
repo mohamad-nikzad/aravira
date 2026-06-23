@@ -89,6 +89,59 @@ export type AdminSalonDetailResponse = {
   }
 }
 
+export type AdminSetupSalonConfigurationResponse = {
+  hours: AdminSetupSalonHours
+  presence: AdminSetupSalonPresence
+}
+
+export type AdminSetupSalonHours = {
+  workingStart: string
+  workingEnd: string
+  slotDurationMinutes: number
+  workingDays: number
+}
+
+export type AdminSetupSalonPresence = {
+  address: string | null
+  mapGoogle: string | null
+  mapNeshan: string | null
+  mapBalad: string | null
+  socialInstagram: string | null
+  socialTelegram: string | null
+  socialWhatsapp: string | null
+  website: string | null
+}
+
+export type AdminSetupSalonHoursResponse = {
+  hours: AdminSetupSalonHours
+}
+
+export type AdminSetupSalonHoursPatchRequest = {
+  workingStart?: string
+  workingEnd?: string
+  slotDurationMinutes?: number
+  workingDays?: number
+  reason: string
+  liveConfirmation?: string
+}
+
+export type AdminSetupSalonPresenceResponse = {
+  presence: AdminSetupSalonPresence
+}
+
+export type AdminSetupSalonPresencePatchRequest = {
+  address?: string | null
+  mapGoogle?: string | null
+  mapNeshan?: string | null
+  mapBalad?: string | null
+  socialInstagram?: string | null
+  socialTelegram?: string | null
+  socialWhatsapp?: string | null
+  website?: string | null
+  reason: string
+  liveConfirmation?: string
+}
+
 export type AdminSalonClientsResponse = {
   items: Array<{
     [key: string]: unknown
@@ -1802,6 +1855,137 @@ export type GetApiV1AdminSalonsByIdResponses = {
 
 export type GetApiV1AdminSalonsByIdResponse =
   GetApiV1AdminSalonsByIdResponses[keyof GetApiV1AdminSalonsByIdResponses]
+
+export type GetApiV1AdminSalonsByIdSetupData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/api/v1/admin/salons/{id}/setup'
+}
+
+export type GetApiV1AdminSalonsByIdSetupErrors = {
+  /**
+   * Missing or invalid session
+   */
+  401: ApiError
+  /**
+   * Authenticated user is not an active platform admin or lacks permission
+   */
+  403: ApiError
+  /**
+   * Admin resource not found
+   */
+  404: ApiError
+  /**
+   * Mutation violates platform admin safety rules
+   */
+  409: ApiError
+}
+
+export type GetApiV1AdminSalonsByIdSetupError =
+  GetApiV1AdminSalonsByIdSetupErrors[keyof GetApiV1AdminSalonsByIdSetupErrors]
+
+export type GetApiV1AdminSalonsByIdSetupResponses = {
+  /**
+   * Setup Salon configuration
+   */
+  200: AdminSetupSalonConfigurationResponse
+}
+
+export type GetApiV1AdminSalonsByIdSetupResponse =
+  GetApiV1AdminSalonsByIdSetupResponses[keyof GetApiV1AdminSalonsByIdSetupResponses]
+
+export type PatchApiV1AdminSalonsByIdSetupHoursData = {
+  body: AdminSetupSalonHoursPatchRequest
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/api/v1/admin/salons/{id}/setup/hours'
+}
+
+export type PatchApiV1AdminSalonsByIdSetupHoursErrors = {
+  /**
+   * Invalid request body or query
+   */
+  400: ApiError
+  /**
+   * Missing or invalid session
+   */
+  401: ApiError
+  /**
+   * Authenticated user is not an active platform admin or lacks permission
+   */
+  403: ApiError
+  /**
+   * Admin resource not found
+   */
+  404: ApiError
+  /**
+   * Mutation violates platform admin safety rules
+   */
+  409: ApiError
+}
+
+export type PatchApiV1AdminSalonsByIdSetupHoursError =
+  PatchApiV1AdminSalonsByIdSetupHoursErrors[keyof PatchApiV1AdminSalonsByIdSetupHoursErrors]
+
+export type PatchApiV1AdminSalonsByIdSetupHoursResponses = {
+  /**
+   * Updated Setup Salon hours
+   */
+  200: AdminSetupSalonHoursResponse
+}
+
+export type PatchApiV1AdminSalonsByIdSetupHoursResponse =
+  PatchApiV1AdminSalonsByIdSetupHoursResponses[keyof PatchApiV1AdminSalonsByIdSetupHoursResponses]
+
+export type PatchApiV1AdminSalonsByIdSetupPresenceData = {
+  body: AdminSetupSalonPresencePatchRequest
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/api/v1/admin/salons/{id}/setup/presence'
+}
+
+export type PatchApiV1AdminSalonsByIdSetupPresenceErrors = {
+  /**
+   * Invalid request body or query
+   */
+  400: ApiError
+  /**
+   * Missing or invalid session
+   */
+  401: ApiError
+  /**
+   * Authenticated user is not an active platform admin or lacks permission
+   */
+  403: ApiError
+  /**
+   * Admin resource not found
+   */
+  404: ApiError
+  /**
+   * Mutation violates platform admin safety rules
+   */
+  409: ApiError
+}
+
+export type PatchApiV1AdminSalonsByIdSetupPresenceError =
+  PatchApiV1AdminSalonsByIdSetupPresenceErrors[keyof PatchApiV1AdminSalonsByIdSetupPresenceErrors]
+
+export type PatchApiV1AdminSalonsByIdSetupPresenceResponses = {
+  /**
+   * Updated Setup Salon presence
+   */
+  200: AdminSetupSalonPresenceResponse
+}
+
+export type PatchApiV1AdminSalonsByIdSetupPresenceResponse =
+  PatchApiV1AdminSalonsByIdSetupPresenceResponses[keyof PatchApiV1AdminSalonsByIdSetupPresenceResponses]
 
 export type GetApiV1AdminSalonsByIdClientsData = {
   body?: never

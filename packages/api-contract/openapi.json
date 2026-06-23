@@ -342,6 +342,184 @@
         },
         "required": ["salon", "members", "stats"]
       },
+      "AdminSetupSalonConfigurationResponse": {
+        "type": "object",
+        "properties": {
+          "hours": {
+            "$ref": "#/components/schemas/AdminSetupSalonHours"
+          },
+          "presence": {
+            "$ref": "#/components/schemas/AdminSetupSalonPresence"
+          }
+        },
+        "required": ["hours", "presence"]
+      },
+      "AdminSetupSalonHours": {
+        "type": "object",
+        "properties": {
+          "workingStart": {
+            "type": "string"
+          },
+          "workingEnd": {
+            "type": "string"
+          },
+          "slotDurationMinutes": {
+            "type": "integer"
+          },
+          "workingDays": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 127
+          }
+        },
+        "required": [
+          "workingStart",
+          "workingEnd",
+          "slotDurationMinutes",
+          "workingDays"
+        ]
+      },
+      "AdminSetupSalonPresence": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "mapGoogle": {
+            "type": "string",
+            "nullable": true
+          },
+          "mapNeshan": {
+            "type": "string",
+            "nullable": true
+          },
+          "mapBalad": {
+            "type": "string",
+            "nullable": true
+          },
+          "socialInstagram": {
+            "type": "string",
+            "nullable": true
+          },
+          "socialTelegram": {
+            "type": "string",
+            "nullable": true
+          },
+          "socialWhatsapp": {
+            "type": "string",
+            "nullable": true
+          },
+          "website": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "address",
+          "mapGoogle",
+          "mapNeshan",
+          "mapBalad",
+          "socialInstagram",
+          "socialTelegram",
+          "socialWhatsapp",
+          "website"
+        ]
+      },
+      "AdminSetupSalonHoursResponse": {
+        "type": "object",
+        "properties": {
+          "hours": {
+            "$ref": "#/components/schemas/AdminSetupSalonHours"
+          }
+        },
+        "required": ["hours"]
+      },
+      "AdminSetupSalonHoursPatchRequest": {
+        "type": "object",
+        "properties": {
+          "workingStart": {
+            "type": "string"
+          },
+          "workingEnd": {
+            "type": "string"
+          },
+          "slotDurationMinutes": {
+            "type": "integer"
+          },
+          "workingDays": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 127
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500,
+            "example": "درخواست پشتیبانی داخلی"
+          },
+          "liveConfirmation": {
+            "type": "string"
+          }
+        },
+        "required": ["reason"]
+      },
+      "AdminSetupSalonPresenceResponse": {
+        "type": "object",
+        "properties": {
+          "presence": {
+            "$ref": "#/components/schemas/AdminSetupSalonPresence"
+          }
+        },
+        "required": ["presence"]
+      },
+      "AdminSetupSalonPresencePatchRequest": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "mapGoogle": {
+            "type": "string",
+            "nullable": true
+          },
+          "mapNeshan": {
+            "type": "string",
+            "nullable": true
+          },
+          "mapBalad": {
+            "type": "string",
+            "nullable": true
+          },
+          "socialInstagram": {
+            "type": "string",
+            "nullable": true
+          },
+          "socialTelegram": {
+            "type": "string",
+            "nullable": true
+          },
+          "socialWhatsapp": {
+            "type": "string",
+            "nullable": true
+          },
+          "website": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500,
+            "example": "درخواست پشتیبانی داخلی"
+          },
+          "liveConfirmation": {
+            "type": "string"
+          }
+        },
+        "required": ["reason"]
+      },
       "AdminSalonClientsResponse": {
         "type": "object",
         "properties": {
@@ -5592,6 +5770,280 @@
           },
           "404": {
             "description": "Admin resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/salons/{id}/setup": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get Setup Salon hours and presence",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Setup Salon configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSetupSalonConfigurationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user is not an active platform admin or lacks permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Admin resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Mutation violates platform admin safety rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/salons/{id}/setup/hours": {
+      "patch": {
+        "tags": ["Admin"],
+        "summary": "Update Setup Salon hours",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSetupSalonHoursPatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated Setup Salon hours",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSetupSalonHoursResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user is not an active platform admin or lacks permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Admin resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Mutation violates platform admin safety rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/salons/{id}/setup/presence": {
+      "patch": {
+        "tags": ["Admin"],
+        "summary": "Update Setup Salon presence",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSetupSalonPresencePatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated Setup Salon presence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSetupSalonPresenceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user is not an active platform admin or lacks permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Admin resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Mutation violates platform admin safety rules",
             "content": {
               "application/json": {
                 "schema": {

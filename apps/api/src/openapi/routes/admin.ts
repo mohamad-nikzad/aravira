@@ -32,6 +32,11 @@ import {
   adminSalonsResponseSchema,
   adminSetupSalonCreateBodySchema,
   adminSetupSalonResponseSchema,
+  adminSetupSalonConfigurationResponseSchema,
+  adminSetupHoursPatchBodySchema,
+  adminSetupHoursResponseSchema,
+  adminSetupPresencePatchBodySchema,
+  adminSetupPresenceResponseSchema,
   adminStatusUpdateBodySchema,
   adminSupportAppointmentRequestsResponseSchema,
   adminSupportAppointmentsResponseSchema,
@@ -235,6 +240,89 @@ export const getAdminSalonRoute = createRoute({
     401: unauthorizedResponse,
     403: forbiddenResponse,
     404: notFoundResponse,
+  },
+})
+
+export const getAdminSetupSalonConfigurationRoute = createRoute({
+  method: 'get',
+  path: '/salons/{id}/setup',
+  tags: ['Admin'],
+  summary: 'Get Setup Salon hours and presence',
+  security: adminSecurity,
+  request: { params: idParamSchema },
+  responses: {
+    200: {
+      description: 'Setup Salon configuration',
+      content: {
+        'application/json': {
+          schema: adminSetupSalonConfigurationResponseSchema,
+        },
+      },
+    },
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+    404: notFoundResponse,
+    409: conflictResponse,
+  },
+})
+
+export const updateAdminSetupSalonHoursRoute = createRoute({
+  method: 'patch',
+  path: '/salons/{id}/setup/hours',
+  tags: ['Admin'],
+  summary: 'Update Setup Salon hours',
+  security: adminSecurity,
+  request: {
+    params: idParamSchema,
+    body: {
+      required: true,
+      content: {
+        'application/json': { schema: adminSetupHoursPatchBodySchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Updated Setup Salon hours',
+      content: {
+        'application/json': { schema: adminSetupHoursResponseSchema },
+      },
+    },
+    400: validationResponse,
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+    404: notFoundResponse,
+    409: conflictResponse,
+  },
+})
+
+export const updateAdminSetupSalonPresenceRoute = createRoute({
+  method: 'patch',
+  path: '/salons/{id}/setup/presence',
+  tags: ['Admin'],
+  summary: 'Update Setup Salon presence',
+  security: adminSecurity,
+  request: {
+    params: idParamSchema,
+    body: {
+      required: true,
+      content: {
+        'application/json': { schema: adminSetupPresencePatchBodySchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Updated Setup Salon presence',
+      content: {
+        'application/json': { schema: adminSetupPresenceResponseSchema },
+      },
+    },
+    400: validationResponse,
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+    404: notFoundResponse,
+    409: conflictResponse,
   },
 })
 

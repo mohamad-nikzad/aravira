@@ -19,7 +19,6 @@ No active backlog items.
 
 - [BL-0031 Assisted Salon Setup and handoff](inbox/BL-0031-assisted-salon-setup-and-handoff.md)
 - [BL-0032 Create and recognize a Setup Salon](inbox/BL-0032-create-and-recognize-setup-salon.md)
-- [BL-0033 Configure Setup Salon hours and Presence](inbox/BL-0033-configure-setup-salon-hours-and-presence.md)
 - [BL-0034 Configure the Setup Salon service catalog](inbox/BL-0034-configure-setup-salon-service-catalog.md)
 - [BL-0035 Create and claim unclaimed Staff Profiles](inbox/BL-0035-create-and-claim-unclaimed-staff-profiles.md)
 - [BL-0036 Transfer verified staff access between salons](inbox/BL-0036-transfer-verified-staff-access-between-salons.md)
@@ -42,6 +41,7 @@ No active backlog items.
 
 ## Done
 
+- [BL-0033 Configure Setup Salon hours and Presence](done/BL-0033-configure-setup-salon-hours-and-presence.md)
 - [BL-0001 Improve landing page](done/BL-0001-improve-landing-page.md)
 - [BL-0002 Improve salons landing pages](done/BL-0002-improve-salons-landing-pages.md)
 - [BL-0004 Login and register with OTP](done/BL-0004-login-and-register-with-otp.md)

@@ -32,6 +32,7 @@ import {
   getApiV1AdminSalonsByIdClients,
   getApiV1AdminSalonsByIdNotes,
   getApiV1AdminSalonsByIdServices,
+  getApiV1AdminSalonsByIdSetup,
   getApiV1AdminSalonsByIdStaff,
   getApiV1AdminSupportAppointmentRequests,
   getApiV1AdminSupportAppointments,
@@ -78,6 +79,8 @@ import {
   type Options,
   patchApiV1AdminCatalogPresetsById,
   patchApiV1AdminPlatformAdminsById,
+  patchApiV1AdminSalonsByIdSetupHours,
+  patchApiV1AdminSalonsByIdSetupPresence,
   patchApiV1AdminSalonsByIdStatus,
   patchApiV1AppointmentsById,
   patchApiV1ClientsById,
@@ -193,6 +196,9 @@ import type {
   GetApiV1AdminSalonsByIdServicesData,
   GetApiV1AdminSalonsByIdServicesError,
   GetApiV1AdminSalonsByIdServicesResponse,
+  GetApiV1AdminSalonsByIdSetupData,
+  GetApiV1AdminSalonsByIdSetupError,
+  GetApiV1AdminSalonsByIdSetupResponse,
   GetApiV1AdminSalonsByIdStaffData,
   GetApiV1AdminSalonsByIdStaffError,
   GetApiV1AdminSalonsByIdStaffResponse,
@@ -331,6 +337,12 @@ import type {
   PatchApiV1AdminPlatformAdminsByIdData,
   PatchApiV1AdminPlatformAdminsByIdError,
   PatchApiV1AdminPlatformAdminsByIdResponse,
+  PatchApiV1AdminSalonsByIdSetupHoursData,
+  PatchApiV1AdminSalonsByIdSetupHoursError,
+  PatchApiV1AdminSalonsByIdSetupHoursResponse,
+  PatchApiV1AdminSalonsByIdSetupPresenceData,
+  PatchApiV1AdminSalonsByIdSetupPresenceError,
+  PatchApiV1AdminSalonsByIdSetupPresenceResponse,
   PatchApiV1AdminSalonsByIdStatusData,
   PatchApiV1AdminSalonsByIdStatusError,
   PatchApiV1AdminSalonsByIdStatusResponse,
@@ -764,6 +776,88 @@ export const getApiV1AdminSalonsByIdOptions = (
     },
     queryKey: getApiV1AdminSalonsByIdQueryKey(options),
   })
+
+export const getApiV1AdminSalonsByIdSetupQueryKey = (
+  options: Options<GetApiV1AdminSalonsByIdSetupData>,
+) => createQueryKey('getApiV1AdminSalonsByIdSetup', options)
+
+/**
+ * Get Setup Salon hours and presence
+ */
+export const getApiV1AdminSalonsByIdSetupOptions = (
+  options: Options<GetApiV1AdminSalonsByIdSetupData>,
+) =>
+  queryOptions<
+    GetApiV1AdminSalonsByIdSetupResponse,
+    GetApiV1AdminSalonsByIdSetupError,
+    GetApiV1AdminSalonsByIdSetupResponse,
+    ReturnType<typeof getApiV1AdminSalonsByIdSetupQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await getApiV1AdminSalonsByIdSetup({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      })
+      return data
+    },
+    queryKey: getApiV1AdminSalonsByIdSetupQueryKey(options),
+  })
+
+/**
+ * Update Setup Salon hours
+ */
+export const patchApiV1AdminSalonsByIdSetupHoursMutation = (
+  options?: Partial<Options<PatchApiV1AdminSalonsByIdSetupHoursData>>,
+): UseMutationOptions<
+  PatchApiV1AdminSalonsByIdSetupHoursResponse,
+  PatchApiV1AdminSalonsByIdSetupHoursError,
+  Options<PatchApiV1AdminSalonsByIdSetupHoursData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    PatchApiV1AdminSalonsByIdSetupHoursResponse,
+    PatchApiV1AdminSalonsByIdSetupHoursError,
+    Options<PatchApiV1AdminSalonsByIdSetupHoursData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await patchApiV1AdminSalonsByIdSetupHours({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      })
+      return data
+    },
+  }
+  return mutationOptions
+}
+
+/**
+ * Update Setup Salon presence
+ */
+export const patchApiV1AdminSalonsByIdSetupPresenceMutation = (
+  options?: Partial<Options<PatchApiV1AdminSalonsByIdSetupPresenceData>>,
+): UseMutationOptions<
+  PatchApiV1AdminSalonsByIdSetupPresenceResponse,
+  PatchApiV1AdminSalonsByIdSetupPresenceError,
+  Options<PatchApiV1AdminSalonsByIdSetupPresenceData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    PatchApiV1AdminSalonsByIdSetupPresenceResponse,
+    PatchApiV1AdminSalonsByIdSetupPresenceError,
+    Options<PatchApiV1AdminSalonsByIdSetupPresenceData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await patchApiV1AdminSalonsByIdSetupPresence({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      })
+      return data
+    },
+  }
+  return mutationOptions
+}
 
 export const getApiV1AdminSalonsByIdClientsQueryKey = (
   options: Options<GetApiV1AdminSalonsByIdClientsData>,

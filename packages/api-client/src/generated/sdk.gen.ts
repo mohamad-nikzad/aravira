@@ -74,6 +74,9 @@ import type {
   GetApiV1AdminSalonsByIdServicesData,
   GetApiV1AdminSalonsByIdServicesErrors,
   GetApiV1AdminSalonsByIdServicesResponses,
+  GetApiV1AdminSalonsByIdSetupData,
+  GetApiV1AdminSalonsByIdSetupErrors,
+  GetApiV1AdminSalonsByIdSetupResponses,
   GetApiV1AdminSalonsByIdStaffData,
   GetApiV1AdminSalonsByIdStaffErrors,
   GetApiV1AdminSalonsByIdStaffResponses,
@@ -212,6 +215,12 @@ import type {
   PatchApiV1AdminPlatformAdminsByIdData,
   PatchApiV1AdminPlatformAdminsByIdErrors,
   PatchApiV1AdminPlatformAdminsByIdResponses,
+  PatchApiV1AdminSalonsByIdSetupHoursData,
+  PatchApiV1AdminSalonsByIdSetupHoursErrors,
+  PatchApiV1AdminSalonsByIdSetupHoursResponses,
+  PatchApiV1AdminSalonsByIdSetupPresenceData,
+  PatchApiV1AdminSalonsByIdSetupPresenceErrors,
+  PatchApiV1AdminSalonsByIdSetupPresenceResponses,
   PatchApiV1AdminSalonsByIdStatusData,
   PatchApiV1AdminSalonsByIdStatusErrors,
   PatchApiV1AdminSalonsByIdStatusResponses,
@@ -475,6 +484,74 @@ export const getApiV1AdminSalonsById = <ThrowOnError extends boolean = false>(
     GetApiV1AdminSalonsByIdErrors,
     ThrowOnError
   >({ url: '/api/v1/admin/salons/{id}', ...options })
+
+/**
+ * Get Setup Salon hours and presence
+ */
+export const getApiV1AdminSalonsByIdSetup = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<GetApiV1AdminSalonsByIdSetupData, ThrowOnError>,
+): RequestResult<
+  GetApiV1AdminSalonsByIdSetupResponses,
+  GetApiV1AdminSalonsByIdSetupErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    GetApiV1AdminSalonsByIdSetupResponses,
+    GetApiV1AdminSalonsByIdSetupErrors,
+    ThrowOnError
+  >({ url: '/api/v1/admin/salons/{id}/setup', ...options })
+
+/**
+ * Update Setup Salon hours
+ */
+export const patchApiV1AdminSalonsByIdSetupHours = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<PatchApiV1AdminSalonsByIdSetupHoursData, ThrowOnError>,
+): RequestResult<
+  PatchApiV1AdminSalonsByIdSetupHoursResponses,
+  PatchApiV1AdminSalonsByIdSetupHoursErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    PatchApiV1AdminSalonsByIdSetupHoursResponses,
+    PatchApiV1AdminSalonsByIdSetupHoursErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/admin/salons/{id}/setup/hours',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * Update Setup Salon presence
+ */
+export const patchApiV1AdminSalonsByIdSetupPresence = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<PatchApiV1AdminSalonsByIdSetupPresenceData, ThrowOnError>,
+): RequestResult<
+  PatchApiV1AdminSalonsByIdSetupPresenceResponses,
+  PatchApiV1AdminSalonsByIdSetupPresenceErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    PatchApiV1AdminSalonsByIdSetupPresenceResponses,
+    PatchApiV1AdminSalonsByIdSetupPresenceErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/admin/salons/{id}/setup/presence',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
 
 /**
  * List salon Clients for platform admin

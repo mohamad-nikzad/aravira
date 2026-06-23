@@ -13,6 +13,9 @@ const generated = vi.hoisted(() => ({
   getAppointmentRequests: vi.fn(),
   getStaff: vi.fn(),
   getServices: vi.fn(),
+  getSetup: vi.fn(),
+  patchSetupHours: vi.fn(),
+  patchSetupPresence: vi.fn(),
   patchStatus: vi.fn(),
   postSalon: vi.fn(),
   postNote: vi.fn(),
@@ -105,6 +108,13 @@ vi.mock('@repo/api-client/query', () => ({
     queryKey: ['salon-notes', options],
     queryFn: () => generated.getNotes(options),
   }),
+  getApiV1AdminSalonsByIdSetupOptions: (options: unknown) => ({
+    queryKey: ['salon-setup', options],
+    queryFn: () => generated.getSetup(options),
+  }),
+  getApiV1AdminSalonsByIdSetupQueryKey: (options: unknown) => [
+    { _id: 'salon-setup', options },
+  ],
   getApiV1AdminSalonsByIdClientsOptions: (options: unknown) => ({
     queryKey: ['salon-clients', options],
     queryFn: () => generated.getClients(options),
@@ -128,6 +138,12 @@ vi.mock('@repo/api-client/query', () => ({
   patchApiV1AdminSalonsByIdStatusMutation: () => ({
     mutationFn: generated.patchStatus,
   }),
+  patchApiV1AdminSalonsByIdSetupHoursMutation: () => ({
+    mutationFn: generated.patchSetupHours,
+  }),
+  patchApiV1AdminSalonsByIdSetupPresenceMutation: () => ({
+    mutationFn: generated.patchSetupPresence,
+  }),
   postApiV1AdminSalonsMutation: () => ({
     mutationFn: generated.postSalon,
   }),
@@ -148,6 +164,9 @@ describe('salons feature', () => {
     generated.getAppointmentRequests.mockReset()
     generated.getStaff.mockReset()
     generated.getServices.mockReset()
+    generated.getSetup.mockReset()
+    generated.patchSetupHours.mockReset()
+    generated.patchSetupPresence.mockReset()
     generated.patchStatus.mockReset()
     generated.postSalon.mockReset()
     generated.postNote.mockReset()
@@ -288,6 +307,108 @@ describe('salons feature', () => {
     expect(await screen.findByText('راه‌اندازی')).toBeTruthy()
     expect(screen.getByText('09121234567')).toBeTruthy()
     expect(screen.getByText('تلفن مالک موردنظر')).toBeTruthy()
+  })
+
+  it('edits Setup Salon hours and presence while preserving entered values on failures', async () => {
+    generated.getSalon.mockResolvedValue({
+      salon: {
+        id: salonId,
+        name: 'Setup Aftab',
+        status: 'setup',
+        intendedOwnerPhone: '09121234567',
+        publicEnabled: false,
+      },
+      members: [],
+      stats: { services: 0, appointments: 0 },
+    })
+    generated.getNotes.mockResolvedValue({ notes: [] })
+    generated.getSetup.mockResolvedValue({
+      hours: {
+        workingStart: '09:00',
+        workingEnd: '19:00',
+        slotDurationMinutes: 30,
+        workingDays: 126,
+      },
+      presence: {
+        address: 'Old address',
+        mapGoogle: null,
+        mapNeshan: null,
+        mapBalad: null,
+        socialInstagram: null,
+        socialTelegram: null,
+        socialWhatsapp: null,
+        website: null,
+      },
+    })
+    generated.patchSetupHours.mockRejectedValue(
+      new Error('ساعت پایان نامعتبر است'),
+    )
+    generated.patchSetupPresence.mockResolvedValue({ presence: {} })
+
+    await renderSalonDetail(`/salons/${salonId}?tab=setup`)
+
+    expect(await screen.findByText('روزها و ساعت کاری')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('ساعت باز شدن'), {
+      target: { value: '10:00' },
+    })
+    fireEvent.change(screen.getAllByLabelText('دلیل تغییر')[0]!, {
+      target: { value: 'Prepare salon hours' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره ساعت کاری' }))
+
+    await waitFor(() => expect(generated.patchSetupHours).toHaveBeenCalled())
+    expect(generated.patchSetupHours.mock.calls[0]?.[0]).toEqual({
+      path: { id: salonId },
+      body: {
+        workingStart: '10:00',
+        workingEnd: '19:00',
+        slotDurationMinutes: 30,
+        workingDays: 126,
+        reason: 'Prepare salon hours',
+        liveConfirmation: undefined,
+      },
+    })
+    expect(await screen.findByText('ساعت پایان نامعتبر است')).toBeTruthy()
+    expect(
+      (screen.getByLabelText('ساعت باز شدن') as HTMLInputElement).value,
+    ).toBe('10:00')
+
+    fireEvent.change(screen.getByLabelText('آدرس'), {
+      target: { value: 'New address' },
+    })
+    fireEvent.change(screen.getAllByLabelText('دلیل تغییر')[1]!, {
+      target: { value: 'Prepare salon presence' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره حضور سالن' }))
+
+    await waitFor(() => expect(generated.patchSetupPresence).toHaveBeenCalled())
+    expect(generated.patchSetupPresence.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        path: { id: salonId },
+        body: expect.objectContaining({
+          address: 'New address',
+          reason: 'Prepare salon presence',
+        }),
+      }),
+    )
+  })
+
+  it('hides Setup Salon editing from platform support', async () => {
+    mockAuthMe({ role: 'platform_support' })
+    generated.getSalon.mockResolvedValue({
+      salon: { id: salonId, name: 'Setup Aftab', status: 'setup' },
+      members: [],
+      stats: {},
+    })
+    generated.getNotes.mockResolvedValue({ notes: [] })
+
+    renderAdminRoute(`/salons/${salonId}`)
+
+    expect((await screen.findAllByText('Setup Aftab')).length).toBeGreaterThan(
+      0,
+    )
+    expect(screen.queryByRole('tab', { name: 'آماده‌سازی' })).toBeNull()
+    expect(generated.getSetup).not.toHaveBeenCalled()
   })
 
   it('renders salon overview detail and submits a live-data status change with reason and confirmation', async () => {

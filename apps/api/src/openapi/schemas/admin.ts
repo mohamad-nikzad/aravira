@@ -223,6 +223,55 @@ export const adminSetupSalonResponseSchema = z
   .object({ salon: anyRecordSchema })
   .openapi('AdminSetupSalonResponse')
 
+export const adminSetupHoursSchema = z
+  .object({
+    workingStart: z.string(),
+    workingEnd: z.string(),
+    slotDurationMinutes: z.number().int(),
+    workingDays: z.number().int().min(1).max(127),
+  })
+  .openapi('AdminSetupSalonHours')
+
+export const adminSetupPresenceSchema = z
+  .object({
+    address: z.string().nullable(),
+    mapGoogle: z.string().nullable(),
+    mapNeshan: z.string().nullable(),
+    mapBalad: z.string().nullable(),
+    socialInstagram: z.string().nullable(),
+    socialTelegram: z.string().nullable(),
+    socialWhatsapp: z.string().nullable(),
+    website: z.string().nullable(),
+  })
+  .openapi('AdminSetupSalonPresence')
+
+export const adminSetupSalonConfigurationResponseSchema = z
+  .object({ hours: adminSetupHoursSchema, presence: adminSetupPresenceSchema })
+  .openapi('AdminSetupSalonConfigurationResponse')
+
+const adminSetupMutationMetaShape = {
+  reason: adminReasonSchema,
+  liveConfirmation: z.string().optional(),
+}
+
+export const adminSetupHoursPatchBodySchema = adminSetupHoursSchema
+  .partial()
+  .extend(adminSetupMutationMetaShape)
+  .openapi('AdminSetupSalonHoursPatchRequest')
+
+export const adminSetupHoursResponseSchema = z
+  .object({ hours: adminSetupHoursSchema })
+  .openapi('AdminSetupSalonHoursResponse')
+
+export const adminSetupPresencePatchBodySchema = adminSetupPresenceSchema
+  .partial()
+  .extend(adminSetupMutationMetaShape)
+  .openapi('AdminSetupSalonPresencePatchRequest')
+
+export const adminSetupPresenceResponseSchema = z
+  .object({ presence: adminSetupPresenceSchema })
+  .openapi('AdminSetupSalonPresenceResponse')
+
 export const adminNoteCreateBodySchema = z
   .object({
     body: z.string().min(1).max(5000),

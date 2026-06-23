@@ -4,7 +4,11 @@ import {
   getApiV1AdminSalonsByIdNotesQueryKey,
   getApiV1AdminSalonsByIdOptions,
   getApiV1AdminSalonsByIdQueryKey,
+  getApiV1AdminSalonsByIdSetupOptions,
+  getApiV1AdminSalonsByIdSetupQueryKey,
   getApiV1AdminSalonsQueryKey,
+  patchApiV1AdminSalonsByIdSetupHoursMutation,
+  patchApiV1AdminSalonsByIdSetupPresenceMutation,
   patchApiV1AdminSalonsByIdStatusMutation,
   postApiV1AdminSalonsByIdNotesMutation,
 } from '@repo/api-client/query'
@@ -34,6 +38,7 @@ import { normalizeStatus, StatusBadge, truthy } from './salon-columns'
 import { NotesPanel, StatusForm } from './salon-governance'
 import { CompactRows, DetailGrid, Panel } from '#/components/admin/panel'
 import { SalonTenantDataTabs } from './salon-tenant-tabs'
+import { SalonSetupEditor } from './salon-setup-editor'
 import {
   useSalonDetailUrlState,
   type SalonDetailSection,
@@ -79,7 +84,7 @@ function SalonDetailBreadcrumbs({ salonName }: { salonName?: string }) {
 
 export function SalonDetailScreen({ salonId }: { salonId: string }) {
   const queryClient = useQueryClient()
-  const { runtime } = useAdminAuth()
+  const { me, runtime } = useAdminAuth()
   const { successMessage, showSuccess } = useMutationSuccess()
   const { tab, subtab, setTab, setSubtab } = useSalonDetailUrlState()
   const isLiveData = runtime.dataSource === 'live'
@@ -89,6 +94,12 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
   const notesQuery = useQuery(
     getApiV1AdminSalonsByIdNotesOptions({ path: { id: salonId } }),
   )
+  const canManageSetup =
+    me.role === 'platform_owner' || me.role === 'platform_admin'
+  const setupQuery = useQuery({
+    ...getApiV1AdminSalonsByIdSetupOptions({ path: { id: salonId } }),
+    enabled: detailQuery.data?.salon?.status === 'setup' && canManageSetup,
+  })
   const statusMutation = useMutation({
     ...patchApiV1AdminSalonsByIdStatusMutation(),
     onSuccess: () => {
@@ -121,6 +132,28 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
       })
     },
   })
+  const hoursMutation = useMutation({
+    ...patchApiV1AdminSalonsByIdSetupHoursMutation(),
+    onSuccess: () => {
+      showSuccess('ساعت کاری سالن ذخیره شد.')
+      void queryClient.invalidateQueries({
+        queryKey: getApiV1AdminSalonsByIdSetupQueryKey({
+          path: { id: salonId },
+        }),
+      })
+    },
+  })
+  const presenceMutation = useMutation({
+    ...patchApiV1AdminSalonsByIdSetupPresenceMutation(),
+    onSuccess: () => {
+      showSuccess('حضور سالن ذخیره شد.')
+      void queryClient.invalidateQueries({
+        queryKey: getApiV1AdminSalonsByIdSetupQueryKey({
+          path: { id: salonId },
+        }),
+      })
+    },
+  })
 
   if (detailQuery.isLoading) {
     return <ScreenSkeleton label="در حال بارگذاری سالن" />
@@ -149,6 +182,9 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
           <TabsTrigger value="overview">نمای کلی</TabsTrigger>
           <TabsTrigger value="governance">حاکمیت</TabsTrigger>
           <TabsTrigger value="operations">عملیات</TabsTrigger>
+          {currentStatus === 'setup' && canManageSetup ? (
+            <TabsTrigger value="setup">آماده‌سازی</TabsTrigger>
+          ) : null}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -247,6 +283,39 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
             onTabChange={setSubtab}
           />
         </TabsContent>
+
+        {currentStatus === 'setup' && canManageSetup ? (
+          <TabsContent value="setup">
+            {setupQuery.isLoading ? (
+              <ScreenSkeleton label="در حال بارگذاری تنظیمات راه‌اندازی" />
+            ) : null}
+            {setupQuery.isError ? (
+              <ErrorPanel
+                message="بارگذاری تنظیمات راه‌اندازی ناموفق بود."
+                onRetry={() => void setupQuery.refetch()}
+              />
+            ) : null}
+            {setupQuery.data ? (
+              <SalonSetupEditor
+                configuration={setupQuery.data}
+                hoursError={hoursMutation.error}
+                presenceError={presenceMutation.error}
+                hoursPending={hoursMutation.isPending}
+                presencePending={presenceMutation.isPending}
+                isLiveData={isLiveData}
+                onSaveHours={(body, options) =>
+                  hoursMutation.mutate({ path: { id: salonId }, body }, options)
+                }
+                onSavePresence={(body, options) =>
+                  presenceMutation.mutate(
+                    { path: { id: salonId }, body },
+                    options,
+                  )
+                }
+              />
+            ) : null}
+          </TabsContent>
+        ) : null}
       </Tabs>
     </div>
   )

@@ -4,6 +4,7 @@ export const SALON_DETAIL_SECTIONS = [
   'overview',
   'governance',
   'operations',
+  'setup',
 ] as const
 export const SALON_OPS_TABS = [
   'clients',
@@ -73,7 +74,10 @@ export function compactTableSearch(
 ): Partial<TableSearch> {
   const out: Partial<TableSearch> = {}
   const page = input.page ?? defaults.page
-  const pageSize = normalizePageSize(input.pageSize ?? defaults.pageSize, defaults.pageSize)
+  const pageSize = normalizePageSize(
+    input.pageSize ?? defaults.pageSize,
+    defaults.pageSize,
+  )
 
   if (page !== defaults.page) out.page = page
   if (pageSize !== defaults.pageSize) out.pageSize = pageSize

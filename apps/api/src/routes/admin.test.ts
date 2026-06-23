@@ -49,6 +49,16 @@ vi.mock('@repo/database/members', () => ({
   getMemberForUser: vi.fn(),
 }))
 
+vi.mock('@repo/database/settings', () => ({
+  getBusinessSettings: vi.fn(),
+  updateBusinessSettings: vi.fn(),
+}))
+
+vi.mock('@repo/database/salon-profile', () => ({
+  getSalonPresence: vi.fn(),
+  updateSalonPresence: vi.fn(),
+}))
+
 import { auth as authServer } from '@repo/auth/server'
 import {
   createAdminAuditEvent,
@@ -72,6 +82,14 @@ import {
   updatePlatformAdmin,
   upsertPlatformAdmin,
 } from '@repo/database/admin'
+import {
+  getBusinessSettings,
+  updateBusinessSettings,
+} from '@repo/database/settings'
+import {
+  getSalonPresence,
+  updateSalonPresence,
+} from '@repo/database/salon-profile'
 
 process.env.NODE_ENV = 'test'
 process.env.DATABASE_URL = 'postgres://stub'
@@ -249,6 +267,164 @@ describe('admin runtime data source', () => {
       expect(createSetupSalon).not.toHaveBeenCalled()
     },
   )
+
+  it('reads and updates Setup Salon hours using manager settings behavior', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: { id: salonId, status: 'setup' },
+      members: [],
+      stats: {},
+    } as never)
+    vi.mocked(getBusinessSettings).mockResolvedValue({
+      workingStart: '09:00',
+      workingEnd: '19:00',
+      slotDurationMinutes: 30,
+      workingDays: 126,
+    })
+    vi.mocked(getSalonPresence).mockResolvedValue({
+      address: null,
+      mapGoogle: null,
+      mapNeshan: null,
+      mapBalad: null,
+      socialInstagram: null,
+      socialTelegram: null,
+      socialWhatsapp: null,
+      website: null,
+    })
+    vi.mocked(updateBusinessSettings).mockResolvedValue({
+      workingStart: '10:00',
+      workingEnd: '20:00',
+      slotDurationMinutes: 30,
+      workingDays: 62,
+    })
+
+    const readRes = await app.request(`/api/v1/admin/salons/${salonId}/setup`, {
+      headers: authHeaders,
+    })
+    const updateRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/hours`,
+      {
+        method: 'PATCH',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workingStart: '۱۰:۰۰',
+          workingEnd: '۲۰:۰۰',
+          workingDays: 62,
+          reason: 'Prepare salon hours',
+          liveConfirmation: 'LIVE',
+        }),
+      },
+    )
+
+    expect(readRes.status).toBe(200)
+    expect(await readRes.json()).toMatchObject({
+      hours: { workingStart: '09:00', workingDays: 126 },
+      presence: { address: null },
+    })
+    expect(updateRes.status).toBe(200)
+    expect(updateBusinessSettings).toHaveBeenCalledWith(salonId, {
+      workingStart: '10:00',
+      workingEnd: '20:00',
+      workingDays: 62,
+    })
+    expect(createAdminAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'salon.setup.hours.update',
+        reason: 'Prepare salon hours',
+      }),
+    )
+  })
+
+  it('normalizes Setup Salon presence with the manager schema', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: { id: salonId, status: 'setup' },
+      members: [],
+      stats: {},
+    } as never)
+    vi.mocked(updateSalonPresence).mockResolvedValue({
+      address: 'Tehran',
+      mapGoogle: 'https://maps.app.goo.gl/abc',
+      mapNeshan: null,
+      mapBalad: null,
+      socialInstagram: '@aftab',
+      socialTelegram: null,
+      socialWhatsapp: null,
+      website: null,
+    })
+
+    const res = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/presence`,
+      {
+        method: 'PATCH',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: '  Tehran  ',
+          mapGoogle: ' https://maps.app.goo.gl/abc ',
+          socialInstagram: ' @aftab ',
+          website: '',
+          reason: 'Prepare salon presence',
+          liveConfirmation: 'LIVE',
+        }),
+      },
+    )
+
+    expect(res.status).toBe(200)
+    expect(updateSalonPresence).toHaveBeenCalledWith(salonId, {
+      address: 'Tehran',
+      mapGoogle: 'https://maps.app.goo.gl/abc',
+      socialInstagram: '@aftab',
+      website: undefined,
+    })
+  })
+
+  it('rejects invalid setup validation, roles, and salon lifecycles', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: { id: salonId, status: 'active' },
+      members: [],
+      stats: {},
+    } as never)
+    const lifecycleRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/hours`,
+      {
+        method: 'PATCH',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workingStart: '09:00',
+          workingEnd: '19:00',
+          reason: 'Prepare salon hours',
+          liveConfirmation: 'LIVE',
+        }),
+      },
+    )
+    expect(lifecycleRes.status).toBe(409)
+
+    const invalidRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/presence`,
+      {
+        method: 'PATCH',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mapGoogle: 'https://example.com/map',
+          reason: 'Prepare salon presence',
+          liveConfirmation: 'LIVE',
+        }),
+      },
+    )
+    expect(invalidRes.status).toBe(400)
+
+    vi.mocked(getPlatformAdminForUser).mockResolvedValue({
+      id: 'platform-admin-2',
+      userId: 'admin-user-1',
+      role: 'platform_support',
+      active: true,
+    } as never)
+    const forbiddenRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup`,
+      { headers: authHeaders },
+    )
+    expect(forbiddenRes.status).toBe(403)
+    expect(updateBusinessSettings).not.toHaveBeenCalled()
+    expect(updateSalonPresence).not.toHaveBeenCalled()
+  })
 
   it('lists and reads admin salons', async () => {
     vi.mocked(listAdminSalons).mockResolvedValue({

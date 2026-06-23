@@ -133,6 +133,7 @@ import {
   getAdminOverviewRoute,
   getAdminRuntimeRoute,
   getAdminSalonRoute,
+  getAdminSetupSalonConfigurationRoute,
   getAdminUserRoute,
   listAdminAuditLogRoute,
   listAdminCatalogPresetsRoute,
@@ -151,6 +152,8 @@ import {
   listPlatformAdminsRoute,
   updateAdminCatalogPresetRoute,
   updateAdminSalonStatusRoute,
+  updateAdminSetupSalonHoursRoute,
+  updateAdminSetupSalonPresenceRoute,
   updatePlatformAdminRoute,
 } from './routes/admin'
 
@@ -467,6 +470,36 @@ const createSetupSalonStub: RouteHandler<typeof createSetupSalonRoute> = (c) =>
 
 const getAdminSalonStub: RouteHandler<typeof getAdminSalonRoute> = (c) =>
   c.json({ salon: {}, members: [], stats: {} }, 200)
+
+const setupHoursStub = {
+  workingStart: '09:00',
+  workingEnd: '19:00',
+  slotDurationMinutes: 30,
+  workingDays: 126,
+}
+
+const setupPresenceStub = {
+  address: null,
+  mapGoogle: null,
+  mapNeshan: null,
+  mapBalad: null,
+  socialInstagram: null,
+  socialTelegram: null,
+  socialWhatsapp: null,
+  website: null,
+}
+
+const getAdminSetupSalonConfigurationStub: RouteHandler<
+  typeof getAdminSetupSalonConfigurationRoute
+> = (c) => c.json({ hours: setupHoursStub, presence: setupPresenceStub }, 200)
+
+const updateAdminSetupSalonHoursStub: RouteHandler<
+  typeof updateAdminSetupSalonHoursRoute
+> = (c) => c.json({ hours: setupHoursStub }, 200)
+
+const updateAdminSetupSalonPresenceStub: RouteHandler<
+  typeof updateAdminSetupSalonPresenceRoute
+> = (c) => c.json({ presence: setupPresenceStub }, 200)
 
 const listAdminSalonClientsStub: RouteHandler<
   typeof listAdminSalonClientsRoute
@@ -1093,6 +1126,15 @@ export const contractApp = new OpenAPIHono()
       .openapi(listAdminSalonsRoute, listAdminSalonsStub)
       .openapi(createSetupSalonRoute, createSetupSalonStub)
       .openapi(getAdminSalonRoute, getAdminSalonStub)
+      .openapi(
+        getAdminSetupSalonConfigurationRoute,
+        getAdminSetupSalonConfigurationStub,
+      )
+      .openapi(updateAdminSetupSalonHoursRoute, updateAdminSetupSalonHoursStub)
+      .openapi(
+        updateAdminSetupSalonPresenceRoute,
+        updateAdminSetupSalonPresenceStub,
+      )
       .openapi(listAdminSalonClientsRoute, listAdminSalonClientsStub)
       .openapi(listAdminSalonAppointmentsRoute, listAdminSalonAppointmentsStub)
       .openapi(
