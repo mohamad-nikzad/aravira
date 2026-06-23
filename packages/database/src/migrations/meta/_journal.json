@@ -71,6 +71,13 @@
       "when": 1781979737320,
       "tag": "0009_ambitious_starfox",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782239368439,
+      "tag": "0010_military_sunfire",
+      "breakpoints": true
     }
   ]
 }

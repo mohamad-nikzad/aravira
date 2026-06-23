@@ -272,6 +272,9 @@ import type {
   PostApiV1AdminSalonsByIdNotesData,
   PostApiV1AdminSalonsByIdNotesErrors,
   PostApiV1AdminSalonsByIdNotesResponses,
+  PostApiV1AdminSalonsData,
+  PostApiV1AdminSalonsErrors,
+  PostApiV1AdminSalonsResponses,
   PostApiV1AdminUsersByIdNotesData,
   PostApiV1AdminUsersByIdNotesErrors,
   PostApiV1AdminUsersByIdNotesResponses,
@@ -433,6 +436,29 @@ export const getApiV1AdminSalons = <ThrowOnError extends boolean = false>(
     GetApiV1AdminSalonsErrors,
     ThrowOnError
   >({ url: '/api/v1/admin/salons', ...options })
+
+/**
+ * Create a non-public Setup Salon
+ */
+export const postApiV1AdminSalons = <ThrowOnError extends boolean = false>(
+  options: Options<PostApiV1AdminSalonsData, ThrowOnError>,
+): RequestResult<
+  PostApiV1AdminSalonsResponses,
+  PostApiV1AdminSalonsErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    PostApiV1AdminSalonsResponses,
+    PostApiV1AdminSalonsErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/admin/salons',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
 
 /**
  * Get salon detail for platform admin

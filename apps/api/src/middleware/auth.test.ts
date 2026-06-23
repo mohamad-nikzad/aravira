@@ -164,6 +164,21 @@ describe('requirePlatformAdmin', () => {
 })
 
 describe('requireTenant', () => {
+  it('rejects Setup Salons even if a membership is present', async () => {
+    vi.mocked(getMemberForUser).mockResolvedValue({
+      userId: 'u1',
+      organizationId: 's1',
+      role: 'owner',
+      salonStatus: 'setup',
+      name: 'Ali',
+      username: '09121111111',
+    })
+
+    const res = await appWithTenant().request('/tenant')
+
+    expect(res.status).toBe(403)
+  })
+
   it('rejects suspended salons even when the user has membership', async () => {
     vi.mocked(getMemberForUser).mockResolvedValue({
       userId: 'u1',

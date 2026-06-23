@@ -1,0 +1,1 @@
+ALTER TABLE "salon_profile" ADD COLUMN "intended_owner_phone" text;

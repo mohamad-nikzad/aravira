@@ -97,6 +97,7 @@ import {
   patchApiV1StaffByIdServices,
   postApiV1AdminCatalogPresets,
   postApiV1AdminPlatformAdmins,
+  postApiV1AdminSalons,
   postApiV1AdminSalonsByIdNotes,
   postApiV1AdminUsersByIdNotes,
   postApiV1AppointmentRequestsByIdApprove,
@@ -390,6 +391,9 @@ import type {
   PostApiV1AdminSalonsByIdNotesData,
   PostApiV1AdminSalonsByIdNotesError,
   PostApiV1AdminSalonsByIdNotesResponse,
+  PostApiV1AdminSalonsData,
+  PostApiV1AdminSalonsError,
+  PostApiV1AdminSalonsResponse,
   PostApiV1AdminUsersByIdNotesData,
   PostApiV1AdminUsersByIdNotesError,
   PostApiV1AdminUsersByIdNotesResponse,
@@ -705,6 +709,33 @@ export const getApiV1AdminSalonsInfiniteOptions = (
       queryKey: getApiV1AdminSalonsInfiniteQueryKey(options),
     },
   )
+
+/**
+ * Create a non-public Setup Salon
+ */
+export const postApiV1AdminSalonsMutation = (
+  options?: Partial<Options<PostApiV1AdminSalonsData>>,
+): UseMutationOptions<
+  PostApiV1AdminSalonsResponse,
+  PostApiV1AdminSalonsError,
+  Options<PostApiV1AdminSalonsData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    PostApiV1AdminSalonsResponse,
+    PostApiV1AdminSalonsError,
+    Options<PostApiV1AdminSalonsData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await postApiV1AdminSalons({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      })
+      return data
+    },
+  }
+  return mutationOptions
+}
 
 export const getApiV1AdminSalonsByIdQueryKey = (
   options: Options<GetApiV1AdminSalonsByIdData>,

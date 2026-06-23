@@ -30,6 +30,8 @@ import {
   adminSalonServicesResponseSchema,
   adminSalonStaffResponseSchema,
   adminSalonsResponseSchema,
+  adminSetupSalonCreateBodySchema,
+  adminSetupSalonResponseSchema,
   adminStatusUpdateBodySchema,
   adminSupportAppointmentRequestsResponseSchema,
   adminSupportAppointmentsResponseSchema,
@@ -142,6 +144,32 @@ export const listAdminSalonsRoute = getRoute(
   adminSalonsResponseSchema,
   adminListQuerySchema,
 )
+export const createSetupSalonRoute = createRoute({
+  method: 'post',
+  path: '/salons',
+  tags: ['Admin'],
+  summary: 'Create a non-public Setup Salon',
+  security: adminSecurity,
+  request: {
+    body: {
+      required: true,
+      content: {
+        'application/json': { schema: adminSetupSalonCreateBodySchema },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Setup Salon created',
+      content: {
+        'application/json': { schema: adminSetupSalonResponseSchema },
+      },
+    },
+    400: validationResponse,
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+  },
+})
 export const listAdminUsersRoute = getRoute(
   '/users',
   'List users for platform admin',
@@ -266,6 +294,7 @@ export const updateAdminSalonStatusRoute = createRoute({
     401: unauthorizedResponse,
     403: forbiddenResponse,
     404: notFoundResponse,
+    409: conflictResponse,
   },
 })
 

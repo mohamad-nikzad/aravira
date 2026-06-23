@@ -6,7 +6,7 @@ export type MemberContext = {
   userId: string
   organizationId: string
   role: string
-  salonStatus?: 'active' | 'suspended' | 'archived'
+  salonStatus?: 'setup' | 'active' | 'suspended' | 'archived'
   name: string
   username: string
 }

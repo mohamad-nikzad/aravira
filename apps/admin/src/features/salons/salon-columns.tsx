@@ -1,4 +1,3 @@
-import type { AdminSalonStatus } from '@repo/api-client/types'
 import { Link } from '@tanstack/react-router'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Eye } from 'lucide-react'
@@ -11,6 +10,7 @@ import { Button } from '#/components/ui/button'
 import { formatCurrency, formatDate, number, text } from '#/lib/admin-format'
 
 export type RecordRow = Record<string, unknown>
+export type AdminSalonStatus = 'setup' | 'active' | 'suspended' | 'archived'
 
 export function useSalonsListColumns() {
   return useMemo<ColumnDef<RecordRow>[]>(
@@ -33,7 +33,11 @@ export function useSalonsListColumns() {
       {
         accessorKey: 'phone',
         header: 'تلفن',
-        cell: ({ row }) => <span dir="ltr">{text(row.original.phone)}</span>,
+        cell: ({ row }) => (
+          <span dir="ltr">
+            {text(row.original.phone) || text(row.original.intendedOwnerPhone)}
+          </span>
+        ),
       },
       {
         accessorKey: 'memberCount',
@@ -59,7 +63,7 @@ export function useSalonsListColumns() {
               to="/salons/$salonId"
               params={{ salonId: text(row.original.id) }}
             >
-              <Eye className="h-4 w-4" />
+              <Eye data-icon="inline-start" />
               مشاهده
             </Link>
           </Button>
@@ -292,7 +296,8 @@ export function useServiceColumns() {
 }
 
 export function normalizeStatus(value: unknown): AdminSalonStatus {
-  if (value === 'suspended' || value === 'archived') return value
+  if (value === 'setup' || value === 'suspended' || value === 'archived')
+    return value
   return 'active'
 }
 
@@ -304,6 +309,7 @@ export { BooleanBadge } from '#/components/admin/boolean-badge'
 export { PrimaryCell } from '#/components/admin/primary-cell'
 
 export function StatusBadge({ status }: { status: string }) {
+  if (status === 'setup') return <Badge>راه‌اندازی</Badge>
   if (status === 'active') return <Badge variant="success">فعال</Badge>
   if (status === 'suspended') return <Badge variant="warning">تعلیق‌شده</Badge>
   if (status === 'archived') return <Badge variant="danger">آرشیوشده</Badge>

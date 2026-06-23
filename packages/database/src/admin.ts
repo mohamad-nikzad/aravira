@@ -17,6 +17,7 @@ import {
   adminInternalNotes,
   appointmentRequests,
   appointments,
+  businessSettings,
   catalogPresets,
   clientFollowUpMessageDeliveries,
   clients,
@@ -26,6 +27,7 @@ import {
   organization,
   platformAdmins,
   salonMember,
+  salonOnboarding,
   salonProfile,
   salonPublicSettings,
   serviceCategories,
@@ -83,6 +85,8 @@ export type ListResult<T> = {
     total: number
   }
 }
+
+export type SalonStatus = 'setup' | 'active' | 'suspended' | 'archived'
 
 const DEFAULT_PAGE_SIZE = 25
 const MAX_PAGE_SIZE = 100
@@ -337,6 +341,7 @@ export async function getAdminOverview() {
     ])
 
   const salonsByStatus = {
+    setup: 0,
     active: 0,
     suspended: 0,
     archived: 0,
@@ -358,6 +363,7 @@ export async function listAdminSalons(input: ListInput = {}) {
         ilike(organization.name, searchLike(search)),
         ilike(organization.slug, searchLike(search)),
         ilike(salonProfile.phone, searchLike(search)),
+        ilike(salonProfile.intendedOwnerPhone, searchLike(search)),
       )
     : undefined
 
@@ -371,6 +377,7 @@ export async function listAdminSalons(input: ListInput = {}) {
       createdAt: organization.createdAt,
       status: salonProfile.status,
       phone: salonProfile.phone,
+      intendedOwnerPhone: salonProfile.intendedOwnerPhone,
       publicEnabled: salonPublicSettings.enabled,
       memberCount: countDistinct(salonMember.id),
     })
@@ -390,6 +397,7 @@ export async function listAdminSalons(input: ListInput = {}) {
       organization.createdAt,
       salonProfile.status,
       salonProfile.phone,
+      salonProfile.intendedOwnerPhone,
       salonPublicSettings.enabled,
     )
     .orderBy(desc(organization.createdAt))
@@ -419,6 +427,7 @@ export async function getAdminSalon(id: string) {
       timezone: salonProfile.timezone,
       locale: salonProfile.locale,
       phone: salonProfile.phone,
+      intendedOwnerPhone: salonProfile.intendedOwnerPhone,
       address: salonProfile.address,
       publicEnabled: salonPublicSettings.enabled,
       appointmentRequestsEnabled:
@@ -478,9 +487,52 @@ export async function getAdminSalon(id: string) {
   }
 }
 
+export async function createSetupSalon(input: {
+  name: string
+  intendedOwnerPhone: string
+}) {
+  const db = getDb()
+  const id = crypto.randomUUID()
+  const slug = `setup-${id}`
+
+  return db.transaction(async (tx) => {
+    const [salon] = await tx
+      .insert(organization)
+      .values({ id, name: input.name, slug })
+      .returning({
+        id: organization.id,
+        name: organization.name,
+        slug: organization.slug,
+        createdAt: organization.createdAt,
+      })
+
+    await tx.insert(salonProfile).values({
+      organizationId: id,
+      status: 'setup',
+      intendedOwnerPhone: input.intendedOwnerPhone,
+    })
+    await tx.insert(businessSettings).values({ salonId: id })
+    await tx.insert(salonPublicSettings).values({
+      salonId: id,
+      enabled: false,
+      appointmentRequestsEnabled: false,
+    })
+    await tx.insert(salonOnboarding).values({ salonId: id })
+
+    return {
+      ...salon!,
+      status: 'setup' as const,
+      intendedOwnerPhone: input.intendedOwnerPhone,
+      phone: null,
+      publicEnabled: false,
+      appointmentRequestsEnabled: false,
+    }
+  })
+}
+
 export async function updateAdminSalonStatus(input: {
   salonId: string
-  status: 'active' | 'suspended' | 'archived'
+  status: Exclude<SalonStatus, 'setup'>
 }) {
   const db = getDb()
   const [updated] = await db

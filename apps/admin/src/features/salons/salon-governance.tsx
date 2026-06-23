@@ -1,7 +1,6 @@
 import type {
   AdminNoteCreateRequest,
   AdminNotesResponse,
-  AdminSalonStatus,
   AdminSalonStatusUpdateRequest,
 } from '@repo/api-client/types'
 import { Plus, RefreshCw } from 'lucide-react'
@@ -31,7 +30,11 @@ import { formatDate } from '#/lib/admin-format'
 
 import { ErrorPanel } from '#/components/admin/error-panel'
 
-import { normalizeStatus, StatusBadge } from './salon-columns'
+import {
+  normalizeStatus,
+  StatusBadge,
+  type AdminSalonStatus,
+} from './salon-columns'
 import { Panel } from '#/components/admin/panel'
 
 export type MutationSubmitOptions = {
@@ -62,7 +65,10 @@ export function StatusForm({
     const form = new FormData(event.currentTarget)
     onSubmit(
       {
-        status: normalizeStatus(form.get('status')),
+        status: normalizeStatus(form.get('status')) as Exclude<
+          AdminSalonStatus,
+          'setup'
+        >,
         reason: String(form.get('reason') ?? ''),
         liveConfirmation: liveConfirmationFromForm(form, isLiveData),
       },

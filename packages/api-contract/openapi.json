@@ -202,6 +202,9 @@
           "salonsByStatus": {
             "type": "object",
             "properties": {
+              "setup": {
+                "type": "integer"
+              },
               "active": {
                 "type": "integer"
               },
@@ -212,7 +215,7 @@
                 "type": "integer"
               }
             },
-            "required": ["active", "suspended", "archived"]
+            "required": ["setup", "active", "suspended", "archived"]
           },
           "failedDeliveries": {
             "type": "integer"
@@ -275,6 +278,42 @@
           }
         },
         "required": ["page", "pageSize", "total"]
+      },
+      "AdminSetupSalonResponse": {
+        "type": "object",
+        "properties": {
+          "salon": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          }
+        },
+        "required": ["salon"]
+      },
+      "AdminSetupSalonCreateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "intendedOwnerPhone": {
+            "type": "string",
+            "pattern": "^09\\d{9}$"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500,
+            "example": "درخواست پشتیبانی داخلی"
+          },
+          "liveConfirmation": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "intendedOwnerPhone", "reason"]
       },
       "AdminSalonDetailResponse": {
         "type": "object",
@@ -397,7 +436,8 @@
         "type": "object",
         "properties": {
           "status": {
-            "$ref": "#/components/schemas/AdminSalonStatus"
+            "type": "string",
+            "enum": ["active", "suspended", "archived"]
           },
           "reason": {
             "type": "string",
@@ -410,10 +450,6 @@
           }
         },
         "required": ["status", "reason"]
-      },
-      "AdminSalonStatus": {
-        "type": "string",
-        "enum": ["active", "suspended", "archived"]
       },
       "AdminNotesResponse": {
         "type": "object",
@@ -5433,6 +5469,70 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Create a non-public Setup Salon",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSetupSalonCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Setup Salon created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSetupSalonResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user is not an active platform admin or lacks permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/admin/salons/{id}": {
@@ -6103,6 +6203,16 @@
           },
           "404": {
             "description": "Admin resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Mutation violates platform admin safety rules",
             "content": {
               "application/json": {
                 "schema": {

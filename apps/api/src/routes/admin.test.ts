@@ -16,6 +16,7 @@ vi.mock('@repo/database/admin', () => ({
   createAdminAuditEvent: vi.fn(),
   createAdminCatalogPreset: vi.fn(),
   createAdminInternalNote: vi.fn(),
+  createSetupSalon: vi.fn(),
   getAdminMessagingHealth: vi.fn(),
   getAdminOverview: vi.fn(),
   getAdminSalon: vi.fn(),
@@ -53,6 +54,7 @@ import {
   createAdminAuditEvent,
   createAdminCatalogPreset,
   createAdminInternalNote,
+  createSetupSalon,
   getAdminSalon,
   getPlatformAdminForUser,
   getPlatformAdminMe,
@@ -169,6 +171,85 @@ describe('admin runtime data source', () => {
     expect(updateAdminSalonStatus).not.toHaveBeenCalled()
   })
 
+  it('creates a Setup Salon with a canonical phone and redacted audit metadata', async () => {
+    vi.mocked(createSetupSalon).mockResolvedValue({
+      id: salonId,
+      name: 'Aftab',
+      slug: `setup-${salonId}`,
+      status: 'setup',
+      intendedOwnerPhone: '09121234567',
+      publicEnabled: false,
+      appointmentRequestsEnabled: false,
+    } as never)
+
+    const res = await app.request('/api/v1/admin/salons', {
+      method: 'POST',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: ' Aftab ',
+        intendedOwnerPhone: '+98 912 123 4567',
+        reason: 'Signed field agreement',
+        liveConfirmation: 'LIVE',
+      }),
+    })
+
+    expect(res.status).toBe(201)
+    expect(createSetupSalon).toHaveBeenCalledWith({
+      name: 'Aftab',
+      intendedOwnerPhone: '09121234567',
+    })
+    expect(createAdminAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorUserId: 'admin-user-1',
+        action: 'salon.setup.create',
+        targetId: salonId,
+        metadata: { intendedOwnerPhone: '[REDACTED]' },
+      }),
+    )
+  })
+
+  it('rejects invalid intended-owner phones', async () => {
+    const res = await app.request('/api/v1/admin/salons', {
+      method: 'POST',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Aftab',
+        intendedOwnerPhone: '12345',
+        reason: 'Signed field agreement',
+        liveConfirmation: 'LIVE',
+      }),
+    })
+
+    expect(res.status).toBe(400)
+    expect(createSetupSalon).not.toHaveBeenCalled()
+  })
+
+  it.each(['platform_support', 'platform_viewer'] as const)(
+    'forbids Setup Salon creation for %s',
+    async (role) => {
+      vi.mocked(getPlatformAdminForUser).mockResolvedValue({
+        id: 'platform-admin-2',
+        userId: 'admin-user-1',
+        role,
+        active: true,
+      } as never)
+
+      const res = await app.request('/api/v1/admin/salons', {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Aftab',
+          intendedOwnerPhone: '09121234567',
+          reason: 'Signed field agreement',
+          liveConfirmation: 'LIVE',
+        }),
+      })
+
+      expect(res.status).toBe(403)
+      expect(createSetupSalon).not.toHaveBeenCalled()
+    },
+  )
+
   it('lists and reads admin salons', async () => {
     vi.mocked(listAdminSalons).mockResolvedValue({
       items: [{ id: salonId, name: 'Aftab', status: 'active' }],
@@ -279,6 +360,11 @@ describe('admin runtime data source', () => {
   })
 
   it('updates salon status with reason and LIVE confirmation', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: { id: salonId, status: 'active' },
+      members: [],
+      stats: {},
+    } as never)
     vi.mocked(updateAdminSalonStatus).mockResolvedValue({
       id: salonId,
       status: 'suspended',
@@ -312,6 +398,27 @@ describe('admin runtime data source', () => {
         reason: 'Safety review',
       }),
     )
+  })
+
+  it('does not activate a Setup Salon outside the handoff flow', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: { id: salonId, status: 'setup' },
+      members: [],
+      stats: {},
+    } as never)
+
+    const res = await app.request(`/api/v1/admin/salons/${salonId}/status`, {
+      method: 'PATCH',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'active',
+        reason: 'Skip handoff',
+        liveConfirmation: 'LIVE',
+      }),
+    })
+
+    expect(res.status).toBe(409)
+    expect(updateAdminSalonStatus).not.toHaveBeenCalled()
   })
 
   it('lists and creates internal salon notes with a reason', async () => {

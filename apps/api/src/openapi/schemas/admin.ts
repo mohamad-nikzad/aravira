@@ -12,7 +12,7 @@ export const platformRoleSchema = z
   .openapi('PlatformRole')
 
 export const salonStatusSchema = z
-  .enum(['active', 'suspended', 'archived'])
+  .enum(['setup', 'active', 'suspended', 'archived'])
   .openapi('AdminSalonStatus')
 
 export const adminListQuerySchema = z
@@ -111,6 +111,7 @@ export const adminRuntimeResponseSchema = z
 export const adminOverviewResponseSchema = z
   .object({
     salonsByStatus: z.object({
+      setup: z.number().int(),
       active: z.number().int(),
       suspended: z.number().int(),
       archived: z.number().int(),
@@ -203,11 +204,24 @@ export const adminNotesResponseSchema = z
 
 export const adminStatusUpdateBodySchema = z
   .object({
-    status: salonStatusSchema,
+    status: z.enum(['active', 'suspended', 'archived']),
     reason: adminReasonSchema,
     liveConfirmation: z.string().optional(),
   })
   .openapi('AdminSalonStatusUpdateRequest')
+
+export const adminSetupSalonCreateBodySchema = z
+  .object({
+    name: z.string().min(1).max(120),
+    intendedOwnerPhone: z.string().regex(/^09\d{9}$/),
+    reason: adminReasonSchema,
+    liveConfirmation: z.string().optional(),
+  })
+  .openapi('AdminSetupSalonCreateRequest')
+
+export const adminSetupSalonResponseSchema = z
+  .object({ salon: anyRecordSchema })
+  .openapi('AdminSetupSalonResponse')
 
 export const adminNoteCreateBodySchema = z
   .object({

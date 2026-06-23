@@ -125,6 +125,7 @@ import {
 import {
   createAdminCatalogPresetRoute,
   createAdminSalonNoteRoute,
+  createSetupSalonRoute,
   createAdminUserNoteRoute,
   createPlatformAdminRoute,
   getAdminMeRoute,
@@ -450,7 +451,7 @@ const getAdminRuntimeStub: RouteHandler<typeof getAdminRuntimeRoute> = (c) =>
 const getAdminOverviewStub: RouteHandler<typeof getAdminOverviewRoute> = (c) =>
   c.json(
     {
-      salonsByStatus: { active: 0, suspended: 0, archived: 0 },
+      salonsByStatus: { setup: 0, active: 0, suspended: 0, archived: 0 },
       failedDeliveries: 0,
       messagingAccounts: [],
       recentAuditEvents: [],
@@ -460,6 +461,9 @@ const getAdminOverviewStub: RouteHandler<typeof getAdminOverviewRoute> = (c) =>
 
 const listAdminSalonsStub: RouteHandler<typeof listAdminSalonsRoute> = (c) =>
   c.json(adminListStub, 200)
+
+const createSetupSalonStub: RouteHandler<typeof createSetupSalonRoute> = (c) =>
+  c.json({ salon: {} }, 201)
 
 const getAdminSalonStub: RouteHandler<typeof getAdminSalonRoute> = (c) =>
   c.json({ salon: {}, members: [], stats: {} }, 200)
@@ -1087,6 +1091,7 @@ export const contractApp = new OpenAPIHono()
       .openapi(getAdminRuntimeRoute, getAdminRuntimeStub)
       .openapi(getAdminOverviewRoute, getAdminOverviewStub)
       .openapi(listAdminSalonsRoute, listAdminSalonsStub)
+      .openapi(createSetupSalonRoute, createSetupSalonStub)
       .openapi(getAdminSalonRoute, getAdminSalonStub)
       .openapi(listAdminSalonClientsRoute, listAdminSalonClientsStub)
       .openapi(listAdminSalonAppointmentsRoute, listAdminSalonAppointmentsStub)

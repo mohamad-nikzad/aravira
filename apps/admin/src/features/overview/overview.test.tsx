@@ -12,13 +12,9 @@ const overviewQuery = vi.hoisted(() => ({
 }))
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({
-    to,
-    children,
-  }: {
-    to: string
-    children: ReactNode
-  }) => <a href={to}>{children}</a>,
+  Link: ({ to, children }: { to: string; children: ReactNode }) => (
+    <a href={to}>{children}</a>
+  ),
 }))
 
 vi.mock('@repo/api-client/query', () => ({
@@ -46,6 +42,7 @@ function renderOverview() {
 
 const populatedOverview: AdminOverviewResponse = {
   salonsByStatus: {
+    setup: 3,
     active: 7,
     suspended: 2,
     archived: 1,
@@ -84,7 +81,7 @@ describe('OverviewScreen', () => {
 
     expect(await screen.findByText('سالن‌های فعال')).toBeTruthy()
     expect(screen.getByText('7')).toBeTruthy()
-    expect(screen.getByText('2 تعلیق‌شده')).toBeTruthy()
+    expect(screen.getByText('3 راه‌اندازی · 2 تعلیق‌شده')).toBeTruthy()
     expect(screen.getByText('3')).toBeTruthy()
     expect(screen.getByText('bale فعال')).toBeTruthy()
     expect(screen.getByText('salon.status.updated')).toBeTruthy()
@@ -102,22 +99,29 @@ describe('OverviewScreen', () => {
       screen.getByRole('link', { name: /سالن‌های فعال/ }).getAttribute('href'),
     ).toBe('/salons')
     expect(
-      screen.getByRole('link', { name: /سالن‌های آرشیوشده/ }).getAttribute('href'),
+      screen
+        .getByRole('link', { name: /سالن‌های آرشیوشده/ })
+        .getAttribute('href'),
     ).toBe('/salons')
     expect(
-      screen.getByRole('link', { name: /رویدادهای ممیزی اخیر/ }).getAttribute('href'),
+      screen
+        .getByRole('link', { name: /رویدادهای ممیزی اخیر/ })
+        .getAttribute('href'),
     ).toBe('/audit-log')
     expect(
       screen.getByRole('link', { name: 'مشاهده همه' }).getAttribute('href'),
     ).toBe('/audit-log')
     expect(
-      screen.getByRole('link', { name: /salon\.status\.updated/ }).getAttribute('href'),
+      screen
+        .getByRole('link', { name: /salon\.status\.updated/ })
+        .getAttribute('href'),
     ).toBe('/audit-log')
   })
 
   it('renders empty states when overview lists are empty', async () => {
     overviewQuery.queryFn.mockResolvedValue({
       salonsByStatus: {
+        setup: 0,
         active: 0,
         suspended: 0,
         archived: 0,
@@ -132,9 +136,7 @@ describe('OverviewScreen', () => {
     expect(
       await screen.findByText('هنوز حساب پیام‌رسانی متصل نشده است.'),
     ).toBeTruthy()
-    expect(
-      screen.getByText('هنوز تغییری توسط مدیر ثبت نشده است.'),
-    ).toBeTruthy()
+    expect(screen.getByText('هنوز تغییری توسط مدیر ثبت نشده است.')).toBeTruthy()
   })
 
   it('renders the loading state while the overview query is pending', () => {

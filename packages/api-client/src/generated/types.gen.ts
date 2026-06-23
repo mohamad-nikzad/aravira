@@ -37,6 +37,7 @@ export type AdminRuntimeResponse = {
 
 export type AdminOverviewResponse = {
   salonsByStatus: {
+    setup: number
     active: number
     suspended: number
     archived: number
@@ -61,6 +62,19 @@ export type AdminPagination = {
   page: number
   pageSize: number
   total: number
+}
+
+export type AdminSetupSalonResponse = {
+  salon: {
+    [key: string]: unknown
+  }
+}
+
+export type AdminSetupSalonCreateRequest = {
+  name: string
+  intendedOwnerPhone: string
+  reason: string
+  liveConfirmation?: string
 }
 
 export type AdminSalonDetailResponse = {
@@ -111,12 +125,10 @@ export type AdminSalonServicesResponse = {
 }
 
 export type AdminSalonStatusUpdateRequest = {
-  status: AdminSalonStatus
+  status: 'active' | 'suspended' | 'archived'
   reason: string
   liveConfirmation?: string
 }
-
-export type AdminSalonStatus = 'active' | 'suspended' | 'archived'
 
 export type AdminNotesResponse = {
   notes: Array<{
@@ -1719,6 +1731,41 @@ export type GetApiV1AdminSalonsResponses = {
 export type GetApiV1AdminSalonsResponse =
   GetApiV1AdminSalonsResponses[keyof GetApiV1AdminSalonsResponses]
 
+export type PostApiV1AdminSalonsData = {
+  body: AdminSetupSalonCreateRequest
+  path?: never
+  query?: never
+  url: '/api/v1/admin/salons'
+}
+
+export type PostApiV1AdminSalonsErrors = {
+  /**
+   * Invalid request body or query
+   */
+  400: ApiError
+  /**
+   * Missing or invalid session
+   */
+  401: ApiError
+  /**
+   * Authenticated user is not an active platform admin or lacks permission
+   */
+  403: ApiError
+}
+
+export type PostApiV1AdminSalonsError =
+  PostApiV1AdminSalonsErrors[keyof PostApiV1AdminSalonsErrors]
+
+export type PostApiV1AdminSalonsResponses = {
+  /**
+   * Setup Salon created
+   */
+  201: AdminSetupSalonResponse
+}
+
+export type PostApiV1AdminSalonsResponse =
+  PostApiV1AdminSalonsResponses[keyof PostApiV1AdminSalonsResponses]
+
 export type GetApiV1AdminSalonsByIdData = {
   body?: never
   path: {
@@ -1987,6 +2034,10 @@ export type PatchApiV1AdminSalonsByIdStatusErrors = {
    * Admin resource not found
    */
   404: ApiError
+  /**
+   * Mutation violates platform admin safety rules
+   */
+  409: ApiError
 }
 
 export type PatchApiV1AdminSalonsByIdStatusError =

@@ -14,11 +14,21 @@ const generated = vi.hoisted(() => ({
   getStaff: vi.fn(),
   getServices: vi.fn(),
   patchStatus: vi.fn(),
+  postSalon: vi.fn(),
   postNote: vi.fn(),
   authMe: vi.fn(),
 }))
 
-function mockAuthMe(options: { dataSource?: 'local' | 'live' } = {}) {
+function mockAuthMe(
+  options: {
+    dataSource?: 'local' | 'live'
+    role?:
+      | 'platform_owner'
+      | 'platform_admin'
+      | 'platform_support'
+      | 'platform_viewer'
+  } = {},
+) {
   generated.authMe.mockResolvedValue({
     user: {
       id: 'admin-user-id',
@@ -27,7 +37,7 @@ function mockAuthMe(options: { dataSource?: 'local' | 'live' } = {}) {
       email: 'owner@saluna.test',
       phoneNumber: '+989120000000',
       username: 'owner',
-      role: 'platform_owner',
+      role: options.role ?? 'platform_owner',
       active: true,
     },
     runtime: { dataSource: options.dataSource ?? 'local' },
@@ -118,6 +128,9 @@ vi.mock('@repo/api-client/query', () => ({
   patchApiV1AdminSalonsByIdStatusMutation: () => ({
     mutationFn: generated.patchStatus,
   }),
+  postApiV1AdminSalonsMutation: () => ({
+    mutationFn: generated.postSalon,
+  }),
   postApiV1AdminSalonsByIdNotesMutation: () => ({
     mutationFn: generated.postNote,
   }),
@@ -136,6 +149,7 @@ describe('salons feature', () => {
     generated.getStaff.mockReset()
     generated.getServices.mockReset()
     generated.patchStatus.mockReset()
+    generated.postSalon.mockReset()
     generated.postNote.mockReset()
     mockAuthMe()
     generated.getClients.mockResolvedValue({
@@ -191,6 +205,89 @@ describe('salons feature', () => {
     expect(generated.listSalons).toHaveBeenCalledWith({
       query: { page: 1, pageSize: 20, search: undefined },
     })
+  })
+
+  it('distinguishes Setup Salons and creates one from the owner-only action', async () => {
+    generated.listSalons.mockResolvedValue({
+      items: [
+        {
+          id: salonId,
+          name: 'Setup Aftab',
+          slug: `setup-${salonId}`,
+          status: 'setup',
+          intendedOwnerPhone: '09121234567',
+          memberCount: 0,
+          publicEnabled: false,
+        },
+      ],
+      pagination: { page: 1, pageSize: 20, total: 1 },
+    })
+    generated.postSalon.mockResolvedValue({ salon: { id: salonId } })
+
+    renderSalonsList()
+
+    expect(await screen.findByText('راه‌اندازی')).toBeTruthy()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'سالن راه‌اندازی جدید' }),
+    )
+    fireEvent.change(screen.getByLabelText('نام سالن'), {
+      target: { value: 'Setup Aftab' },
+    })
+    fireEvent.change(screen.getByLabelText('شماره تلفن مالک موردنظر'), {
+      target: { value: '+98 912 123 4567' },
+    })
+    fireEvent.change(screen.getByLabelText('دلیل'), {
+      target: { value: 'Signed agreement' },
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'ایجاد سالن راه‌اندازی' }),
+    )
+
+    await waitFor(() => expect(generated.postSalon).toHaveBeenCalled())
+    expect(generated.postSalon.mock.calls[0]?.[0]).toEqual({
+      body: {
+        name: 'Setup Aftab',
+        intendedOwnerPhone: '+98 912 123 4567',
+        reason: 'Signed agreement',
+        liveConfirmation: undefined,
+      },
+    })
+  })
+
+  it('hides the Setup Salon mutation from platform support', async () => {
+    generated.listSalons.mockResolvedValue({
+      items: [],
+      pagination: { page: 1, pageSize: 20, total: 0 },
+    })
+    mockAuthMe({ role: 'platform_support' })
+
+    renderAdminRoute('/salons')
+
+    await waitFor(() => expect(generated.listSalons).toHaveBeenCalled())
+    expect(
+      screen.queryByRole('button', { name: 'سالن راه‌اندازی جدید' }),
+    ).toBeNull()
+  })
+
+  it('shows Setup status and intended-owner phone in salon detail', async () => {
+    generated.getSalon.mockResolvedValue({
+      salon: {
+        id: salonId,
+        name: 'Setup Aftab',
+        status: 'setup',
+        intendedOwnerPhone: '09121234567',
+        publicEnabled: false,
+      },
+      members: [],
+      stats: { services: 0, appointments: 0 },
+    })
+    generated.getNotes.mockResolvedValue({ notes: [] })
+
+    renderSalonDetail(`/salons/${salonId}`)
+
+    expect(await screen.findByText('راه‌اندازی')).toBeTruthy()
+    expect(screen.getByText('09121234567')).toBeTruthy()
+    expect(screen.getByText('تلفن مالک موردنظر')).toBeTruthy()
   })
 
   it('renders salon overview detail and submits a live-data status change with reason and confirmation', async () => {

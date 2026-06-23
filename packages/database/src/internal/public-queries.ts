@@ -19,7 +19,12 @@ import {
   isSalonOpenOnDate,
   resolveStaffWorkingHoursForDay,
 } from '@repo/salon-core/staff-availability'
-import type { Appointment, Service, StaffSchedule, User } from '@repo/salon-core/types'
+import type {
+  Appointment,
+  Service,
+  StaffSchedule,
+  User,
+} from '@repo/salon-core/types'
 import { endTimeFromDuration } from '@repo/salon-core/appointment-time'
 import { PUBLIC_REQUEST_WINDOW_DAYS } from '@repo/salon-core/forms/public'
 import { normalizePhone } from '@repo/salon-core/phone'
@@ -65,11 +70,17 @@ export type PublicSalonLookupResult =
   | { ok: true; view: PublicSalonView }
   | { ok: false; status: number; error: string }
 
+export function isPublicSalonStatus(status: string | null): boolean {
+  return status === 'active'
+}
+
 /**
  * Resolves a salon by its public slug. Returns 404 when the salon is missing,
  * inactive, or has no `salon_public_settings` row with `enabled = true`.
  */
-export async function getPublicSalon(slug: string): Promise<PublicSalonLookupResult> {
+export async function getPublicSalon(
+  slug: string,
+): Promise<PublicSalonLookupResult> {
   const db = getDb()
   const [salonRow] = await db
     .select({
@@ -94,7 +105,7 @@ export async function getPublicSalon(slug: string): Promise<PublicSalonLookupRes
     .where(eq(organization.slug, slug))
     .limit(1)
 
-  if (!salonRow || salonRow.status !== 'active') {
+  if (!salonRow || !isPublicSalonStatus(salonRow.status)) {
     return { ok: false, status: 404, error: 'سالن یافت نشد' }
   }
 
@@ -160,11 +171,12 @@ export type PublicAvailabilityLookupResult =
   | { ok: false; status: number; error: string }
 
 function buildAppointmentsByStaffAndDate(
-  appointments: Appointment[]
+  appointments: Appointment[],
 ): Map<string, Map<string, Appointment[]>> {
   const byStaff = new Map<string, Map<string, Appointment[]>>()
   for (const appointment of appointments) {
-    const byDate = byStaff.get(appointment.staffId) ?? new Map<string, Appointment[]>()
+    const byDate =
+      byStaff.get(appointment.staffId) ?? new Map<string, Appointment[]>()
     const list = byDate.get(appointment.date) ?? []
     list.push(appointment)
     byDate.set(appointment.date, list)
@@ -179,7 +191,7 @@ function buildAppointmentsByStaffAndDate(
  * `[salonToday, salonToday + PUBLIC_REQUEST_WINDOW_DAYS]` in `Asia/Tehran`.
  */
 export async function getPublicAvailability(
-  params: PublicAvailabilityLookupParams
+  params: PublicAvailabilityLookupParams,
 ): Promise<PublicAvailabilityLookupResult> {
   const today = salonTodayYmd()
   const maxDate = addDaysYmd(today, PUBLIC_REQUEST_WINDOW_DAYS)
@@ -190,7 +202,11 @@ export async function getPublicAvailability(
   const salonLookup = await getPublicSalon(params.slug)
   if (!salonLookup.ok) return salonLookup
   if (!salonLookup.view.publicSettings.appointmentRequestsEnabled) {
-    return { ok: false, status: 403, error: 'درخواست نوبت برای این سالن غیرفعال است' }
+    return {
+      ok: false,
+      status: 403,
+      error: 'درخواست نوبت برای این سالن غیرفعال است',
+    }
   }
   const salonId = salonLookup.view.salon.id
 
@@ -207,11 +223,20 @@ export async function getPublicAvailability(
   const activeStaff = allStaff.filter((member) => member.role === 'staff')
   const eligibleStaff = eligibleStaffForService(activeStaff, service.id)
   if (eligibleStaff.length === 0) {
-    return emptyAvailability(params.mode, AVAILABILITY_EMPTY_REASONS.NO_QUALIFIED_STAFF)
+    return emptyAvailability(
+      params.mode,
+      AVAILABILITY_EMPTY_REASONS.NO_QUALIFIED_STAFF,
+    )
   }
 
-  if (params.mode === 'day' && !isSalonOpenOnDate(businessHours.workingDays, params.date)) {
-    return emptyAvailability(params.mode, AVAILABILITY_EMPTY_REASONS.SALON_CLOSED)
+  if (
+    params.mode === 'day' &&
+    !isSalonOpenOnDate(businessHours.workingDays, params.date)
+  ) {
+    return emptyAvailability(
+      params.mode,
+      AVAILABILITY_EMPTY_REASONS.SALON_CLOSED,
+    )
   }
 
   const nearestDays = params.nearestDays ?? 14
@@ -229,20 +254,28 @@ export async function getPublicAvailability(
       params.mode,
       params.mode === 'day'
         ? AVAILABILITY_EMPTY_REASONS.SALON_CLOSED
-        : AVAILABILITY_EMPTY_REASONS.OUTSIDE_SEARCH_WINDOW
+        : AVAILABILITY_EMPTY_REASONS.OUTSIDE_SEARCH_WINDOW,
     )
   }
 
   const [appointments, schedulesByStaffEntries] = await Promise.all([
-    getAppointmentsByDateRange(salonId, searchDates[0]!, searchDates[searchDates.length - 1]!),
+    getAppointmentsByDateRange(
+      salonId,
+      searchDates[0]!,
+      searchDates[searchDates.length - 1]!,
+    ),
     Promise.all(
       eligibleStaff.map(
-        async (member) => [member.id, await getStaffSchedules(salonId, member.id)] as const
-      )
+        async (member) =>
+          [member.id, await getStaffSchedules(salonId, member.id)] as const,
+      ),
     ),
   ])
-  const appointmentsByStaffAndDate = buildAppointmentsByStaffAndDate(appointments)
-  const schedulesByStaff = new Map<string, StaffSchedule[]>(schedulesByStaffEntries)
+  const appointmentsByStaffAndDate =
+    buildAppointmentsByStaffAndDate(appointments)
+  const schedulesByStaff = new Map<string, StaffSchedule[]>(
+    schedulesByStaffEntries,
+  )
   const todayDate = salonTodayYmd()
   const nowTime = salonCurrentHm()
 
@@ -254,7 +287,7 @@ export async function getPublicAvailability(
         schedules: schedulesByStaff.get(staffMember.id) ?? [],
         businessHours,
         appointmentsByStaffAndDate,
-      })
+      }),
     )
 
   if (params.mode === 'day') {
@@ -297,12 +330,18 @@ export async function getPublicAvailability(
 
 function emptyAvailability(
   mode: AvailabilityMode,
-  reason: AvailabilityEmptyReason
+  reason: AvailabilityEmptyReason,
 ): PublicAvailabilityLookupResult {
   if (mode === 'day') {
-    return { ok: true, response: { mode: 'day', slots: [], emptyReason: reason } }
+    return {
+      ok: true,
+      response: { mode: 'day', slots: [], emptyReason: reason },
+    }
   }
-  return { ok: true, response: { mode: 'nearest', slot: null, emptyReason: reason } }
+  return {
+    ok: true,
+    response: { mode: 'nearest', slot: null, emptyReason: reason },
+  }
 }
 
 function buildStaffDay(input: {
@@ -320,7 +359,9 @@ function buildStaffDay(input: {
     businessHours: input.businessHours,
   })
   const appointments =
-    input.appointmentsByStaffAndDate.get(input.staffMember.id)?.get(input.date) ?? []
+    input.appointmentsByStaffAndDate
+      .get(input.staffMember.id)
+      ?.get(input.date) ?? []
   return {
     staffId: input.staffMember.id,
     staffName: input.staffMember.name,
@@ -354,12 +395,16 @@ export type CreateAppointmentRequestResult =
  * confirmation token. Does NOT block availability — see ADR-0002.
  */
 export async function createAppointmentRequest(
-  input: CreateAppointmentRequestInput
+  input: CreateAppointmentRequestInput,
 ): Promise<CreateAppointmentRequestResult> {
   const salonLookup = await getPublicSalon(input.slug)
   if (!salonLookup.ok) return salonLookup
   if (!salonLookup.view.publicSettings.appointmentRequestsEnabled) {
-    return { ok: false, status: 403, error: 'درخواست نوبت برای این سالن غیرفعال است' }
+    return {
+      ok: false,
+      status: 403,
+      error: 'درخواست نوبت برای این سالن غیرفعال است',
+    }
   }
   const salonId = salonLookup.view.salon.id
 
@@ -420,7 +465,7 @@ export type AppointmentRequestStatusView = {
  * identity".
  */
 export async function getAppointmentRequestByToken(
-  token: string
+  token: string,
 ): Promise<AppointmentRequestStatusView | null> {
   const db = getDb()
   const rows = await db
@@ -463,7 +508,7 @@ export type CancelAppointmentRequestResult =
  * may be cancelled; any other status returns 409.
  */
 export async function cancelAppointmentRequestByToken(
-  token: string
+  token: string,
 ): Promise<CancelAppointmentRequestResult> {
   const db = getDb()
   const updated = await db
@@ -472,8 +517,8 @@ export async function cancelAppointmentRequestByToken(
     .where(
       and(
         eq(appointmentRequests.confirmationToken, token),
-        eq(appointmentRequests.status, 'pending')
-      )
+        eq(appointmentRequests.status, 'pending'),
+      ),
     )
     .returning({ id: appointmentRequests.id })
   if (updated.length === 0) {

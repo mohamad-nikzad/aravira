@@ -46,7 +46,7 @@ export function OverviewScreen() {
       value: data?.salonsByStatus.active ?? 0,
       icon: Activity,
       tone: 'success',
-      hint: `${data?.salonsByStatus.suspended ?? 0} تعلیق‌شده`,
+      hint: `${data?.salonsByStatus.setup ?? 0} راه‌اندازی · ${data?.salonsByStatus.suspended ?? 0} تعلیق‌شده`,
       href: '/salons',
     },
     {

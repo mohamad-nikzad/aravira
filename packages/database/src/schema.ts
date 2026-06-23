@@ -192,8 +192,9 @@ export const salonProfile = pgTable('salon_profile', {
   locale: text('locale').notNull().default('fa-IR'),
   status: text('status')
     .notNull()
-    .$type<'active' | 'suspended' | 'archived'>()
+    .$type<'setup' | 'active' | 'suspended' | 'archived'>()
     .default('active'),
+  intendedOwnerPhone: text('intended_owner_phone'),
   phone: text('phone'),
   address: text('address'),
   mapGoogle: text('map_google'),

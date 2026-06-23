@@ -30,11 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { useAdminAuth } from '#/context/admin-auth-provider'
 import { number, text } from '#/lib/admin-format'
 
-import {
-  normalizeStatus,
-  StatusBadge,
-  truthy,
-} from './salon-columns'
+import { normalizeStatus, StatusBadge, truthy } from './salon-columns'
 import { NotesPanel, StatusForm } from './salon-governance'
 import { CompactRows, DetailGrid, Panel } from '#/components/admin/panel'
 import { SalonTenantDataTabs } from './salon-tenant-tabs'
@@ -171,6 +167,10 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
             <DetailGrid
               items={[
                 ['شماره تلفن', text(salon.phone)],
+                [
+                  'تلفن مالک موردنظر',
+                  text(salon.intendedOwnerPhone) || 'ثبت نشده',
+                ],
                 ['منطقه زمانی', text(salon.timezone)],
                 [
                   'صفحه عمومی',
@@ -202,18 +202,27 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
 
         <TabsContent value="governance" className="space-y-4">
           <div className="grid gap-4 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-            <StatusForm
-              current={currentStatus}
-              error={statusMutation.error}
-              isLiveData={isLiveData}
-              pending={statusMutation.isPending}
-              onSubmit={(input, options) =>
-                statusMutation.mutate(
-                  { path: { id: salonId }, body: input },
-                  options,
-                )
-              }
-            />
+            {currentStatus === 'setup' ? (
+              <Panel title="وضعیت راه‌اندازی">
+                <p className="text-sm leading-6 text-muted-foreground">
+                  این سالن تا تحویل به مالک در وضعیت راه‌اندازی باقی می‌ماند و
+                  از این صفحه فعال نمی‌شود.
+                </p>
+              </Panel>
+            ) : (
+              <StatusForm
+                current={currentStatus}
+                error={statusMutation.error}
+                isLiveData={isLiveData}
+                pending={statusMutation.isPending}
+                onSubmit={(input, options) =>
+                  statusMutation.mutate(
+                    { path: { id: salonId }, body: input },
+                    options,
+                  )
+                }
+              />
+            )}
             <NotesPanel
               error={noteMutation.error}
               isError={notesQuery.isError}

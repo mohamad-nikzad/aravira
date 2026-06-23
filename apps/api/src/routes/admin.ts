@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import {
   countActivePlatformOwners,
+  createSetupSalon,
   createAdminCatalogPreset,
   createAdminInternalNote,
   getAdminMessagingHealth,
@@ -31,6 +32,7 @@ import {
   type PlatformRole,
 } from '@repo/database/admin'
 import { presetTreeSchema } from '@repo/salon-core/forms/catalog-preset'
+import { phoneSchema } from '@repo/salon-core/forms/primitives'
 import type { AppEnv } from '../factory'
 import { getEnv } from '../env'
 import { requirePlatformAdmin } from '../middleware/auth'
@@ -60,6 +62,13 @@ const reasonSchema = z.string().trim().min(3).max(500)
 
 const statusBodySchema = z.object({
   status: z.enum(['active', 'suspended', 'archived']),
+  reason: reasonSchema,
+  liveConfirmation: z.string().trim().optional(),
+})
+
+const setupSalonBodySchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  intendedOwnerPhone: phoneSchema,
   reason: reasonSchema,
   liveConfirmation: z.string().trim().optional(),
 })
@@ -144,6 +153,36 @@ export const adminRoute = new Hono<AppEnv>()
     requirePlatformAdmin('view_salons'),
     zValidator('query', listQuerySchema),
     async (c) => ok(c, await listAdminSalons(c.req.valid('query'))),
+  )
+  .post(
+    '/salons',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('json', setupSalonBodySchema),
+    async (c) => {
+      const body = c.req.valid('json')
+      const liveConfirmationError = requireLiveConfirmation(
+        c,
+        body.liveConfirmation,
+      )
+      if (liveConfirmationError) return liveConfirmationError
+
+      const salon = await createSetupSalon({
+        name: body.name,
+        intendedOwnerPhone: body.intendedOwnerPhone,
+      })
+      await writeAudit({
+        actorUserId: c.var.platformAdmin.userId,
+        actorPlatformRole: c.var.platformAdmin.role,
+        action: 'salon.setup.create',
+        targetType: 'salon',
+        targetId: salon.id,
+        salonId: salon.id,
+        reason: body.reason,
+        metadata: { intendedOwnerPhone: '[REDACTED]' },
+        request: auditMeta(c),
+      })
+      return created(c, { salon })
+    },
   )
   .get(
     '/salons/:id',
@@ -231,6 +270,15 @@ export const adminRoute = new Hono<AppEnv>()
         body.liveConfirmation,
       )
       if (liveConfirmationError) return liveConfirmationError
+      const existing = await getAdminSalon(id)
+      if (!existing) return error(c, 'سالن یافت نشد', 404)
+      if (existing.salon.status === 'setup') {
+        return error(
+          c,
+          'فعال‌سازی سالن راه‌اندازی فقط از مسیر تحویل به مالک ممکن است',
+          409,
+        )
+      }
       const updated = await updateAdminSalonStatus({
         salonId: id,
         status: body.status,
