@@ -166,6 +166,63 @@ export type AdminSetupStaffCreateRequest = {
     liveConfirmation?: string;
 };
 
+export type AdminSetupClientCreateResponse = {
+    client: {
+        [key: string]: unknown;
+    };
+};
+
+export type AdminSetupClientCreateRequest = {
+    name: string;
+    phone: string;
+    notes?: string;
+    tags?: Array<string>;
+    reason: string;
+    liveConfirmation?: string;
+};
+
+export type AdminSetupClientImportPreviewResponse = {
+    counts: {
+        totalInFile: number;
+        eligible: number;
+        invalid: number;
+        duplicateExisting: number;
+        duplicateInFile: number;
+        truncated: boolean;
+    };
+    rows: Array<{
+        localId: string;
+        name: string;
+        phone: string;
+        selected: boolean;
+    }>;
+    skippedRows: Array<{
+        localId: string;
+        name: string;
+        phone: string | null;
+        reason: 'invalid' | 'duplicate-existing' | 'duplicate-in-file';
+        invalidDetail?: 'name' | 'missing-phone' | 'invalid-phone';
+    }>;
+};
+
+export type AdminSetupClientImportSource = {
+    format: 'csv' | 'vcf';
+    source: string;
+};
+
+export type AdminSetupClientImportResponse = {
+    imported: number;
+    skipped: number;
+    duplicate: number;
+    invalid: number;
+};
+
+export type AdminSetupClientImportRequest = AdminSetupClientImportSource & {
+    selectedLocalIds: Array<string>;
+    reason: string;
+    liveConfirmation?: string;
+};
+
 export type AdminSetupCatalogResponse = {
     categories: Array<{
         [key: string]: unknown;
@@ -2170,6 +2227,123 @@ export type PostApiV1AdminSalonsByIdSetupStaffResponses = {
 };
 
 export type PostApiV1AdminSalonsByIdSetupStaffResponse = PostApiV1AdminSalonsByIdSetupStaffResponses[keyof PostApiV1AdminSalonsByIdSetupStaffResponses];
+
+export type PostApiV1AdminSalonsByIdSetupClientsData = {
+    body: AdminSetupClientCreateRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/salons/{id}/setup/clients';
+};
+
+export type PostApiV1AdminSalonsByIdSetupClientsErrors = {
+    /**
+     * Invalid request body or query
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user is not an active platform admin or lacks permission
+     */
+    403: ApiError;
+    /**
+     * Mutation violates platform admin safety rules
+     */
+    409: ApiError;
+};
+
+export type PostApiV1AdminSalonsByIdSetupClientsError = PostApiV1AdminSalonsByIdSetupClientsErrors[keyof PostApiV1AdminSalonsByIdSetupClientsErrors];
+
+export type PostApiV1AdminSalonsByIdSetupClientsResponses = {
+    /**
+     * Created Client
+     */
+    201: AdminSetupClientCreateResponse;
+};
+
+export type PostApiV1AdminSalonsByIdSetupClientsResponse = PostApiV1AdminSalonsByIdSetupClientsResponses[keyof PostApiV1AdminSalonsByIdSetupClientsResponses];
+
+export type PostApiV1AdminSalonsByIdSetupClientsImportPreviewData = {
+    body: AdminSetupClientImportSource;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/salons/{id}/setup/clients/import/preview';
+};
+
+export type PostApiV1AdminSalonsByIdSetupClientsImportPreviewErrors = {
+    /**
+     * Invalid request body or query
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user is not an active platform admin or lacks permission
+     */
+    403: ApiError;
+    /**
+     * Mutation violates platform admin safety rules
+     */
+    409: ApiError;
+};
+
+export type PostApiV1AdminSalonsByIdSetupClientsImportPreviewError = PostApiV1AdminSalonsByIdSetupClientsImportPreviewErrors[keyof PostApiV1AdminSalonsByIdSetupClientsImportPreviewErrors];
+
+export type PostApiV1AdminSalonsByIdSetupClientsImportPreviewResponses = {
+    /**
+     * Import preview
+     */
+    200: AdminSetupClientImportPreviewResponse;
+};
+
+export type PostApiV1AdminSalonsByIdSetupClientsImportPreviewResponse = PostApiV1AdminSalonsByIdSetupClientsImportPreviewResponses[keyof PostApiV1AdminSalonsByIdSetupClientsImportPreviewResponses];
+
+export type PostApiV1AdminSalonsByIdSetupClientsImportData = {
+    body: AdminSetupClientImportRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/salons/{id}/setup/clients/import';
+};
+
+export type PostApiV1AdminSalonsByIdSetupClientsImportErrors = {
+    /**
+     * Invalid request body or query
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user is not an active platform admin or lacks permission
+     */
+    403: ApiError;
+    /**
+     * Mutation violates platform admin safety rules
+     */
+    409: ApiError;
+};
+
+export type PostApiV1AdminSalonsByIdSetupClientsImportError = PostApiV1AdminSalonsByIdSetupClientsImportErrors[keyof PostApiV1AdminSalonsByIdSetupClientsImportErrors];
+
+export type PostApiV1AdminSalonsByIdSetupClientsImportResponses = {
+    /**
+     * Import result
+     */
+    200: AdminSetupClientImportResponse;
+};
+
+export type PostApiV1AdminSalonsByIdSetupClientsImportResponse = PostApiV1AdminSalonsByIdSetupClientsImportResponses[keyof PostApiV1AdminSalonsByIdSetupClientsImportResponses];
 
 export type GetApiV1AdminSalonsByIdSetupCatalogData = {
     body?: never;

@@ -277,6 +277,80 @@ export const adminSetupStaffCreateResponseSchema = z
   .object({ profile: anyRecordSchema })
   .openapi('AdminSetupStaffCreateResponse')
 
+export const adminSetupClientCreateBodySchema = z
+  .object({
+    name: z.string().min(1),
+    phone: z.string().regex(/^09\d{9}$/),
+    notes: z.string().optional(),
+    tags: z.array(z.string()).max(8).default([]),
+    reason: adminReasonSchema,
+    liveConfirmation: z.string().optional(),
+  })
+  .openapi('AdminSetupClientCreateRequest')
+
+export const adminSetupClientCreateResponseSchema = z
+  .object({ client: anyRecordSchema })
+  .openapi('AdminSetupClientCreateResponse')
+
+export const adminSetupClientImportSourceSchema = z
+  .object({
+    format: z.enum(['csv', 'vcf']),
+    source: z.string().min(1).max(2_000_000),
+  })
+  .openapi('AdminSetupClientImportSource')
+
+const adminSetupClientImportCountsSchema = z.object({
+  totalInFile: z.number().int(),
+  eligible: z.number().int(),
+  invalid: z.number().int(),
+  duplicateExisting: z.number().int(),
+  duplicateInFile: z.number().int(),
+  truncated: z.boolean(),
+})
+
+export const adminSetupClientImportPreviewResponseSchema = z
+  .object({
+    counts: adminSetupClientImportCountsSchema,
+    rows: z.array(
+      z.object({
+        localId: z.string(),
+        name: z.string(),
+        phone: z.string(),
+        selected: z.boolean(),
+      }),
+    ),
+    skippedRows: z.array(
+      z.object({
+        localId: z.string(),
+        name: z.string(),
+        phone: z.string().nullable(),
+        reason: z.enum(['invalid', 'duplicate-existing', 'duplicate-in-file']),
+        invalidDetail: z
+          .enum(['name', 'missing-phone', 'invalid-phone'])
+          .optional(),
+      }),
+    ),
+  })
+  .openapi('AdminSetupClientImportPreviewResponse')
+
+export const adminSetupClientImportBodySchema =
+  adminSetupClientImportSourceSchema
+    .extend({
+      selectedLocalIds: z.array(z.string()).min(1).max(200),
+      reason: adminReasonSchema,
+      liveConfirmation: z.string().optional(),
+    })
+    .openapi('AdminSetupClientImportRequest')
+
+export const adminSetupClientImportResponseSchema = z
+  .object({
+    imported: z.number().int(),
+    skipped: z.number().int(),
+    duplicate: z.number().int(),
+    invalid: z.number().int(),
+  })
+  .openapi('AdminSetupClientImportResponse')
+
 const adminSetupMutationMetaShape = {
   reason: adminReasonSchema,
   liveConfirmation: z.string().optional(),

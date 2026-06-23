@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
 
@@ -18,6 +24,9 @@ const generated = vi.hoisted(() => ({
   getSetupStaff: vi.fn(),
   mutateSetupStaff: vi.fn(),
   mutateSetupCatalog: vi.fn(),
+  createSetupClient: vi.fn(),
+  previewSetupClientImport: vi.fn(),
+  importSetupClients: vi.fn(),
   patchSetupHours: vi.fn(),
   patchSetupPresence: vi.fn(),
   patchStatus: vi.fn(),
@@ -137,6 +146,9 @@ vi.mock('@repo/api-client/query', () => ({
     queryKey: ['salon-clients', options],
     queryFn: () => generated.getClients(options),
   }),
+  getApiV1AdminSalonsByIdClientsQueryKey: (options: unknown) => [
+    { _id: 'salon-clients', options },
+  ],
   getApiV1AdminSalonsByIdAppointmentsOptions: (options: unknown) => ({
     queryKey: ['salon-appointments', options],
     queryFn: () => generated.getAppointments(options),
@@ -189,6 +201,15 @@ vi.mock('@repo/api-client/query', () => ({
   postApiV1AdminSalonsByIdSetupStaffMutation: () => ({
     mutationFn: generated.mutateSetupStaff,
   }),
+  postApiV1AdminSalonsByIdSetupClientsMutation: () => ({
+    mutationFn: generated.createSetupClient,
+  }),
+  postApiV1AdminSalonsByIdSetupClientsImportPreviewMutation: () => ({
+    mutationFn: generated.previewSetupClientImport,
+  }),
+  postApiV1AdminSalonsByIdSetupClientsImportMutation: () => ({
+    mutationFn: generated.importSetupClients,
+  }),
   patchApiV1AdminSalonsByIdSetupCatalogAddonsByEntityIdMutation: () => ({
     mutationFn: generated.mutateSetupCatalog,
   }),
@@ -225,6 +246,9 @@ describe('salons feature', () => {
       presets: [],
     })
     generated.mutateSetupCatalog.mockReset()
+    generated.createSetupClient.mockReset()
+    generated.previewSetupClientImport.mockReset()
+    generated.importSetupClients.mockReset()
     generated.patchSetupHours.mockReset()
     generated.patchSetupPresence.mockReset()
     generated.patchStatus.mockReset()
@@ -587,7 +611,8 @@ describe('salons feature', () => {
     fireEvent.change(await screen.findByLabelText('نام نمایشی'), {
       target: { value: 'سارا' },
     })
-    fireEvent.change(screen.getByLabelText('شماره موبایل'), {
+    const staffPanel = screen.getByText('پروفایل‌های پرسنل').closest('section')!
+    fireEvent.change(within(staffPanel).getByLabelText('شماره موبایل'), {
       target: { value: '09121234567' },
     })
     fireEvent.click(screen.getByText('رنگ مو'))
@@ -608,6 +633,119 @@ describe('salons feature', () => {
       }),
     })
     expect(screen.queryByLabelText(/رمز عبور/)).toBeNull()
+  })
+
+  it('adds one Client and confirms only selected eligible import rows', async () => {
+    generated.getSalon.mockResolvedValue({
+      salon: { id: salonId, name: 'Setup Aftab', status: 'setup' },
+      members: [],
+      stats: { services: 0, appointments: 0 },
+    })
+    generated.getNotes.mockResolvedValue({ notes: [] })
+    generated.getSetup.mockResolvedValue({
+      hours: {
+        workingStart: '09:00',
+        workingEnd: '19:00',
+        slotDurationMinutes: 30,
+        workingDays: 126,
+      },
+      presence: {
+        address: null,
+        mapGoogle: null,
+        mapNeshan: null,
+        mapBalad: null,
+        socialInstagram: null,
+        socialTelegram: null,
+        socialWhatsapp: null,
+        website: null,
+      },
+    })
+    generated.createSetupClient.mockResolvedValue({ client: { id: 'c1' } })
+    generated.previewSetupClientImport.mockResolvedValue({
+      counts: {
+        totalInFile: 3,
+        eligible: 2,
+        invalid: 1,
+        duplicateExisting: 0,
+        duplicateInFile: 0,
+        truncated: false,
+      },
+      rows: [
+        { localId: 'csv-1', name: 'Ali', phone: '09121111111', selected: true },
+        {
+          localId: 'csv-2',
+          name: 'Sara',
+          phone: '09122222222',
+          selected: true,
+        },
+      ],
+      skippedRows: [
+        {
+          localId: 'csv-3',
+          name: 'Bad',
+          phone: '123',
+          reason: 'invalid',
+          invalidDetail: 'invalid-phone',
+        },
+      ],
+    })
+    generated.importSetupClients.mockResolvedValue({
+      imported: 1,
+      skipped: 2,
+      duplicate: 0,
+      invalid: 1,
+    })
+
+    await renderSalonDetail(`/salons/${salonId}?tab=setup`)
+
+    const addPanel = (
+      await screen.findByRole('heading', { name: 'افزودن مشتری' })
+    ).closest('section')!
+    const add = within(addPanel as HTMLElement)
+    fireEvent.change(add.getByLabelText('نام مشتری'), {
+      target: { value: 'مریم' },
+    })
+    fireEvent.change(add.getByLabelText('شماره موبایل'), {
+      target: { value: '۰۹۱۲۳۴۵۶۷۸۹' },
+    })
+    fireEvent.change(add.getByLabelText('دلیل افزودن'), {
+      target: { value: 'Prepare client' },
+    })
+    fireEvent.click(add.getByRole('button', { name: 'افزودن مشتری' }))
+    await waitFor(() => expect(generated.createSetupClient).toHaveBeenCalled())
+
+    const importPanel = screen
+      .getByText('ورود مشتریان از فایل')
+      .closest('section')!
+    const importUi = within(importPanel as HTMLElement)
+    const source = 'name,phone\nAli,09121111111\nSara,09122222222\nBad,123'
+    fireEvent.change(importUi.getByLabelText('فایل CSV یا VCF'), {
+      target: {
+        files: [{ name: 'clients.csv', text: () => Promise.resolve(source) }],
+      },
+    })
+    await waitFor(() =>
+      expect(generated.previewSetupClientImport).toHaveBeenCalled(),
+    )
+    fireEvent.click(await importUi.findByLabelText('انتخاب Sara'))
+    fireEvent.change(importUi.getByLabelText('دلیل ورود'), {
+      target: { value: 'Import selected clients' },
+    })
+    fireEvent.click(
+      importUi.getByRole('button', { name: /تأیید و ورود 1 مشتری/ }),
+    )
+
+    await waitFor(() => expect(generated.importSetupClients).toHaveBeenCalled())
+    expect(generated.importSetupClients.mock.calls[0]?.[0]).toEqual({
+      path: { id: salonId },
+      body: {
+        format: 'csv',
+        source,
+        selectedLocalIds: ['csv-1'],
+        reason: 'Import selected clients',
+        liveConfirmation: undefined,
+      },
+    })
   })
 
   it('hides Setup Salon editing from platform support', async () => {

@@ -63,6 +63,17 @@ import {
   getSalonPresence,
   updateSalonPresence,
 } from '@repo/database/salon-profile'
+import {
+  createClient,
+  createClientsBulk,
+  getAllClients,
+  isDuplicatePhoneError,
+  setClientTags,
+} from '@repo/database/clients'
+import { clientFormSchema } from '@repo/salon-core/forms/client'
+import { buildClientImportPreview } from '@repo/salon-core/client-import'
+import { parseClientCsv } from '@repo/salon-core/csv'
+import { parseVcfFile } from '@repo/salon-core/vcf'
 import { presetTreeSchema } from '@repo/salon-core/forms/catalog-preset'
 import { applyCatalogPresetBodySchema } from '@repo/salon-core/forms/catalog-preset'
 import {
@@ -140,6 +151,18 @@ const setupStaffCreateBodySchema = z.object({
   active: z.boolean().default(true),
   serviceIds: z.array(z.string().uuid()).nullable(),
   schedule: z.array(setupStaffScheduleSchema).max(7),
+  reason: reasonSchema,
+  liveConfirmation: z.string().trim().optional(),
+})
+const setupClientCreateBodySchema = clientFormSchema.and(
+  setupMutationMetaSchema,
+)
+const setupClientImportSourceSchema = z.object({
+  format: z.enum(['csv', 'vcf']),
+  source: z.string().min(1).max(2_000_000),
+})
+const setupClientImportBodySchema = setupClientImportSourceSchema.extend({
+  selectedLocalIds: z.array(z.string().min(1)).min(1).max(200),
   reason: reasonSchema,
   liveConfirmation: z.string().trim().optional(),
 })
@@ -281,6 +304,21 @@ function setupCatalogError(c: Parameters<typeof error>[0], err: unknown) {
     return error(c, 'دسته یا گروه انتخاب‌شده معتبر نیست', 400)
   }
   return null
+}
+
+async function previewSetupClientImport(
+  salonId: string,
+  input: z.infer<typeof setupClientImportSourceSchema>,
+) {
+  const drafts =
+    input.format === 'csv'
+      ? parseClientCsv(input.source)
+      : parseVcfFile(input.source, (index) => `vcf-${index + 1}`)
+  const clients = await getAllClients(salonId)
+  return buildClientImportPreview(
+    drafts,
+    new Set(clients.flatMap((client) => (client.phone ? [client.phone] : []))),
+  )
 }
 
 export const adminRoute = new Hono<AppEnv>()
@@ -427,6 +465,115 @@ export const adminRoute = new Hono<AppEnv>()
         request: auditMeta(c),
       })
       return ok(c, { presence })
+    },
+  )
+  .post(
+    '/salons/:id/setup/clients',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('json', setupClientCreateBodySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
+      if (liveError) return liveError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      try {
+        const client = await createClient({
+          salonId: id,
+          name: body.name,
+          phone: body.phone,
+          notes: body.notes,
+        })
+        const tags = await setClientTags(client.id, id, body.tags)
+        await writeAudit({
+          actorUserId: c.var.platformAdmin.userId,
+          actorPlatformRole: c.var.platformAdmin.role,
+          action: 'salon.setup.client.create',
+          targetType: 'client',
+          targetId: client.id,
+          salonId: id,
+          reason: body.reason,
+          metadata: { personalData: '[REDACTED]' },
+          request: auditMeta(c),
+        })
+        return created(c, { client: { ...client, tags } })
+      } catch (err) {
+        if (isDuplicatePhoneError(err)) {
+          return error(c, 'این شماره تماس برای این سالن قبلاً ثبت شده است', 409)
+        }
+        throw err
+      }
+    },
+  )
+  .post(
+    '/salons/:id/setup/clients/import/preview',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('json', setupClientImportSourceSchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      const preview = await previewSetupClientImport(id, c.req.valid('json'))
+      if (preview.counts.totalInFile === 0) {
+        return error(c, 'هیچ ردیف مشتری در فایل پیدا نشد', 400)
+      }
+      return ok(c, preview)
+    },
+  )
+  .post(
+    '/salons/:id/setup/clients/import',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('json', setupClientImportBodySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
+      if (liveError) return liveError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      const preview = await previewSetupClientImport(id, body)
+      const selectedIds = new Set(body.selectedLocalIds)
+      const selectedRows = preview.rows.filter((row) =>
+        selectedIds.has(row.localId),
+      )
+      if (selectedRows.length === 0) {
+        return error(c, 'حداقل یک ردیف معتبر را برای ورود انتخاب کنید', 400)
+      }
+      const result = await createClientsBulk(
+        id,
+        selectedRows.map(({ name, phone }) => ({ name, phone })),
+      )
+      const duplicateCount =
+        preview.counts.duplicateExisting +
+        preview.counts.duplicateInFile +
+        result.skipped.filter((row) => row.reason === 'duplicate-phone').length
+      await writeAudit({
+        actorUserId: c.var.platformAdmin.userId,
+        actorPlatformRole: c.var.platformAdmin.role,
+        action: 'salon.setup.client_import.create',
+        targetType: 'salon',
+        targetId: id,
+        salonId: id,
+        reason: body.reason,
+        metadata: {
+          format: body.format,
+          imported: result.created.length,
+          skipped: preview.counts.totalInFile - result.created.length,
+          duplicate: duplicateCount,
+          invalid: preview.counts.invalid,
+        },
+        request: auditMeta(c),
+      })
+      return ok(c, {
+        imported: result.created.length,
+        skipped: preview.counts.totalInFile - result.created.length,
+        duplicate: duplicateCount,
+        invalid: preview.counts.invalid,
+      })
     },
   )
   .get(

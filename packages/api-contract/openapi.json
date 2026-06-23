@@ -673,6 +673,242 @@
           "reason"
         ]
       },
+      "AdminSetupClientCreateResponse": {
+        "type": "object",
+        "properties": {
+          "client": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          }
+        },
+        "required": [
+          "client"
+        ]
+      },
+      "AdminSetupClientCreateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^09\\d{9}$"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "default": []
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500,
+            "example": "درخواست پشتیبانی داخلی"
+          },
+          "liveConfirmation": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "phone",
+          "reason"
+        ]
+      },
+      "AdminSetupClientImportPreviewResponse": {
+        "type": "object",
+        "properties": {
+          "counts": {
+            "type": "object",
+            "properties": {
+              "totalInFile": {
+                "type": "integer"
+              },
+              "eligible": {
+                "type": "integer"
+              },
+              "invalid": {
+                "type": "integer"
+              },
+              "duplicateExisting": {
+                "type": "integer"
+              },
+              "duplicateInFile": {
+                "type": "integer"
+              },
+              "truncated": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "totalInFile",
+              "eligible",
+              "invalid",
+              "duplicateExisting",
+              "duplicateInFile",
+              "truncated"
+            ]
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "localId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "phone": {
+                  "type": "string"
+                },
+                "selected": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "localId",
+                "name",
+                "phone",
+                "selected"
+              ]
+            }
+          },
+          "skippedRows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "localId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "phone": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "invalid",
+                    "duplicate-existing",
+                    "duplicate-in-file"
+                  ]
+                },
+                "invalidDetail": {
+                  "type": "string",
+                  "enum": [
+                    "name",
+                    "missing-phone",
+                    "invalid-phone"
+                  ]
+                }
+              },
+              "required": [
+                "localId",
+                "name",
+                "phone",
+                "reason"
+              ]
+            }
+          }
+        },
+        "required": [
+          "counts",
+          "rows",
+          "skippedRows"
+        ]
+      },
+      "AdminSetupClientImportSource": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "csv",
+              "vcf"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000000
+          }
+        },
+        "required": [
+          "format",
+          "source"
+        ]
+      },
+      "AdminSetupClientImportResponse": {
+        "type": "object",
+        "properties": {
+          "imported": {
+            "type": "integer"
+          },
+          "skipped": {
+            "type": "integer"
+          },
+          "duplicate": {
+            "type": "integer"
+          },
+          "invalid": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "imported",
+          "skipped",
+          "duplicate",
+          "invalid"
+        ]
+      },
+      "AdminSetupClientImportRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AdminSetupClientImportSource"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "selectedLocalIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 200
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 500,
+                "example": "درخواست پشتیبانی داخلی"
+              },
+              "liveConfirmation": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "selectedLocalIds",
+              "reason"
+            ]
+          }
+        ]
+      },
       "AdminSetupCatalogResponse": {
         "type": "object",
         "properties": {
@@ -7573,6 +7809,276 @@
           },
           "404": {
             "description": "Admin resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Mutation violates platform admin safety rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/salons/{id}/setup/clients": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Create a Setup Salon Client",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSetupClientCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSetupClientCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user is not an active platform admin or lacks permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Mutation violates platform admin safety rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/salons/{id}/setup/clients/import/preview": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Preview a Setup Salon Client Import",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSetupClientImportSource"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Import preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSetupClientImportPreviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user is not an active platform admin or lacks permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Mutation violates platform admin safety rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/salons/{id}/setup/clients/import": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Confirm a Setup Salon Client Import",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSetupClientImportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Import result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSetupClientImportResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user is not an active platform admin or lacks permission",
             "content": {
               "application/json": {
                 "schema": {

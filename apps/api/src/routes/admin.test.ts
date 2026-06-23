@@ -65,6 +65,15 @@ vi.mock('@repo/database/staff', () => ({
   validateActiveServiceIds: vi.fn(),
 }))
 
+vi.mock('@repo/database/clients', () => ({
+  createClient: vi.fn(),
+  createClientsBulk: vi.fn(),
+  getAllClients: vi.fn(),
+  isDuplicatePhoneError: (error: unknown) =>
+    error instanceof Error && error.message.includes('duplicate'),
+  setClientTags: vi.fn(),
+}))
+
 vi.mock('@repo/database/catalog-presets', () => ({
   applyCatalogPreset: vi.fn(),
   listActiveCatalogPresets: vi.fn(),
@@ -123,6 +132,12 @@ import {
   listSetupStaffProfiles,
   validateActiveServiceIds,
 } from '@repo/database/staff'
+import {
+  createClient,
+  createClientsBulk,
+  getAllClients,
+  setClientTags,
+} from '@repo/database/clients'
 import {
   createService,
   createServiceCategory,
@@ -485,6 +500,166 @@ describe('admin runtime data source', () => {
     expect(await listRes.json()).toEqual({
       staff: [{ id: '55555555-5555-4555-8555-555555555555', claimed: false }],
     })
+  })
+
+  it('creates one Setup Salon Client with canonical validation and redacted audit data', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: { id: salonId, status: 'setup' },
+    } as never)
+    vi.mocked(createClient).mockResolvedValue({
+      id: '88888888-8888-4888-8888-888888888888',
+      salonId,
+      name: 'مریم',
+      phone: '09123456789',
+    } as never)
+    vi.mocked(setClientTags).mockResolvedValue([])
+
+    const res = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/clients`,
+      {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: ' مریم ',
+          phone: '۰۹۱۲۳۴۵۶۷۸۹',
+          tags: [],
+          reason: 'Prepare clients',
+          liveConfirmation: 'LIVE',
+        }),
+      },
+    )
+
+    expect(res.status).toBe(201)
+    expect(createClient).toHaveBeenCalledWith(
+      expect.objectContaining({
+        salonId,
+        name: 'مریم',
+        phone: '09123456789',
+      }),
+    )
+    expect(createAdminAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'salon.setup.client.create',
+        metadata: { personalData: '[REDACTED]' },
+      }),
+    )
+  })
+
+  it.each([
+    {
+      format: 'csv',
+      source:
+        'name,phone,ignored\nAli,09121111111,x\nExisting,۰۹۱۲۲۲۲۲۲۲۲,x\nBad,123,x\nDuplicate,09121111111,x',
+      selectedLocalId: 'csv-1',
+    },
+    {
+      format: 'vcf',
+      source:
+        'BEGIN:VCARD\nFN:Ali\nTEL:09121111111\nEND:VCARD\nBEGIN:VCARD\nFN:Existing\nTEL:۰۹۱۲۲۲۲۲۲۲۲\nEND:VCARD\nBEGIN:VCARD\nFN:Bad\nTEL:123\nEND:VCARD\nBEGIN:VCARD\nFN:Duplicate\nTEL:09121111111\nEND:VCARD',
+      selectedLocalId: 'vcf-1',
+    },
+  ])(
+    'previews and confirms an ephemeral $format Client Import',
+    async ({ format, source, selectedLocalId }) => {
+      vi.mocked(getAdminSalon).mockResolvedValue({
+        salon: { id: salonId, status: 'setup' },
+      } as never)
+      vi.mocked(getAllClients).mockResolvedValue([
+        { id: 'existing', name: 'Existing', phone: '09122222222' },
+      ] as never)
+      vi.mocked(createClientsBulk).mockResolvedValue({
+        created: [{ id: 'new-client', name: 'Ali', phone: '09121111111' }],
+        skipped: [],
+      } as never)
+
+      const previewRes = await app.request(
+        `/api/v1/admin/salons/${salonId}/setup/clients/import/preview`,
+        {
+          method: 'POST',
+          headers: { ...authHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ format, source }),
+        },
+      )
+      expect(previewRes.status).toBe(200)
+      expect(await previewRes.json()).toMatchObject({
+        counts: {
+          totalInFile: 4,
+          eligible: 1,
+          invalid: 1,
+          duplicateExisting: 1,
+          duplicateInFile: 1,
+        },
+        rows: [{ localId: selectedLocalId, phone: '09121111111' }],
+      })
+
+      const confirmRes = await app.request(
+        `/api/v1/admin/salons/${salonId}/setup/clients/import`,
+        {
+          method: 'POST',
+          headers: { ...authHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            format,
+            source,
+            selectedLocalIds: [selectedLocalId],
+            reason: 'Import agreed list',
+            liveConfirmation: 'LIVE',
+          }),
+        },
+      )
+      expect(confirmRes.status).toBe(200)
+      expect(await confirmRes.json()).toEqual({
+        imported: 1,
+        skipped: 3,
+        duplicate: 2,
+        invalid: 1,
+      })
+      expect(createClientsBulk).toHaveBeenCalledWith(salonId, [
+        { name: 'Ali', phone: '09121111111' },
+      ])
+      expect(createAdminAuditEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'salon.setup.client_import.create',
+          metadata: {
+            format,
+            imported: 1,
+            skipped: 3,
+            duplicate: 2,
+            invalid: 1,
+          },
+        }),
+      )
+    },
+  )
+
+  it('forbids Client setup writes after handoff and for read-only platform roles', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: { id: salonId, status: 'active' },
+    } as never)
+    const lifecycle = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/clients/import/preview`,
+      {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ format: 'csv', source: 'Ali,09121111111' }),
+      },
+    )
+    expect(lifecycle.status).toBe(409)
+
+    vi.mocked(getPlatformAdminForUser).mockResolvedValue({
+      id: 'platform-viewer',
+      userId: platformAdminUserId,
+      role: 'platform_viewer',
+      active: true,
+    } as never)
+    const forbidden = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/clients/import/preview`,
+      {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ format: 'csv', source: 'Ali,09121111111' }),
+      },
+    )
+    expect(forbidden.status).toBe(403)
   })
 
   it('rejects invalid setup validation, roles, and salon lifecycles', async () => {

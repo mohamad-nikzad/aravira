@@ -106,7 +106,9 @@ function parsePropertyLine(line: string): ParsedProperty | null {
   const value = line.slice(colonIndex + 1)
   const segments = left.split(';')
   const name = segments[0]?.trim().toUpperCase() ?? ''
-  const params = segments.slice(1).map((segment) => segment.trim().toUpperCase())
+  const params = segments
+    .slice(1)
+    .map((segment) => segment.trim().toUpperCase())
 
   if (!name) return null
   return { name, params, value: decodePropertyValue(params, value) }
@@ -137,13 +139,17 @@ function hasMobileType(params: string[]): boolean {
 
     const typeMatch = param.match(/^TYPE=(.+)$/i)
     if (!typeMatch) return false
-    const types = typeMatch[1].split(',').map((type) => type.trim().toUpperCase())
+    const types = typeMatch[1]
+      .split(',')
+      .map((type) => type.trim().toUpperCase())
     return types.some((type) => MOBILE_TYPE_PARAMS.has(type))
   })
 }
 
 function chooseTel(properties: ParsedProperty[]): string | null {
-  const telEntries = properties.filter((property) => isTelProperty(property.name))
+  const telEntries = properties.filter((property) =>
+    isTelProperty(property.name),
+  )
   if (telEntries.length === 0) return null
 
   const mobile = telEntries.find((entry) => hasMobileType(entry.params))
@@ -163,7 +169,7 @@ function parseCardName(properties: ParsedProperty[]): string {
   return ''
 }
 
-function parseCard(block: string): VcfDraftContact {
+function parseCard(block: string, localId: string): VcfDraftContact {
   const properties = unfoldLines(block)
     .map(parsePropertyLine)
     .filter((property): property is ParsedProperty => property != null)
@@ -177,19 +183,22 @@ function parseCard(block: string): VcfDraftContact {
       : canonicalSalonPhone(tel) || null
 
   return {
-    localId: crypto.randomUUID(),
+    localId,
     name,
     phone: phone && phone.length > 0 ? phone : null,
   }
 }
 
-export function parseVcfFile(text: string): VcfDraftContact[] {
+export function parseVcfFile(
+  text: string,
+  localIdFactory: (index: number) => string = () => crypto.randomUUID(),
+): VcfDraftContact[] {
   const matches = text.match(VCARD_BLOCK_RE)
   if (!matches || matches.length === 0) return []
 
   const drafts: VcfDraftContact[] = []
-  for (const block of matches) {
-    drafts.push(parseCard(block))
+  for (const [index, block] of matches.entries()) {
+    drafts.push(parseCard(block, localIdFactory(index)))
   }
   return drafts
 }

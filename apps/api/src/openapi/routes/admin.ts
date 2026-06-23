@@ -45,6 +45,12 @@ import {
   adminSetupCatalogMutationResponseSchema,
   adminSetupCatalogPresetApplyBodySchema,
   adminSetupCatalogResponseSchema,
+  adminSetupClientCreateBodySchema,
+  adminSetupClientCreateResponseSchema,
+  adminSetupClientImportBodySchema,
+  adminSetupClientImportPreviewResponseSchema,
+  adminSetupClientImportResponseSchema,
+  adminSetupClientImportSourceSchema,
   adminSetupCategoryCreateBodySchema,
   adminSetupCategoryUpdateBodySchema,
   adminSetupFamilyCreateBodySchema,
@@ -533,6 +539,95 @@ export const listAdminSalonClientsRoute = getSalonListRoute(
   'List salon Clients for platform admin',
   adminSalonClientsResponseSchema,
 )
+
+export const createAdminSetupClientRoute = createRoute({
+  method: 'post',
+  path: '/salons/{id}/setup/clients',
+  tags: ['Admin'],
+  summary: 'Create a Setup Salon Client',
+  security: adminSecurity,
+  request: {
+    params: idParamSchema,
+    body: {
+      required: true,
+      content: {
+        'application/json': { schema: adminSetupClientCreateBodySchema },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Created Client',
+      content: {
+        'application/json': { schema: adminSetupClientCreateResponseSchema },
+      },
+    },
+    400: validationResponse,
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+    409: conflictResponse,
+  },
+})
+
+export const previewAdminSetupClientImportRoute = createRoute({
+  method: 'post',
+  path: '/salons/{id}/setup/clients/import/preview',
+  tags: ['Admin'],
+  summary: 'Preview a Setup Salon Client Import',
+  security: adminSecurity,
+  request: {
+    params: idParamSchema,
+    body: {
+      required: true,
+      content: {
+        'application/json': { schema: adminSetupClientImportSourceSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Import preview',
+      content: {
+        'application/json': {
+          schema: adminSetupClientImportPreviewResponseSchema,
+        },
+      },
+    },
+    400: validationResponse,
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+    409: conflictResponse,
+  },
+})
+
+export const createAdminSetupClientImportRoute = createRoute({
+  method: 'post',
+  path: '/salons/{id}/setup/clients/import',
+  tags: ['Admin'],
+  summary: 'Confirm a Setup Salon Client Import',
+  security: adminSecurity,
+  request: {
+    params: idParamSchema,
+    body: {
+      required: true,
+      content: {
+        'application/json': { schema: adminSetupClientImportBodySchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Import result',
+      content: {
+        'application/json': { schema: adminSetupClientImportResponseSchema },
+      },
+    },
+    400: validationResponse,
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+    409: conflictResponse,
+  },
+})
 
 export const listAdminSalonAppointmentsRoute = getSalonListRoute(
   '/salons/{id}/appointments',
