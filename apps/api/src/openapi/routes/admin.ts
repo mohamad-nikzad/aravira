@@ -33,8 +33,14 @@ import {
   adminSetupSalonCreateBodySchema,
   adminSetupSalonResponseSchema,
   adminSetupSalonConfigurationResponseSchema,
+  adminSetupOwnerPhonePatchBodySchema,
+  adminSetupOwnerPhoneResponseSchema,
+  adminSetupHandoffCreateBodySchema,
+  adminSetupHandoffResponseSchema,
   adminSetupStaffCreateBodySchema,
   adminSetupStaffCreateResponseSchema,
+  adminSetupStaffAccessQuerySchema,
+  adminSetupStaffAccessResponseSchema,
   adminSetupStaffListResponseSchema,
   adminSetupHoursPatchBodySchema,
   adminSetupHoursResponseSchema,
@@ -292,6 +298,66 @@ export const getAdminSetupSalonConfigurationRoute = createRoute({
   },
 })
 
+export const updateAdminSetupOwnerPhoneRoute = createRoute({
+  method: 'patch',
+  path: '/salons/{id}/setup/owner-phone',
+  tags: ['Admin'],
+  summary: 'Update the intended owner phone for a Setup Salon',
+  security: adminSecurity,
+  request: {
+    params: idParamSchema,
+    body: {
+      required: true,
+      content: {
+        'application/json': { schema: adminSetupOwnerPhonePatchBodySchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Updated intended owner phone',
+      content: {
+        'application/json': { schema: adminSetupOwnerPhoneResponseSchema },
+      },
+    },
+    400: validationResponse,
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+    404: notFoundResponse,
+    409: conflictResponse,
+  },
+})
+
+export const createAdminSetupHandoffRoute = createRoute({
+  method: 'post',
+  path: '/salons/{id}/setup/handoff',
+  tags: ['Admin'],
+  summary: 'Create a one-time Setup Salon handoff link',
+  security: adminSecurity,
+  request: {
+    params: idParamSchema,
+    body: {
+      required: true,
+      content: {
+        'application/json': { schema: adminSetupHandoffCreateBodySchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'One-time handoff link',
+      content: {
+        'application/json': { schema: adminSetupHandoffResponseSchema },
+      },
+    },
+    400: validationResponse,
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+    404: notFoundResponse,
+    409: conflictResponse,
+  },
+})
+
 export const updateAdminSetupSalonHoursRoute = createRoute({
   method: 'patch',
   path: '/salons/{id}/setup/hours',
@@ -366,6 +432,28 @@ export const getAdminSetupStaffRoute = createRoute({
         'application/json': { schema: adminSetupStaffListResponseSchema },
       },
     },
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+    404: notFoundResponse,
+    409: conflictResponse,
+  },
+})
+
+export const getAdminSetupStaffAccessRoute = createRoute({
+  method: 'get',
+  path: '/salons/{id}/setup/staff/access',
+  tags: ['Admin'],
+  summary: 'Inspect existing claimed staff access before setup',
+  security: adminSecurity,
+  request: { params: idParamSchema, query: adminSetupStaffAccessQuerySchema },
+  responses: {
+    200: {
+      description: 'Existing cross-salon staff access, when present',
+      content: {
+        'application/json': { schema: adminSetupStaffAccessResponseSchema },
+      },
+    },
+    400: validationResponse,
     401: unauthorizedResponse,
     403: forbiddenResponse,
     404: notFoundResponse,

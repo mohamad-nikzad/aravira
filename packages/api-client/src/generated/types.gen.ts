@@ -64,6 +64,11 @@ export type AdminSetupSalonResponse = {
     salon: {
         [key: string]: unknown;
     };
+    ownerConflict: {
+        salonId: string;
+        salonName: string;
+        salonStatus: 'setup' | 'active' | 'suspended' | 'archived';
+    } | null;
 };
 
 export type AdminSetupSalonCreateRequest = {
@@ -108,6 +113,30 @@ export type AdminSetupSalonPresence = {
     website: string | null;
 };
 
+export type AdminSetupOwnerPhoneResponse = {
+    salon: {
+        salonId: string;
+        intendedOwnerPhone: string | null;
+    };
+};
+
+export type AdminSetupOwnerPhonePatchRequest = {
+    intendedOwnerPhone: string;
+    reason: string;
+    liveConfirmation?: string;
+};
+
+export type AdminSetupHandoffResponse = {
+    url: string;
+    expiresAt: string | string;
+};
+
+export type AdminSetupHandoffCreateRequest = {
+    enablePublicPage?: boolean;
+    reason: string;
+    liveConfirmation?: string;
+};
+
 export type AdminSetupSalonHoursResponse = {
     hours: AdminSetupSalonHours;
 };
@@ -142,6 +171,14 @@ export type AdminSetupStaffListResponse = {
     staff: Array<{
         [key: string]: unknown;
     }>;
+};
+
+export type AdminSetupStaffAccessResponse = {
+    access: {
+        salonId: string;
+        salonName: string;
+        salonStatus: 'setup' | 'active' | 'suspended' | 'archived';
+    } | null;
 };
 
 export type AdminSetupStaffCreateResponse = {
@@ -2060,6 +2097,92 @@ export type GetApiV1AdminSalonsByIdSetupResponses = {
 
 export type GetApiV1AdminSalonsByIdSetupResponse = GetApiV1AdminSalonsByIdSetupResponses[keyof GetApiV1AdminSalonsByIdSetupResponses];
 
+export type PatchApiV1AdminSalonsByIdSetupOwnerPhoneData = {
+    body: AdminSetupOwnerPhonePatchRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/salons/{id}/setup/owner-phone';
+};
+
+export type PatchApiV1AdminSalonsByIdSetupOwnerPhoneErrors = {
+    /**
+     * Invalid request body or query
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user is not an active platform admin or lacks permission
+     */
+    403: ApiError;
+    /**
+     * Admin resource not found
+     */
+    404: ApiError;
+    /**
+     * Mutation violates platform admin safety rules
+     */
+    409: ApiError;
+};
+
+export type PatchApiV1AdminSalonsByIdSetupOwnerPhoneError = PatchApiV1AdminSalonsByIdSetupOwnerPhoneErrors[keyof PatchApiV1AdminSalonsByIdSetupOwnerPhoneErrors];
+
+export type PatchApiV1AdminSalonsByIdSetupOwnerPhoneResponses = {
+    /**
+     * Updated intended owner phone
+     */
+    200: AdminSetupOwnerPhoneResponse;
+};
+
+export type PatchApiV1AdminSalonsByIdSetupOwnerPhoneResponse = PatchApiV1AdminSalonsByIdSetupOwnerPhoneResponses[keyof PatchApiV1AdminSalonsByIdSetupOwnerPhoneResponses];
+
+export type PostApiV1AdminSalonsByIdSetupHandoffData = {
+    body: AdminSetupHandoffCreateRequest;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/salons/{id}/setup/handoff';
+};
+
+export type PostApiV1AdminSalonsByIdSetupHandoffErrors = {
+    /**
+     * Invalid request body or query
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user is not an active platform admin or lacks permission
+     */
+    403: ApiError;
+    /**
+     * Admin resource not found
+     */
+    404: ApiError;
+    /**
+     * Mutation violates platform admin safety rules
+     */
+    409: ApiError;
+};
+
+export type PostApiV1AdminSalonsByIdSetupHandoffError = PostApiV1AdminSalonsByIdSetupHandoffErrors[keyof PostApiV1AdminSalonsByIdSetupHandoffErrors];
+
+export type PostApiV1AdminSalonsByIdSetupHandoffResponses = {
+    /**
+     * One-time handoff link
+     */
+    200: AdminSetupHandoffResponse;
+};
+
+export type PostApiV1AdminSalonsByIdSetupHandoffResponse = PostApiV1AdminSalonsByIdSetupHandoffResponses[keyof PostApiV1AdminSalonsByIdSetupHandoffResponses];
+
 export type PatchApiV1AdminSalonsByIdSetupHoursData = {
     body: AdminSetupSalonHoursPatchRequest;
     path: {
@@ -2227,6 +2350,51 @@ export type PostApiV1AdminSalonsByIdSetupStaffResponses = {
 };
 
 export type PostApiV1AdminSalonsByIdSetupStaffResponse = PostApiV1AdminSalonsByIdSetupStaffResponses[keyof PostApiV1AdminSalonsByIdSetupStaffResponses];
+
+export type GetApiV1AdminSalonsByIdSetupStaffAccessData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query: {
+        phone: string;
+    };
+    url: '/api/v1/admin/salons/{id}/setup/staff/access';
+};
+
+export type GetApiV1AdminSalonsByIdSetupStaffAccessErrors = {
+    /**
+     * Invalid request body or query
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid session
+     */
+    401: ApiError;
+    /**
+     * Authenticated user is not an active platform admin or lacks permission
+     */
+    403: ApiError;
+    /**
+     * Admin resource not found
+     */
+    404: ApiError;
+    /**
+     * Mutation violates platform admin safety rules
+     */
+    409: ApiError;
+};
+
+export type GetApiV1AdminSalonsByIdSetupStaffAccessError = GetApiV1AdminSalonsByIdSetupStaffAccessErrors[keyof GetApiV1AdminSalonsByIdSetupStaffAccessErrors];
+
+export type GetApiV1AdminSalonsByIdSetupStaffAccessResponses = {
+    /**
+     * Existing cross-salon staff access, when present
+     */
+    200: AdminSetupStaffAccessResponse;
+};
+
+export type GetApiV1AdminSalonsByIdSetupStaffAccessResponse = GetApiV1AdminSalonsByIdSetupStaffAccessResponses[keyof GetApiV1AdminSalonsByIdSetupStaffAccessResponses];
 
 export type PostApiV1AdminSalonsByIdSetupClientsData = {
     body: AdminSetupClientCreateRequest;

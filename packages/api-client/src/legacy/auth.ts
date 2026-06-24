@@ -55,6 +55,12 @@ export type PhoneStatusResponse = {
   otpLoginEnabled: boolean
 }
 
+export type SalonHandoffStatusResponse = {
+  phone: string
+  expiresAt: string
+  requiresPassword: boolean
+}
+
 export type PreWorkspaceResponse = {
   user: PreWorkspaceUser
   salon: { id: string; name: string; slug: string }
@@ -154,6 +160,37 @@ export function createAuthApi(client: ApiClient) {
           body: input,
         },
       )
+    },
+    getSalonHandoff(token: string, opts: { signal?: AbortSignal } = {}) {
+      return client.request<SalonHandoffStatusResponse>(
+        `${endpoints.salonHandoff}/${encodeURIComponent(token)}`,
+        { signal: opts.signal },
+      )
+    },
+    sendSalonHandoffOtp(token: string) {
+      return client.request<{ status?: boolean }>(
+        `${endpoints.salonHandoff}/${encodeURIComponent(token)}/send-otp`,
+        { method: 'POST', body: {} },
+      )
+    },
+    verifySalonHandoffOtp(token: string, code: string) {
+      return client.request<{ status?: boolean }>(
+        `${endpoints.salonHandoff}/${encodeURIComponent(token)}/verify-otp`,
+        { method: 'POST', body: { code } },
+      )
+    },
+    completeSalonHandoff(
+      token: string,
+      input: { displayName: string; password?: string },
+    ) {
+      return client.request<{
+        salonId: string
+        redirectTo: string
+        publicEnabled: boolean
+      }>(`${endpoints.salonHandoff}/${encodeURIComponent(token)}/complete`, {
+        method: 'POST',
+        body: input,
+      })
     },
     // The signup wrapper creates the org + sidecars and sets the session cookie;
     // `/me` then yields the full `User` (role/salonId resolved server-side).

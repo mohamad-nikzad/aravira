@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from 'drizzle-orm'
+import { and, asc, eq, isNotNull, isNull, ne } from 'drizzle-orm'
 import { getDb } from './client'
 import {
   member,
@@ -9,6 +9,8 @@ import {
   staffSchedules,
   staffServices,
   user,
+  organization,
+  salonProfile,
 } from './schema'
 
 export type SetupStaffScheduleInput = {
@@ -104,13 +106,20 @@ export async function createSetupStaffProfile(
 
 export type StaffProfileClaimResult =
   | { status: 'none' }
-  | { status: 'claimed'; profileId: string; salonId: string }
+  | {
+      status: 'claimed'
+      profileId: string
+      salonId: string
+      transferred: boolean
+    }
   | {
       status: 'rejected'
       reason: 'ambiguous' | 'already_claimed' | 'ineligible' | 'phone_mismatch'
     }
 
-type ClaimCandidate = typeof staffProfiles.$inferSelect
+type ClaimCandidate = typeof staffProfiles.$inferSelect & {
+  salonStatus?: 'setup' | 'active' | 'suspended' | 'archived'
+}
 
 export function evaluateStaffProfileClaim(input: {
   identity:
@@ -121,7 +130,11 @@ export function evaluateStaffProfileClaim(input: {
   matches: ClaimCandidate[]
   membershipSalonIds: string[]
 }):
-  | { status: 'candidate'; profile: ClaimCandidate }
+  | {
+      status: 'candidate'
+      profile: ClaimCandidate
+      sourceProfile?: ClaimCandidate
+    }
   | Exclude<StaffProfileClaimResult, { status: 'claimed' }> {
   if (
     !input.identity?.verified ||
@@ -130,18 +143,83 @@ export function evaluateStaffProfileClaim(input: {
   ) {
     return { status: 'rejected', reason: 'phone_mismatch' }
   }
-  if (input.matches.length === 0) return { status: 'none' }
-  if (input.matches.length > 1) {
+  const currentProfiles = input.matches.filter(
+    (profile) => profile.userId === input.userId,
+  )
+  if (currentProfiles.length > 1) {
     return { status: 'rejected', reason: 'ambiguous' }
   }
-  const profile = input.matches[0]!
-  if (profile.userId && profile.userId !== input.userId) {
+  const currentProfile = currentProfiles[0]
+  const targets = input.matches.filter(
+    (profile) =>
+      profile.userId === null &&
+      profile.active &&
+      profile.accessDetachedAt === null &&
+      (profile.salonStatus === undefined || profile.salonStatus === 'setup'),
+  )
+  if (targets.length > 1) {
+    return { status: 'rejected', reason: 'ambiguous' }
+  }
+  const target = targets[0]
+  if (
+    input.matches.some(
+      (profile) => profile.userId && profile.userId !== input.userId,
+    )
+  ) {
     return { status: 'rejected', reason: 'already_claimed' }
   }
-  if (input.membershipSalonIds.some((salonId) => salonId !== profile.salonId)) {
+  if (currentProfile && !target) {
+    return { status: 'candidate', profile: currentProfile }
+  }
+  if (currentProfile && target) {
+    if (
+      input.membershipSalonIds.some(
+        (salonId) =>
+          salonId !== currentProfile.salonId && salonId !== target.salonId,
+      )
+    ) {
+      return { status: 'rejected', reason: 'ineligible' }
+    }
+    return {
+      status: 'candidate',
+      profile: target,
+      sourceProfile: currentProfile,
+    }
+  }
+  if (!target) return { status: 'none' }
+  if (input.membershipSalonIds.some((salonId) => salonId !== target.salonId)) {
     return { status: 'rejected', reason: 'ineligible' }
   }
-  return { status: 'candidate', profile }
+  return { status: 'candidate', profile: target }
+}
+
+export async function getClaimedStaffAccessForPhone(input: {
+  phone: string
+  excludingSalonId: string
+}) {
+  const rows = await getDb()
+    .select({
+      salonId: staffProfiles.salonId,
+      salonName: organization.name,
+      salonStatus: salonProfile.status,
+    })
+    .from(staffProfiles)
+    .innerJoin(organization, eq(organization.id, staffProfiles.salonId))
+    .innerJoin(
+      salonProfile,
+      eq(salonProfile.organizationId, staffProfiles.salonId),
+    )
+    .where(
+      and(
+        eq(staffProfiles.phone, input.phone),
+        isNotNull(staffProfiles.userId),
+        isNull(staffProfiles.accessDetachedAt),
+        ne(staffProfiles.salonId, input.excludingSalonId),
+      ),
+    )
+    .limit(1)
+
+  return rows[0] ?? null
 }
 
 export async function claimStaffProfile(input: {
@@ -159,16 +237,30 @@ export async function claimStaffProfile(input: {
       .from(user)
       .where(eq(user.id, input.userId))
       .limit(1)
+      .for('update')
     const identity = identityRows[0]
     const matches = await tx
-      .select()
+      .select({
+        id: staffProfiles.id,
+        salonId: staffProfiles.salonId,
+        userId: staffProfiles.userId,
+        name: staffProfiles.name,
+        phone: staffProfiles.phone,
+        color: staffProfiles.color,
+        active: staffProfiles.active,
+        claimedAt: staffProfiles.claimedAt,
+        accessDetachedAt: staffProfiles.accessDetachedAt,
+        createdAt: staffProfiles.createdAt,
+        updatedAt: staffProfiles.updatedAt,
+        salonStatus: salonProfile.status,
+      })
       .from(staffProfiles)
-      .where(
-        and(
-          eq(staffProfiles.phone, input.phone),
-          eq(staffProfiles.active, true),
-        ),
+      .innerJoin(
+        salonProfile,
+        eq(salonProfile.organizationId, staffProfiles.salonId),
       )
+      .where(eq(staffProfiles.phone, input.phone))
+      .for('update')
     const memberships = await tx
       .select({ salonId: member.organizationId })
       .from(member)
@@ -181,7 +273,75 @@ export async function claimStaffProfile(input: {
       membershipSalonIds: memberships.map((row) => row.salonId),
     })
     if (decision.status !== 'candidate') return decision
-    const { profile } = decision
+    const { profile, sourceProfile } = decision
+
+    if (sourceProfile) {
+      await tx
+        .update(staffSchedules)
+        .set({ staffId: sourceProfile.id, updatedAt: new Date() })
+        .where(
+          and(
+            eq(staffSchedules.salonId, sourceProfile.salonId),
+            eq(staffSchedules.staffId, input.userId),
+          ),
+        )
+      await tx
+        .update(staffServices)
+        .set({ staffUserId: sourceProfile.id })
+        .where(
+          and(
+            eq(staffServices.salonId, sourceProfile.salonId),
+            eq(staffServices.staffUserId, input.userId),
+          ),
+        )
+      await tx
+        .update(appointments)
+        .set({ staffId: sourceProfile.id, updatedAt: new Date() })
+        .where(
+          and(
+            eq(appointments.salonId, sourceProfile.salonId),
+            eq(appointments.staffId, input.userId),
+          ),
+        )
+      await tx
+        .update(appointmentRequests)
+        .set({ staffId: sourceProfile.id, updatedAt: new Date() })
+        .where(
+          and(
+            eq(appointmentRequests.salonId, sourceProfile.salonId),
+            eq(appointmentRequests.staffId, input.userId),
+          ),
+        )
+      await tx
+        .delete(salonMember)
+        .where(
+          and(
+            eq(salonMember.organizationId, sourceProfile.salonId),
+            eq(salonMember.userId, input.userId),
+          ),
+        )
+      await tx
+        .delete(member)
+        .where(
+          and(
+            eq(member.organizationId, sourceProfile.salonId),
+            eq(member.userId, input.userId),
+          ),
+        )
+      await tx
+        .update(staffProfiles)
+        .set({
+          userId: null,
+          accessDetachedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(staffProfiles.id, sourceProfile.id),
+            eq(staffProfiles.userId, input.userId),
+          ),
+        )
+    }
 
     if (!profile.userId) {
       const [claimed] = await tx
@@ -189,6 +349,7 @@ export async function claimStaffProfile(input: {
         .set({
           userId: input.userId,
           claimedAt: new Date(),
+          accessDetachedAt: null,
           updatedAt: new Date(),
         })
         .where(
@@ -252,6 +413,7 @@ export async function claimStaffProfile(input: {
       status: 'claimed',
       profileId: profile.id,
       salonId: profile.salonId,
+      transferred: Boolean(sourceProfile),
     }
   })
 }

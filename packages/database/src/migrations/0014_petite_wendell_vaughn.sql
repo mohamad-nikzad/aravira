@@ -1,0 +1,1 @@
+ALTER TABLE "salon_handoff" ADD COLUMN "enable_public_page" boolean DEFAULT false NOT NULL;

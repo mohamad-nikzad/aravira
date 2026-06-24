@@ -23,5 +23,6 @@ export {
   claimStaffProfile,
   createSetupStaffProfile,
   getStaffProfileForUser,
+  getClaimedStaffAccessForPhone,
   listSetupStaffProfiles,
 } from './setup-staff'

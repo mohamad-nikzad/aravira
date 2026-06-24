@@ -206,6 +206,30 @@ export const salonProfile = pgTable('salon_profile', {
   website: text('website'),
 })
 
+export const salonHandoff = pgTable(
+  'salon_handoff',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    enablePublicPage: boolean('enable_public_page').notNull().default(false),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdByUserId: uuid('created_by_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict' }),
+  },
+  (t) => [
+    uniqueIndex('salon_handoff_token_hash_unique').on(t.tokenHash),
+    index('salon_handoff_salon_id_idx').on(t.salonId),
+  ],
+)
+
 export const platformAdmins = pgTable(
   'platform_admins',
   {
@@ -358,6 +382,7 @@ export const staffProfiles = pgTable(
     color: text('color').notNull(),
     active: boolean('active').notNull().default(true),
     claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    accessDetachedAt: timestamp('access_detached_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

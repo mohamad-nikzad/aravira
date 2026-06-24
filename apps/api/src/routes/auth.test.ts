@@ -526,6 +526,7 @@ describe('OTP signup continuation routes', () => {
       status: 'claimed',
       profileId: 'profile-1',
       salonId: 'salon-1',
+      transferred: false,
     })
 
     const res = await app.request('/api/v1/auth/phone-number/verify', {
@@ -539,6 +540,30 @@ describe('OTP signup continuation routes', () => {
       userId: 'u1',
       phone: '09121234567',
     })
+  })
+
+  it('runs a Staff Access Transfer only after successful OTP verification', async () => {
+    vi.mocked(authServer.handler).mockResolvedValue(
+      new Response(JSON.stringify({ status: true, user: { id: 'u1' } }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }) as never,
+    )
+    vi.mocked(claimStaffProfile).mockResolvedValue({
+      status: 'claimed',
+      profileId: 'profile-new',
+      salonId: 'salon-new',
+      transferred: true,
+    })
+
+    const res = await app.request('/api/v1/auth/phone-number/verify', {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify({ phoneNumber: '09121234567', code: '123456' }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(claimStaffProfile).toHaveBeenCalledOnce()
   })
 
   it('rejects an ambiguous Staff Profile claim after OTP without identity detail', async () => {

@@ -314,10 +314,37 @@
             "additionalProperties": {
               "nullable": true
             }
+          },
+          "ownerConflict": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "salonId": {
+                "type": "string"
+              },
+              "salonName": {
+                "type": "string"
+              },
+              "salonStatus": {
+                "type": "string",
+                "enum": [
+                  "setup",
+                  "active",
+                  "suspended",
+                  "archived"
+                ]
+              }
+            },
+            "required": [
+              "salonId",
+              "salonName",
+              "salonStatus"
+            ]
           }
         },
         "required": [
-          "salon"
+          "salon",
+          "ownerConflict"
         ]
       },
       "AdminSetupSalonCreateRequest": {
@@ -466,6 +493,97 @@
           "website"
         ]
       },
+      "AdminSetupOwnerPhoneResponse": {
+        "type": "object",
+        "properties": {
+          "salon": {
+            "type": "object",
+            "properties": {
+              "salonId": {
+                "type": "string"
+              },
+              "intendedOwnerPhone": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "salonId",
+              "intendedOwnerPhone"
+            ]
+          }
+        },
+        "required": [
+          "salon"
+        ]
+      },
+      "AdminSetupOwnerPhonePatchRequest": {
+        "type": "object",
+        "properties": {
+          "intendedOwnerPhone": {
+            "type": "string",
+            "pattern": "^09\\d{9}$"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500,
+            "example": "درخواست پشتیبانی داخلی"
+          },
+          "liveConfirmation": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "intendedOwnerPhone",
+          "reason"
+        ]
+      },
+      "AdminSetupHandoffResponse": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt"
+        ]
+      },
+      "AdminSetupHandoffCreateRequest": {
+        "type": "object",
+        "properties": {
+          "enablePublicPage": {
+            "type": "boolean",
+            "default": false
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500,
+            "example": "درخواست پشتیبانی داخلی"
+          },
+          "liveConfirmation": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
       "AdminSetupSalonHoursResponse": {
         "type": "object",
         "properties": {
@@ -583,6 +701,41 @@
         },
         "required": [
           "staff"
+        ]
+      },
+      "AdminSetupStaffAccessResponse": {
+        "type": "object",
+        "properties": {
+          "access": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "salonId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "salonName": {
+                "type": "string"
+              },
+              "salonStatus": {
+                "type": "string",
+                "enum": [
+                  "setup",
+                  "active",
+                  "suspended",
+                  "archived"
+                ]
+              }
+            },
+            "required": [
+              "salonId",
+              "salonName",
+              "salonStatus"
+            ]
+          }
+        },
+        "required": [
+          "access"
         ]
       },
       "AdminSetupStaffCreateResponse": {
@@ -7452,6 +7605,206 @@
         }
       }
     },
+    "/api/v1/admin/salons/{id}/setup/owner-phone": {
+      "patch": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Update the intended owner phone for a Setup Salon",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSetupOwnerPhonePatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated intended owner phone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSetupOwnerPhoneResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user is not an active platform admin or lacks permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Admin resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Mutation violates platform admin safety rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/salons/{id}/setup/handoff": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Create a one-time Setup Salon handoff link",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSetupHandoffCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "One-time handoff link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSetupHandoffResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user is not an active platform admin or lacks permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Admin resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Mutation violates platform admin safety rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/salons/{id}/setup/hours": {
       "patch": {
         "tags": [
@@ -7773,6 +8126,105 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminSetupStaffCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user is not an active platform admin or lacks permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Admin resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Mutation violates platform admin safety rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/salons/{id}/setup/staff/access": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Inspect existing claimed staff access before setup",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^09\\d{9}$"
+            },
+            "required": true,
+            "name": "phone",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Existing cross-salon staff access, when present",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSetupStaffAccessResponse"
                 }
               }
             }

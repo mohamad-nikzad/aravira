@@ -42,6 +42,7 @@ import { SalonSetupEditor } from './salon-setup-editor'
 import { SalonSetupCatalog } from './salon-setup-catalog'
 import { SalonSetupStaff } from './salon-setup-staff'
 import { SalonSetupClients } from './salon-setup-clients'
+import { SalonSetupHandoff } from './salon-setup-handoff'
 import {
   useSalonDetailUrlState,
   type SalonDetailSection,
@@ -300,6 +301,11 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
             ) : null}
             {setupQuery.data ? (
               <div className="space-y-4">
+                <SalonSetupHandoff
+                  salonId={salonId}
+                  intendedOwnerPhone={text(salon.intendedOwnerPhone)}
+                  isLiveData={isLiveData}
+                />
                 <SalonSetupEditor
                   configuration={setupQuery.data}
                   hoursError={hoursMutation.error}

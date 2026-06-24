@@ -29,6 +29,8 @@ const generated = vi.hoisted(() => ({
   importSetupClients: vi.fn(),
   patchSetupHours: vi.fn(),
   patchSetupPresence: vi.fn(),
+  patchSetupOwnerPhone: vi.fn(),
+  createSetupHandoff: vi.fn(),
   patchStatus: vi.fn(),
   postSalon: vi.fn(),
   postNote: vi.fn(),
@@ -174,6 +176,12 @@ vi.mock('@repo/api-client/query', () => ({
   patchApiV1AdminSalonsByIdSetupPresenceMutation: () => ({
     mutationFn: generated.patchSetupPresence,
   }),
+  patchApiV1AdminSalonsByIdSetupOwnerPhoneMutation: () => ({
+    mutationFn: generated.patchSetupOwnerPhone,
+  }),
+  postApiV1AdminSalonsByIdSetupHandoffMutation: () => ({
+    mutationFn: generated.createSetupHandoff,
+  }),
   postApiV1AdminSalonsByIdSetupCatalogPresetsByPresetIdApplyMutation: () => ({
     mutationFn: generated.mutateSetupCatalog,
   }),
@@ -251,6 +259,8 @@ describe('salons feature', () => {
     generated.importSetupClients.mockReset()
     generated.patchSetupHours.mockReset()
     generated.patchSetupPresence.mockReset()
+    generated.patchSetupOwnerPhone.mockReset()
+    generated.createSetupHandoff.mockReset()
     generated.patchStatus.mockReset()
     generated.postSalon.mockReset()
     generated.postNote.mockReset()
@@ -325,7 +335,10 @@ describe('salons feature', () => {
       ],
       pagination: { page: 1, pageSize: 20, total: 1 },
     })
-    generated.postSalon.mockResolvedValue({ salon: { id: salonId } })
+    generated.postSalon.mockResolvedValue({
+      salon: { id: salonId },
+      ownerConflict: null,
+    })
 
     renderSalonsList()
 

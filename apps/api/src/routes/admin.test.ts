@@ -49,6 +49,12 @@ vi.mock('@repo/database/members', () => ({
   getMemberForUser: vi.fn(),
 }))
 
+vi.mock('@repo/database/salon-handoff', () => ({
+  createSalonHandoff: vi.fn(),
+  getSalonIdentityConflictForPhone: vi.fn(),
+  updateSetupSalonOwnerPhone: vi.fn(),
+}))
+
 vi.mock('@repo/database/settings', () => ({
   getBusinessSettings: vi.fn(),
   updateBusinessSettings: vi.fn(),
@@ -61,6 +67,7 @@ vi.mock('@repo/database/salon-profile', () => ({
 
 vi.mock('@repo/database/staff', () => ({
   createSetupStaffProfile: vi.fn(),
+  getClaimedStaffAccessForPhone: vi.fn(),
   listSetupStaffProfiles: vi.fn(),
   validateActiveServiceIds: vi.fn(),
 }))
@@ -129,6 +136,7 @@ import {
 import { applyCatalogPreset } from '@repo/database/catalog-presets'
 import {
   createSetupStaffProfile,
+  getClaimedStaffAccessForPhone,
   listSetupStaffProfiles,
   validateActiveServiceIds,
 } from '@repo/database/staff'
@@ -147,6 +155,11 @@ import {
   getAllServices,
   updateService,
 } from '@repo/database/services'
+import {
+  createSalonHandoff,
+  getSalonIdentityConflictForPhone,
+  updateSetupSalonOwnerPhone,
+} from '@repo/database/salon-handoff'
 
 process.env.NODE_ENV = 'test'
 process.env.DATABASE_URL = 'postgres://stub'
@@ -200,6 +213,7 @@ const parsedPresetTree = [
 
 beforeEach(() => {
   vi.resetAllMocks()
+  vi.mocked(getSalonIdentityConflictForPhone).mockResolvedValue(undefined)
   vi.mocked(authServer.api.getSession).mockResolvedValue({
     user: { id: 'admin-user-1' },
   } as never)
@@ -273,6 +287,7 @@ describe('admin runtime data source', () => {
       name: 'Aftab',
       intendedOwnerPhone: '09121234567',
     })
+    expect(await res.json()).toMatchObject({ ownerConflict: null })
     expect(createAdminAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         actorUserId: 'admin-user-1',
@@ -327,7 +342,11 @@ describe('admin runtime data source', () => {
 
   it('reads and updates Setup Salon hours using manager settings behavior', async () => {
     vi.mocked(getAdminSalon).mockResolvedValue({
-      salon: { id: salonId, status: 'setup' },
+      salon: {
+        id: salonId,
+        status: 'setup',
+        intendedOwnerPhone: '09121234567',
+      },
       members: [],
       stats: {},
     } as never)
@@ -389,6 +408,130 @@ describe('admin runtime data source', () => {
         reason: 'Prepare salon hours',
       }),
     )
+  })
+
+  it('updates the intended-owner phone and creates an opaque handoff link', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: {
+        id: salonId,
+        status: 'setup',
+        intendedOwnerPhone: '09121234567',
+      },
+      members: [],
+      stats: {},
+    } as never)
+    vi.mocked(updateSetupSalonOwnerPhone).mockResolvedValue({
+      salonId,
+      intendedOwnerPhone: '09121234567',
+    })
+    vi.mocked(createSalonHandoff).mockResolvedValue({
+      token: 'opaque-token-value',
+      expiresAt: new Date('2026-06-24T12:00:00.000Z'),
+    })
+    vi.mocked(getSalonIdentityConflictForPhone).mockResolvedValue(undefined)
+
+    const phoneRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/owner-phone`,
+      {
+        method: 'PATCH',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          intendedOwnerPhone: '۰۹۱۲۱۲۳۴۵۶۷',
+          reason: 'Owner corrected the number',
+          liveConfirmation: 'LIVE',
+        }),
+      },
+    )
+    const linkRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/handoff`,
+      {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enablePublicPage: true,
+          reason: 'Owner is ready to claim',
+          liveConfirmation: 'LIVE',
+        }),
+      },
+    )
+
+    expect(phoneRes.status).toBe(200)
+    expect(updateSetupSalonOwnerPhone).toHaveBeenCalledWith({
+      salonId,
+      intendedOwnerPhone: '09121234567',
+    })
+    expect(linkRes.status).toBe(200)
+    expect(await linkRes.json()).toMatchObject({
+      url: 'http://localhost:3000/handoff/opaque-token-value',
+    })
+    expect(createSalonHandoff).toHaveBeenCalledWith({
+      salonId,
+      createdByUserId: 'admin-user-1',
+      enablePublicPage: true,
+    })
+    expect(createAdminAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'salon.setup.owner_phone.update',
+        metadata: { intendedOwnerPhone: '[REDACTED]' },
+      }),
+    )
+  })
+
+  it('warns on Setup Salon creation and blocks handoff for an owned phone', async () => {
+    vi.mocked(createSetupSalon).mockResolvedValue({
+      id: salonId,
+      name: 'Aftab',
+      status: 'setup',
+    } as never)
+    vi.mocked(getSalonIdentityConflictForPhone).mockResolvedValue({
+      salonId: 'existing-salon',
+      salonName: 'Mehr',
+      salonStatus: 'active',
+    })
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: {
+        id: salonId,
+        status: 'setup',
+        intendedOwnerPhone: '09121234567',
+      },
+      members: [],
+      stats: {},
+    } as never)
+
+    const createRes = await app.request('/api/v1/admin/salons', {
+      method: 'POST',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Aftab',
+        intendedOwnerPhone: '09121234567',
+        reason: 'Signed field agreement',
+        liveConfirmation: 'LIVE',
+      }),
+    })
+    const handoffRes = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/handoff`,
+      {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: 'Owner is ready',
+          liveConfirmation: 'LIVE',
+        }),
+      },
+    )
+
+    expect(createRes.status).toBe(201)
+    expect(await createRes.json()).toMatchObject({
+      ownerConflict: {
+        salonName: 'Mehr',
+        salonStatus: 'active',
+      },
+    })
+    expect(handoffRes.status).toBe(409)
+    expect(await handoffRes.json()).toMatchObject({
+      code: 'HANDOFF_IDENTITY_CONFLICT',
+    })
+    expect(createSalonHandoff).not.toHaveBeenCalled()
   })
 
   it('normalizes Setup Salon presence with the manager schema', async () => {
@@ -660,6 +803,44 @@ describe('admin runtime data source', () => {
       },
     )
     expect(forbidden.status).toBe(403)
+  })
+
+  it('shows claimed cross-salon staff access only to salon-managing admins', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: { id: salonId, status: 'setup' },
+    } as never)
+    vi.mocked(getClaimedStaffAccessForPhone).mockResolvedValue({
+      salonId: '77777777-7777-4777-8777-777777777777',
+      salonName: 'سالن قبلی',
+      salonStatus: 'active',
+    })
+
+    const allowed = await app.request(
+      `/api/v1/admin/salons/${salonId}/setup/staff/access?phone=09121234567`,
+      { headers: authHeaders },
+    )
+    expect(allowed.status).toBe(200)
+    expect(await allowed.json()).toEqual({
+      access: expect.objectContaining({
+        salonName: 'سالن قبلی',
+        salonStatus: 'active',
+      }),
+    })
+
+    for (const role of ['platform_support', 'platform_viewer'] as const) {
+      vi.mocked(getPlatformAdminForUser).mockResolvedValue({
+        id: `platform-${role}`,
+        userId: platformAdminUserId,
+        role,
+        active: true,
+      } as never)
+      const forbidden = await app.request(
+        `/api/v1/admin/salons/${salonId}/setup/staff/access?phone=09121234567`,
+        { headers: authHeaders },
+      )
+      expect(forbidden.status).toBe(403)
+    }
+    expect(getClaimedStaffAccessForPhone).toHaveBeenCalledTimes(1)
   })
 
   it('rejects invalid setup validation, roles, and salon lifecycles', async () => {

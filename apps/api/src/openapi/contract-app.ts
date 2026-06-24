@@ -133,6 +133,7 @@ import {
   createAdminSetupClientRoute,
   previewAdminSetupClientImportRoute,
   createAdminSetupClientImportRoute,
+  createAdminSetupHandoffRoute,
   createAdminSalonNoteRoute,
   createSetupSalonRoute,
   createAdminUserNoteRoute,
@@ -144,6 +145,7 @@ import {
   getAdminSalonRoute,
   getAdminSetupSalonConfigurationRoute,
   getAdminSetupStaffRoute,
+  getAdminSetupStaffAccessRoute,
   getAdminSetupCatalogRoute,
   getAdminUserRoute,
   listAdminAuditLogRoute,
@@ -165,6 +167,7 @@ import {
   updateAdminSalonStatusRoute,
   updateAdminSetupSalonHoursRoute,
   updateAdminSetupSalonPresenceRoute,
+  updateAdminSetupOwnerPhoneRoute,
   updateAdminSetupAddonRoute,
   updateAdminSetupCategoryRoute,
   updateAdminSetupFamilyRoute,
@@ -481,7 +484,7 @@ const listAdminSalonsStub: RouteHandler<typeof listAdminSalonsRoute> = (c) =>
   c.json(adminListStub, 200)
 
 const createSetupSalonStub: RouteHandler<typeof createSetupSalonRoute> = (c) =>
-  c.json({ salon: {} }, 201)
+  c.json({ salon: {}, ownerConflict: null }, 201)
 
 const getAdminSalonStub: RouteHandler<typeof getAdminSalonRoute> = (c) =>
   c.json({ salon: {}, members: [], stats: {} }, 200)
@@ -507,6 +510,30 @@ const setupPresenceStub = {
 const getAdminSetupSalonConfigurationStub: RouteHandler<
   typeof getAdminSetupSalonConfigurationRoute
 > = (c) => c.json({ hours: setupHoursStub, presence: setupPresenceStub }, 200)
+
+const updateAdminSetupOwnerPhoneStub: RouteHandler<
+  typeof updateAdminSetupOwnerPhoneRoute
+> = (c) =>
+  c.json(
+    {
+      salon: {
+        salonId: '00000000-0000-4000-8000-000000000000',
+        intendedOwnerPhone: '09123456789',
+      },
+    },
+    200,
+  )
+
+const createAdminSetupHandoffStub: RouteHandler<
+  typeof createAdminSetupHandoffRoute
+> = (c) =>
+  c.json(
+    {
+      url: 'https://app.saluna.ir/handoff/token',
+      expiresAt: new Date().toISOString(),
+    },
+    200,
+  )
 
 const updateAdminSetupSalonHoursStub: RouteHandler<
   typeof updateAdminSetupSalonHoursRoute
@@ -1155,12 +1182,15 @@ export const contractApp = new OpenAPIHono()
         getAdminSetupSalonConfigurationRoute,
         getAdminSetupSalonConfigurationStub,
       )
+      .openapi(updateAdminSetupOwnerPhoneRoute, updateAdminSetupOwnerPhoneStub)
+      .openapi(createAdminSetupHandoffRoute, createAdminSetupHandoffStub)
       .openapi(updateAdminSetupSalonHoursRoute, updateAdminSetupSalonHoursStub)
       .openapi(
         updateAdminSetupSalonPresenceRoute,
         updateAdminSetupSalonPresenceStub,
       )
       .openapi(getAdminSetupStaffRoute, setupCatalogMutationStub)
+      .openapi(getAdminSetupStaffAccessRoute, setupCatalogMutationStub)
       .openapi(createAdminSetupStaffRoute, setupCatalogMutationStub)
       .openapi(createAdminSetupClientRoute, setupCatalogMutationStub)
       .openapi(previewAdminSetupClientImportRoute, setupCatalogMutationStub)

@@ -220,8 +220,46 @@ export const adminSetupSalonCreateBodySchema = z
   .openapi('AdminSetupSalonCreateRequest')
 
 export const adminSetupSalonResponseSchema = z
-  .object({ salon: anyRecordSchema })
+  .object({
+    salon: anyRecordSchema,
+    ownerConflict: z
+      .object({
+        salonId: z.string(),
+        salonName: z.string(),
+        salonStatus: z.enum(['setup', 'active', 'suspended', 'archived']),
+      })
+      .nullable(),
+  })
   .openapi('AdminSetupSalonResponse')
+
+export const adminSetupOwnerPhonePatchBodySchema = z
+  .object({
+    intendedOwnerPhone: z.string().regex(/^09\d{9}$/),
+    reason: adminReasonSchema,
+    liveConfirmation: z.string().optional(),
+  })
+  .openapi('AdminSetupOwnerPhonePatchRequest')
+
+export const adminSetupOwnerPhoneResponseSchema = z
+  .object({
+    salon: z.object({
+      salonId: z.string(),
+      intendedOwnerPhone: z.string().nullable(),
+    }),
+  })
+  .openapi('AdminSetupOwnerPhoneResponse')
+
+export const adminSetupHandoffCreateBodySchema = z
+  .object({
+    enablePublicPage: z.boolean().default(false),
+    reason: adminReasonSchema,
+    liveConfirmation: z.string().optional(),
+  })
+  .openapi('AdminSetupHandoffCreateRequest')
+
+export const adminSetupHandoffResponseSchema = z
+  .object({ url: z.string().url(), expiresAt: isoDateTimeSchema })
+  .openapi('AdminSetupHandoffResponse')
 
 export const adminSetupHoursSchema = z
   .object({
@@ -276,6 +314,22 @@ export const adminSetupStaffListResponseSchema = z
 export const adminSetupStaffCreateResponseSchema = z
   .object({ profile: anyRecordSchema })
   .openapi('AdminSetupStaffCreateResponse')
+
+export const adminSetupStaffAccessQuerySchema = z.object({
+  phone: z.string().regex(/^09\d{9}$/),
+})
+
+export const adminSetupStaffAccessResponseSchema = z
+  .object({
+    access: z
+      .object({
+        salonId: z.string().uuid(),
+        salonName: z.string(),
+        salonStatus: z.enum(['setup', 'active', 'suspended', 'archived']),
+      })
+      .nullable(),
+  })
+  .openapi('AdminSetupStaffAccessResponse')
 
 export const adminSetupClientCreateBodySchema = z
   .object({

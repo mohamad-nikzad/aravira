@@ -32,6 +32,11 @@ import {
   type PlatformRole,
 } from '@repo/database/admin'
 import {
+  createSalonHandoff,
+  getSalonIdentityConflictForPhone,
+  updateSetupSalonOwnerPhone,
+} from '@repo/database/salon-handoff'
+import {
   CatalogReferenceError,
   createService,
   createServiceAddon,
@@ -56,6 +61,7 @@ import {
 } from '@repo/database/settings'
 import {
   createSetupStaffProfile,
+  getClaimedStaffAccessForPhone,
   listSetupStaffProfiles,
   validateActiveServiceIds,
 } from '@repo/database/staff'
@@ -131,6 +137,18 @@ const setupSalonBodySchema = z.object({
   liveConfirmation: z.string().trim().optional(),
 })
 
+const setupOwnerPhoneBodySchema = z.object({
+  intendedOwnerPhone: phoneSchema,
+  reason: reasonSchema,
+  liveConfirmation: z.string().trim().optional(),
+})
+
+const setupHandoffBodySchema = z.object({
+  enablePublicPage: z.boolean().default(false),
+  reason: reasonSchema,
+  liveConfirmation: z.string().trim().optional(),
+})
+
 const setupMutationMetaSchema = z.object({
   reason: reasonSchema,
   liveConfirmation: z.string().trim().optional(),
@@ -154,6 +172,7 @@ const setupStaffCreateBodySchema = z.object({
   reason: reasonSchema,
   liveConfirmation: z.string().trim().optional(),
 })
+const setupStaffAccessQuerySchema = z.object({ phone: phoneSchema })
 const setupClientCreateBodySchema = clientFormSchema.and(
   setupMutationMetaSchema,
 )
@@ -354,6 +373,10 @@ export const adminRoute = new Hono<AppEnv>()
         name: body.name,
         intendedOwnerPhone: body.intendedOwnerPhone,
       })
+      const ownerConflict = await getSalonIdentityConflictForPhone({
+        phone: body.intendedOwnerPhone,
+        excludingSalonId: salon.id,
+      })
       await writeAudit({
         actorUserId: c.var.platformAdmin.userId,
         actorPlatformRole: c.var.platformAdmin.role,
@@ -365,7 +388,7 @@ export const adminRoute = new Hono<AppEnv>()
         metadata: { intendedOwnerPhone: '[REDACTED]' },
         request: auditMeta(c),
       })
-      return created(c, { salon })
+      return created(c, { salon, ownerConflict: ownerConflict ?? null })
     },
   )
   .get(
@@ -391,6 +414,98 @@ export const adminRoute = new Hono<AppEnv>()
         getSalonPresence(id),
       ])
       return ok(c, { hours, presence })
+    },
+  )
+  .patch(
+    '/salons/:id/setup/owner-phone',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('json', setupOwnerPhoneBodySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveConfirmationError = requireLiveConfirmation(
+        c,
+        body.liveConfirmation,
+      )
+      if (liveConfirmationError) return liveConfirmationError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      const salon = await updateSetupSalonOwnerPhone({
+        salonId: id,
+        intendedOwnerPhone: body.intendedOwnerPhone,
+      })
+      if (!salon) return error(c, 'سالن در وضعیت راه‌اندازی نیست', 409)
+      await writeAudit({
+        actorUserId: c.var.platformAdmin.userId,
+        actorPlatformRole: c.var.platformAdmin.role,
+        action: 'salon.setup.owner_phone.update',
+        targetType: 'salon',
+        targetId: id,
+        salonId: id,
+        reason: body.reason,
+        metadata: { intendedOwnerPhone: '[REDACTED]' },
+        request: auditMeta(c),
+      })
+      return ok(c, { salon })
+    },
+  )
+  .post(
+    '/salons/:id/setup/handoff',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('json', setupHandoffBodySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const liveConfirmationError = requireLiveConfirmation(
+        c,
+        body.liveConfirmation,
+      )
+      if (liveConfirmationError) return liveConfirmationError
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      const salon = await getAdminSalon(id)
+      const intendedOwnerPhone = salon?.salon.intendedOwnerPhone
+      if (!intendedOwnerPhone) {
+        return error(c, 'شماره مالک موردنظر ثبت نشده است', 409)
+      }
+      const ownerConflict = await getSalonIdentityConflictForPhone({
+        phone: intendedOwnerPhone,
+        excludingSalonId: id,
+      })
+      if (ownerConflict) {
+        return error(
+          c,
+          `این شماره قبلاً به سالن «${ownerConflict.salonName}» با وضعیت ${ownerConflict.salonStatus} متصل است`,
+          409,
+          'HANDOFF_IDENTITY_CONFLICT',
+        )
+      }
+      const handoff = await createSalonHandoff({
+        salonId: id,
+        createdByUserId: c.var.platformAdmin.userId,
+        enablePublicPage: body.enablePublicPage,
+      })
+      const baseUrl = (
+        process.env.PWA_ORIGIN ?? 'http://localhost:3000'
+      ).replace(/\/$/, '')
+      const url = `${baseUrl}/handoff/${handoff.token}`
+      await writeAudit({
+        actorUserId: c.var.platformAdmin.userId,
+        actorPlatformRole: c.var.platformAdmin.role,
+        action: 'salon.setup.handoff_link.create',
+        targetType: 'salon',
+        targetId: id,
+        salonId: id,
+        reason: body.reason,
+        metadata: {
+          expiresAt: handoff.expiresAt.toISOString(),
+          enablePublicPage: body.enablePublicPage,
+        },
+        request: auditMeta(c),
+      })
+      return ok(c, { url, expiresAt: handoff.expiresAt })
     },
   )
   .patch(
@@ -465,6 +580,22 @@ export const adminRoute = new Hono<AppEnv>()
         request: auditMeta(c),
       })
       return ok(c, { presence })
+    },
+  )
+  .get(
+    '/salons/:id/setup/staff/access',
+    requirePlatformAdmin('manage_salons'),
+    zValidator('param', idParamSchema),
+    zValidator('query', setupStaffAccessQuerySchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const lifecycleError = await requireSetupSalon(c, id)
+      if (lifecycleError) return lifecycleError
+      const access = await getClaimedStaffAccessForPhone({
+        phone: c.req.valid('query').phone,
+        excludingSalonId: id,
+      })
+      return ok(c, { access })
     },
   )
   .post(

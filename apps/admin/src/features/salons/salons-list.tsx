@@ -48,10 +48,16 @@ export function SalonsListScreen() {
   const queryClient = useQueryClient()
   const { me, runtime } = useAdminAuth()
   const [createOpen, setCreateOpen] = useState(false)
+  const [creationWarning, setCreationWarning] = useState<string | null>(null)
   const canCreate = hasPlatformPermission(me.role, 'manage_salons')
   const createMutation = useMutation({
     ...postApiV1AdminSalonsMutation(),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setCreationWarning(
+        data.ownerConflict
+          ? `هشدار: شماره مالک موردنظر قبلاً به سالن «${data.ownerConflict.salonName}» با وضعیت ${data.ownerConflict.salonStatus} متصل است. تحویل این سالن تا رفع تعارض ممکن نیست.`
+          : null,
+      )
       setCreateOpen(false)
       void queryClient.invalidateQueries({
         queryKey: getApiV1AdminSalonsQueryKey(),
@@ -79,6 +85,14 @@ export function SalonsListScreen() {
           ) : null
         }
       />
+      {creationWarning ? (
+        <div
+          role="alert"
+          className="mx-6 mb-6 border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"
+        >
+          {creationWarning}
+        </div>
+      ) : null}
       <SetupSalonDialog
         open={createOpen}
         isLiveData={runtime.dataSource === 'live'}
