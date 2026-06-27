@@ -426,6 +426,49 @@ describe('salons feature', () => {
     expect(screen.getByText('تلفن مالک موردنظر')).toBeTruthy()
   })
 
+  it('edits only the intended-owner phone on the Setup Salon info page', async () => {
+    generated.getSalon.mockResolvedValue({
+      salon: {
+        id: salonId,
+        name: 'Setup Aftab',
+        slug: `setup-${salonId}`,
+        status: 'setup',
+        intendedOwnerPhone: '09121234567',
+        phone: null,
+        timezone: 'Asia/Tehran',
+      },
+      members: [],
+      stats: { services: 0, appointments: 0 },
+    })
+    generated.getNotes.mockResolvedValue({ notes: [] })
+    generated.patchSetupOwnerPhone.mockResolvedValue({
+      salon: { id: salonId, intendedOwnerPhone: '+989121111111' },
+    })
+
+    await renderSalonDetail(`/salons/${salonId}/edit`)
+
+    expect(await screen.findByText('مالک موردنظر')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^تغییر وضعیت$/ })).toBeNull()
+    expect(screen.queryByLabelText('یادداشت')).toBeNull()
+
+    fireEvent.change(screen.getByLabelText('شماره تلفن مالک موردنظر'), {
+      target: { value: '+989121111111' },
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'ذخیره اطلاعات سالن' }),
+    )
+
+    await waitFor(() =>
+      expect(generated.patchSetupOwnerPhone).toHaveBeenCalled(),
+    )
+    expect(generated.patchSetupOwnerPhone.mock.calls[0]?.[0]).toEqual({
+      path: { id: salonId },
+      body: { intendedOwnerPhone: '+989121111111' },
+    })
+    expect(generated.patchStatus).not.toHaveBeenCalled()
+    expect(generated.postNote).not.toHaveBeenCalled()
+  })
+
   it('edits Setup Salon hours and presence while preserving entered values on failures', async () => {
     generated.getSalon.mockResolvedValue({
       salon: {

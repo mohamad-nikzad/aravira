@@ -7,11 +7,13 @@ import {
   getApiV1AdminSalonsByIdSetupOptions,
   getApiV1AdminSalonsByIdSetupQueryKey,
   getApiV1AdminSalonsQueryKey,
+  patchApiV1AdminSalonsByIdSetupOwnerPhoneMutation,
   patchApiV1AdminSalonsByIdSetupHoursMutation,
   patchApiV1AdminSalonsByIdSetupPresenceMutation,
   patchApiV1AdminSalonsByIdStatusMutation,
   postApiV1AdminSalonsByIdNotesMutation,
 } from '@repo/api-client/query'
+import type { AdminSetupOwnerPhonePatchRequest } from '@repo/api-client/types'
 import { Link } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -21,15 +23,19 @@ import {
   LayoutDashboard,
   MapPin,
   Pencil,
+  Save,
   Scissors,
   ShieldAlert,
   UserRound,
   Users,
   type LucideIcon,
 } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 
 import { ErrorPanel } from '#/components/admin/error-panel'
+import { FormField } from '#/components/admin/form-field'
+import { LiveDataWarning } from '#/components/admin/live-data-form'
+import { MutationError } from '#/components/admin/mutation-error'
 import {
   MutationSuccess,
   useMutationSuccess,
@@ -50,8 +56,17 @@ import {
 import { useAdminAuth } from '#/context/admin-auth-provider'
 import { formatDate, number, text } from '#/lib/admin-format'
 
-import { normalizeStatus, StatusBadge, truthy } from './salon-columns'
-import { NotesPanel, StatusForm } from './salon-governance'
+import {
+  normalizeStatus,
+  StatusBadge,
+  truthy,
+  type AdminSalonStatus,
+} from './salon-columns'
+import {
+  NotesPanel,
+  StatusForm,
+  type MutationSubmitOptions,
+} from './salon-governance'
 import {
   SalonSetupHoursForm,
   SalonSetupPresenceForm,
@@ -223,6 +238,21 @@ function useSalonWorkspace(salonId: string) {
       })
     },
   })
+  const setupOwnerPhoneMutation = useMutation({
+    ...patchApiV1AdminSalonsByIdSetupOwnerPhoneMutation(),
+    onSuccess: () => {
+      showSuccess('شماره مالک موردنظر ذخیره شد.')
+      void queryClient.invalidateQueries({
+        queryKey: getApiV1AdminSalonsQueryKey(),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: getApiV1AdminSalonsByIdQueryKey({ path: { id: salonId } }),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: getApiV1AdminOverviewQueryKey(),
+      })
+    },
+  })
 
   return {
     canEnterOverride,
@@ -234,6 +264,7 @@ function useSalonWorkspace(salonId: string) {
     notesQuery,
     overrideMode,
     presenceMutation,
+    setupOwnerPhoneMutation,
     setupQuery,
     statusMutation,
     successMessage,
@@ -276,7 +307,9 @@ function SalonWorkspaceScreen({
       {section === 'overview' ? (
         <SalonOverviewSection salonId={salonId} data={data} />
       ) : null}
-      {section === 'edit' ? <SalonEditSection data={data} /> : null}
+      {section === 'edit' ? (
+        <SalonEditSection salonId={salonId} data={data} />
+      ) : null}
       {section === 'hours' ? (
         <SetupSectionGate
           salonId={salonId}
@@ -641,8 +674,24 @@ function formatAppointmentSlot(date: string, time: string) {
   return [formatDate(date), time].filter(Boolean).join('، ')
 }
 
-function SalonEditSection({ data }: { data: WorkspaceData }) {
+function SalonEditSection({
+  salonId,
+  data,
+}: {
+  salonId: string
+  data: WorkspaceData
+}) {
   const currentStatus = normalizeStatus(data.salon.status)
+
+  if (currentStatus === 'setup') {
+    return (
+      <SetupSalonInfoSection
+        salonId={salonId}
+        data={data}
+        currentStatus={currentStatus}
+      />
+    )
+  }
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
@@ -658,27 +707,18 @@ function SalonEditSection({ data }: { data: WorkspaceData }) {
         />
       </Panel>
       <div className="space-y-4">
-        {currentStatus === 'setup' ? (
-          <Panel title="وضعیت راه‌اندازی">
-            <p className="text-sm leading-6 text-muted-foreground">
-              این سالن تا تحویل به مالک در وضعیت راه‌اندازی باقی می‌ماند و از
-              این صفحه فعال نمی‌شود.
-            </p>
-          </Panel>
-        ) : (
-          <StatusForm
-            current={currentStatus}
-            error={data.statusMutation.error}
-            isLiveData={data.isLiveData}
-            pending={data.statusMutation.isPending}
-            onSubmit={(input, options) =>
-              data.statusMutation.mutate(
-                { path: { id: text(data.salon.id) }, body: input },
-                options,
-              )
-            }
-          />
-        )}
+        <StatusForm
+          current={currentStatus}
+          error={data.statusMutation.error}
+          isLiveData={data.isLiveData}
+          pending={data.statusMutation.isPending}
+          onSubmit={(input, options) =>
+            data.statusMutation.mutate(
+              { path: { id: text(data.salon.id) }, body: input },
+              options,
+            )
+          }
+        />
         <NotesPanel
           error={data.noteMutation.error}
           isError={data.notesQuery.isError}
@@ -695,6 +735,92 @@ function SalonEditSection({ data }: { data: WorkspaceData }) {
         />
       </div>
     </div>
+  )
+}
+
+function SetupSalonInfoSection({
+  salonId,
+  data,
+  currentStatus,
+}: {
+  salonId: string
+  data: WorkspaceData
+  currentStatus: AdminSalonStatus
+}) {
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+      <Panel title="اطلاعات سالن">
+        <DetailGrid
+          items={[
+            ['نام سالن', text(data.salon.name)],
+            ['شناسه عمومی', text(data.salon.slug)],
+            ['شماره تلفن', text(data.salon.phone)],
+            ['منطقه زمانی', text(data.salon.timezone)],
+            ['وضعیت', WORKSPACE_STATUS_LABELS[currentStatus]],
+          ]}
+        />
+      </Panel>
+      <SetupOwnerPhoneForm
+        intendedOwnerPhone={text(data.salon.intendedOwnerPhone)}
+        error={data.setupOwnerPhoneMutation.error}
+        isLiveData={data.isLiveData}
+        pending={data.setupOwnerPhoneMutation.isPending}
+        onSave={(body, options) =>
+          data.setupOwnerPhoneMutation.mutate(
+            { path: { id: salonId }, body },
+            options,
+          )
+        }
+      />
+    </div>
+  )
+}
+
+function SetupOwnerPhoneForm({
+  intendedOwnerPhone,
+  error,
+  isLiveData,
+  pending,
+  onSave,
+}: {
+  intendedOwnerPhone: string
+  error: unknown
+  isLiveData: boolean
+  pending: boolean
+  onSave: (
+    input: AdminSetupOwnerPhonePatchRequest,
+    options?: MutationSubmitOptions,
+  ) => void
+}) {
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    onSave({
+      intendedOwnerPhone: String(form.get('intendedOwnerPhone') ?? ''),
+    })
+  }
+
+  return (
+    <Panel title="مالک موردنظر">
+      <form className="flex flex-col gap-5" onSubmit={submit}>
+        <LiveDataWarning
+          show={isLiveData}
+          message="تغییر شماره مالک روی داده‌های زنده اعمال می‌شود."
+        />
+        <FormField
+          label="شماره تلفن مالک موردنظر"
+          name="intendedOwnerPhone"
+          defaultValue={intendedOwnerPhone}
+          placeholder="+989121234567"
+          required
+        />
+        <MutationError error={error} />
+        <Button type="submit" disabled={pending}>
+          <Save data-icon="inline-start" />
+          ذخیره اطلاعات سالن
+        </Button>
+      </form>
+    </Panel>
   )
 }
 
