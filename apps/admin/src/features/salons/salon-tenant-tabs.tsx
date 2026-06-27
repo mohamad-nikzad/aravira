@@ -97,13 +97,13 @@ export function SalonTenantDataPage({
     services: {
       title: 'خدمات',
       columns: serviceColumns,
-      loadingLabel: 'در حال بارگذاری انواع خدمت',
+      loadingLabel: 'در حال بارگذاری خدمات',
       queryOptionsFor: (params: ListParams) =>
         getApiV1AdminSalonsByIdServicesOptions({
           path: { id: salonId },
           query: params,
         }),
-      emptyCopy: 'نوع خدمتی برای این سالن ثبت نشده است.',
+      emptyCopy: 'خدمتی برای این سالن ثبت نشده است.',
     },
   }[tab]
 
@@ -159,9 +159,7 @@ function TenantListContent({
           setPagination((current) => ({ ...current, pageIndex: 0 }))
         }}
       />
-      {listQuery.isLoading ? (
-        <ScreenSkeleton label={loadingLabel} />
-      ) : null}
+      {listQuery.isLoading ? <ScreenSkeleton label={loadingLabel} /> : null}
       {listQuery.isError ? (
         <ErrorPanel
           message="بارگذاری داده‌های سالن ناموفق بود."

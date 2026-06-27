@@ -454,9 +454,7 @@ describe('salons feature', () => {
     fireEvent.change(screen.getByLabelText('شماره تلفن مالک موردنظر'), {
       target: { value: '+989121111111' },
     })
-    fireEvent.click(
-      screen.getByRole('button', { name: 'ذخیره اطلاعات سالن' }),
-    )
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره اطلاعات سالن' }))
 
     await waitFor(() =>
       expect(generated.patchSetupOwnerPhone).toHaveBeenCalled(),
@@ -1014,16 +1012,26 @@ describe('salons feature', () => {
       items: [
         {
           id: 'service-1',
-          name: 'ServiceVariant Cut',
+          name: 'Cut service',
           kind: 'standard',
           categoryName: 'Hair',
-          familyName: 'Cut',
+          familyName: 'Internal cut group',
           duration: 45,
           price: 500000,
           active: true,
         },
+        {
+          id: 'service-2',
+          name: 'Bridal package',
+          kind: 'combo',
+          categoryName: 'Makeup',
+          familyName: 'Internal package group',
+          duration: 120,
+          price: 2500000,
+          active: true,
+        },
       ],
-      pagination: { page: 1, pageSize: 10, total: 1 },
+      pagination: { page: 1, pageSize: 10, total: 2 },
     })
 
     await renderSalonDetail(`/salons/${salonId}/clients`)
@@ -1040,6 +1048,10 @@ describe('salons feature', () => {
     await waitFor(() => {
       expect(generated.getServices).toHaveBeenCalled()
     })
-    expect(screen.queryByText(/Add ServiceVariant/)).toBeNull()
+    expect(await screen.findByText('Cut service')).toBeTruthy()
+    expect(screen.getByText('Bridal package')).toBeTruthy()
+    expect(screen.getByText('پکیج')).toBeTruthy()
+    expect(screen.queryByText('Internal cut group')).toBeNull()
+    expect(screen.queryByText(/Add Service/)).toBeNull()
   })
 })

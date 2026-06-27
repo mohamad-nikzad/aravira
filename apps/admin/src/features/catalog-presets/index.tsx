@@ -99,7 +99,7 @@ export function CatalogPresetsPage() {
     <>
       <AdminPageHeader
         title="الگوهای کاتالوگ"
-        description="مدیریت قالب‌های سرویس با ساختار دسته، خانواده و نسخه سرویس."
+        description="مدیریت قالب‌های سرویس با ساختار ساده دسته و خدمت."
       />
       <CatalogPresetsScreen />
     </>
@@ -135,7 +135,7 @@ export function CatalogPresetsScreen() {
       },
       {
         accessorKey: 'tree',
-        header: 'درخت قالب سرویس',
+        header: 'ساختار خدمات',
         cell: ({ row }) => <TreeSummary tree={row.original.tree} />,
       },
       {
@@ -230,7 +230,7 @@ function CatalogPresetDialog({
             {isNew ? 'الگوی جدید کاتالوگ' : 'ویرایش الگوی کاتالوگ'}
           </DialogTitle>
           <DialogDescription>
-            قالب سرویس را با ساختار دسته، خانواده و نسخه سرویس ویرایش کنید.
+            قالب سرویس را با دسته‌ها و خدمات قابل رزرو ویرایش کنید.
           </DialogDescription>
         </DialogHeader>
         <CatalogPresetForm
@@ -288,7 +288,7 @@ function CatalogPresetForm({
     <form className="flex flex-col gap-5" onSubmit={submit}>
       <LiveDataWarning
         show={isLiveData}
-        message="این تغییر روی داده LIVE تولید اعمال می‌شود. قبل از ذخیره، الگوی کاتالوگ و ساختار دسته، خانواده و نسخه سرویس را بررسی کنید."
+        message="این تغییر روی داده LIVE تولید اعمال می‌شود. قبل از ذخیره، الگوی کاتالوگ و ساختار دسته‌ها و خدمات را بررسی کنید."
       />
       <section className="grid gap-3 md:grid-cols-[1fr_1fr_140px_auto]">
         <FormField
@@ -354,10 +354,8 @@ function TreeEditor({
         <div className="flex min-w-0 items-center gap-2">
           <FolderTree className="text-muted-foreground" />
           <div>
-            <CardTitle className="text-sm">درخت قالب سرویس</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              دسته {'->'} خانواده {'->'} نسخه سرویس
-            </p>
+            <CardTitle className="text-sm">ساختار خدمات</CardTitle>
+            <p className="text-xs text-muted-foreground">دسته {'->'} خدمت</p>
           </div>
         </div>
         <Button
@@ -460,7 +458,7 @@ function CategoryEditor({
             }
           >
             <Plus className="h-4 w-4" />
-            خانواده
+            گروه داخلی
           </Button>
         </div>
       </CardContent>
@@ -495,13 +493,13 @@ function FamilyEditor({
       <CardContent className="flex flex-col gap-3 p-3">
         <div className="grid gap-2 md:grid-cols-[1fr_auto]">
           <LabeledInput
-            label="خانواده"
+            label="گروه داخلی"
             value={family.name}
             required
             onChange={(name) => onChange({ ...family, name })}
           />
           <IconAction
-            label="حذف خانواده"
+            label="حذف گروه داخلی"
             disabled={!canRemove}
             onClick={() => setConfirmRemove(true)}
           >
@@ -510,7 +508,7 @@ function FamilyEditor({
         </div>
         <RemoveConfirmationDialog
           open={confirmRemove}
-          message="این خانواده و همه نسخه‌های سرویس تو در تو حذف شوند؟"
+          message="این گروه داخلی و همه خدمات تو در تو حذف شوند؟"
           onConfirm={onRemove}
           onOpenChange={setConfirmRemove}
         />
@@ -543,7 +541,7 @@ function FamilyEditor({
             }
           >
             <CopyPlus className="h-4 w-4" />
-            نسخه سرویس
+            خدمت
           </Button>
         </div>
       </CardContent>
@@ -567,7 +565,7 @@ function VariantEditor({
   return (
     <div className="grid gap-2 rounded-md border border-border/70 bg-card px-3 py-2 md:grid-cols-[1.2fr_100px_120px_120px_1fr_auto]">
       <LabeledInput
-        label="نسخه سرویس"
+        label="خدمت"
         value={variant.name}
         required
         onChange={(name) => onChange({ ...variant, name })}
@@ -597,14 +595,14 @@ function VariantEditor({
         onChange={(color) => onChange({ ...variant, color })}
       />
       <LabeledInput
-        label="توضیحات نسخه سرویس"
+        label="توضیحات خدمت"
         value={variant.description ?? ''}
         onChange={(description) =>
           onChange({ ...variant, description: description || null })
         }
       />
       <IconAction
-        label="حذف نسخه سرویس"
+        label="حذف خدمت"
         disabled={!canRemove}
         onClick={() => setConfirmRemove(true)}
       >
@@ -612,7 +610,7 @@ function VariantEditor({
       </IconAction>
       <RemoveConfirmationDialog
         open={confirmRemove}
-        message="این نسخه سرویس حذف شود؟"
+        message="این خدمت حذف شود؟"
         onConfirm={onRemove}
         onOpenChange={setConfirmRemove}
       />
@@ -681,8 +679,10 @@ function TreeSummary({ tree }: { tree: unknown }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       <Badge variant="outline">{normalized.length} دسته</Badge>
-      <Badge variant="outline">{familyCount} خانواده</Badge>
-      <Badge variant="outline">{variantCount} نسخه سرویس</Badge>
+      {familyCount > 0 ? (
+        <Badge variant="outline">{familyCount} گروه داخلی</Badge>
+      ) : null}
+      <Badge variant="outline">{variantCount} خدمت</Badge>
     </div>
   )
 }

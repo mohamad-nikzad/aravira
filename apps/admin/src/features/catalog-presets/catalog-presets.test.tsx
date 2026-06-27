@@ -96,14 +96,14 @@ describe('catalog presets feature', () => {
     expect(await screen.findByText('Starter services')).toBeTruthy()
     expect(screen.getByText('starter-services')).toBeTruthy()
     expect(screen.getByText('1 دسته')).toBeTruthy()
-    expect(screen.getByText('1 خانواده')).toBeTruthy()
-    expect(screen.getByText('1 نسخه سرویس')).toBeTruthy()
+    expect(screen.getByText('1 گروه داخلی')).toBeTruthy()
+    expect(screen.getByText('1 خدمت')).toBeTruthy()
     expect(generated.listPresets).toHaveBeenCalledWith({
       query: { page: 1, pageSize: 20, search: undefined },
     })
   })
 
-  it('creates a CatalogPreset with category, family, service variant, and reason', async () => {
+  it('creates a CatalogPreset with category and service copy', async () => {
     generated.listPresets.mockResolvedValue({
       items: [],
       pagination: { page: 1, pageSize: 20, total: 0 },
@@ -122,10 +122,10 @@ describe('catalog presets feature', () => {
     fireEvent.change(screen.getByLabelText('دسته'), {
       target: { value: 'Hair' },
     })
-    fireEvent.change(screen.getByLabelText('خانواده'), {
+    fireEvent.change(screen.getByLabelText('گروه داخلی'), {
       target: { value: 'Color' },
     })
-    fireEvent.change(screen.getByLabelText('نسخه سرویس'), {
+    fireEvent.change(screen.getByLabelText('خدمت'), {
       target: { value: 'Root color' },
     })
     fireEvent.click(screen.getByRole('button', { name: /ذخیره الگوی کاتالوگ/ }))
@@ -261,16 +261,16 @@ describe('catalog presets feature', () => {
     await renderCatalogPresets()
 
     fireEvent.click(await screen.findByRole('button', { name: /ویرایش/ }))
-    expect(screen.getAllByLabelText('نسخه سرویس')).toHaveLength(2)
+    expect(screen.getAllByLabelText('خدمت')).toHaveLength(2)
 
-    fireEvent.click(screen.getAllByLabelText('حذف نسخه سرویس')[0]!)
-    expect(screen.getByText('این نسخه سرویس حذف شود؟')).toBeTruthy()
+    fireEvent.click(screen.getAllByLabelText('حذف خدمت')[0]!)
+    expect(screen.getByText('این خدمت حذف شود؟')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'انصراف' }))
-    expect(screen.getAllByLabelText('نسخه سرویس')).toHaveLength(2)
+    expect(screen.getAllByLabelText('خدمت')).toHaveLength(2)
 
-    fireEvent.click(screen.getAllByLabelText('حذف نسخه سرویس')[0]!)
+    fireEvent.click(screen.getAllByLabelText('حذف خدمت')[0]!)
     fireEvent.click(screen.getByRole('button', { name: 'حذف' }))
-    expect(screen.getAllByLabelText('نسخه سرویس')).toHaveLength(1)
+    expect(screen.getAllByLabelText('خدمت')).toHaveLength(1)
   })
 })

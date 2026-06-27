@@ -266,7 +266,7 @@ export function SalonSetupCatalog({
           ))}
         </CatalogSection>
 
-        <CatalogSection title="گروه‌ها" count={families.length}>
+        <CatalogSection title="گروه‌های داخلی" count={families.length}>
           <form
             className="space-y-3 rounded-xl border border-dashed p-4"
             onSubmit={(event) => {
@@ -284,7 +284,7 @@ export function SalonSetupCatalog({
             }}
           >
             <Field
-              label="گروه جدید"
+              label="گروه داخلی جدید"
               name="name"
               required
               placeholder="مثلاً رنگ و لایت"
@@ -296,7 +296,7 @@ export function SalonSetupCatalog({
               required
             />
             <Button type="submit" variant="outline">
-              <Plus /> افزودن گروه
+              <Plus /> افزودن گروه داخلی
             </Button>
           </form>
           {families.map((row) => (
@@ -328,7 +328,7 @@ export function SalonSetupCatalog({
           ))}
         </CatalogSection>
 
-        <CatalogSection title="خدمات قابل رزرو" count={services.length}>
+        <CatalogSection title="خدمات" count={services.length}>
           <ServiceForm
             categories={categories}
             families={families}
@@ -507,7 +507,7 @@ function ServiceFields({
       />
       <CatalogSelect
         name="familyId"
-        label="گروه"
+        label="گروه داخلی (اختیاری)"
         rows={families}
         defaultValue={row?.familyId}
       />

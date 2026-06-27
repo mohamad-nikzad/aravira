@@ -484,24 +484,21 @@ export function useServiceColumns() {
     () => [
       {
         accessorKey: 'name',
-        header: 'نوع خدمت',
+        header: 'خدمت',
         cell: ({ row }) => (
           <PrimaryCell
             title={text(row.original.name)}
-            subtitle={[
-              text(row.original.categoryName),
-              text(row.original.familyName),
-            ]
-              .filter(Boolean)
-              .join(' / ')}
+            subtitle={text(row.original.categoryName)}
           />
         ),
       },
       {
         accessorKey: 'kind',
-        header: 'نوع',
+        header: 'قالب',
         cell: ({ row }) => (
-          <Badge variant="outline">{text(row.original.kind)}</Badge>
+          <Badge variant="outline">
+            {formatServiceKind(row.original.kind)}
+          </Badge>
         ),
       },
       {
@@ -534,6 +531,11 @@ export function normalizeStatus(value: unknown): AdminSalonStatus {
   if (value === 'setup' || value === 'suspended' || value === 'archived')
     return value
   return 'active'
+}
+
+function formatServiceKind(value: unknown) {
+  if (value === 'combo') return 'پکیج'
+  return 'خدمت'
 }
 
 export function truthy(value: unknown): boolean {
