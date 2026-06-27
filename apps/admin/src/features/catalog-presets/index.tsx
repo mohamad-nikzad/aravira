@@ -18,11 +18,7 @@ import {
   FormField,
   TextAreaField,
 } from '#/components/admin/form-field'
-import {
-  LiveConfirmationInput,
-  LiveDataWarning,
-  liveConfirmationFromForm,
-} from '#/components/admin/live-data-form'
+import { LiveDataWarning } from '#/components/admin/live-data-form'
 import { MutationError } from '#/components/admin/mutation-error'
 import {
   MutationSuccess,
@@ -285,8 +281,6 @@ function CatalogPresetForm({
       tree,
       sortOrder: Number(form.get('sortOrder') ?? 0),
       isActive: form.get('isActive') === 'on',
-      reason: String(form.get('reason') ?? ''),
-      liveConfirmation: liveConfirmationFromForm(form, isLiveData),
     })
   }
 
@@ -328,14 +322,6 @@ function CatalogPresetForm({
         rows={2}
       />
       <TreeEditor tree={tree} onChange={setTree} />
-      <TextAreaField
-        label="دلیل"
-        name="reason"
-        placeholder="دلیل برای گزارش ممیزی الزامی است"
-        rows={3}
-        required
-      />
-      <LiveConfirmationInput show={isLiveData} />
       <MutationError error={error} />
       <DialogFooter>
         <Button disabled={pending} type="submit">

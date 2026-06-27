@@ -81,7 +81,7 @@ export function AuditLogScreen() {
         cell: ({ row }) => (
           <PrimaryCell
             title={text(row.original.action)}
-            subtitle={text(row.original.reason)}
+            subtitle={text(row.original.targetType)}
           />
         ),
       },

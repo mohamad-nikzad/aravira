@@ -358,21 +358,11 @@
           "intendedOwnerPhone": {
             "type": "string",
             "pattern": "^09\\d{9}$"
-          },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
           }
         },
         "required": [
           "name",
-          "intendedOwnerPhone",
-          "reason"
+          "intendedOwnerPhone"
         ]
       },
       "AdminSalonDetailResponse": {
@@ -523,20 +513,10 @@
           "intendedOwnerPhone": {
             "type": "string",
             "pattern": "^09\\d{9}$"
-          },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
           }
         },
         "required": [
-          "intendedOwnerPhone",
-          "reason"
+          "intendedOwnerPhone"
         ]
       },
       "AdminSetupHandoffResponse": {
@@ -569,20 +549,8 @@
           "enablePublicPage": {
             "type": "boolean",
             "default": false
-          },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
           }
-        },
-        "required": [
-          "reason"
-        ]
+        }
       },
       "AdminSetupSalonHoursResponse": {
         "type": "object",
@@ -612,25 +580,13 @@
             "minimum": 1,
             "maximum": 127
           },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
-          },
           "override": {
             "type": "boolean",
             "enum": [
               true
             ]
           }
-        },
-        "required": [
-          "reason"
-        ]
+        }
       },
       "AdminSetupSalonPresenceResponse": {
         "type": "object",
@@ -678,25 +634,13 @@
             "type": "string",
             "nullable": true
           },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
-          },
           "override": {
             "type": "boolean",
             "enum": [
               true
             ]
           }
-        },
-        "required": [
-          "reason"
-        ]
+        }
       },
       "AdminSetupStaffListResponse": {
         "type": "object",
@@ -818,15 +762,6 @@
             },
             "maxItems": 7
           },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
-          },
           "override": {
             "type": "boolean",
             "enum": [
@@ -840,8 +775,7 @@
           "color",
           "active",
           "serviceIds",
-          "schedule",
-          "reason"
+          "schedule"
         ]
       },
       "AdminSetupClientCreateResponse": {
@@ -880,15 +814,6 @@
             "maxItems": 8,
             "default": []
           },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
-          },
           "override": {
             "type": "boolean",
             "enum": [
@@ -898,8 +823,7 @@
         },
         "required": [
           "name",
-          "phone",
-          "reason"
+          "phone"
         ]
       },
       "AdminSetupClientImportPreviewResponse": {
@@ -1074,20 +998,10 @@
                 },
                 "minItems": 1,
                 "maxItems": 200
-              },
-              "reason": {
-                "type": "string",
-                "minLength": 3,
-                "maxLength": 500,
-                "example": "درخواست پشتیبانی داخلی"
-              },
-              "liveConfirmation": {
-                "type": "string"
               }
             },
             "required": [
-              "selectedLocalIds",
-              "reason"
+              "selectedLocalIds"
             ]
           }
         ]
@@ -1232,15 +1146,6 @@
               ]
             }
           },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
-          },
           "override": {
             "type": "boolean",
             "enum": [
@@ -1249,8 +1154,7 @@
           }
         },
         "required": [
-          "selection",
-          "reason"
+          "selection"
         ]
       },
       "AdminSetupCategoryCreateRequest": {
@@ -1262,15 +1166,6 @@
           "active": {
             "type": "boolean"
           },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
-          },
           "override": {
             "type": "boolean",
             "enum": [
@@ -1279,8 +1174,7 @@
           }
         },
         "required": [
-          "name",
-          "reason"
+          "name"
         ]
       },
       "AdminSetupCategoryUpdateRequest": {
@@ -1292,25 +1186,13 @@
           "active": {
             "type": "boolean"
           },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
-          },
           "override": {
             "type": "boolean",
             "enum": [
               true
             ]
           }
-        },
-        "required": [
-          "reason"
-        ]
+        }
       },
       "AdminSetupFamilyCreateRequest": {
         "type": "object",
@@ -1324,15 +1206,6 @@
           "active": {
             "type": "boolean"
           },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
-          },
           "override": {
             "type": "boolean",
             "enum": [
@@ -1342,8 +1215,7 @@
         },
         "required": [
           "categoryId",
-          "name",
-          "reason"
+          "name"
         ]
       },
       "AdminSetupFamilyUpdateRequest": {
@@ -1358,25 +1230,13 @@
           "active": {
             "type": "boolean"
           },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
-          },
           "override": {
             "type": "boolean",
             "enum": [
               true
             ]
           }
-        },
-        "required": [
-          "reason"
-        ]
+        }
       },
       "AdminSetupServiceCreateRequest": {
         "type": "object",
@@ -1416,15 +1276,6 @@
               "combo"
             ]
           },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
-          },
           "override": {
             "type": "boolean",
             "enum": [
@@ -1437,8 +1288,7 @@
           "categoryId",
           "duration",
           "price",
-          "color",
-          "reason"
+          "color"
         ]
       },
       "AdminSetupServiceUpdateRequest": {
@@ -1479,25 +1329,13 @@
               "combo"
             ]
           },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
-          },
           "override": {
             "type": "boolean",
             "enum": [
               true
             ]
           }
-        },
-        "required": [
-          "reason"
-        ]
+        }
       },
       "AdminSetupAddonCreateRequest": {
         "type": "object",
@@ -1588,15 +1426,6 @@
               ]
             }
           },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
-          },
           "override": {
             "type": "boolean",
             "enum": [
@@ -1607,8 +1436,7 @@
         "required": [
           "name",
           "priceDelta",
-          "durationDelta",
-          "reason"
+          "durationDelta"
         ]
       },
       "AdminSetupAddonUpdateRequest": {
@@ -1700,25 +1528,13 @@
               ]
             }
           },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
-          },
           "override": {
             "type": "boolean",
             "enum": [
               true
             ]
           }
-        },
-        "required": [
-          "reason"
-        ]
+        }
       },
       "AdminSalonClientsResponse": {
         "type": "object",
@@ -1835,20 +1651,10 @@
               "suspended",
               "archived"
             ]
-          },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
           }
         },
         "required": [
-          "status",
-          "reason"
+          "status"
         ]
       },
       "AdminNotesResponse": {
@@ -1933,17 +1739,10 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 5000
-          },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
           }
         },
         "required": [
-          "body",
-          "reason"
+          "body"
         ]
       },
       "AdminUsersResponse": {
@@ -2068,22 +1867,12 @@
           },
           "isActive": {
             "type": "boolean"
-          },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
           }
         },
         "required": [
           "slug",
           "name",
-          "tree",
-          "reason"
+          "tree"
         ]
       },
       "AdminCatalogPresetUpdateRequest": {
@@ -2118,20 +1907,8 @@
           },
           "isActive": {
             "type": "boolean"
-          },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
           }
-        },
-        "required": [
-          "reason"
-        ]
+        }
       },
       "AdminMessagingHealthResponse": {
         "type": "object",
@@ -2300,21 +2077,11 @@
           },
           "active": {
             "type": "boolean"
-          },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
           }
         },
         "required": [
           "userId",
-          "role",
-          "reason"
+          "role"
         ]
       },
       "AdminPlatformAdminUpdateRequest": {
@@ -2325,20 +2092,8 @@
           },
           "active": {
             "type": "boolean"
-          },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500,
-            "example": "درخواست پشتیبانی داخلی"
-          },
-          "liveConfirmation": {
-            "type": "string"
           }
-        },
-        "required": [
-          "reason"
-        ]
+        }
       },
       "ClientsListResponse": {
         "type": "object",

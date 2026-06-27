@@ -21,7 +21,6 @@ export async function writeAdminAudit(input: {
   action: string
   targetType: string
   targetId: string
-  reason: string
   salonId?: string | null
   metadata?: Record<string, unknown>
   request: ReturnType<typeof adminAuditRequestMeta>
@@ -32,7 +31,6 @@ export async function writeAdminAudit(input: {
     action: input.action,
     targetType: input.targetType,
     targetId: input.targetId,
-    reason: input.reason,
     salonId: input.salonId ?? null,
     metadata: input.metadata,
     requestId: input.request.requestId,

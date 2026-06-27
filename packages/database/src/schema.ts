@@ -287,7 +287,6 @@ export const adminAuditEvents = pgTable(
     salonId: uuid('salon_id').references(() => organization.id, {
       onDelete: 'set null',
     }),
-    reason: text('reason').notNull(),
     metadata: jsonb('metadata')
       .notNull()
       .$type<Record<string, unknown>>()

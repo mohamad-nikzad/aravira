@@ -10,12 +10,8 @@ import { Plus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 
 import { AdminListTable } from '#/components/admin/admin-list-table'
-import { FormField, TextAreaField } from '#/components/admin/form-field'
-import {
-  LiveConfirmationInput,
-  LiveDataWarning,
-  liveConfirmationFromForm,
-} from '#/components/admin/live-data-form'
+import { FormField } from '#/components/admin/form-field'
+import { LiveDataWarning } from '#/components/admin/live-data-form'
 import { MutationError } from '#/components/admin/mutation-error'
 import { AdminPageHeader } from '#/components/layout/admin-page-header'
 import { Button } from '#/components/ui/button'
@@ -126,8 +122,6 @@ function SetupSalonDialog({
     onSubmit({
       name: String(form.get('name') ?? ''),
       intendedOwnerPhone: String(form.get('intendedOwnerPhone') ?? ''),
-      reason: String(form.get('reason') ?? ''),
-      liveConfirmation: liveConfirmationFromForm(form, isLiveData),
     })
   }
 
@@ -143,7 +137,7 @@ function SetupSalonDialog({
         <form className="flex flex-col gap-4" onSubmit={submit}>
           <LiveDataWarning
             show={isLiveData}
-            message="این سالن در داده LIVE تولید ساخته می‌شود. برای ادامه LIVE را وارد کنید."
+            message="این سالن در داده LIVE تولید ساخته می‌شود."
           />
           <FormField label="نام سالن" name="name" required />
           <FormField
@@ -153,14 +147,6 @@ function SetupSalonDialog({
             type="tel"
             required
           />
-          <TextAreaField
-            label="دلیل"
-            name="reason"
-            placeholder="دلیل ایجاد برای گزارش ممیزی الزامی است"
-            rows={3}
-            required
-          />
-          <LiveConfirmationInput show={isLiveData} />
           <MutationError error={error} />
           <DialogFooter>
             <Button type="submit" disabled={pending}>

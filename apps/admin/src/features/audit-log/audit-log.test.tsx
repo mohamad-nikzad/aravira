@@ -64,7 +64,6 @@ describe('AuditLogScreen', () => {
           targetType: 'salon',
           targetId: 'salon-123456789',
           salonId: 'salon-123456789',
-          reason: 'Policy review',
           createdAt: '2026-06-18T10:30:00.000Z',
         },
       ],
@@ -74,7 +73,7 @@ describe('AuditLogScreen', () => {
     await renderAdminRoute('/audit-log')
 
     expect(await screen.findByText('salon.status.updated')).toBeTruthy()
-    expect(screen.getByText('Policy review')).toBeTruthy()
+    expect(screen.getAllByText('salon').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Platform Owner').length).toBeGreaterThan(0)
     expect(screen.getByText('مالک')).toBeTruthy()
     expect(screen.getAllByText('salon-12').length).toBeGreaterThan(0)

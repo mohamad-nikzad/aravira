@@ -7,11 +7,7 @@ import { Save } from 'lucide-react'
 import { useId, useState, type FormEvent } from 'react'
 
 import { FormField, TextAreaField } from '#/components/admin/form-field'
-import {
-  LiveConfirmationInput,
-  LiveDataWarning,
-  liveConfirmationFromForm,
-} from '#/components/admin/live-data-form'
+import { LiveDataWarning } from '#/components/admin/live-data-form'
 import { MutationError } from '#/components/admin/mutation-error'
 import { Button } from '#/components/ui/button'
 import {
@@ -88,8 +84,6 @@ export function SalonSetupEditor({
       workingEnd: String(form.get('workingEnd') ?? ''),
       slotDurationMinutes: Number(form.get('slotDurationMinutes')),
       workingDays: workingDaysMask(days),
-      reason: String(form.get('reason') ?? ''),
-      liveConfirmation: liveConfirmationFromForm(form, isLiveData),
     })
   }
 
@@ -105,8 +99,6 @@ export function SalonSetupEditor({
       socialTelegram: String(form.get('socialTelegram') ?? ''),
       socialWhatsapp: String(form.get('socialWhatsapp') ?? ''),
       website: String(form.get('website') ?? ''),
-      reason: String(form.get('reason') ?? ''),
-      liveConfirmation: liveConfirmationFromForm(form, isLiveData),
     })
   }
 
@@ -116,7 +108,7 @@ export function SalonSetupEditor({
         <form className="flex flex-col gap-5" onSubmit={submitHours}>
           <LiveDataWarning
             show={isLiveData}
-            message="تغییر ساعت کاری روی داده‌های زنده اعمال می‌شود. برای ادامه LIVE را وارد کنید."
+            message="تغییر ساعت کاری روی داده‌های زنده اعمال می‌شود."
           />
           <FieldSet>
             <FieldLegend variant="label" id={daysLabelId}>
@@ -163,8 +155,6 @@ export function SalonSetupEditor({
               required
             />
           </FieldGroup>
-          <TextAreaField label="دلیل تغییر" name="reason" rows={2} required />
-          <LiveConfirmationInput show={isLiveData} />
           <MutationError error={hoursError} />
           <Button type="submit" disabled={hoursPending || days.length === 0}>
             <Save data-icon="inline-start" />
@@ -177,7 +167,7 @@ export function SalonSetupEditor({
         <form className="flex flex-col gap-5" onSubmit={submitPresence}>
           <LiveDataWarning
             show={isLiveData}
-            message="تغییر حضور سالن روی داده‌های زنده اعمال می‌شود. برای ادامه LIVE را وارد کنید."
+            message="تغییر حضور سالن روی داده‌های زنده اعمال می‌شود."
           />
           <TextAreaField
             label="آدرس"
@@ -220,8 +210,6 @@ export function SalonSetupEditor({
             name="socialWhatsapp"
             value={configuration.presence.socialWhatsapp}
           />
-          <TextAreaField label="دلیل تغییر" name="reason" rows={2} required />
-          <LiveConfirmationInput show={isLiveData} />
           <MutationError error={presenceError} />
           <Button type="submit" disabled={presencePending}>
             <Save data-icon="inline-start" />

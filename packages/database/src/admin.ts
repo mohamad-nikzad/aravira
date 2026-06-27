@@ -56,7 +56,6 @@ export type CreateAdminAuditEventInput = {
   action: string
   targetType: string
   targetId: string
-  reason: string
   salonId?: string | null
   metadata?: Record<string, unknown>
   requestId?: string | null
@@ -243,7 +242,6 @@ export async function createAdminAuditEvent(input: CreateAdminAuditEventInput) {
       action: input.action,
       targetType: input.targetType,
       targetId: input.targetId,
-      reason: input.reason,
       salonId: input.salonId ?? null,
       metadata: input.metadata ?? {},
       requestId: input.requestId ?? null,
@@ -332,7 +330,6 @@ export async function getAdminOverview() {
           targetType: adminAuditEvents.targetType,
           targetId: adminAuditEvents.targetId,
           salonId: adminAuditEvents.salonId,
-          reason: adminAuditEvents.reason,
           createdAt: adminAuditEvents.createdAt,
         })
         .from(adminAuditEvents)
@@ -1152,7 +1149,6 @@ export async function listAdminAuditLog(
       targetType: adminAuditEvents.targetType,
       targetId: adminAuditEvents.targetId,
       salonId: adminAuditEvents.salonId,
-      reason: adminAuditEvents.reason,
       metadata: adminAuditEvents.metadata,
       requestId: adminAuditEvents.requestId,
       ip: adminAuditEvents.ip,

@@ -13,11 +13,7 @@ import { FileUp, UserPlus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 
 import { FormField, TextAreaField } from '#/components/admin/form-field'
-import {
-  LiveConfirmationInput,
-  LiveDataWarning,
-  liveConfirmationFromForm,
-} from '#/components/admin/live-data-form'
+import { LiveDataWarning } from '#/components/admin/live-data-form'
 import { MutationError } from '#/components/admin/mutation-error'
 import { Panel } from '#/components/admin/panel'
 import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert'
@@ -102,8 +98,6 @@ export function SalonSetupClients({
         phone: String(form.get('phone') ?? ''),
         notes: String(form.get('notes') ?? ''),
         tags: [],
-        reason: String(form.get('reason') ?? ''),
-        liveConfirmation: liveConfirmationFromForm(form, isLiveData),
         ...(overrideMode ? { override: true as const } : {}),
       },
     })
@@ -125,14 +119,11 @@ export function SalonSetupClients({
   function submitImport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!source) return
-    const form = new FormData(event.currentTarget)
     importMutation.mutate({
       path: { id: salonId },
       body: {
         ...source,
         selectedLocalIds: [...selectedIds],
-        reason: String(form.get('reason') ?? ''),
-        liveConfirmation: liveConfirmationFromForm(form, isLiveData),
       },
     })
   }
@@ -145,7 +136,7 @@ export function SalonSetupClients({
         <form className="flex flex-col gap-4" onSubmit={submitClient}>
           <LiveDataWarning
             show={isLiveData}
-            message="افزودن مشتری روی داده‌های زنده اعمال می‌شود. برای ادامه LIVE را وارد کنید."
+            message="افزودن مشتری روی داده‌های زنده اعمال می‌شود."
           />
           <FieldGroup>
             <FormField label="نام مشتری" name="name" required />
@@ -156,13 +147,6 @@ export function SalonSetupClients({
               required
             />
             <TextAreaField label="یادداشت" name="notes" rows={2} />
-            <TextAreaField
-              label="دلیل افزودن"
-              name="reason"
-              rows={2}
-              required
-            />
-            <LiveConfirmationInput show={isLiveData} />
           </FieldGroup>
           <MutationError error={createMutation.error} />
           {createMutation.isSuccess ? (
@@ -188,7 +172,7 @@ export function SalonSetupClients({
         <form className="flex flex-col gap-4" onSubmit={submitImport}>
           <LiveDataWarning
             show={isLiveData}
-            message="ورود مشتریان روی داده‌های زنده اعمال می‌شود. برای ادامه LIVE را وارد کنید."
+            message="ورود مشتریان روی داده‌های زنده اعمال می‌شود."
           />
           <Field>
             <FieldLabel htmlFor="setup-client-file">فایل CSV یا VCF</FieldLabel>
@@ -214,13 +198,6 @@ export function SalonSetupClients({
           ) : null}
           {preview ? (
             <>
-              <TextAreaField
-                label="دلیل ورود"
-                name="reason"
-                rows={2}
-                required
-              />
-              <LiveConfirmationInput show={isLiveData} />
               <MutationError error={importMutation.error} />
               {importMutation.data ? (
                 <Alert>

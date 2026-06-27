@@ -101,7 +101,7 @@ describe('admin settings platform admins', () => {
     },
   )
 
-  it('lists and grants platform admin access from Settings with reason and live confirmation', async () => {
+  it('lists and grants platform admin access from Settings', async () => {
     generated.listPlatformAdmins.mockResolvedValue({
       items: [
         {
@@ -161,12 +161,6 @@ describe('admin settings platform admins', () => {
     fireEvent.click(await screen.findByRole('option', { name: /Support User/ }))
     fireEvent.click(screen.getByRole('combobox', { name: 'نقش' }))
     fireEvent.click(await screen.findByRole('option', { name: 'پشتیبان' }))
-    fireEvent.change(screen.getByLabelText('دلیل'), {
-      target: { value: 'Add support access' },
-    })
-    fireEvent.change(screen.getByLabelText('تأیید داده LIVE'), {
-      target: { value: 'LIVE' },
-    })
     fireEvent.click(screen.getByRole('button', { name: /ذخیره دسترسی/ }))
 
     await waitFor(() => {
@@ -177,8 +171,6 @@ describe('admin settings platform admins', () => {
         userId: platformAdminUserId,
         role: 'platform_support',
         active: true,
-        reason: 'Add support access',
-        liveConfirmation: 'LIVE',
       },
     })
   })

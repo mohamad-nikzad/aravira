@@ -246,18 +246,28 @@ describe('admin runtime data source', () => {
     })
   })
 
-  it('blocks live salon status mutations without LIVE confirmation', async () => {
+  it('updates live salon status without forced confirmation fields', async () => {
+    vi.mocked(getAdminSalon).mockResolvedValue({
+      salon: { id: salonId, status: 'active' },
+      members: [],
+      stats: {},
+    } as never)
+    vi.mocked(updateAdminSalonStatus).mockResolvedValue({
+      id: salonId,
+      status: 'suspended',
+    } as never)
+
     const res = await app.request(`/api/v1/admin/salons/${salonId}/status`, {
       method: 'PATCH',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'suspended', reason: 'Safety review' }),
+      body: JSON.stringify({ status: 'suspended' }),
     })
 
-    expect(res.status).toBe(400)
-    expect(await res.json()).toEqual({
-      error: 'برای تغییر داده زنده عبارت LIVE را وارد کنید',
+    expect(res.status).toBe(200)
+    expect(updateAdminSalonStatus).toHaveBeenCalledWith({
+      salonId,
+      status: 'suspended',
     })
-    expect(updateAdminSalonStatus).not.toHaveBeenCalled()
   })
 
   it('creates a Setup Salon with a canonical phone and redacted audit metadata', async () => {
@@ -277,8 +287,6 @@ describe('admin runtime data source', () => {
       body: JSON.stringify({
         name: ' Aftab ',
         intendedOwnerPhone: '+98 912 123 4567',
-        reason: 'Signed field agreement',
-        liveConfirmation: 'LIVE',
       }),
     })
 
@@ -305,8 +313,6 @@ describe('admin runtime data source', () => {
       body: JSON.stringify({
         name: 'Aftab',
         intendedOwnerPhone: '12345',
-        reason: 'Signed field agreement',
-        liveConfirmation: 'LIVE',
       }),
     })
 
@@ -330,8 +336,6 @@ describe('admin runtime data source', () => {
         body: JSON.stringify({
           name: 'Aftab',
           intendedOwnerPhone: '09121234567',
-          reason: 'Signed field agreement',
-          liveConfirmation: 'LIVE',
         }),
       })
 
@@ -385,8 +389,6 @@ describe('admin runtime data source', () => {
           workingStart: '۱۰:۰۰',
           workingEnd: '۲۰:۰۰',
           workingDays: 62,
-          reason: 'Prepare salon hours',
-          liveConfirmation: 'LIVE',
         }),
       },
     )
@@ -405,7 +407,6 @@ describe('admin runtime data source', () => {
     expect(createAdminAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'salon.setup.hours.update',
-        reason: 'Prepare salon hours',
       }),
     )
   })
@@ -456,8 +457,6 @@ describe('admin runtime data source', () => {
         },
         body: JSON.stringify({
           workingStart: '10:00',
-          reason: 'Owner requested emergency correction',
-          liveConfirmation: 'LIVE',
           override: true,
         }),
       },
@@ -475,7 +474,6 @@ describe('admin runtime data source', () => {
         action: 'salon.override.hours.update',
         salonId,
         targetId: salonId,
-        reason: 'Owner requested emergency correction',
         metadata: { fields: ['workingStart'] },
         ip: '203.0.113.10',
         userAgent: 'override-test',
@@ -506,8 +504,6 @@ describe('admin runtime data source', () => {
           headers: { ...authHeaders, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             workingStart: '10:00',
-            reason: 'Unauthorized override attempt',
-            liveConfirmation: 'LIVE',
             override: true,
           }),
         },
@@ -536,7 +532,7 @@ describe('admin runtime data source', () => {
     expect(getBusinessSettings).not.toHaveBeenCalled()
   })
 
-  it('requires override intent, reason, and live confirmation for active-salon changes', async () => {
+  it('requires override intent for active-salon changes', async () => {
     vi.mocked(getAdminSalon).mockResolvedValue({
       salon: { id: salonId, status: 'active' },
       members: [],
@@ -546,11 +542,9 @@ describe('admin runtime data source', () => {
     const requests = [
       {
         workingStart: '10:00',
-        reason: 'Missing override',
-        liveConfirmation: 'LIVE',
       },
-      { workingStart: '10:00', override: true, liveConfirmation: 'LIVE' },
-      { workingStart: '10:00', override: true, reason: 'Missing confirmation' },
+      { workingStart: '10:00', override: true },
+      { workingStart: '10:00', override: true },
     ]
     const responses = await Promise.all(
       requests.map((body) =>
@@ -563,9 +557,9 @@ describe('admin runtime data source', () => {
     )
 
     expect(responses.map((response) => response.status)).toEqual([
-      409, 400, 400,
+      409, 200, 200,
     ])
-    expect(updateBusinessSettings).not.toHaveBeenCalled()
+    expect(updateBusinessSettings).toHaveBeenCalledTimes(2)
   })
 
   it('updates the intended-owner phone and creates an opaque handoff link', async () => {
@@ -595,8 +589,6 @@ describe('admin runtime data source', () => {
         headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           intendedOwnerPhone: '۰۹۱۲۱۲۳۴۵۶۷',
-          reason: 'Owner corrected the number',
-          liveConfirmation: 'LIVE',
         }),
       },
     )
@@ -607,8 +599,6 @@ describe('admin runtime data source', () => {
         headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           enablePublicPage: true,
-          reason: 'Owner is ready to claim',
-          liveConfirmation: 'LIVE',
         }),
       },
     )
@@ -662,8 +652,6 @@ describe('admin runtime data source', () => {
       body: JSON.stringify({
         name: 'Aftab',
         intendedOwnerPhone: '09121234567',
-        reason: 'Signed field agreement',
-        liveConfirmation: 'LIVE',
       }),
     })
     const handoffRes = await app.request(
@@ -671,10 +659,7 @@ describe('admin runtime data source', () => {
       {
         method: 'POST',
         headers: { ...authHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reason: 'Owner is ready',
-          liveConfirmation: 'LIVE',
-        }),
+        body: JSON.stringify({}),
       },
     )
 
@@ -719,8 +704,6 @@ describe('admin runtime data source', () => {
           mapGoogle: ' https://maps.app.goo.gl/abc ',
           socialInstagram: ' @aftab ',
           website: '',
-          reason: 'Prepare salon presence',
-          liveConfirmation: 'LIVE',
         }),
       },
     )
@@ -766,8 +749,6 @@ describe('admin runtime data source', () => {
           workingEnd: '17:00',
         },
       ],
-      reason: 'آماده سازی پرسنل',
-      liveConfirmation: 'LIVE',
     }
     const createRes = await app.request(
       `/api/v1/admin/salons/${salonId}/setup/staff`,
@@ -824,8 +805,6 @@ describe('admin runtime data source', () => {
           name: ' مریم ',
           phone: '۰۹۱۲۳۴۵۶۷۸۹',
           tags: [],
-          reason: 'Prepare clients',
-          liveConfirmation: 'LIVE',
         }),
       },
     )
@@ -902,8 +881,6 @@ describe('admin runtime data source', () => {
             format,
             source,
             selectedLocalIds: [selectedLocalId],
-            reason: 'Import agreed list',
-            liveConfirmation: 'LIVE',
           }),
         },
       )
@@ -1015,8 +992,6 @@ describe('admin runtime data source', () => {
         body: JSON.stringify({
           workingStart: '09:00',
           workingEnd: '19:00',
-          reason: 'Prepare salon hours',
-          liveConfirmation: 'LIVE',
         }),
       },
     )
@@ -1029,8 +1004,6 @@ describe('admin runtime data source', () => {
         headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mapGoogle: 'https://example.com/map',
-          reason: 'Prepare salon presence',
-          liveConfirmation: 'LIVE',
         }),
       },
     )
@@ -1085,8 +1058,6 @@ describe('admin runtime data source', () => {
               families: [{ familyIndex: 0, variantIndices: [0] }],
             },
           ],
-          reason: 'Prepare service menu',
-          liveConfirmation: 'LIVE',
         }),
       },
     )
@@ -1097,8 +1068,6 @@ describe('admin runtime data source', () => {
         headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: 'مو',
-          reason: 'Add category',
-          liveConfirmation: 'LIVE',
         }),
       },
     )
@@ -1113,8 +1082,6 @@ describe('admin runtime data source', () => {
           duration: 60,
           price: 1200000,
           color: 'rose',
-          reason: 'Add service',
-          liveConfirmation: 'LIVE',
         }),
       },
     )
@@ -1125,8 +1092,6 @@ describe('admin runtime data source', () => {
         headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           price: 1400000,
-          reason: 'Correct price',
-          liveConfirmation: 'LIVE',
         }),
       },
     )
@@ -1156,8 +1121,6 @@ describe('admin runtime data source', () => {
         headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: 'مو',
-          reason: 'Add category',
-          liveConfirmation: 'LIVE',
         }),
       },
     )
@@ -1174,8 +1137,6 @@ describe('admin runtime data source', () => {
           duration: 0,
           price: -1,
           color: 'rose',
-          reason: 'Invalid service',
-          liveConfirmation: 'LIVE',
         }),
       },
     )
@@ -1304,7 +1265,7 @@ describe('admin runtime data source', () => {
     })
   })
 
-  it('updates salon status with reason and LIVE confirmation', async () => {
+  it('updates salon status and writes an audit event', async () => {
     vi.mocked(getAdminSalon).mockResolvedValue({
       salon: { id: salonId, status: 'active' },
       members: [],
@@ -1323,8 +1284,6 @@ describe('admin runtime data source', () => {
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         status: 'suspended',
-        reason: 'Safety review',
-        liveConfirmation: 'LIVE',
       }),
     })
 
@@ -1340,7 +1299,6 @@ describe('admin runtime data source', () => {
       expect.objectContaining({
         action: 'salon.status.update',
         targetId: salonId,
-        reason: 'Safety review',
       }),
     )
   })
@@ -1357,8 +1315,6 @@ describe('admin runtime data source', () => {
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         status: 'active',
-        reason: 'Skip handoff',
-        liveConfirmation: 'LIVE',
       }),
     })
 
@@ -1366,7 +1322,7 @@ describe('admin runtime data source', () => {
     expect(updateAdminSalonStatus).not.toHaveBeenCalled()
   })
 
-  it('lists and creates internal salon notes with a reason', async () => {
+  it('lists and creates internal salon notes', async () => {
     vi.mocked(getAdminSalon).mockResolvedValue({
       salon: { id: salonId, name: 'Aftab', status: 'active' },
       members: [],
@@ -1406,7 +1362,6 @@ describe('admin runtime data source', () => {
         headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           body: 'Follow up',
-          reason: 'Support context',
         }),
       },
     )
@@ -1433,7 +1388,6 @@ describe('admin runtime data source', () => {
       expect.objectContaining({
         action: 'salon.note.create',
         targetId: salonId,
-        reason: 'Support context',
       }),
     )
   })
@@ -1446,7 +1400,6 @@ describe('admin runtime data source', () => {
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         body: 'Follow up',
-        reason: 'Support context',
       }),
     })
 
@@ -1486,29 +1439,7 @@ describe('admin runtime data source', () => {
     })
   })
 
-  it('blocks live CatalogPreset create without LIVE confirmation', async () => {
-    const res = await app.request('/api/v1/admin/catalog-presets', {
-      method: 'POST',
-      headers: { ...authHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        slug: 'hair-services',
-        name: 'قالب خدمات مو',
-        description: null,
-        tree: presetTree,
-        sortOrder: 1,
-        isActive: true,
-        reason: 'Add canonical hair service variants',
-      }),
-    })
-
-    expect(res.status).toBe(400)
-    expect(await res.json()).toEqual({
-      error: 'برای تغییر داده زنده عبارت LIVE را وارد کنید',
-    })
-    expect(createAdminCatalogPreset).not.toHaveBeenCalled()
-  })
-
-  it('creates a CatalogPreset with a reason and writes audit event', async () => {
+  it('creates a CatalogPreset and writes audit event', async () => {
     vi.mocked(createAdminCatalogPreset).mockResolvedValue({
       id: presetId,
       slug: 'hair-services',
@@ -1529,8 +1460,6 @@ describe('admin runtime data source', () => {
         tree: presetTree,
         sortOrder: 1,
         isActive: true,
-        reason: 'Add canonical hair service variants',
-        liveConfirmation: 'LIVE',
       }),
     })
 
@@ -1545,38 +1474,17 @@ describe('admin runtime data source', () => {
       tree: parsedPresetTree,
       sortOrder: 1,
       isActive: true,
-      reason: 'Add canonical hair service variants',
-      liveConfirmation: 'LIVE',
     })
     expect(createAdminAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'catalog_preset.create',
         targetType: 'catalog_preset',
         targetId: presetId,
-        reason: 'Add canonical hair service variants',
       }),
     )
   })
 
-  it('blocks live CatalogPreset update without LIVE confirmation', async () => {
-    const res = await app.request(`/api/v1/admin/catalog-presets/${presetId}`, {
-      method: 'PATCH',
-      headers: { ...authHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'قالب خدمات مو و ابرو',
-        isActive: false,
-        reason: 'Archive old service variant language',
-      }),
-    })
-
-    expect(res.status).toBe(400)
-    expect(await res.json()).toEqual({
-      error: 'برای تغییر داده زنده عبارت LIVE را وارد کنید',
-    })
-    expect(updateAdminCatalogPreset).not.toHaveBeenCalled()
-  })
-
-  it('updates a CatalogPreset with a reason and writes audit event', async () => {
+  it('updates a CatalogPreset and writes audit event', async () => {
     vi.mocked(updateAdminCatalogPreset).mockResolvedValue({
       id: presetId,
       slug: 'hair-services',
@@ -1594,8 +1502,6 @@ describe('admin runtime data source', () => {
       body: JSON.stringify({
         name: 'قالب خدمات مو و ابرو',
         isActive: false,
-        reason: 'Archive old service variant language',
-        liveConfirmation: 'LIVE',
       }),
     })
 
@@ -1607,15 +1513,12 @@ describe('admin runtime data source', () => {
       id: presetId,
       name: 'قالب خدمات مو و ابرو',
       isActive: false,
-      reason: 'Archive old service variant language',
-      liveConfirmation: 'LIVE',
     })
     expect(createAdminAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'catalog_preset.update',
         targetType: 'catalog_preset',
         targetId: presetId,
-        reason: 'Archive old service variant language',
       }),
     )
   })
@@ -1672,8 +1575,6 @@ describe('admin runtime data source', () => {
         userId: platformAdminUserId,
         role: 'platform_support',
         active: true,
-        reason: 'Support coverage',
-        liveConfirmation: 'LIVE',
       }),
     })
 
@@ -1683,7 +1584,7 @@ describe('admin runtime data source', () => {
     expect(upsertPlatformAdmin).not.toHaveBeenCalled()
   })
 
-  it('creates platform admin access with reason and LIVE confirmation', async () => {
+  it('creates platform admin access and writes audit event', async () => {
     vi.mocked(upsertPlatformAdmin).mockResolvedValue({
       id: platformAdminId,
       userId: platformAdminUserId,
@@ -1701,8 +1602,6 @@ describe('admin runtime data source', () => {
         userId: platformAdminUserId,
         role: 'platform_support',
         active: true,
-        reason: 'Support coverage',
-        liveConfirmation: 'LIVE',
       }),
     })
 
@@ -1721,39 +1620,7 @@ describe('admin runtime data source', () => {
         action: 'platform_admin.upsert',
         targetType: 'platform_admin',
         targetId: platformAdminId,
-        reason: 'Support coverage',
       }),
     )
-  })
-
-  it('requires a reason before platform admin mutations', async () => {
-    const createRes = await app.request('/api/v1/admin/platform-admins', {
-      method: 'POST',
-      headers: { ...authHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: platformAdminUserId,
-        role: 'platform_support',
-        active: true,
-        liveConfirmation: 'LIVE',
-      }),
-    })
-    const updateRes = await app.request(
-      `/api/v1/admin/platform-admins/${platformAdminId}`,
-      {
-        method: 'PATCH',
-        headers: { ...authHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          role: 'platform_support',
-          active: true,
-          liveConfirmation: 'LIVE',
-        }),
-      },
-    )
-
-    expect(createRes.status).toBe(400)
-    expect(updateRes.status).toBe(400)
-    expect(upsertPlatformAdmin).not.toHaveBeenCalled()
-    expect(updatePlatformAdmin).not.toHaveBeenCalled()
-    expect(createAdminAuditEvent).not.toHaveBeenCalled()
   })
 })

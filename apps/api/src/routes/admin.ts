@@ -122,36 +122,24 @@ const auditQuerySchema = listQuerySchema.extend({
   salonId: z.string().uuid().optional(),
 })
 
-const reasonSchema = z.string().trim().min(3).max(500)
-
 const statusBodySchema = z.object({
   status: z.enum(['active', 'suspended', 'archived']),
-  reason: reasonSchema,
-  liveConfirmation: z.string().trim().optional(),
 })
 
 const setupSalonBodySchema = z.object({
   name: z.string().trim().min(1).max(120),
   intendedOwnerPhone: phoneSchema,
-  reason: reasonSchema,
-  liveConfirmation: z.string().trim().optional(),
 })
 
 const setupOwnerPhoneBodySchema = z.object({
   intendedOwnerPhone: phoneSchema,
-  reason: reasonSchema,
-  liveConfirmation: z.string().trim().optional(),
 })
 
 const setupHandoffBodySchema = z.object({
   enablePublicPage: z.boolean().default(false),
-  reason: reasonSchema,
-  liveConfirmation: z.string().trim().optional(),
 })
 
 const setupMutationMetaSchema = z.object({
-  reason: reasonSchema,
-  liveConfirmation: z.string().trim().optional(),
   override: z.literal(true).optional(),
 })
 
@@ -177,8 +165,6 @@ const setupStaffCreateBodySchema = z.object({
   active: z.boolean().default(true),
   serviceIds: z.array(z.string().uuid()).nullable(),
   schedule: z.array(setupStaffScheduleSchema).max(7),
-  reason: reasonSchema,
-  liveConfirmation: z.string().trim().optional(),
   override: z.literal(true).optional(),
 })
 const setupStaffAccessQuerySchema = z.object({
@@ -198,8 +184,6 @@ const setupClientImportSourceSchema = z.object({
 })
 const setupClientImportBodySchema = setupClientImportSourceSchema.extend({
   selectedLocalIds: z.array(z.string().min(1)).min(1).max(200),
-  reason: reasonSchema,
-  liveConfirmation: z.string().trim().optional(),
 })
 const setupCatalogPresetBodySchema = applyCatalogPresetBodySchema.and(
   setupMutationMetaSchema,
@@ -237,7 +221,6 @@ const setupCatalogPresetParamSchema = idParamSchema.extend({
 
 const noteBodySchema = z.object({
   body: z.string().trim().min(1).max(5000),
-  reason: reasonSchema,
 })
 
 const catalogPresetCreateSchema = z.object({
@@ -247,13 +230,9 @@ const catalogPresetCreateSchema = z.object({
   tree: presetTreeSchema,
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
-  reason: reasonSchema,
-  liveConfirmation: z.string().trim().optional(),
 })
 
-const catalogPresetUpdateSchema = catalogPresetCreateSchema
-  .partial()
-  .extend({ reason: reasonSchema })
+const catalogPresetUpdateSchema = catalogPresetCreateSchema.partial()
 
 const platformRoleSchema = z.enum([
   'platform_owner',
@@ -266,28 +245,15 @@ const platformAdminCreateSchema = z.object({
   userId: z.string().uuid(),
   role: platformRoleSchema,
   active: z.boolean().optional(),
-  reason: reasonSchema,
-  liveConfirmation: z.string().trim().optional(),
 })
 
 const platformAdminUpdateSchema = z.object({
   role: platformRoleSchema.optional(),
   active: z.boolean().optional(),
-  reason: reasonSchema,
-  liveConfirmation: z.string().trim().optional(),
 })
 
 function runtime() {
   return { dataSource: getEnv().ADMIN_DATA_SOURCE }
-}
-
-function requireLiveConfirmation(
-  c: Parameters<typeof error>[0],
-  confirmation: string | undefined,
-) {
-  if (getEnv().ADMIN_DATA_SOURCE !== 'live') return null
-  if (confirmation === 'LIVE') return null
-  return error(c, 'برای تغییر داده زنده عبارت LIVE را وارد کنید', 400)
 }
 
 async function requireExistingSalon(
@@ -402,11 +368,6 @@ export const adminRoute = new Hono<AppEnv>()
     zValidator('json', setupSalonBodySchema),
     async (c) => {
       const body = c.req.valid('json')
-      const liveConfirmationError = requireLiveConfirmation(
-        c,
-        body.liveConfirmation,
-      )
-      if (liveConfirmationError) return liveConfirmationError
 
       const salon = await createSetupSalon({
         name: body.name,
@@ -423,7 +384,6 @@ export const adminRoute = new Hono<AppEnv>()
         targetType: 'salon',
         targetId: salon.id,
         salonId: salon.id,
-        reason: body.reason,
         metadata: { intendedOwnerPhone: '[REDACTED]' },
         request: auditMeta(c),
       })
@@ -470,11 +430,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveConfirmationError = requireLiveConfirmation(
-        c,
-        body.liveConfirmation,
-      )
-      if (liveConfirmationError) return liveConfirmationError
       const lifecycleError = await requireSetupSalon(c, id)
       if (lifecycleError) return lifecycleError
       const salon = await updateSetupSalonOwnerPhone({
@@ -489,7 +444,6 @@ export const adminRoute = new Hono<AppEnv>()
         targetType: 'salon',
         targetId: id,
         salonId: id,
-        reason: body.reason,
         metadata: { intendedOwnerPhone: '[REDACTED]' },
         request: auditMeta(c),
       })
@@ -504,11 +458,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveConfirmationError = requireLiveConfirmation(
-        c,
-        body.liveConfirmation,
-      )
-      if (liveConfirmationError) return liveConfirmationError
       const lifecycleError = await requireSetupSalon(c, id)
       if (lifecycleError) return lifecycleError
       const salon = await getAdminSalon(id)
@@ -544,7 +493,6 @@ export const adminRoute = new Hono<AppEnv>()
         targetType: 'salon',
         targetId: id,
         salonId: id,
-        reason: body.reason,
         metadata: {
           expiresAt: handoff.expiresAt.toISOString(),
           enablePublicPage: body.enablePublicPage,
@@ -562,11 +510,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveConfirmationError = requireLiveConfirmation(
-        c,
-        body.liveConfirmation,
-      )
-      if (liveConfirmationError) return liveConfirmationError
       const lifecycleError = await requireSetupSalon(
         c,
         id,
@@ -595,7 +538,6 @@ export const adminRoute = new Hono<AppEnv>()
         targetType: 'salon',
         targetId: id,
         salonId: id,
-        reason: body.reason,
         metadata: {
           fields: [
             ...(body.workingStart !== undefined ? ['workingStart'] : []),
@@ -619,11 +561,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveConfirmationError = requireLiveConfirmation(
-        c,
-        body.liveConfirmation,
-      )
-      if (liveConfirmationError) return liveConfirmationError
       const lifecycleError = await requireSetupSalon(
         c,
         id,
@@ -631,12 +568,7 @@ export const adminRoute = new Hono<AppEnv>()
         c.var.platformAdmin.role,
       )
       if (lifecycleError) return lifecycleError
-      const {
-        reason,
-        liveConfirmation: _liveConfirmation,
-        override,
-        ...payload
-      } = body
+      const { override, ...payload } = body
       const presence = await updateSalonPresence(id, payload)
       await writeAudit({
         actorUserId: c.var.platformAdmin.userId,
@@ -645,7 +577,6 @@ export const adminRoute = new Hono<AppEnv>()
         targetType: 'salon',
         targetId: id,
         salonId: id,
-        reason,
         metadata: { fields: Object.keys(payload) },
         request: auditMeta(c),
       })
@@ -682,8 +613,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
-      if (liveError) return liveError
       const lifecycleError = await requireSetupSalon(
         c,
         id,
@@ -706,7 +635,6 @@ export const adminRoute = new Hono<AppEnv>()
           targetType: 'client',
           targetId: client.id,
           salonId: id,
-          reason: body.reason,
           metadata: { personalData: '[REDACTED]' },
           request: auditMeta(c),
         })
@@ -749,8 +677,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
-      if (liveError) return liveError
       const lifecycleError = await requireSetupSalon(
         c,
         id,
@@ -781,7 +707,6 @@ export const adminRoute = new Hono<AppEnv>()
         targetType: 'salon',
         targetId: id,
         salonId: id,
-        reason: body.reason,
         metadata: {
           format: body.format,
           imported: result.created.length,
@@ -825,8 +750,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
-      if (liveError) return liveError
       const lifecycleError = await requireSetupSalon(
         c,
         id,
@@ -873,7 +796,6 @@ export const adminRoute = new Hono<AppEnv>()
           targetType: 'staff_profile',
           targetId: profile.id,
           salonId: id,
-          reason: body.reason,
           metadata: {
             phone: '[REDACTED]',
             serviceCount: body.serviceIds?.length ?? 0,
@@ -929,8 +851,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id, presetId } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
-      if (liveError) return liveError
       const lifecycleError = await requireSetupSalon(
         c,
         id,
@@ -954,7 +874,6 @@ export const adminRoute = new Hono<AppEnv>()
           targetType: 'catalog_preset',
           targetId: presetId,
           salonId: id,
-          reason: body.reason,
           metadata: result,
           request: auditMeta(c),
         })
@@ -974,8 +893,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
-      if (liveError) return liveError
       const lifecycleError = await requireSetupSalon(
         c,
         id,
@@ -999,7 +916,6 @@ export const adminRoute = new Hono<AppEnv>()
           targetType: 'service_category',
           targetId: category.id,
           salonId: id,
-          reason: body.reason,
           metadata: { fields: ['name', 'active'] },
           request: auditMeta(c),
         })
@@ -1019,8 +935,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id, entityId } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
-      if (liveError) return liveError
       const lifecycleError = await requireSetupSalon(
         c,
         id,
@@ -1028,7 +942,7 @@ export const adminRoute = new Hono<AppEnv>()
         c.var.platformAdmin.role,
       )
       if (lifecycleError) return lifecycleError
-      const { reason, liveConfirmation: _live, override, ...patch } = body
+      const { override, ...patch } = body
       try {
         const category = await updateServiceCategory(entityId, id, patch)
         if (!category) return error(c, 'دسته خدمات یافت نشد', 404)
@@ -1039,7 +953,6 @@ export const adminRoute = new Hono<AppEnv>()
           targetType: 'service_category',
           targetId: entityId,
           salonId: id,
-          reason,
           metadata: { fields: Object.keys(patch) },
           request: auditMeta(c),
         })
@@ -1059,8 +972,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
-      if (liveError) return liveError
       const lifecycleError = await requireSetupSalon(
         c,
         id,
@@ -1085,7 +996,6 @@ export const adminRoute = new Hono<AppEnv>()
           targetType: 'service_family',
           targetId: family.id,
           salonId: id,
-          reason: body.reason,
           metadata: { fields: ['categoryId', 'name', 'active'] },
           request: auditMeta(c),
         })
@@ -1105,8 +1015,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id, entityId } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
-      if (liveError) return liveError
       const lifecycleError = await requireSetupSalon(
         c,
         id,
@@ -1114,7 +1022,7 @@ export const adminRoute = new Hono<AppEnv>()
         c.var.platformAdmin.role,
       )
       if (lifecycleError) return lifecycleError
-      const { reason, liveConfirmation: _live, override, ...patch } = body
+      const { override, ...patch } = body
       try {
         const family = await updateServiceFamily(entityId, id, patch)
         if (!family) return error(c, 'گروه خدمات یافت نشد', 404)
@@ -1125,7 +1033,6 @@ export const adminRoute = new Hono<AppEnv>()
           targetType: 'service_family',
           targetId: entityId,
           salonId: id,
-          reason,
           metadata: { fields: Object.keys(patch) },
           request: auditMeta(c),
         })
@@ -1145,8 +1052,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
-      if (liveError) return liveError
       const lifecycleError = await requireSetupSalon(
         c,
         id,
@@ -1177,7 +1082,6 @@ export const adminRoute = new Hono<AppEnv>()
           targetType: 'service',
           targetId: service.id,
           salonId: id,
-          reason: body.reason,
           metadata: {
             fields: [
               'name',
@@ -1209,8 +1113,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id, entityId } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
-      if (liveError) return liveError
       const lifecycleError = await requireSetupSalon(
         c,
         id,
@@ -1218,7 +1120,7 @@ export const adminRoute = new Hono<AppEnv>()
         c.var.platformAdmin.role,
       )
       if (lifecycleError) return lifecycleError
-      const { reason, liveConfirmation: _live, override, ...input } = body
+      const { override, ...input } = body
       const patch: Partial<Service> = { ...input }
       if (input.familyId !== undefined) patch.familyId = input.familyId ?? null
       try {
@@ -1231,7 +1133,6 @@ export const adminRoute = new Hono<AppEnv>()
           targetType: 'service',
           targetId: entityId,
           salonId: id,
-          reason,
           metadata: { fields: Object.keys(patch) },
           request: auditMeta(c),
         })
@@ -1251,8 +1152,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
-      if (liveError) return liveError
       const lifecycleError = await requireSetupSalon(
         c,
         id,
@@ -1260,13 +1159,7 @@ export const adminRoute = new Hono<AppEnv>()
         c.var.platformAdmin.role,
       )
       if (lifecycleError) return lifecycleError
-      const {
-        reason,
-        liveConfirmation: _live,
-        override,
-        id: _clientId,
-        ...input
-      } = body
+      const { override, id: _clientId, ...input } = body
       try {
         const addon = await createServiceAddon({ ...input, salonId: id })
         await writeAudit({
@@ -1276,7 +1169,6 @@ export const adminRoute = new Hono<AppEnv>()
           targetType: 'service_addon',
           targetId: addon.id,
           salonId: id,
-          reason,
           metadata: { fields: Object.keys(input) },
           request: auditMeta(c),
         })
@@ -1296,8 +1188,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id, entityId } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveError = requireLiveConfirmation(c, body.liveConfirmation)
-      if (liveError) return liveError
       const lifecycleError = await requireSetupSalon(
         c,
         id,
@@ -1305,7 +1195,7 @@ export const adminRoute = new Hono<AppEnv>()
         c.var.platformAdmin.role,
       )
       if (lifecycleError) return lifecycleError
-      const { reason, liveConfirmation: _live, override, ...patch } = body
+      const { override, ...patch } = body
       try {
         const addon = await updateServiceAddon(entityId, id, patch)
         if (!addon) return error(c, 'افزودنی یافت نشد', 404)
@@ -1316,7 +1206,6 @@ export const adminRoute = new Hono<AppEnv>()
           targetType: 'service_addon',
           targetId: entityId,
           salonId: id,
-          reason,
           metadata: { fields: Object.keys(patch) },
           request: auditMeta(c),
         })
@@ -1399,11 +1288,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveConfirmationError = requireLiveConfirmation(
-        c,
-        body.liveConfirmation,
-      )
-      if (liveConfirmationError) return liveConfirmationError
       const existing = await getAdminSalon(id)
       if (!existing) return error(c, 'سالن یافت نشد', 404)
       if (existing.salon.status === 'setup') {
@@ -1425,7 +1309,6 @@ export const adminRoute = new Hono<AppEnv>()
         targetType: 'salon',
         targetId: id,
         salonId: id,
-        reason: body.reason,
         metadata: { status: body.status },
         request: auditMeta(c),
       })
@@ -1471,7 +1354,6 @@ export const adminRoute = new Hono<AppEnv>()
         targetType: 'salon',
         targetId: id,
         salonId: id,
-        reason: body.reason,
         metadata: { noteId: note.id },
         request: auditMeta(c),
       })
@@ -1528,7 +1410,6 @@ export const adminRoute = new Hono<AppEnv>()
         action: 'user.note.create',
         targetType: 'user',
         targetId: id,
-        reason: body.reason,
         metadata: { noteId: note.id },
         request: auditMeta(c),
       })
@@ -1547,11 +1428,6 @@ export const adminRoute = new Hono<AppEnv>()
     zValidator('json', catalogPresetCreateSchema),
     async (c) => {
       const body = c.req.valid('json')
-      const liveConfirmationError = requireLiveConfirmation(
-        c,
-        body.liveConfirmation,
-      )
-      if (liveConfirmationError) return liveConfirmationError
       const preset = await createAdminCatalogPreset(body)
       await writeAudit({
         actorUserId: c.var.platformAdmin.userId,
@@ -1559,7 +1435,6 @@ export const adminRoute = new Hono<AppEnv>()
         action: 'catalog_preset.create',
         targetType: 'catalog_preset',
         targetId: preset.id,
-        reason: body.reason,
         metadata: { slug: preset.slug },
         request: auditMeta(c),
       })
@@ -1574,11 +1449,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveConfirmationError = requireLiveConfirmation(
-        c,
-        body.liveConfirmation,
-      )
-      if (liveConfirmationError) return liveConfirmationError
       const preset = await updateAdminCatalogPreset({ id, ...body })
       if (!preset) return error(c, 'قالب یافت نشد', 404)
       await writeAudit({
@@ -1587,7 +1457,6 @@ export const adminRoute = new Hono<AppEnv>()
         action: 'catalog_preset.update',
         targetType: 'catalog_preset',
         targetId: id,
-        reason: body.reason,
         metadata: { slug: preset.slug, isActive: preset.isActive },
         request: auditMeta(c),
       })
@@ -1638,11 +1507,6 @@ export const adminRoute = new Hono<AppEnv>()
     zValidator('json', platformAdminCreateSchema),
     async (c) => {
       const body = c.req.valid('json')
-      const liveConfirmationError = requireLiveConfirmation(
-        c,
-        body.liveConfirmation,
-      )
-      if (liveConfirmationError) return liveConfirmationError
       const admin = await upsertPlatformAdmin({
         userId: body.userId,
         role: body.role,
@@ -1655,7 +1519,6 @@ export const adminRoute = new Hono<AppEnv>()
         action: 'platform_admin.upsert',
         targetType: 'platform_admin',
         targetId: admin.id,
-        reason: body.reason,
         metadata: {
           userId: admin.userId,
           role: admin.role,
@@ -1674,11 +1537,6 @@ export const adminRoute = new Hono<AppEnv>()
     async (c) => {
       const { id } = c.req.valid('param')
       const body = c.req.valid('json')
-      const liveConfirmationError = requireLiveConfirmation(
-        c,
-        body.liveConfirmation,
-      )
-      if (liveConfirmationError) return liveConfirmationError
       const target = await getPlatformAdminById(id)
       if (!target) return error(c, 'ادمین پلتفرم یافت نشد', 404)
       const ownerCount = await countActivePlatformOwners()
@@ -1703,7 +1561,6 @@ export const adminRoute = new Hono<AppEnv>()
         action: 'platform_admin.update',
         targetType: 'platform_admin',
         targetId: admin.id,
-        reason: body.reason,
         metadata: {
           userId: admin.userId,
           role: admin.role,

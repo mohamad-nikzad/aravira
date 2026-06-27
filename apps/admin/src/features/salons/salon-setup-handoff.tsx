@@ -7,16 +7,8 @@ import {
   postApiV1AdminSalonsByIdSetupHandoffMutation,
 } from '@repo/api-client/query'
 
-import {
-  CheckboxField,
-  FormField,
-  TextAreaField,
-} from '#/components/admin/form-field'
-import {
-  LiveConfirmationInput,
-  LiveDataWarning,
-  liveConfirmationFromForm,
-} from '#/components/admin/live-data-form'
+import { CheckboxField, FormField } from '#/components/admin/form-field'
+import { LiveDataWarning } from '#/components/admin/live-data-form'
 import { MutationError } from '#/components/admin/mutation-error'
 import { Panel } from '#/components/admin/panel'
 import { Button } from '#/components/ui/button'
@@ -64,8 +56,6 @@ export function SalonSetupHandoff({
       path: { id: salonId },
       body: {
         intendedOwnerPhone: String(form.get('intendedOwnerPhone') ?? ''),
-        reason: String(form.get('reason') ?? ''),
-        liveConfirmation: liveConfirmationFromForm(form, isLiveData),
       },
     })
   }
@@ -78,8 +68,6 @@ export function SalonSetupHandoff({
       path: { id: salonId },
       body: {
         enablePublicPage: form.get('enablePublicPage') === 'on',
-        reason: String(form.get('reason') ?? ''),
-        liveConfirmation: liveConfirmationFromForm(form, isLiveData),
       },
     })
   }
@@ -102,7 +90,7 @@ export function SalonSetupHandoff({
           </div>
           <LiveDataWarning
             show={isLiveData}
-            message="شماره مالک روی داده زنده تغییر می‌کند. برای ادامه LIVE را وارد کنید."
+            message="شماره مالک روی داده زنده تغییر می‌کند."
           />
           <FormField
             label="شماره موبایل"
@@ -111,13 +99,6 @@ export function SalonSetupHandoff({
             defaultValue={intendedOwnerPhone}
             required
           />
-          <TextAreaField
-            label="دلیل اصلاح شماره"
-            name="reason"
-            rows={2}
-            required
-          />
-          <LiveConfirmationInput show={isLiveData} />
           <MutationError error={phoneMutation.error} />
           <Button type="submit" disabled={phoneMutation.isPending}>
             <Save data-icon="inline-start" />
@@ -135,13 +116,7 @@ export function SalonSetupHandoff({
           </div>
           <LiveDataWarning
             show={isLiveData}
-            message="ساخت لینک روی داده زنده ثبت می‌شود. برای ادامه LIVE را وارد کنید."
-          />
-          <TextAreaField
-            label="دلیل ساخت لینک"
-            name="reason"
-            rows={2}
-            required
+            message="ساخت لینک روی داده زنده ثبت می‌شود."
           />
           <CheckboxField
             name="enablePublicPage"
@@ -150,7 +125,6 @@ export function SalonSetupHandoff({
           <p className="-mt-2 text-xs leading-5 text-muted-foreground">
             به‌صورت پیش‌فرض خاموش است و تا پیش از تکمیل تحویل منتشر نمی‌شود.
           </p>
-          <LiveConfirmationInput show={isLiveData} />
           <MutationError error={handoffMutation.error} />
           <Button type="submit" disabled={handoffMutation.isPending}>
             <Link2 data-icon="inline-start" />

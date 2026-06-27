@@ -74,8 +74,6 @@ export type AdminSetupSalonResponse = {
 export type AdminSetupSalonCreateRequest = {
     name: string;
     intendedOwnerPhone: string;
-    reason: string;
-    liveConfirmation?: string;
 };
 
 export type AdminSalonDetailResponse = {
@@ -122,8 +120,6 @@ export type AdminSetupOwnerPhoneResponse = {
 
 export type AdminSetupOwnerPhonePatchRequest = {
     intendedOwnerPhone: string;
-    reason: string;
-    liveConfirmation?: string;
 };
 
 export type AdminSetupHandoffResponse = {
@@ -133,8 +129,6 @@ export type AdminSetupHandoffResponse = {
 
 export type AdminSetupHandoffCreateRequest = {
     enablePublicPage?: boolean;
-    reason: string;
-    liveConfirmation?: string;
 };
 
 export type AdminSetupSalonHoursResponse = {
@@ -146,8 +140,6 @@ export type AdminSetupSalonHoursPatchRequest = {
     workingEnd?: string;
     slotDurationMinutes?: number;
     workingDays?: number;
-    reason: string;
-    liveConfirmation?: string;
     override?: true;
 };
 
@@ -164,8 +156,6 @@ export type AdminSetupSalonPresencePatchRequest = {
     socialTelegram?: string | null;
     socialWhatsapp?: string | null;
     website?: string | null;
-    reason: string;
-    liveConfirmation?: string;
     override?: true;
 };
 
@@ -201,8 +191,6 @@ export type AdminSetupStaffCreateRequest = {
         workingStart: string;
         workingEnd: string;
     }>;
-    reason: string;
-    liveConfirmation?: string;
     override?: true;
 };
 
@@ -217,8 +205,6 @@ export type AdminSetupClientCreateRequest = {
     phone: string;
     notes?: string;
     tags?: Array<string>;
-    reason: string;
-    liveConfirmation?: string;
     override?: true;
 };
 
@@ -261,8 +247,6 @@ export type AdminSetupClientImportResponse = {
 
 export type AdminSetupClientImportRequest = AdminSetupClientImportSource & {
     selectedLocalIds: Array<string>;
-    reason: string;
-    liveConfirmation?: string;
 };
 
 export type AdminSetupCatalogResponse = {
@@ -308,24 +292,18 @@ export type AdminSetupCatalogPresetApplyRequest = {
             variantIndices: Array<number>;
         }>;
     }>;
-    reason: string;
-    liveConfirmation?: string;
     override?: true;
 };
 
 export type AdminSetupCategoryCreateRequest = {
     name: string;
     active?: boolean;
-    reason: string;
-    liveConfirmation?: string;
     override?: true;
 };
 
 export type AdminSetupCategoryUpdateRequest = {
     name?: string;
     active?: boolean;
-    reason: string;
-    liveConfirmation?: string;
     override?: true;
 };
 
@@ -333,8 +311,6 @@ export type AdminSetupFamilyCreateRequest = {
     categoryId: string;
     name: string;
     active?: boolean;
-    reason: string;
-    liveConfirmation?: string;
     override?: true;
 };
 
@@ -342,8 +318,6 @@ export type AdminSetupFamilyUpdateRequest = {
     categoryId?: string;
     name?: string;
     active?: boolean;
-    reason: string;
-    liveConfirmation?: string;
     override?: true;
 };
 
@@ -357,8 +331,6 @@ export type AdminSetupServiceCreateRequest = {
     active?: boolean;
     description?: string;
     kind?: 'standard' | 'combo';
-    reason: string;
-    liveConfirmation?: string;
     override?: true;
 };
 
@@ -372,8 +344,6 @@ export type AdminSetupServiceUpdateRequest = {
     active?: boolean;
     description?: string;
     kind?: 'standard' | 'combo';
-    reason: string;
-    liveConfirmation?: string;
     override?: true;
 };
 
@@ -395,8 +365,6 @@ export type AdminSetupAddonCreateRequest = {
         type: 'service';
         serviceId: string;
     }>;
-    reason: string;
-    liveConfirmation?: string;
     override?: true;
 };
 
@@ -418,8 +386,6 @@ export type AdminSetupAddonUpdateRequest = {
         type: 'service';
         serviceId: string;
     }>;
-    reason: string;
-    liveConfirmation?: string;
     override?: true;
 };
 
@@ -460,8 +426,6 @@ export type AdminSalonServicesResponse = {
 
 export type AdminSalonStatusUpdateRequest = {
     status: 'active' | 'suspended' | 'archived';
-    reason: string;
-    liveConfirmation?: string;
 };
 
 export type AdminNotesResponse = {
@@ -485,7 +449,6 @@ export type AdminNoteResponse = {
 
 export type AdminNoteCreateRequest = {
     body: string;
-    reason: string;
 };
 
 export type AdminUsersResponse = {
@@ -529,8 +492,6 @@ export type AdminCatalogPresetCreateRequest = {
     }>;
     sortOrder?: number;
     isActive?: boolean;
-    reason: string;
-    liveConfirmation?: string;
 };
 
 export type AdminCatalogPresetUpdateRequest = {
@@ -542,8 +503,6 @@ export type AdminCatalogPresetUpdateRequest = {
     }>;
     sortOrder?: number;
     isActive?: boolean;
-    reason: string;
-    liveConfirmation?: string;
 };
 
 export type AdminMessagingHealthResponse = {
@@ -603,15 +562,11 @@ export type AdminPlatformAdminCreateRequest = {
     userId: string;
     role: PlatformRole;
     active?: boolean;
-    reason: string;
-    liveConfirmation?: string;
 };
 
 export type AdminPlatformAdminUpdateRequest = {
     role?: PlatformRole;
     active?: boolean;
-    reason: string;
-    liveConfirmation?: string;
 };
 
 export type ClientsListResponse = {

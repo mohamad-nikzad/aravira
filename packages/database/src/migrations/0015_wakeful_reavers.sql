@@ -1,0 +1,1 @@
+ALTER TABLE "admin_audit_events" DROP COLUMN "reason";

@@ -312,8 +312,8 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
                 <AlertDescription className="flex flex-col items-start gap-3">
                   <p>
                     این حالت داده‌های عملیاتی سالن فعال را تغییر می‌دهد. هر
-                    تغییر به نام شما، با دلیل و جزئیات درخواست ممیزی می‌شود. هیچ
-                    نشست مستاجر یا جانشینی کاربر سالن ساخته نمی‌شود.
+                    تغییر به نام شما و با جزئیات درخواست ممیزی می‌شود. هیچ نشست
+                    مستاجر یا جانشینی کاربر سالن ساخته نمی‌شود.
                   </p>
                   <Button
                     type="button"
@@ -332,8 +332,8 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
                 <AlertTitle>Override فعال است</AlertTitle>
                 <AlertDescription className="flex flex-col items-start gap-3">
                   <p>
-                    در حال ویرایش داده زنده سالن هستید. دلیل و LIVE برای هر
-                    تغییر الزامی است.
+                    در حال ویرایش داده زنده سالن هستید. تغییرات با حساب شما در
+                    گزارش ممیزی ثبت می‌شود.
                   </p>
                   <Button
                     type="button"

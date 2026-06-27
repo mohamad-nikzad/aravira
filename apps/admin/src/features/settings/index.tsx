@@ -11,12 +11,8 @@ import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Eye, LockKeyhole, Plus, ShieldCheck, UserRound } from 'lucide-react'
 
 import { AdminListTable } from '#/components/admin/admin-list-table'
-import { CheckboxField, TextAreaField } from '#/components/admin/form-field'
-import {
-  LiveConfirmationInput,
-  LiveDataWarning,
-  liveConfirmationFromForm,
-} from '#/components/admin/live-data-form'
+import { CheckboxField } from '#/components/admin/form-field'
+import { LiveDataWarning } from '#/components/admin/live-data-form'
 import { MutationError } from '#/components/admin/mutation-error'
 import {
   MutationSuccess,
@@ -230,8 +226,6 @@ function PlatformAdminSheet({
       userId: String(form.get('userId') ?? ''),
       role: String(form.get('role') ?? 'platform_viewer') as PlatformRole,
       active: form.get('active') === 'on',
-      reason: String(form.get('reason') ?? ''),
-      liveConfirmation: liveConfirmationFromForm(form, isLiveData),
     }
     if (isNew) {
       createMutation.mutate({ body })
@@ -242,8 +236,6 @@ function PlatformAdminSheet({
       body: {
         role: body.role,
         active: body.active,
-        reason: body.reason,
-        liveConfirmation: body.liveConfirmation,
       },
     })
   }
@@ -262,7 +254,7 @@ function PlatformAdminSheet({
         <form className="mt-6 flex flex-col gap-4" onSubmit={submit}>
           <LiveDataWarning
             show={isLiveData}
-            message="این تغییر دسترسی روی داده LIVE تولید اعمال می‌شود. برای ادامه LIVE را وارد کنید."
+            message="این تغییر دسترسی روی داده LIVE تولید اعمال می‌شود."
           />
           <UserPicker
             name="userId"
@@ -290,8 +282,6 @@ function PlatformAdminSheet({
             name="active"
             defaultChecked={source.active !== false}
           />
-          <TextAreaField label="دلیل" name="reason" rows={3} required />
-          <LiveConfirmationInput show={isLiveData} />
           <MutationError error={activeMutation.error} />
           <Button disabled={activeMutation.isPending} type="submit">
             <ShieldCheck className="h-4 w-4" />

@@ -46,7 +46,6 @@ async function auditPlatformReply(
     targetType: 'support_message',
     targetId: result.message.id,
     salonId: result.ticket.salonId,
-    reason: 'support_ticket_reply',
     metadata: baseMetadata,
     request,
   })
@@ -59,7 +58,6 @@ async function auditPlatformReply(
       targetType: 'support_ticket',
       targetId: result.ticket.id,
       salonId: result.ticket.salonId,
-      reason: 'support_ticket_status_change',
       metadata: {
         previousStatus: result.previousStatus,
         resultingStatus: result.resultingStatus,
@@ -145,7 +143,6 @@ export const adminSupportTicketsRoute = new Hono<AppEnv>()
           targetType: 'support_ticket',
           targetId: result.ticket.id,
           salonId: result.ticket.salonId,
-          reason: 'support_ticket_status_change',
           metadata: {
             previousStatus: result.previousStatus,
             resultingStatus: result.resultingStatus,

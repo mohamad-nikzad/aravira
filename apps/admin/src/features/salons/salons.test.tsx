@@ -352,9 +352,6 @@ describe('salons feature', () => {
     fireEvent.change(screen.getByLabelText('شماره تلفن مالک موردنظر'), {
       target: { value: '+98 912 123 4567' },
     })
-    fireEvent.change(screen.getByLabelText('دلیل'), {
-      target: { value: 'Signed agreement' },
-    })
     fireEvent.click(
       screen.getByRole('button', { name: 'ایجاد سالن راه‌اندازی' }),
     )
@@ -364,8 +361,6 @@ describe('salons feature', () => {
       body: {
         name: 'Setup Aftab',
         intendedOwnerPhone: '+98 912 123 4567',
-        reason: 'Signed agreement',
-        liveConfirmation: undefined,
       },
     })
   })
@@ -448,9 +443,6 @@ describe('salons feature', () => {
     fireEvent.change(screen.getByLabelText('ساعت باز شدن'), {
       target: { value: '10:00' },
     })
-    fireEvent.change(screen.getAllByLabelText('دلیل تغییر')[0]!, {
-      target: { value: 'Prepare salon hours' },
-    })
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره ساعت کاری' }))
 
     await waitFor(() => expect(generated.patchSetupHours).toHaveBeenCalled())
@@ -461,8 +453,6 @@ describe('salons feature', () => {
         workingEnd: '19:00',
         slotDurationMinutes: 30,
         workingDays: 126,
-        reason: 'Prepare salon hours',
-        liveConfirmation: undefined,
       },
     })
     expect(await screen.findByText('ساعت پایان نامعتبر است')).toBeTruthy()
@@ -473,9 +463,6 @@ describe('salons feature', () => {
     fireEvent.change(screen.getByLabelText('آدرس'), {
       target: { value: 'New address' },
     })
-    fireEvent.change(screen.getAllByLabelText('دلیل تغییر')[1]!, {
-      target: { value: 'Prepare salon presence' },
-    })
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره حضور سالن' }))
 
     await waitFor(() => expect(generated.patchSetupPresence).toHaveBeenCalled())
@@ -484,7 +471,6 @@ describe('salons feature', () => {
         path: { id: salonId },
         body: expect.objectContaining({
           address: 'New address',
-          reason: 'Prepare salon presence',
         }),
       }),
     )
@@ -535,9 +521,6 @@ describe('salons feature', () => {
     const categoryName = await screen.findByLabelText('دسته جدید')
     const categoryForm = categoryName.closest('form')!
     fireEvent.change(categoryName, { target: { value: 'مو' } })
-    fireEvent.change(categoryForm.querySelector('[name="reason"]')!, {
-      target: { value: 'Prepare categories' },
-    })
     fireEvent.submit(categoryForm)
 
     await waitFor(() => expect(generated.mutateSetupCatalog).toHaveBeenCalled())
@@ -546,16 +529,11 @@ describe('salons feature', () => {
       body: {
         name: 'مو',
         active: true,
-        reason: 'Prepare categories',
       },
     })
 
     const presetButton = screen.getByRole('button', {
       name: 'اعمال همه خدمات قالب',
-    })
-    const presetForm = presetButton.closest('form')!
-    fireEvent.change(presetForm.querySelector('[name="reason"]')!, {
-      target: { value: 'Use starter preset' },
     })
     fireEvent.click(presetButton)
 
@@ -574,7 +552,6 @@ describe('salons feature', () => {
             families: [{ familyIndex: 0, variantIndices: [0] }],
           },
         ],
-        reason: 'Use starter preset',
       },
     })
   })
@@ -721,9 +698,6 @@ describe('salons feature', () => {
     fireEvent.change(add.getByLabelText('شماره موبایل'), {
       target: { value: '۰۹۱۲۳۴۵۶۷۸۹' },
     })
-    fireEvent.change(add.getByLabelText('دلیل افزودن'), {
-      target: { value: 'Prepare client' },
-    })
     fireEvent.click(add.getByRole('button', { name: 'افزودن مشتری' }))
     await waitFor(() => expect(generated.createSetupClient).toHaveBeenCalled())
 
@@ -741,9 +715,6 @@ describe('salons feature', () => {
       expect(generated.previewSetupClientImport).toHaveBeenCalled(),
     )
     fireEvent.click(await importUi.findByLabelText('انتخاب Sara'))
-    fireEvent.change(importUi.getByLabelText('دلیل ورود'), {
-      target: { value: 'Import selected clients' },
-    })
     fireEvent.click(
       importUi.getByRole('button', { name: /تأیید و ورود 1 مشتری/ }),
     )
@@ -755,8 +726,6 @@ describe('salons feature', () => {
         format: 'csv',
         source,
         selectedLocalIds: ['csv-1'],
-        reason: 'Import selected clients',
-        liveConfirmation: undefined,
       },
     })
   })
@@ -850,7 +819,7 @@ describe('salons feature', () => {
     expect(generated.getSetup).not.toHaveBeenCalled()
   })
 
-  it('renders salon overview detail and submits a live-data status change with reason and confirmation', async () => {
+  it('renders salon overview detail and submits a live-data status change', async () => {
     generated.getSalon.mockResolvedValue({
       salon: {
         id: salonId,
@@ -889,12 +858,6 @@ describe('salons feature', () => {
 
     fireEvent.click(screen.getByRole('combobox', { name: 'وضعیت' }))
     fireEvent.click(await screen.findByRole('option', { name: 'تعلیق‌شده' }))
-    fireEvent.change(screen.getByLabelText('دلیل'), {
-      target: { value: 'Policy review' },
-    })
-    fireEvent.change(screen.getByLabelText('تأیید داده LIVE'), {
-      target: { value: 'LIVE' },
-    })
     fireEvent.click(screen.getByRole('button', { name: /به‌روزرسانی وضعیت/ }))
 
     await waitFor(() => {
@@ -909,8 +872,6 @@ describe('salons feature', () => {
       path: { id: salonId },
       body: {
         status: 'suspended',
-        reason: 'Policy review',
-        liveConfirmation: 'LIVE',
       },
     })
   })
@@ -943,12 +904,6 @@ describe('salons feature', () => {
     fireEvent.change(screen.getByLabelText('یادداشت'), {
       target: { value: 'Call owner again' },
     })
-    fireEvent.change(
-      screen.getByPlaceholderText('ثبت دلیل برای گزارش ممیزی الزامی است'),
-      {
-        target: { value: 'Internal follow-up note' },
-      },
-    )
     fireEvent.click(screen.getByRole('button', { name: /افزودن یادداشت/ }))
 
     await waitFor(() => {
@@ -963,7 +918,6 @@ describe('salons feature', () => {
       path: { id: salonId },
       body: {
         body: 'Call owner again',
-        reason: 'Internal follow-up note',
       },
     })
   })

@@ -48,7 +48,6 @@ function record(value: unknown): Record<string, unknown> {
 
 export function SalonSetupStaff({
   salonId,
-  isLiveData,
   overrideMode,
 }: {
   salonId: string
@@ -74,8 +73,6 @@ export function SalonSetupStaff({
   const [active, setActive] = useState(true)
   const [serviceIds, setServiceIds] = useState<string[]>([])
   const [schedule, setSchedule] = useState(defaultSchedule)
-  const [reason, setReason] = useState('آماده‌سازی پروفایل پرسنل')
-  const [liveConfirmation, setLiveConfirmation] = useState('')
 
   const mutation = useMutation({
     ...postApiV1AdminSalonsByIdSetupStaffMutation(),
@@ -118,8 +115,6 @@ export function SalonSetupStaff({
                 active,
                 serviceIds,
                 schedule,
-                reason,
-                ...(isLiveData ? { liveConfirmation } : {}),
                 ...(overrideMode ? { override: true as const } : {}),
               },
             })
@@ -257,29 +252,6 @@ export function SalonSetupStaff({
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="setup-staff-reason">دلیل تغییر</Label>
-              <Input
-                id="setup-staff-reason"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                required
-              />
-            </div>
-            {isLiveData ? (
-              <div className="space-y-2">
-                <Label htmlFor="setup-staff-live">تایید داده زنده</Label>
-                <Input
-                  id="setup-staff-live"
-                  value={liveConfirmation}
-                  onChange={(e) => setLiveConfirmation(e.target.value)}
-                  placeholder="LIVE"
-                  required
-                />
-              </div>
-            ) : null}
-          </div>
           <MutationError error={mutation.error} />
           <Button
             type="submit"

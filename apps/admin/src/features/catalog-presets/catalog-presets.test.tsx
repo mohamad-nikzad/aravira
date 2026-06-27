@@ -128,9 +128,6 @@ describe('catalog presets feature', () => {
     fireEvent.change(screen.getByLabelText('نسخه سرویس'), {
       target: { value: 'Root color' },
     })
-    fireEvent.change(screen.getByLabelText('دلیل'), {
-      target: { value: 'Add starter service template' },
-    })
     fireEvent.click(screen.getByRole('button', { name: /ذخیره الگوی کاتالوگ/ }))
 
     await waitFor(() => {
@@ -162,7 +159,6 @@ describe('catalog presets feature', () => {
         ],
         sortOrder: 0,
         isActive: true,
-        reason: 'Add starter service template',
       },
     })
   })
@@ -210,13 +206,6 @@ describe('catalog presets feature', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /ویرایش/ }))
     expect(screen.getByText(/داده LIVE تولید/)).toBeTruthy()
-
-    fireEvent.change(screen.getByLabelText('دلیل'), {
-      target: { value: 'Fix service variant name' },
-    })
-    fireEvent.change(screen.getByLabelText('تأیید داده LIVE'), {
-      target: { value: 'LIVE' },
-    })
     fireEvent.click(screen.getByRole('button', { name: /ذخیره الگوی کاتالوگ/ }))
 
     await waitFor(() => {
@@ -227,8 +216,6 @@ describe('catalog presets feature', () => {
       body: {
         slug: 'starter-services',
         name: 'Starter services',
-        reason: 'Fix service variant name',
-        liveConfirmation: 'LIVE',
       },
     })
   })

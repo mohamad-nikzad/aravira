@@ -66,40 +66,10 @@ function number(form: FormData, name: string) {
   return Number(form.get(name) ?? 0)
 }
 
-function mutationMeta(
-  form: FormData,
-  isLiveData: boolean,
-  overrideMode: boolean,
-) {
+function mutationMeta(overrideMode: boolean) {
   return {
-    reason: string(form, 'reason'),
-    ...(isLiveData
-      ? { liveConfirmation: string(form, 'liveConfirmation') }
-      : {}),
     ...(overrideMode ? { override: true as const } : {}),
   }
-}
-
-function MutationFields({ isLiveData }: { isLiveData: boolean }) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <Field
-        label="دلیل تغییر"
-        name="reason"
-        required
-        placeholder="آماده‌سازی کاتالوگ سالن"
-      />
-      {isLiveData ? (
-        <Field
-          label="تأیید داده زنده"
-          name="liveConfirmation"
-          required
-          placeholder="LIVE"
-          dir="ltr"
-        />
-      ) : null}
-    </div>
-  )
 }
 
 function Field({
@@ -117,7 +87,6 @@ function Field({
 
 export function SalonSetupCatalog({
   salonId,
-  isLiveData,
   overrideMode,
 }: {
   salonId: string
@@ -211,7 +180,6 @@ export function SalonSetupCatalog({
               className="rounded-xl border bg-muted/20 p-4"
               onSubmit={(event) => {
                 event.preventDefault()
-                const form = new FormData(event.currentTarget)
                 applyPreset.mutate({
                   path: { id: salonId, presetId: preset.id },
                   body: {
@@ -226,7 +194,7 @@ export function SalonSetupCatalog({
                         }),
                       ),
                     })),
-                    ...mutationMeta(form, isLiveData, overrideMode),
+                    ...mutationMeta(overrideMode),
                   },
                 })
               }}
@@ -235,7 +203,6 @@ export function SalonSetupCatalog({
                 <Sparkles className="size-4 text-primary" />
                 <strong>{preset.name}</strong>
               </div>
-              <MutationFields isLiveData={isLiveData} />
               <Button
                 className="mt-3 w-full"
                 type="submit"
@@ -265,7 +232,7 @@ export function SalonSetupCatalog({
                 body: {
                   name: string(form, 'name'),
                   active: true,
-                  ...mutationMeta(form, isLiveData, overrideMode),
+                  ...mutationMeta(overrideMode),
                 },
               })
             }}
@@ -276,7 +243,6 @@ export function SalonSetupCatalog({
               required
               placeholder="مثلاً مو"
             />
-            <MutationFields isLiveData={isLiveData} />
             <Button type="submit" variant="outline">
               <Plus /> افزودن دسته
             </Button>
@@ -292,11 +258,10 @@ export function SalonSetupCatalog({
                   body: {
                     name: string(form, 'name'),
                     active: form.get('active') === 'on',
-                    ...mutationMeta(form, isLiveData, overrideMode),
+                    ...mutationMeta(overrideMode),
                   },
                 })
               }
-              isLiveData={isLiveData}
             />
           ))}
         </CatalogSection>
@@ -313,7 +278,7 @@ export function SalonSetupCatalog({
                   categoryId: string(form, 'categoryId'),
                   name: string(form, 'name'),
                   active: true,
-                  ...mutationMeta(form, isLiveData, overrideMode),
+                  ...mutationMeta(overrideMode),
                 },
               })
             }}
@@ -330,7 +295,6 @@ export function SalonSetupCatalog({
               rows={categories}
               required
             />
-            <MutationFields isLiveData={isLiveData} />
             <Button type="submit" variant="outline">
               <Plus /> افزودن گروه
             </Button>
@@ -356,11 +320,10 @@ export function SalonSetupCatalog({
                     categoryId: string(form, 'categoryId'),
                     name: string(form, 'name'),
                     active: form.get('active') === 'on',
-                    ...mutationMeta(form, isLiveData, overrideMode),
+                    ...mutationMeta(overrideMode),
                   },
                 })
               }
-              isLiveData={isLiveData}
             />
           ))}
         </CatalogSection>
@@ -369,11 +332,10 @@ export function SalonSetupCatalog({
           <ServiceForm
             categories={categories}
             families={families}
-            isLiveData={isLiveData}
             onSubmit={(form) =>
               createService.mutate({
                 path: { id: salonId },
-                body: serviceBody(form, isLiveData, overrideMode, true),
+                body: serviceBody(form, overrideMode, true),
               })
             }
           />
@@ -392,10 +354,9 @@ export function SalonSetupCatalog({
               onSubmit={(form) =>
                 updateService.mutate({
                   path: { id: salonId, entityId: row.id },
-                  body: serviceBody(form, isLiveData, overrideMode),
+                  body: serviceBody(form, overrideMode),
                 })
               }
-              isLiveData={isLiveData}
               hideName
             />
           ))}
@@ -403,11 +364,10 @@ export function SalonSetupCatalog({
 
         <CatalogSection title="افزودنی‌ها" count={addons.length}>
           <AddonForm
-            isLiveData={isLiveData}
             onSubmit={(form) =>
               createAddon.mutate({
                 path: { id: salonId },
-                body: addonBody(form, isLiveData, overrideMode, true),
+                body: addonBody(form, overrideMode, true),
               })
             }
           />
@@ -420,16 +380,9 @@ export function SalonSetupCatalog({
               onSubmit={(form) =>
                 updateAddon.mutate({
                   path: { id: salonId, entityId: row.id },
-                  body: addonBody(
-                    form,
-                    isLiveData,
-                    overrideMode,
-                    false,
-                    row.scopes,
-                  ),
+                  body: addonBody(form, overrideMode, false, row.scopes),
                 })
               }
-              isLiveData={isLiveData}
               hideName
             />
           ))}
@@ -461,14 +414,12 @@ function EditableRow({
   active = true,
   extra,
   onSubmit,
-  isLiveData,
   hideName,
 }: {
   label: string
   active?: boolean
   extra?: React.ReactNode
   onSubmit: (form: FormData) => void
-  isLiveData: boolean
   hideName?: boolean
 }) {
   return (
@@ -491,7 +442,6 @@ function EditableRow({
         <label className="flex items-center gap-2 text-sm font-medium">
           <Checkbox name="active" defaultChecked={active} /> فعال
         </label>
-        <MutationFields isLiveData={isLiveData} />
         <Button type="submit">
           <Check /> ذخیره تغییرات
         </Button>
@@ -590,12 +540,10 @@ function ServiceFields({
 function ServiceForm({
   categories,
   families,
-  isLiveData,
   onSubmit,
 }: {
   categories: Row[]
   families: Family[]
-  isLiveData: boolean
   onSubmit: (form: FormData) => void
 }) {
   return (
@@ -607,7 +555,6 @@ function ServiceForm({
       }}
     >
       <ServiceFields categories={categories} families={families} />
-      <MutationFields isLiveData={isLiveData} />
       <Button type="submit" variant="outline">
         <Plus /> افزودن خدمت
       </Button>
@@ -615,12 +562,7 @@ function ServiceForm({
   )
 }
 
-function serviceBody(
-  form: FormData,
-  isLiveData: boolean,
-  overrideMode: boolean,
-  isCreate = false,
-) {
+function serviceBody(form: FormData, overrideMode: boolean, isCreate = false) {
   return {
     name: string(form, 'name'),
     categoryId: string(form, 'categoryId'),
@@ -630,7 +572,7 @@ function serviceBody(
     color: string(form, 'color'),
     active: isCreate || form.get('active') !== null,
     kind: 'standard' as const,
-    ...mutationMeta(form, isLiveData, overrideMode),
+    ...mutationMeta(overrideMode),
   }
 }
 
@@ -663,13 +605,7 @@ function AddonFields({ row }: { row?: Addon }) {
   )
 }
 
-function AddonForm({
-  isLiveData,
-  onSubmit,
-}: {
-  isLiveData: boolean
-  onSubmit: (form: FormData) => void
-}) {
+function AddonForm({ onSubmit }: { onSubmit: (form: FormData) => void }) {
   return (
     <form
       className="space-y-3 rounded-xl border border-dashed p-4"
@@ -679,7 +615,6 @@ function AddonForm({
       }}
     >
       <AddonFields />
-      <MutationFields isLiveData={isLiveData} />
       <Button type="submit" variant="outline">
         <Plus /> افزودن افزودنی
       </Button>
@@ -689,7 +624,6 @@ function AddonForm({
 
 function addonBody(
   form: FormData,
-  isLiveData: boolean,
   overrideMode: boolean,
   isCreate = false,
   scopes: AddonScope[] = [],
@@ -701,6 +635,6 @@ function addonBody(
     active: isCreate || form.get('active') !== null,
     sortOrder: 0,
     scopes,
-    ...mutationMeta(form, isLiveData, overrideMode),
+    ...mutationMeta(overrideMode),
   }
 }

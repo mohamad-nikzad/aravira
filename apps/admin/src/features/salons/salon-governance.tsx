@@ -8,11 +8,7 @@ import { useState, type FormEvent } from 'react'
 
 import { SelectField } from '#/components/admin/select-field'
 import { TextAreaField } from '#/components/admin/form-field'
-import {
-  LiveConfirmationInput,
-  LiveDataWarning,
-  liveConfirmationFromForm,
-} from '#/components/admin/live-data-form'
+import { LiveDataWarning } from '#/components/admin/live-data-form'
 import { MutationError } from '#/components/admin/mutation-error'
 import { ScreenSkeleton } from '#/components/admin/screen-skeleton'
 import { Button } from '#/components/ui/button'
@@ -25,7 +21,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '#/components/ui/dialog'
-import { Input } from '#/components/ui/input'
 import { formatDate } from '#/lib/admin-format'
 
 import { ErrorPanel } from '#/components/admin/error-panel'
@@ -69,8 +64,6 @@ export function StatusForm({
           AdminSalonStatus,
           'setup'
         >,
-        reason: String(form.get('reason') ?? ''),
-        liveConfirmation: liveConfirmationFromForm(form, isLiveData),
       },
       {
         onSuccess: () => {
@@ -100,7 +93,7 @@ export function StatusForm({
             <DialogHeader>
               <DialogTitle>تغییر وضعیت سالن</DialogTitle>
               <DialogDescription>
-                دلیل این تغییر را برای ثبت در گزارش ممیزی وارد کنید.
+                وضعیت جدید سالن را انتخاب کنید.
               </DialogDescription>
             </DialogHeader>
             <form
@@ -110,7 +103,7 @@ export function StatusForm({
             >
               <LiveDataWarning
                 show={isLiveData}
-                message="تغییر وضعیت سالن روی داده‌های زنده تولیدی اعمال می‌شود. برای ادامه LIVE را وارد کنید."
+                message="تغییر وضعیت سالن روی داده‌های زنده تولیدی اعمال می‌شود."
               />
               <SelectField
                 label="وضعیت"
@@ -122,14 +115,6 @@ export function StatusForm({
                   ['archived', 'آرشیوشده'],
                 ]}
               />
-              <TextAreaField
-                label="دلیل"
-                name="reason"
-                placeholder="ثبت دلیل برای گزارش ممیزی الزامی است"
-                rows={3}
-                required
-              />
-              <LiveConfirmationInput show={isLiveData} />
               <DialogFooter>
                 <Button type="submit" disabled={pending}>
                   <RefreshCw className="h-4 w-4" />
@@ -171,7 +156,6 @@ export function NotesPanel({
     onSubmit(
       {
         body: String(form.get('body') ?? ''),
-        reason: String(form.get('reason') ?? ''),
       },
       {
         onSuccess: () => {
@@ -185,11 +169,6 @@ export function NotesPanel({
     <Panel title="یادداشت‌های داخلی">
       <form className="space-y-3" onSubmit={submit}>
         <TextAreaField label="یادداشت" name="body" rows={3} required />
-        <Input
-          name="reason"
-          placeholder="ثبت دلیل برای گزارش ممیزی الزامی است"
-          required
-        />
         <MutationError error={error} />
         <Button type="submit" disabled={pending}>
           <Plus className="h-4 w-4" />

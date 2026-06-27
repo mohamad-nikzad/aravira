@@ -75,12 +75,6 @@ export const adminPaginationSchema = z
   })
   .openapi('AdminPagination')
 
-export const adminReasonSchema = z
-  .string()
-  .min(3)
-  .max(500)
-  .openapi({ example: 'درخواست پشتیبانی داخلی' })
-
 export const adminSetupAccessQuerySchema = z.object({
   override: z
     .boolean()
@@ -215,8 +209,6 @@ export const adminNotesResponseSchema = z
 export const adminStatusUpdateBodySchema = z
   .object({
     status: z.enum(['active', 'suspended', 'archived']),
-    reason: adminReasonSchema,
-    liveConfirmation: z.string().optional(),
   })
   .openapi('AdminSalonStatusUpdateRequest')
 
@@ -224,8 +216,6 @@ export const adminSetupSalonCreateBodySchema = z
   .object({
     name: z.string().min(1).max(120),
     intendedOwnerPhone: z.string().regex(/^09\d{9}$/),
-    reason: adminReasonSchema,
-    liveConfirmation: z.string().optional(),
   })
   .openapi('AdminSetupSalonCreateRequest')
 
@@ -245,8 +235,6 @@ export const adminSetupSalonResponseSchema = z
 export const adminSetupOwnerPhonePatchBodySchema = z
   .object({
     intendedOwnerPhone: z.string().regex(/^09\d{9}$/),
-    reason: adminReasonSchema,
-    liveConfirmation: z.string().optional(),
   })
   .openapi('AdminSetupOwnerPhonePatchRequest')
 
@@ -262,8 +250,6 @@ export const adminSetupOwnerPhoneResponseSchema = z
 export const adminSetupHandoffCreateBodySchema = z
   .object({
     enablePublicPage: z.boolean().default(false),
-    reason: adminReasonSchema,
-    liveConfirmation: z.string().optional(),
   })
   .openapi('AdminSetupHandoffCreateRequest')
 
@@ -312,8 +298,6 @@ export const adminSetupStaffCreateBodySchema = z
     active: z.boolean(),
     serviceIds: z.array(z.string()).nullable(),
     schedule: z.array(adminSetupStaffScheduleSchema).max(7),
-    reason: adminReasonSchema,
-    liveConfirmation: z.string().optional(),
     override: z.literal(true).optional(),
   })
   .openapi('AdminSetupStaffCreateRequest')
@@ -349,8 +333,6 @@ export const adminSetupClientCreateBodySchema = z
     phone: z.string().regex(/^09\d{9}$/),
     notes: z.string().optional(),
     tags: z.array(z.string()).max(8).default([]),
-    reason: adminReasonSchema,
-    liveConfirmation: z.string().optional(),
     override: z.literal(true).optional(),
   })
   .openapi('AdminSetupClientCreateRequest')
@@ -405,8 +387,6 @@ export const adminSetupClientImportBodySchema =
   adminSetupClientImportSourceSchema
     .extend({
       selectedLocalIds: z.array(z.string()).min(1).max(200),
-      reason: adminReasonSchema,
-      liveConfirmation: z.string().optional(),
     })
     .openapi('AdminSetupClientImportRequest')
 
@@ -420,8 +400,6 @@ export const adminSetupClientImportResponseSchema = z
   .openapi('AdminSetupClientImportResponse')
 
 const adminSetupMutationMetaShape = {
-  reason: adminReasonSchema,
-  liveConfirmation: z.string().optional(),
   override: z.literal(true).optional(),
 }
 
@@ -444,8 +422,6 @@ export const adminSetupPresenceResponseSchema = z
   .openapi('AdminSetupSalonPresenceResponse')
 
 const adminSetupCatalogMutationMetaShape = {
-  reason: adminReasonSchema,
-  liveConfirmation: z.string().optional(),
   override: z.literal(true).optional(),
 }
 
@@ -596,7 +572,6 @@ export const adminSetupCatalogMutationResponseSchema = z
 export const adminNoteCreateBodySchema = z
   .object({
     body: z.string().min(1).max(5000),
-    reason: adminReasonSchema,
   })
   .openapi('AdminNoteCreateRequest')
 
@@ -612,14 +587,11 @@ export const adminCatalogPresetBodySchema = z
     tree: z.array(anyRecordSchema).min(1),
     sortOrder: z.number().int().optional(),
     isActive: z.boolean().optional(),
-    reason: adminReasonSchema,
-    liveConfirmation: z.string().optional(),
   })
   .openapi('AdminCatalogPresetCreateRequest')
 
 export const adminCatalogPresetPatchBodySchema = adminCatalogPresetBodySchema
   .partial()
-  .extend({ reason: adminReasonSchema })
   .openapi('AdminCatalogPresetUpdateRequest')
 
 export const adminCatalogPresetResponseSchema = z
@@ -639,8 +611,6 @@ export const adminPlatformAdminCreateBodySchema = z
     userId: z.string(),
     role: platformRoleSchema,
     active: z.boolean().optional(),
-    reason: adminReasonSchema,
-    liveConfirmation: z.string().optional(),
   })
   .openapi('AdminPlatformAdminCreateRequest')
 
@@ -648,8 +618,6 @@ export const adminPlatformAdminPatchBodySchema = z
   .object({
     role: platformRoleSchema.optional(),
     active: z.boolean().optional(),
-    reason: adminReasonSchema,
-    liveConfirmation: z.string().optional(),
   })
   .openapi('AdminPlatformAdminUpdateRequest')
 
