@@ -34,7 +34,7 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 
 import { ErrorPanel } from '#/components/admin/error-panel'
 import { FormField } from '#/components/admin/form-field'
-import { LiveDataWarning } from '#/components/admin/live-data-form'
+import { LiveDataWarning } from '#/components/admin/live-data-warning'
 import { MutationError } from '#/components/admin/mutation-error'
 import {
   MutationSuccess,
@@ -67,10 +67,7 @@ import {
   StatusForm,
   type MutationSubmitOptions,
 } from './salon-governance'
-import {
-  SalonSetupHoursForm,
-  SalonSetupPresenceForm,
-} from './salon-setup-editor'
+import { SalonSetupHoursForm, SalonSetupPresenceForm } from './salon-setup-editor'
 import { SalonSetupCatalog } from './salon-setup-catalog'
 import { SalonSetupClients } from './salon-setup-clients'
 import { SalonSetupHandoff } from './salon-setup-handoff'

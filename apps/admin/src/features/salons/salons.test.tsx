@@ -942,7 +942,7 @@ describe('salons feature', () => {
     })
   })
 
-  it('lists and creates internal salon notes with a required reason', async () => {
+  it('lists and creates internal salon notes without a reason field', async () => {
     generated.getSalon.mockResolvedValue({
       salon: { id: salonId, name: 'Sun Salon', status: 'active' },
       members: [],

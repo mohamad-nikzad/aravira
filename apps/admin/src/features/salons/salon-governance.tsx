@@ -8,7 +8,7 @@ import { useState, type FormEvent } from 'react'
 
 import { SelectField } from '#/components/admin/select-field'
 import { TextAreaField } from '#/components/admin/form-field'
-import { LiveDataWarning } from '#/components/admin/live-data-form'
+import { LiveDataWarning } from '#/components/admin/live-data-warning'
 import { MutationError } from '#/components/admin/mutation-error'
 import { ScreenSkeleton } from '#/components/admin/screen-skeleton'
 import { Button } from '#/components/ui/button'

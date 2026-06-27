@@ -12,7 +12,7 @@ import { Eye, LockKeyhole, Plus, ShieldCheck, UserRound } from 'lucide-react'
 
 import { AdminListTable } from '#/components/admin/admin-list-table'
 import { CheckboxField } from '#/components/admin/form-field'
-import { LiveDataWarning } from '#/components/admin/live-data-form'
+import { LiveDataWarning } from '#/components/admin/live-data-warning'
 import { MutationError } from '#/components/admin/mutation-error'
 import {
   MutationSuccess,

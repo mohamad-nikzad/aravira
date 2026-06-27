@@ -13,7 +13,7 @@ import { FileUp, UserPlus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 
 import { FormField, TextAreaField } from '#/components/admin/form-field'
-import { LiveDataWarning } from '#/components/admin/live-data-form'
+import { LiveDataWarning } from '#/components/admin/live-data-warning'
 import { MutationError } from '#/components/admin/mutation-error'
 import { Panel } from '#/components/admin/panel'
 import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert'

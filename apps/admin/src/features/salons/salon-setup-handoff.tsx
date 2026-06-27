@@ -8,7 +8,7 @@ import {
 } from '@repo/api-client/query'
 
 import { CheckboxField, FormField } from '#/components/admin/form-field'
-import { LiveDataWarning } from '#/components/admin/live-data-form'
+import { LiveDataWarning } from '#/components/admin/live-data-warning'
 import { MutationError } from '#/components/admin/mutation-error'
 import { Panel } from '#/components/admin/panel'
 import { Button } from '#/components/ui/button'

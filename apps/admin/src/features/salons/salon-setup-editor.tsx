@@ -7,7 +7,7 @@ import { Save } from 'lucide-react'
 import { useId, useState, type FormEvent } from 'react'
 
 import { FormField, TextAreaField } from '#/components/admin/form-field'
-import { LiveDataWarning } from '#/components/admin/live-data-form'
+import { LiveDataWarning } from '#/components/admin/live-data-warning'
 import { MutationError } from '#/components/admin/mutation-error'
 import { Button } from '#/components/ui/button'
 import {
@@ -45,51 +45,6 @@ function workingDaysMask(values: string[]) {
 }
 
 type Configuration = AdminSetupSalonConfigurationResponse
-
-export function SalonSetupEditor({
-  configuration,
-  hoursError,
-  presenceError,
-  hoursPending,
-  presencePending,
-  isLiveData,
-  onSaveHours,
-  onSavePresence,
-}: {
-  configuration: Configuration
-  hoursError: unknown
-  presenceError: unknown
-  hoursPending: boolean
-  presencePending: boolean
-  isLiveData: boolean
-  onSaveHours: (
-    input: AdminSetupSalonHoursPatchRequest,
-    options?: MutationSubmitOptions,
-  ) => void
-  onSavePresence: (
-    input: AdminSetupSalonPresencePatchRequest,
-    options?: MutationSubmitOptions,
-  ) => void
-}) {
-  return (
-    <div className="grid gap-4 xl:grid-cols-2">
-      <SalonSetupHoursForm
-        configuration={configuration}
-        error={hoursError}
-        pending={hoursPending}
-        isLiveData={isLiveData}
-        onSave={onSaveHours}
-      />
-      <SalonSetupPresenceForm
-        configuration={configuration}
-        error={presenceError}
-        pending={presencePending}
-        isLiveData={isLiveData}
-        onSave={onSavePresence}
-      />
-    </div>
-  )
-}
 
 export function SalonSetupHoursForm({
   configuration,

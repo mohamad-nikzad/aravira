@@ -11,7 +11,7 @@ import { useState, type FormEvent } from 'react'
 
 import { AdminListTable } from '#/components/admin/admin-list-table'
 import { FormField } from '#/components/admin/form-field'
-import { LiveDataWarning } from '#/components/admin/live-data-form'
+import { LiveDataWarning } from '#/components/admin/live-data-warning'
 import { MutationError } from '#/components/admin/mutation-error'
 import { AdminPageHeader } from '#/components/layout/admin-page-header'
 import { Button } from '#/components/ui/button'
