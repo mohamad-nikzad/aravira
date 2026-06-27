@@ -300,21 +300,46 @@ describe('salons feature', () => {
           slug: 'aftab',
           status: 'active',
           phone: '+989121234567',
+          ownerName: 'Maryam',
+          ownerPhone: '+989120000000',
           memberCount: 3,
-          publicEnabled: true,
+          serviceCount: 7,
+          createdAt: '2026-06-20T10:30:00.000Z',
         },
       ],
       pagination: { page: 1, pageSize: 20, total: 1 },
     })
+    generated.patchStatus.mockResolvedValue({ salon: { id: salonId } })
 
     await renderSalonsList()
 
     expect(await screen.findByText('Sun Salon')).toBeTruthy()
     expect(screen.getByText('aftab')).toBeTruthy()
     expect(screen.getAllByText('فعال').length).toBeGreaterThan(0)
+    expect(screen.getByText('Maryam')).toBeTruthy()
+    expect(screen.getByText('7')).toBeTruthy()
     expect(
-      screen.getByRole('link', { name: /مشاهده/ }).getAttribute('href'),
+      screen.getByRole('link', { name: /Sun Salon/ }).getAttribute('href'),
     ).toBe('/salons/11111111-1111-4111-8111-111111111111')
+
+    fireEvent.pointerDown(
+      screen.getByRole('button', { name: 'اقدام‌های سالن' }),
+      {
+        button: 0,
+        ctrlKey: false,
+      },
+    )
+    expect((await screen.findAllByText('نمای کلی')).length).toBeGreaterThan(1)
+    fireEvent.click(screen.getByText('تعلیق کردن'))
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'تأیید تغییر وضعیت' }),
+    )
+
+    await waitFor(() => expect(generated.patchStatus).toHaveBeenCalled())
+    expect(generated.patchStatus.mock.calls[0]?.[0]).toEqual({
+      path: { id: salonId },
+      body: { status: 'suspended' },
+    })
     expect(generated.listSalons).toHaveBeenCalledWith({
       query: { page: 1, pageSize: 20, search: undefined },
     })
@@ -330,7 +355,7 @@ describe('salons feature', () => {
           status: 'setup',
           intendedOwnerPhone: '09121234567',
           memberCount: 0,
-          publicEnabled: false,
+          serviceCount: 0,
         },
       ],
       pagination: { page: 1, pageSize: 20, total: 1 },

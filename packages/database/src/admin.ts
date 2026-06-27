@@ -1,14 +1,4 @@
-import {
-  and,
-  asc,
-  count,
-  countDistinct,
-  desc,
-  eq,
-  ilike,
-  or,
-  sql,
-} from 'drizzle-orm'
+import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 import type { CatalogPresetTree } from '@repo/salon-core/forms/catalog-preset'
 import { getDb } from './client'
@@ -376,7 +366,34 @@ export async function listAdminSalons(input: ListInput = {}) {
       phone: salonProfile.phone,
       intendedOwnerPhone: salonProfile.intendedOwnerPhone,
       publicEnabled: salonPublicSettings.enabled,
-      memberCount: countDistinct(salonMember.id),
+      ownerName: sql<string | null>`(
+        select ${user.name}
+        from ${member}
+        inner join ${user} on ${user.id} = ${member.userId}
+        where ${member.organizationId} = ${organization.id}
+          and ${member.role} = 'owner'
+        order by ${member.createdAt} asc
+        limit 1
+      )`,
+      ownerPhone: sql<string | null>`(
+        select ${user.phoneNumber}
+        from ${member}
+        inner join ${user} on ${user.id} = ${member.userId}
+        where ${member.organizationId} = ${organization.id}
+          and ${member.role} = 'owner'
+        order by ${member.createdAt} asc
+        limit 1
+      )`,
+      memberCount: sql<number>`(
+        select count(*)
+        from ${salonMember}
+        where ${salonMember.organizationId} = ${organization.id}
+      )`,
+      serviceCount: sql<number>`(
+        select count(*)
+        from ${services}
+        where ${services.salonId} = ${organization.id}
+      )`,
     })
     .from(organization)
     .innerJoin(salonProfile, eq(salonProfile.organizationId, organization.id))
@@ -384,19 +401,7 @@ export async function listAdminSalons(input: ListInput = {}) {
       salonPublicSettings,
       eq(salonPublicSettings.salonId, organization.id),
     )
-    .leftJoin(salonMember, eq(salonMember.organizationId, organization.id))
     .where(where)
-    .groupBy(
-      organization.id,
-      organization.name,
-      organization.slug,
-      organization.logo,
-      organization.createdAt,
-      salonProfile.status,
-      salonProfile.phone,
-      salonProfile.intendedOwnerPhone,
-      salonPublicSettings.enabled,
-    )
     .orderBy(desc(organization.createdAt))
     .limit(pageSize)
     .offset(offset)

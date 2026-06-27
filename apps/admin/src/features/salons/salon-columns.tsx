@@ -1,12 +1,52 @@
+import {
+  getApiV1AdminOverviewQueryKey,
+  getApiV1AdminSalonsQueryKey,
+  patchApiV1AdminSalonsByIdStatusMutation,
+} from '@repo/api-client/query'
+import type { AdminSalonStatusUpdateRequest } from '@repo/api-client/types'
 import { Link } from '@tanstack/react-router'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Eye } from 'lucide-react'
-import { useMemo } from 'react'
+import {
+  Archive,
+  Check,
+  CircleCheck,
+  Clock,
+  Inbox,
+  KeyRound,
+  LayoutDashboard,
+  MapPin,
+  MoreHorizontal,
+  PauseCircle,
+  Pencil,
+  Scissors,
+  UserRound,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 import { BooleanBadge } from '#/components/admin/boolean-badge'
+import { MutationError } from '#/components/admin/mutation-error'
 import { PrimaryCell } from '#/components/admin/primary-cell'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '#/components/ui/dropdown-menu'
 import { formatCurrency, formatDate, number, text } from '#/lib/admin-format'
 
 export type RecordRow = Record<string, unknown>
@@ -19,16 +59,27 @@ export function useSalonsListColumns() {
         accessorKey: 'name',
         header: 'سالن',
         cell: ({ row }) => (
-          <PrimaryCell
-            title={text(row.original.name)}
-            subtitle={text(row.original.slug)}
-          />
+          <Link
+            to="/salons/$salonId"
+            params={{ salonId: text(row.original.id) }}
+            className="block min-w-0 rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <PrimaryCell
+              title={text(row.original.name)}
+              subtitle={text(row.original.slug)}
+            />
+          </Link>
         ),
       },
       {
         accessorKey: 'status',
         header: 'وضعیت',
         cell: ({ row }) => <StatusBadge status={text(row.original.status)} />,
+      },
+      {
+        id: 'owner',
+        header: 'مالک / تحویل',
+        cell: ({ row }) => <OwnerCell row={row.original} />,
       },
       {
         accessorKey: 'phone',
@@ -41,37 +92,253 @@ export function useSalonsListColumns() {
       },
       {
         accessorKey: 'memberCount',
-        header: 'اعضا',
+        header: 'پرسنل',
         cell: ({ row }) => number(row.original.memberCount),
       },
       {
-        accessorKey: 'publicEnabled',
-        header: 'صفحه عمومی',
-        cell: ({ row }) => (
-          <BooleanBadge
-            value={truthy(row.original.publicEnabled)}
-            trueLabel="فعال"
-            falseLabel="غیرفعال"
-          />
-        ),
+        accessorKey: 'serviceCount',
+        header: 'خدمات',
+        cell: ({ row }) => number(row.original.serviceCount),
+      },
+      {
+        accessorKey: 'createdAt',
+        header: 'ایجاد',
+        cell: ({ row }) => formatDate(row.original.createdAt),
       },
       {
         id: 'actions',
-        cell: ({ row }) => (
-          <Button asChild size="sm" variant="ghost">
-            <Link
-              to="/salons/$salonId"
-              params={{ salonId: text(row.original.id) }}
-            >
-              <Eye data-icon="inline-start" />
-              مشاهده
-            </Link>
-          </Button>
-        ),
+        cell: ({ row }) => <SalonRowActions row={row.original} />,
       },
     ],
     [],
   )
+}
+
+function OwnerCell({ row }: { row: RecordRow }) {
+  const ownerName = text(row.ownerName)
+  const ownerPhone = text(row.ownerPhone)
+  const intendedOwnerPhone = text(row.intendedOwnerPhone)
+
+  if (ownerName || ownerPhone) {
+    return (
+      <PrimaryCell
+        title={ownerName || ownerPhone}
+        subtitle={ownerPhone && ownerName ? ownerPhone : 'مالک ثبت‌شده'}
+      />
+    )
+  }
+
+  if (intendedOwnerPhone) {
+    return (
+      <span dir="ltr">
+        <PrimaryCell title="در انتظار تحویل" subtitle={intendedOwnerPhone} />
+      </span>
+    )
+  }
+
+  return <span className="text-muted-foreground">بدون مالک</span>
+}
+
+function SalonRowActions({ row }: { row: RecordRow }) {
+  const salonId = text(row.id)
+  const status = normalizeStatus(row.status)
+  const salonName = text(row.name) || 'این سالن'
+  const [nextStatus, setNextStatus] = useState<Exclude<
+    AdminSalonStatus,
+    'setup'
+  > | null>(null)
+  const queryClient = useQueryClient()
+  const statusMutation = useMutation({
+    ...patchApiV1AdminSalonsByIdStatusMutation(),
+    onSuccess: () => {
+      setNextStatus(null)
+      void queryClient.invalidateQueries({
+        queryKey: getApiV1AdminSalonsQueryKey(),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: getApiV1AdminOverviewQueryKey(),
+      })
+    },
+  })
+  const setup = status === 'setup'
+
+  function submitStatus() {
+    if (!nextStatus) return
+    const body: AdminSalonStatusUpdateRequest = { status: nextStatus }
+    statusMutation.mutate({ path: { id: salonId }, body })
+  }
+
+  return (
+    <>
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button size="icon" variant="ghost" aria-label="اقدام‌های سالن">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-48">
+          <DropdownMenuLabel>میانبرها</DropdownMenuLabel>
+          <DropdownMenuItem asChild>
+            <Link to="/salons/$salonId" params={{ salonId }}>
+              <LayoutDashboard />
+              نمای کلی
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link
+              to="/salons/$salonId"
+              params={{ salonId }}
+              search={{ tab: 'setup' }}
+            >
+              <Pencil />
+              ویرایش اطلاعات سالن
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link
+              to="/salons/$salonId"
+              params={{ salonId }}
+              search={{ tab: 'setup' }}
+            >
+              <Clock />
+              ساعت کاری
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link
+              to="/salons/$salonId"
+              params={{ salonId }}
+              search={{ tab: 'setup' }}
+            >
+              <MapPin />
+              حضور سالن
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link
+              to="/salons/$salonId"
+              params={{ salonId }}
+              search={{ tab: 'operations', subtab: 'staff' }}
+            >
+              <Users />
+              پرسنل
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link
+              to="/salons/$salonId"
+              params={{ salonId }}
+              search={{ tab: 'operations', subtab: 'services' }}
+            >
+              <Scissors />
+              خدمات
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link
+              to="/salons/$salonId"
+              params={{ salonId }}
+              search={{ tab: 'operations', subtab: 'clients' }}
+            >
+              <UserRound />
+              مشتریان
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link
+              to="/salons/$salonId"
+              params={{ salonId }}
+              search={{ tab: 'operations', subtab: 'requests' }}
+            >
+              <Inbox />
+              درخواست‌ها
+            </Link>
+          </DropdownMenuItem>
+          {setup ? (
+            <DropdownMenuItem asChild>
+              <Link
+                to="/salons/$salonId"
+                params={{ salonId }}
+                search={{ tab: 'setup' }}
+              >
+                <KeyRound />
+                تحویل
+              </Link>
+            </DropdownMenuItem>
+          ) : null}
+          {!setup ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>تغییر وضعیت</DropdownMenuLabel>
+              {STATUS_ACTIONS.filter((action) => action.status !== status).map(
+                (action) => (
+                  <DropdownMenuItem
+                    key={action.status}
+                    onSelect={() => setNextStatus(action.status)}
+                  >
+                    <action.icon />
+                    {action.label}
+                  </DropdownMenuItem>
+                ),
+              )}
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Dialog
+        open={Boolean(nextStatus)}
+        onOpenChange={(open) => {
+          if (!open) setNextStatus(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تأیید تغییر وضعیت</DialogTitle>
+            <DialogDescription>
+              وضعیت «{salonName}» به {statusLabel(nextStatus)} تغییر می‌کند.
+            </DialogDescription>
+          </DialogHeader>
+          <MutationError error={statusMutation.error} />
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setNextStatus(null)}
+            >
+              انصراف
+            </Button>
+            <Button
+              type="button"
+              disabled={statusMutation.isPending}
+              onClick={submitStatus}
+            >
+              <Check className="h-4 w-4" />
+              تأیید تغییر وضعیت
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+const STATUS_ACTIONS: Array<{
+  status: Exclude<AdminSalonStatus, 'setup'>
+  label: string
+  icon: LucideIcon
+}> = [
+  { status: 'active', label: 'فعال کردن', icon: CircleCheck },
+  { status: 'suspended', label: 'تعلیق کردن', icon: PauseCircle },
+  { status: 'archived', label: 'آرشیو کردن', icon: Archive },
+]
+
+function statusLabel(status: AdminSalonStatus | null) {
+  if (status === 'active') return 'فعال'
+  if (status === 'suspended') return 'تعلیق‌شده'
+  if (status === 'archived') return 'آرشیوشده'
+  if (status === 'setup') return 'راه‌اندازی'
+  return 'وضعیت جدید'
 }
 
 export function useClientColumns() {
