@@ -195,7 +195,7 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
         onValueChange={(value) => setTab(value as SalonDetailSection)}
         className="space-y-4"
       >
-        <TabsList className="h-auto flex-wrap justify-start">
+        <TabsList>
           <TabsTrigger value="overview">نمای کلی</TabsTrigger>
           <TabsTrigger value="governance">حاکمیت</TabsTrigger>
           <TabsTrigger value="operations">عملیات</TabsTrigger>

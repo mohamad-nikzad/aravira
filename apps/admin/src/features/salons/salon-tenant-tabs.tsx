@@ -72,7 +72,7 @@ export function SalonTenantDataTabs({
         onValueChange={(value) => onTabChange(value as SalonOpsTab)}
         className="space-y-4"
       >
-        <TabsList className="flex h-auto flex-wrap justify-start">
+        <TabsList>
           <TabsTrigger value="clients">مشتریان</TabsTrigger>
           <TabsTrigger value="appointments">نوبت‌ها</TabsTrigger>
           <TabsTrigger value="requests">درخواست‌های نوبت</TabsTrigger>
