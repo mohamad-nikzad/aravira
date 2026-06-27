@@ -76,6 +76,8 @@ describe('pickDeviceContacts', () => {
 
     await expect(pickDeviceContacts({ multiple: false })).resolves.toBeNull()
     expect(toast).toHaveBeenCalledWith(CONTACT_PICK_BLOCKED_TOAST)
+    expect(CONTACT_PICK_BLOCKED_TOAST.description).toContain('app.saluna.ir')
+    expect(CONTACT_PICK_BLOCKED_TOAST.description).toContain('Chrome')
     expect(select).not.toHaveBeenCalled()
   })
 

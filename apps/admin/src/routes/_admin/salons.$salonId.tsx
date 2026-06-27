@@ -1,14 +1,36 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useLocation } from '@tanstack/react-router'
 
 import { SalonDetailPage } from '#/features/salons'
-import { salonDetailSearchSchema } from '#/lib/admin-search-schemas'
+import type { SalonWorkspaceSection } from '#/features/salons/salon-detail'
 
 export const Route = createFileRoute('/_admin/salons/$salonId')({
-  validateSearch: salonDetailSearchSchema,
   component: SalonDetailRoute,
 })
 
 function SalonDetailRoute() {
   const { salonId } = Route.useParams()
-  return <SalonDetailPage salonId={salonId} />
+  const location = useLocation()
+  return (
+    <SalonDetailPage
+      salonId={salonId}
+      section={sectionFromPathname(location.pathname)}
+    />
+  )
+}
+
+function sectionFromPathname(pathname: string): SalonWorkspaceSection {
+  const section = pathname.split('/').filter(Boolean).at(-1)
+  if (
+    section === 'edit' ||
+    section === 'hours' ||
+    section === 'presence' ||
+    section === 'staff' ||
+    section === 'services' ||
+    section === 'clients' ||
+    section === 'requests' ||
+    section === 'handoff'
+  ) {
+    return section
+  }
+  return 'overview'
 }

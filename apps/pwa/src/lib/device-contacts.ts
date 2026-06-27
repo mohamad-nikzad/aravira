@@ -7,7 +7,7 @@ export const CONTACT_PICK_BLOCKED_TOAST = {
   variant: 'destructive' as const,
   title: 'دسترسی به مخاطبین فعال نیست',
   description:
-    'برای انتخاب مخاطب، در تنظیمات گوشی به برنامه سالونا بروید و دسترسی مخاطبین را روشن کنید.',
+    'اگر سالونا را در فهرست برنامه‌ها نمی‌بینید، از تنظیمات مرورگر یا Chrome > Site settings > Contacts، دسترسی app.saluna.ir را روی Allow بگذارید.',
 }
 
 export function isDeviceContactPickerSupported(): boolean {

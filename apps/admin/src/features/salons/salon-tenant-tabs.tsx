@@ -1,6 +1,5 @@
 import {
   getApiV1AdminSalonsByIdAppointmentRequestsOptions,
-  getApiV1AdminSalonsByIdAppointmentsOptions,
   getApiV1AdminSalonsByIdClientsOptions,
   getApiV1AdminSalonsByIdServicesOptions,
   getApiV1AdminSalonsByIdStaffOptions,
@@ -15,10 +14,8 @@ import { ScreenSkeleton } from '#/components/admin/screen-skeleton'
 import { DataTable } from '#/components/data-table/data-table'
 import { DataTablePagination } from '#/components/data-table/data-table-pagination'
 import { DataTableToolbar } from '#/components/data-table/data-table-toolbar'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 
 import {
-  useAppointmentColumns,
   useClientColumns,
   useRequestColumns,
   useServiceColumns,
@@ -26,7 +23,8 @@ import {
   type RecordRow,
 } from './salon-columns'
 import { Panel } from '#/components/admin/panel'
-import type { SalonOpsTab } from './salon-url-state'
+
+type SalonOpsTab = 'clients' | 'requests' | 'staff' | 'services'
 
 type ListParams = {
   page: number
@@ -50,108 +48,83 @@ type AdminListQueryOptions = UseQueryOptions<
   readonly unknown[]
 >
 
-export function SalonTenantDataTabs({
+export function SalonTenantDataPage({
   salonId,
-  activeTab,
-  onTabChange,
+  tab,
 }: {
   salonId: string
-  activeTab: SalonOpsTab
-  onTabChange: (tab: SalonOpsTab) => void
+  tab: SalonOpsTab
 }) {
   const clientColumns = useClientColumns()
-  const appointmentColumns = useAppointmentColumns()
   const requestColumns = useRequestColumns()
   const staffColumns = useStaffColumns()
   const serviceColumns = useServiceColumns()
 
+  const config = {
+    clients: {
+      title: 'مشتریان',
+      columns: clientColumns,
+      loadingLabel: 'در حال بارگذاری مشتریان',
+      queryOptionsFor: (params: ListParams) =>
+        getApiV1AdminSalonsByIdClientsOptions({
+          path: { id: salonId },
+          query: params,
+        }),
+      emptyCopy: 'مشتری‌ای برای این سالن ثبت نشده است.',
+    },
+    requests: {
+      title: 'درخواست‌های نوبت',
+      columns: requestColumns,
+      loadingLabel: 'در حال بارگذاری درخواست‌های نوبت',
+      queryOptionsFor: (params: ListParams) =>
+        getApiV1AdminSalonsByIdAppointmentRequestsOptions({
+          path: { id: salonId },
+          query: params,
+        }),
+      emptyCopy: 'درخواست نوبتی برای این سالن ثبت نشده است.',
+    },
+    staff: {
+      title: 'پرسنل',
+      columns: staffColumns,
+      loadingLabel: 'در حال بارگذاری پرسنل',
+      queryOptionsFor: (params: ListParams) =>
+        getApiV1AdminSalonsByIdStaffOptions({
+          path: { id: salonId },
+          query: params,
+        }),
+      emptyCopy: 'پرسنلی برای این سالن ثبت نشده است.',
+    },
+    services: {
+      title: 'خدمات',
+      columns: serviceColumns,
+      loadingLabel: 'در حال بارگذاری انواع خدمت',
+      queryOptionsFor: (params: ListParams) =>
+        getApiV1AdminSalonsByIdServicesOptions({
+          path: { id: salonId },
+          query: params,
+        }),
+      emptyCopy: 'نوع خدمتی برای این سالن ثبت نشده است.',
+    },
+  }[tab]
+
   return (
-    <Panel title="داده‌های عملیاتی">
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => onTabChange(value as SalonOpsTab)}
-        className="space-y-4"
-      >
-        <TabsList>
-          <TabsTrigger value="clients">مشتریان</TabsTrigger>
-          <TabsTrigger value="appointments">نوبت‌ها</TabsTrigger>
-          <TabsTrigger value="requests">درخواست‌های نوبت</TabsTrigger>
-          <TabsTrigger value="staff">پرسنل</TabsTrigger>
-          <TabsTrigger value="services">انواع خدمت</TabsTrigger>
-        </TabsList>
-        <TenantTabContent
-          value="clients"
-          columns={clientColumns}
-          loadingLabel="در حال بارگذاری مشتریان"
-          queryOptionsFor={(params) =>
-            getApiV1AdminSalonsByIdClientsOptions({
-              path: { id: salonId },
-              query: params,
-            })
-          }
-          emptyCopy="مشتری‌ای برای این سالن ثبت نشده است."
-        />
-        <TenantTabContent
-          value="appointments"
-          columns={appointmentColumns}
-          loadingLabel="در حال بارگذاری نوبت‌ها"
-          queryOptionsFor={(params) =>
-            getApiV1AdminSalonsByIdAppointmentsOptions({
-              path: { id: salonId },
-              query: params,
-            })
-          }
-          emptyCopy="نوبتی برای این سالن ثبت نشده است."
-        />
-        <TenantTabContent
-          value="requests"
-          columns={requestColumns}
-          loadingLabel="در حال بارگذاری درخواست‌های نوبت"
-          queryOptionsFor={(params) =>
-            getApiV1AdminSalonsByIdAppointmentRequestsOptions({
-              path: { id: salonId },
-              query: params,
-            })
-          }
-          emptyCopy="درخواست نوبتی برای این سالن ثبت نشده است."
-        />
-        <TenantTabContent
-          value="staff"
-          columns={staffColumns}
-          loadingLabel="در حال بارگذاری پرسنل"
-          queryOptionsFor={(params) =>
-            getApiV1AdminSalonsByIdStaffOptions({
-              path: { id: salonId },
-              query: params,
-            })
-          }
-          emptyCopy="پرسنلی برای این سالن ثبت نشده است."
-        />
-        <TenantTabContent
-          value="services"
-          columns={serviceColumns}
-          loadingLabel="در حال بارگذاری انواع خدمت"
-          queryOptionsFor={(params) =>
-            getApiV1AdminSalonsByIdServicesOptions({
-              path: { id: salonId },
-              query: params,
-            })
-          }
-          emptyCopy="نوع خدمتی برای این سالن ثبت نشده است."
-        />
-      </Tabs>
+    <Panel title={config.title}>
+      <TenantListContent
+        columns={config.columns}
+        loadingLabel={config.loadingLabel}
+        queryOptionsFor={config.queryOptionsFor}
+        emptyCopy={config.emptyCopy}
+      />
     </Panel>
   )
 }
 
-function TenantTabContent({
-  value,
+function TenantListContent({
   columns,
   loadingLabel,
   queryOptionsFor,
   emptyCopy,
 }: {
-  value: string
   columns: ColumnDef<RecordRow>[]
   loadingLabel: string
   queryOptionsFor: (params: ListParams) => unknown
@@ -174,7 +147,7 @@ function TenantTabContent({
   const rows = listQuery.data?.items ?? []
 
   return (
-    <TabsContent value={value} className="space-y-3">
+    <div className="space-y-3">
       <DataTableToolbar
         query={query}
         onQueryChange={(nextQuery) => {
@@ -214,6 +187,6 @@ function TenantTabContent({
           />
         </>
       ) : null}
-    </TabsContent>
+    </div>
   )
 }

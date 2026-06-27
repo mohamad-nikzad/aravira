@@ -462,7 +462,7 @@ describe('salons feature', () => {
     )
     generated.patchSetupPresence.mockResolvedValue({ presence: {} })
 
-    await renderSalonDetail(`/salons/${salonId}?tab=setup`)
+    await renderSalonDetail(`/salons/${salonId}/hours`)
 
     expect(await screen.findByText('روزها و ساعت کاری')).toBeTruthy()
     fireEvent.change(screen.getByLabelText('ساعت باز شدن'), {
@@ -485,7 +485,11 @@ describe('salons feature', () => {
       (screen.getByLabelText('ساعت باز شدن') as HTMLInputElement).value,
     ).toBe('10:00')
 
-    fireEvent.change(screen.getByLabelText('آدرس'), {
+    cleanup()
+    await renderSalonDetail(`/salons/${salonId}/presence`)
+
+    const address = await screen.findByLabelText('آدرس')
+    fireEvent.change(address, {
       target: { value: 'New address' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره حضور سالن' }))
@@ -541,7 +545,7 @@ describe('salons feature', () => {
     })
     generated.mutateSetupCatalog.mockResolvedValue({})
 
-    await renderSalonDetail(`/salons/${salonId}?tab=setup`)
+    await renderSalonDetail(`/salons/${salonId}/services`)
 
     const categoryName = await screen.findByLabelText('دسته جدید')
     const categoryForm = categoryName.closest('form')!
@@ -621,7 +625,7 @@ describe('salons feature', () => {
     })
     generated.mutateSetupStaff.mockResolvedValue({ profile: { id: 'p1' } })
 
-    await renderSalonDetail(`/salons/${salonId}?tab=setup`)
+    await renderSalonDetail(`/salons/${salonId}/staff`)
 
     fireEvent.change(await screen.findByLabelText('نام نمایشی'), {
       target: { value: 'سارا' },
@@ -711,7 +715,7 @@ describe('salons feature', () => {
       invalid: 1,
     })
 
-    await renderSalonDetail(`/salons/${salonId}?tab=setup`)
+    await renderSalonDetail(`/salons/${salonId}/clients`)
 
     const addPanel = (
       await screen.findByRole('heading', { name: 'افزودن مشتری' })
@@ -799,7 +803,7 @@ describe('salons feature', () => {
       },
     })
 
-    await renderSalonDetail(`/salons/${salonId}?tab=setup`, {
+    await renderSalonDetail(`/salons/${salonId}/hours`, {
       dataSource: 'live',
     })
 
@@ -863,17 +867,13 @@ describe('salons feature', () => {
     generated.getNotes.mockResolvedValue({ notes: [] })
     generated.patchStatus.mockResolvedValue({ salon: { id: salonId } })
 
-    await renderSalonDetail(`/salons/${salonId}?tab=governance`, {
+    await renderSalonDetail(`/salons/${salonId}/edit`, {
       dataSource: 'live',
     })
 
     expect(
       await screen.findByRole('button', { name: /^تغییر وضعیت$/ }),
     ).toBeTruthy()
-    expect(
-      screen.getByRole('tab', { name: 'حاکمیت' }).getAttribute('aria-selected'),
-    ).toBe('true')
-
     fireEvent.click(screen.getByRole('button', { name: /^تغییر وضعیت$/ }))
     expect(
       screen.getByText(
@@ -922,7 +922,7 @@ describe('salons feature', () => {
     })
     generated.postNote.mockResolvedValue({ note: { id: 'note-2' } })
 
-    renderSalonDetail(`/salons/${salonId}?tab=governance`)
+    renderSalonDetail(`/salons/${salonId}/edit`)
 
     expect(await screen.findByText('Needs follow-up')).toBeTruthy()
 
@@ -947,7 +947,7 @@ describe('salons feature', () => {
     })
   })
 
-  it('renders read-only salon tenant data tabs with populated and empty states', async () => {
+  it('renders read-only salon tenant data pages with populated and empty states', async () => {
     generated.getSalon.mockResolvedValue({
       salon: { id: salonId, name: 'Sun Salon', status: 'active' },
       members: [],
@@ -983,7 +983,7 @@ describe('salons feature', () => {
       pagination: { page: 1, pageSize: 10, total: 1 },
     })
 
-    await renderSalonDetail(`/salons/${salonId}?tab=operations`)
+    await renderSalonDetail(`/salons/${salonId}/clients`)
 
     expect(await screen.findByText('Client One')).toBeTruthy()
     expect(screen.queryByText(/Add Client/)).toBeNull()
@@ -992,17 +992,8 @@ describe('salons feature', () => {
       query: { page: 1, pageSize: 10, search: undefined },
     })
 
-    fireEvent.click(screen.getByRole('tab', { name: 'نوبت‌ها' }))
-    await waitFor(() => {
-      expect(generated.getAppointments).toHaveBeenCalled()
-    })
-    expect(generated.getAppointments.mock.calls[0]?.[0]).toEqual({
-      path: { id: salonId },
-      query: { page: 1, pageSize: 10, search: undefined },
-    })
-    expect(screen.queryByText(/Add Appointment/)).toBeNull()
-
-    fireEvent.click(screen.getByRole('tab', { name: 'انواع خدمت' }))
+    cleanup()
+    await renderSalonDetail(`/salons/${salonId}/services`)
     await waitFor(() => {
       expect(generated.getServices).toHaveBeenCalled()
     })

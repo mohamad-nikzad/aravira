@@ -22,6 +22,14 @@ import { Route as AdminSupportTicketsIndexRouteImport } from './routes/_admin/su
 import { Route as AdminSalonsIndexRouteImport } from './routes/_admin/salons.index'
 import { Route as AdminSupportTicketsTicketIdRouteImport } from './routes/_admin/support-tickets.$ticketId'
 import { Route as AdminSalonsSalonIdRouteImport } from './routes/_admin/salons.$salonId'
+import { Route as AdminSalonsSalonIdStaffRouteImport } from './routes/_admin/salons.$salonId.staff'
+import { Route as AdminSalonsSalonIdServicesRouteImport } from './routes/_admin/salons.$salonId.services'
+import { Route as AdminSalonsSalonIdRequestsRouteImport } from './routes/_admin/salons.$salonId.requests'
+import { Route as AdminSalonsSalonIdPresenceRouteImport } from './routes/_admin/salons.$salonId.presence'
+import { Route as AdminSalonsSalonIdHoursRouteImport } from './routes/_admin/salons.$salonId.hours'
+import { Route as AdminSalonsSalonIdHandoffRouteImport } from './routes/_admin/salons.$salonId.handoff'
+import { Route as AdminSalonsSalonIdEditRouteImport } from './routes/_admin/salons.$salonId.edit'
+import { Route as AdminSalonsSalonIdClientsRouteImport } from './routes/_admin/salons.$salonId.clients'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -89,6 +97,51 @@ const AdminSalonsSalonIdRoute = AdminSalonsSalonIdRouteImport.update({
   path: '/$salonId',
   getParentRoute: () => AdminSalonsRoute,
 } as any)
+const AdminSalonsSalonIdStaffRoute = AdminSalonsSalonIdStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AdminSalonsSalonIdRoute,
+} as any)
+const AdminSalonsSalonIdServicesRoute =
+  AdminSalonsSalonIdServicesRouteImport.update({
+    id: '/services',
+    path: '/services',
+    getParentRoute: () => AdminSalonsSalonIdRoute,
+  } as any)
+const AdminSalonsSalonIdRequestsRoute =
+  AdminSalonsSalonIdRequestsRouteImport.update({
+    id: '/requests',
+    path: '/requests',
+    getParentRoute: () => AdminSalonsSalonIdRoute,
+  } as any)
+const AdminSalonsSalonIdPresenceRoute =
+  AdminSalonsSalonIdPresenceRouteImport.update({
+    id: '/presence',
+    path: '/presence',
+    getParentRoute: () => AdminSalonsSalonIdRoute,
+  } as any)
+const AdminSalonsSalonIdHoursRoute = AdminSalonsSalonIdHoursRouteImport.update({
+  id: '/hours',
+  path: '/hours',
+  getParentRoute: () => AdminSalonsSalonIdRoute,
+} as any)
+const AdminSalonsSalonIdHandoffRoute =
+  AdminSalonsSalonIdHandoffRouteImport.update({
+    id: '/handoff',
+    path: '/handoff',
+    getParentRoute: () => AdminSalonsSalonIdRoute,
+  } as any)
+const AdminSalonsSalonIdEditRoute = AdminSalonsSalonIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => AdminSalonsSalonIdRoute,
+} as any)
+const AdminSalonsSalonIdClientsRoute =
+  AdminSalonsSalonIdClientsRouteImport.update({
+    id: '/clients',
+    path: '/clients',
+    getParentRoute: () => AdminSalonsSalonIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -99,10 +152,18 @@ export interface FileRoutesByFullPath {
   '/salons': typeof AdminSalonsRouteWithChildren
   '/settings': typeof AdminSettingsRoute
   '/support-tickets': typeof AdminSupportTicketsRouteWithChildren
-  '/salons/$salonId': typeof AdminSalonsSalonIdRoute
+  '/salons/$salonId': typeof AdminSalonsSalonIdRouteWithChildren
   '/support-tickets/$ticketId': typeof AdminSupportTicketsTicketIdRoute
   '/salons/': typeof AdminSalonsIndexRoute
   '/support-tickets/': typeof AdminSupportTicketsIndexRoute
+  '/salons/$salonId/clients': typeof AdminSalonsSalonIdClientsRoute
+  '/salons/$salonId/edit': typeof AdminSalonsSalonIdEditRoute
+  '/salons/$salonId/handoff': typeof AdminSalonsSalonIdHandoffRoute
+  '/salons/$salonId/hours': typeof AdminSalonsSalonIdHoursRoute
+  '/salons/$salonId/presence': typeof AdminSalonsSalonIdPresenceRoute
+  '/salons/$salonId/requests': typeof AdminSalonsSalonIdRequestsRoute
+  '/salons/$salonId/services': typeof AdminSalonsSalonIdServicesRoute
+  '/salons/$salonId/staff': typeof AdminSalonsSalonIdStaffRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -111,10 +172,18 @@ export interface FileRoutesByTo {
   '/catalog-presets': typeof AdminCatalogPresetsRoute
   '/overview': typeof AdminOverviewRoute
   '/settings': typeof AdminSettingsRoute
-  '/salons/$salonId': typeof AdminSalonsSalonIdRoute
+  '/salons/$salonId': typeof AdminSalonsSalonIdRouteWithChildren
   '/support-tickets/$ticketId': typeof AdminSupportTicketsTicketIdRoute
   '/salons': typeof AdminSalonsIndexRoute
   '/support-tickets': typeof AdminSupportTicketsIndexRoute
+  '/salons/$salonId/clients': typeof AdminSalonsSalonIdClientsRoute
+  '/salons/$salonId/edit': typeof AdminSalonsSalonIdEditRoute
+  '/salons/$salonId/handoff': typeof AdminSalonsSalonIdHandoffRoute
+  '/salons/$salonId/hours': typeof AdminSalonsSalonIdHoursRoute
+  '/salons/$salonId/presence': typeof AdminSalonsSalonIdPresenceRoute
+  '/salons/$salonId/requests': typeof AdminSalonsSalonIdRequestsRoute
+  '/salons/$salonId/services': typeof AdminSalonsSalonIdServicesRoute
+  '/salons/$salonId/staff': typeof AdminSalonsSalonIdStaffRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -127,10 +196,18 @@ export interface FileRoutesById {
   '/_admin/salons': typeof AdminSalonsRouteWithChildren
   '/_admin/settings': typeof AdminSettingsRoute
   '/_admin/support-tickets': typeof AdminSupportTicketsRouteWithChildren
-  '/_admin/salons/$salonId': typeof AdminSalonsSalonIdRoute
+  '/_admin/salons/$salonId': typeof AdminSalonsSalonIdRouteWithChildren
   '/_admin/support-tickets/$ticketId': typeof AdminSupportTicketsTicketIdRoute
   '/_admin/salons/': typeof AdminSalonsIndexRoute
   '/_admin/support-tickets/': typeof AdminSupportTicketsIndexRoute
+  '/_admin/salons/$salonId/clients': typeof AdminSalonsSalonIdClientsRoute
+  '/_admin/salons/$salonId/edit': typeof AdminSalonsSalonIdEditRoute
+  '/_admin/salons/$salonId/handoff': typeof AdminSalonsSalonIdHandoffRoute
+  '/_admin/salons/$salonId/hours': typeof AdminSalonsSalonIdHoursRoute
+  '/_admin/salons/$salonId/presence': typeof AdminSalonsSalonIdPresenceRoute
+  '/_admin/salons/$salonId/requests': typeof AdminSalonsSalonIdRequestsRoute
+  '/_admin/salons/$salonId/services': typeof AdminSalonsSalonIdServicesRoute
+  '/_admin/salons/$salonId/staff': typeof AdminSalonsSalonIdStaffRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -147,6 +224,14 @@ export interface FileRouteTypes {
     | '/support-tickets/$ticketId'
     | '/salons/'
     | '/support-tickets/'
+    | '/salons/$salonId/clients'
+    | '/salons/$salonId/edit'
+    | '/salons/$salonId/handoff'
+    | '/salons/$salonId/hours'
+    | '/salons/$salonId/presence'
+    | '/salons/$salonId/requests'
+    | '/salons/$salonId/services'
+    | '/salons/$salonId/staff'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -159,6 +244,14 @@ export interface FileRouteTypes {
     | '/support-tickets/$ticketId'
     | '/salons'
     | '/support-tickets'
+    | '/salons/$salonId/clients'
+    | '/salons/$salonId/edit'
+    | '/salons/$salonId/handoff'
+    | '/salons/$salonId/hours'
+    | '/salons/$salonId/presence'
+    | '/salons/$salonId/requests'
+    | '/salons/$salonId/services'
+    | '/salons/$salonId/staff'
   id:
     | '__root__'
     | '/'
@@ -174,6 +267,14 @@ export interface FileRouteTypes {
     | '/_admin/support-tickets/$ticketId'
     | '/_admin/salons/'
     | '/_admin/support-tickets/'
+    | '/_admin/salons/$salonId/clients'
+    | '/_admin/salons/$salonId/edit'
+    | '/_admin/salons/$salonId/handoff'
+    | '/_admin/salons/$salonId/hours'
+    | '/_admin/salons/$salonId/presence'
+    | '/_admin/salons/$salonId/requests'
+    | '/_admin/salons/$salonId/services'
+    | '/_admin/salons/$salonId/staff'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -275,16 +376,97 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSalonsSalonIdRouteImport
       parentRoute: typeof AdminSalonsRoute
     }
+    '/_admin/salons/$salonId/staff': {
+      id: '/_admin/salons/$salonId/staff'
+      path: '/staff'
+      fullPath: '/salons/$salonId/staff'
+      preLoaderRoute: typeof AdminSalonsSalonIdStaffRouteImport
+      parentRoute: typeof AdminSalonsSalonIdRoute
+    }
+    '/_admin/salons/$salonId/services': {
+      id: '/_admin/salons/$salonId/services'
+      path: '/services'
+      fullPath: '/salons/$salonId/services'
+      preLoaderRoute: typeof AdminSalonsSalonIdServicesRouteImport
+      parentRoute: typeof AdminSalonsSalonIdRoute
+    }
+    '/_admin/salons/$salonId/requests': {
+      id: '/_admin/salons/$salonId/requests'
+      path: '/requests'
+      fullPath: '/salons/$salonId/requests'
+      preLoaderRoute: typeof AdminSalonsSalonIdRequestsRouteImport
+      parentRoute: typeof AdminSalonsSalonIdRoute
+    }
+    '/_admin/salons/$salonId/presence': {
+      id: '/_admin/salons/$salonId/presence'
+      path: '/presence'
+      fullPath: '/salons/$salonId/presence'
+      preLoaderRoute: typeof AdminSalonsSalonIdPresenceRouteImport
+      parentRoute: typeof AdminSalonsSalonIdRoute
+    }
+    '/_admin/salons/$salonId/hours': {
+      id: '/_admin/salons/$salonId/hours'
+      path: '/hours'
+      fullPath: '/salons/$salonId/hours'
+      preLoaderRoute: typeof AdminSalonsSalonIdHoursRouteImport
+      parentRoute: typeof AdminSalonsSalonIdRoute
+    }
+    '/_admin/salons/$salonId/handoff': {
+      id: '/_admin/salons/$salonId/handoff'
+      path: '/handoff'
+      fullPath: '/salons/$salonId/handoff'
+      preLoaderRoute: typeof AdminSalonsSalonIdHandoffRouteImport
+      parentRoute: typeof AdminSalonsSalonIdRoute
+    }
+    '/_admin/salons/$salonId/edit': {
+      id: '/_admin/salons/$salonId/edit'
+      path: '/edit'
+      fullPath: '/salons/$salonId/edit'
+      preLoaderRoute: typeof AdminSalonsSalonIdEditRouteImport
+      parentRoute: typeof AdminSalonsSalonIdRoute
+    }
+    '/_admin/salons/$salonId/clients': {
+      id: '/_admin/salons/$salonId/clients'
+      path: '/clients'
+      fullPath: '/salons/$salonId/clients'
+      preLoaderRoute: typeof AdminSalonsSalonIdClientsRouteImport
+      parentRoute: typeof AdminSalonsSalonIdRoute
+    }
   }
 }
 
+interface AdminSalonsSalonIdRouteChildren {
+  AdminSalonsSalonIdClientsRoute: typeof AdminSalonsSalonIdClientsRoute
+  AdminSalonsSalonIdEditRoute: typeof AdminSalonsSalonIdEditRoute
+  AdminSalonsSalonIdHandoffRoute: typeof AdminSalonsSalonIdHandoffRoute
+  AdminSalonsSalonIdHoursRoute: typeof AdminSalonsSalonIdHoursRoute
+  AdminSalonsSalonIdPresenceRoute: typeof AdminSalonsSalonIdPresenceRoute
+  AdminSalonsSalonIdRequestsRoute: typeof AdminSalonsSalonIdRequestsRoute
+  AdminSalonsSalonIdServicesRoute: typeof AdminSalonsSalonIdServicesRoute
+  AdminSalonsSalonIdStaffRoute: typeof AdminSalonsSalonIdStaffRoute
+}
+
+const AdminSalonsSalonIdRouteChildren: AdminSalonsSalonIdRouteChildren = {
+  AdminSalonsSalonIdClientsRoute: AdminSalonsSalonIdClientsRoute,
+  AdminSalonsSalonIdEditRoute: AdminSalonsSalonIdEditRoute,
+  AdminSalonsSalonIdHandoffRoute: AdminSalonsSalonIdHandoffRoute,
+  AdminSalonsSalonIdHoursRoute: AdminSalonsSalonIdHoursRoute,
+  AdminSalonsSalonIdPresenceRoute: AdminSalonsSalonIdPresenceRoute,
+  AdminSalonsSalonIdRequestsRoute: AdminSalonsSalonIdRequestsRoute,
+  AdminSalonsSalonIdServicesRoute: AdminSalonsSalonIdServicesRoute,
+  AdminSalonsSalonIdStaffRoute: AdminSalonsSalonIdStaffRoute,
+}
+
+const AdminSalonsSalonIdRouteWithChildren =
+  AdminSalonsSalonIdRoute._addFileChildren(AdminSalonsSalonIdRouteChildren)
+
 interface AdminSalonsRouteChildren {
-  AdminSalonsSalonIdRoute: typeof AdminSalonsSalonIdRoute
+  AdminSalonsSalonIdRoute: typeof AdminSalonsSalonIdRouteWithChildren
   AdminSalonsIndexRoute: typeof AdminSalonsIndexRoute
 }
 
 const AdminSalonsRouteChildren: AdminSalonsRouteChildren = {
-  AdminSalonsSalonIdRoute: AdminSalonsSalonIdRoute,
+  AdminSalonsSalonIdRoute: AdminSalonsSalonIdRouteWithChildren,
   AdminSalonsIndexRoute: AdminSalonsIndexRoute,
 }
 

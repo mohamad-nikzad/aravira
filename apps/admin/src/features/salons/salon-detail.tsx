@@ -14,16 +14,31 @@ import {
 } from '@repo/api-client/query'
 import { Link } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ShieldAlert } from 'lucide-react'
-import { useState } from 'react'
+import {
+  Clock,
+  Handshake,
+  Inbox,
+  LayoutDashboard,
+  MapPin,
+  Pencil,
+  Scissors,
+  ShieldAlert,
+  UserRound,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 
 import { ErrorPanel } from '#/components/admin/error-panel'
 import {
   MutationSuccess,
   useMutationSuccess,
 } from '#/components/admin/mutation-success'
+import { CompactRows, DetailGrid, Panel } from '#/components/admin/panel'
 import { ScreenSkeleton } from '#/components/admin/screen-skeleton'
 import { AdminPageHeader } from '#/components/layout/admin-page-header'
+import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert'
+import { Button } from '#/components/ui/button'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -32,47 +47,77 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '#/components/ui/breadcrumb'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
-import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert'
-import { Button } from '#/components/ui/button'
 import { useAdminAuth } from '#/context/admin-auth-provider'
 import { number, text } from '#/lib/admin-format'
 
 import { normalizeStatus, StatusBadge, truthy } from './salon-columns'
 import { NotesPanel, StatusForm } from './salon-governance'
-import { CompactRows, DetailGrid, Panel } from '#/components/admin/panel'
-import { SalonTenantDataTabs } from './salon-tenant-tabs'
-import { SalonSetupEditor } from './salon-setup-editor'
+import {
+  SalonSetupHoursForm,
+  SalonSetupPresenceForm,
+} from './salon-setup-editor'
 import { SalonSetupCatalog } from './salon-setup-catalog'
-import { SalonSetupStaff } from './salon-setup-staff'
 import { SalonSetupClients } from './salon-setup-clients'
 import { SalonSetupHandoff } from './salon-setup-handoff'
-import {
-  useSalonDetailUrlState,
-  type SalonDetailSection,
-} from './salon-url-state'
+import { SalonSetupStaff } from './salon-setup-staff'
+import { SalonTenantDataPage } from './salon-tenant-tabs'
 
-export function SalonDetailPage({ salonId }: { salonId: string }) {
-  const detailQuery = useQuery(
-    getApiV1AdminSalonsByIdOptions({ path: { id: salonId } }),
-  )
-  const salonName = text(detailQuery.data?.salon?.name) || undefined
+export type SalonWorkspaceSection =
+  | 'overview'
+  | 'edit'
+  | 'hours'
+  | 'presence'
+  | 'staff'
+  | 'services'
+  | 'clients'
+  | 'requests'
+  | 'handoff'
+
+type WorkspaceData = ReturnType<typeof useSalonWorkspace> & {
+  salon: Record<string, unknown>
+}
+
+export function SalonDetailPage({
+  salonId,
+  section = 'overview',
+}: {
+  salonId: string
+  section?: SalonWorkspaceSection
+}) {
+  const workspace = useSalonWorkspace(salonId)
+  const salonName = text(workspace.detailQuery.data?.salon?.name) || undefined
 
   return (
     <>
       <div className="space-y-3">
-        <SalonDetailBreadcrumbs salonName={salonName} />
+        <SalonDetailBreadcrumbs
+          salonId={salonId}
+          salonName={salonName}
+          currentLabel={WORKSPACE_LABELS[section]}
+        />
         <AdminPageHeader
           title={salonName || 'جزئیات سالن'}
-          description="بررسی هویت سالن، اقدامات حاکمیتی و داده‌های عملیاتی."
+          description="فضای کاری سالن برای بررسی، ویرایش و پیگیری بخش‌های اصلی."
         />
       </div>
-      <SalonDetailScreen salonId={salonId} />
+      <SalonWorkspaceScreen
+        workspace={workspace}
+        salonId={salonId}
+        section={section}
+      />
     </>
   )
 }
 
-function SalonDetailBreadcrumbs({ salonName }: { salonName?: string }) {
+function SalonDetailBreadcrumbs({
+  salonId,
+  salonName,
+  currentLabel,
+}: {
+  salonId: string
+  salonName?: string
+  currentLabel: string
+}) {
   return (
     <Breadcrumb>
       <BreadcrumbList>
@@ -83,18 +128,25 @@ function SalonDetailBreadcrumbs({ salonName }: { salonName?: string }) {
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <BreadcrumbPage>{salonName || 'جزئیات سالن'}</BreadcrumbPage>
+          <BreadcrumbLink asChild>
+            <Link to="/salons/$salonId" params={{ salonId }}>
+              {salonName || 'جزئیات سالن'}
+            </Link>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage>{currentLabel}</BreadcrumbPage>
         </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>
   )
 }
 
-export function SalonDetailScreen({ salonId }: { salonId: string }) {
+function useSalonWorkspace(salonId: string) {
   const queryClient = useQueryClient()
   const { me, runtime } = useAdminAuth()
   const { successMessage, showSuccess } = useMutationSuccess()
-  const { tab, subtab, setTab, setSubtab } = useSalonDetailUrlState()
   const [overrideSalonId, setOverrideSalonId] = useState<string | null>(null)
   const isLiveData = runtime.dataSource === 'live'
   const detailQuery = useQuery(
@@ -172,249 +224,493 @@ export function SalonDetailScreen({ salonId }: { salonId: string }) {
     },
   })
 
-  if (detailQuery.isLoading) {
+  return {
+    canEnterOverride,
+    canManageSetup,
+    detailQuery,
+    hoursMutation,
+    isLiveData,
+    noteMutation,
+    notesQuery,
+    overrideMode,
+    presenceMutation,
+    setupQuery,
+    statusMutation,
+    successMessage,
+    setOverrideSalonId,
+  }
+}
+
+function SalonWorkspaceScreen({
+  workspace,
+  salonId,
+  section,
+}: {
+  workspace: ReturnType<typeof useSalonWorkspace>
+  salonId: string
+  section: SalonWorkspaceSection
+}) {
+  if (workspace.detailQuery.isLoading) {
     return <ScreenSkeleton label="در حال بارگذاری سالن" />
   }
-  if (detailQuery.isError) {
+  if (workspace.detailQuery.isError) {
     return (
       <ErrorPanel
         message="بارگذاری جزئیات سالن ناموفق بود."
-        onRetry={() => void detailQuery.refetch()}
+        onRetry={() => void workspace.detailQuery.refetch()}
       />
     )
   }
 
-  const salon = detailQuery.data?.salon ?? {}
-  const currentStatus = normalizeStatus(salon.status)
+  const salon = workspace.detailQuery.data?.salon ?? {}
+  const data: WorkspaceData = { ...workspace, salon }
 
   return (
     <div className="space-y-5">
-      <MutationSuccess message={successMessage} />
-      <Tabs
-        value={tab}
-        onValueChange={(value) => setTab(value as SalonDetailSection)}
-        className="space-y-4"
-      >
-        <TabsList>
-          <TabsTrigger value="overview">نمای کلی</TabsTrigger>
-          <TabsTrigger value="governance">حاکمیت</TabsTrigger>
-          <TabsTrigger value="operations">عملیات</TabsTrigger>
-          {(currentStatus === 'setup' && canManageSetup) || canEnterOverride ? (
-            <TabsTrigger value="setup">
-              {canEnterOverride ? 'Override مالک پلتفرم' : 'آماده‌سازی'}
-            </TabsTrigger>
-          ) : null}
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          <Panel title="هویت سالن">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <h2 className="truncate text-lg font-semibold">
-                  {text(salon.name) || 'سالن بدون نام'}
-                </h2>
-                <p className="mt-1 truncate text-sm text-muted-foreground">
-                  {text(salon.slug) || salonId}
-                </p>
-              </div>
-              <StatusBadge status={currentStatus} />
-            </div>
-            <DetailGrid
-              items={[
-                ['شماره تلفن', text(salon.phone)],
-                [
-                  'تلفن مالک موردنظر',
-                  text(salon.intendedOwnerPhone) || 'ثبت نشده',
-                ],
-                ['منطقه زمانی', text(salon.timezone)],
-                [
-                  'صفحه عمومی',
-                  truthy(salon.publicEnabled) ? 'فعال' : 'غیرفعال',
-                ],
-              ]}
-            />
-          </Panel>
-          <Panel title="آمار">
-            <DetailGrid
-              items={[
-                ['خدمات', number(detailQuery.data?.stats.services)],
-                ['نوبت‌ها', number(detailQuery.data?.stats.appointments)],
-                ['اعضا', number(detailQuery.data?.members.length)],
-              ]}
-            />
-          </Panel>
-          <Panel title="اعضا">
-            <CompactRows
-              rows={(detailQuery.data?.members ?? []).map((member) => ({
-                label: text(member.name),
-                value: text(member.role),
-                badge: text(member.phoneNumber) || text(member.email),
-              }))}
-              empty="عضوی برای این سالن ثبت نشده است."
-            />
-          </Panel>
-        </TabsContent>
-
-        <TabsContent value="governance" className="space-y-4">
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-            {currentStatus === 'setup' ? (
-              <Panel title="وضعیت راه‌اندازی">
-                <p className="text-sm leading-6 text-muted-foreground">
-                  این سالن تا تحویل به مالک در وضعیت راه‌اندازی باقی می‌ماند و
-                  از این صفحه فعال نمی‌شود.
-                </p>
-              </Panel>
-            ) : (
-              <StatusForm
-                current={currentStatus}
-                error={statusMutation.error}
-                isLiveData={isLiveData}
-                pending={statusMutation.isPending}
-                onSubmit={(input, options) =>
-                  statusMutation.mutate(
-                    { path: { id: salonId }, body: input },
+      <MutationSuccess message={workspace.successMessage} />
+      <WorkspaceNav
+        salonId={salonId}
+        section={section}
+        showHandoff={normalizeStatus(salon.status) === 'setup'}
+      />
+      {section === 'overview' ? (
+        <SalonOverviewSection salonId={salonId} data={data} />
+      ) : null}
+      {section === 'edit' ? <SalonEditSection data={data} /> : null}
+      {section === 'hours' ? (
+        <SetupSectionGate
+          salonId={salonId}
+          data={data}
+          render={() =>
+            data.setupQuery.data ? (
+              <SalonSetupHoursForm
+                configuration={data.setupQuery.data}
+                error={data.hoursMutation.error}
+                pending={data.hoursMutation.isPending}
+                isLiveData={data.isLiveData}
+                onSave={(body, options) =>
+                  data.hoursMutation.mutate(
+                    {
+                      path: { id: salonId },
+                      body: {
+                        ...body,
+                        ...(data.overrideMode ? { override: true } : {}),
+                      },
+                    },
                     options,
                   )
                 }
               />
-            )}
-            <NotesPanel
-              error={noteMutation.error}
-              isError={notesQuery.isError}
-              isLoading={notesQuery.isLoading}
-              notes={notesQuery.data?.notes ?? []}
-              pending={noteMutation.isPending}
-              onRetry={() => void notesQuery.refetch()}
-              onSubmit={(input, options) =>
-                noteMutation.mutate(
-                  { path: { id: salonId }, body: input },
-                  options,
-                )
-              }
-            />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="operations">
-          <SalonTenantDataTabs
-            salonId={salonId}
-            activeTab={subtab}
-            onTabChange={setSubtab}
-          />
-        </TabsContent>
-
-        {(currentStatus === 'setup' && canManageSetup) || canEnterOverride ? (
-          <TabsContent value="setup">
-            {canEnterOverride && !overrideMode ? (
-              <Alert variant="destructive">
-                <ShieldAlert />
-                <AlertTitle>ورود به Platform Owner Override</AlertTitle>
-                <AlertDescription className="flex flex-col items-start gap-3">
-                  <p>
-                    این حالت داده‌های عملیاتی سالن فعال را تغییر می‌دهد. هر
-                    تغییر به نام شما و با جزئیات درخواست ممیزی می‌شود. هیچ نشست
-                    مستاجر یا جانشینی کاربر سالن ساخته نمی‌شود.
-                  </p>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={() => setOverrideSalonId(salonId)}
-                  >
-                    <ShieldAlert data-icon="inline-start" />
-                    ورود آگاهانه به Override
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            ) : null}
-            {overrideMode ? (
-              <Alert variant="destructive" className="mb-4">
-                <ShieldAlert />
-                <AlertTitle>Override فعال است</AlertTitle>
-                <AlertDescription className="flex flex-col items-start gap-3">
-                  <p>
-                    در حال ویرایش داده زنده سالن هستید. تغییرات با حساب شما در
-                    گزارش ممیزی ثبت می‌شود.
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setOverrideSalonId(null)}
-                  >
-                    خروج از Override
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            ) : null}
-            {setupQuery.isLoading ? (
-              <ScreenSkeleton label="در حال بارگذاری تنظیمات راه‌اندازی" />
-            ) : null}
-            {setupQuery.isError ? (
-              <ErrorPanel
-                message="بارگذاری تنظیمات راه‌اندازی ناموفق بود."
-                onRetry={() => void setupQuery.refetch()}
+            ) : null
+          }
+        />
+      ) : null}
+      {section === 'presence' ? (
+        <SetupSectionGate
+          salonId={salonId}
+          data={data}
+          render={() =>
+            data.setupQuery.data ? (
+              <SalonSetupPresenceForm
+                configuration={data.setupQuery.data}
+                error={data.presenceMutation.error}
+                pending={data.presenceMutation.isPending}
+                isLiveData={data.isLiveData}
+                onSave={(body, options) =>
+                  data.presenceMutation.mutate(
+                    {
+                      path: { id: salonId },
+                      body: {
+                        ...body,
+                        ...(data.overrideMode ? { override: true } : {}),
+                      },
+                    },
+                    options,
+                  )
+                }
               />
-            ) : null}
-            {setupQuery.data && (currentStatus === 'setup' || overrideMode) ? (
-              <div className="space-y-4">
-                {overrideMode ? null : (
-                  <SalonSetupHandoff
-                    salonId={salonId}
-                    intendedOwnerPhone={text(salon.intendedOwnerPhone)}
-                    isLiveData={isLiveData}
-                  />
-                )}
-                <SalonSetupEditor
-                  configuration={setupQuery.data}
-                  hoursError={hoursMutation.error}
-                  presenceError={presenceMutation.error}
-                  hoursPending={hoursMutation.isPending}
-                  presencePending={presenceMutation.isPending}
-                  isLiveData={isLiveData}
-                  onSaveHours={(body, options) =>
-                    hoursMutation.mutate(
-                      {
-                        path: { id: salonId },
-                        body: {
-                          ...body,
-                          ...(overrideMode ? { override: true } : {}),
-                        },
-                      },
-                      options,
-                    )
-                  }
-                  onSavePresence={(body, options) =>
-                    presenceMutation.mutate(
-                      {
-                        path: { id: salonId },
-                        body: {
-                          ...body,
-                          ...(overrideMode ? { override: true } : {}),
-                        },
-                      },
-                      options,
-                    )
-                  }
-                />
-                <SalonSetupCatalog
-                  salonId={salonId}
-                  isLiveData={isLiveData}
-                  overrideMode={overrideMode}
-                />
-                <SalonSetupStaff
-                  salonId={salonId}
-                  isLiveData={isLiveData}
-                  overrideMode={overrideMode}
-                />
-                <SalonSetupClients
-                  salonId={salonId}
-                  isLiveData={isLiveData}
-                  overrideMode={overrideMode}
-                />
-              </div>
-            ) : null}
-          </TabsContent>
-        ) : null}
-      </Tabs>
+            ) : null
+          }
+        />
+      ) : null}
+      {section === 'staff' ? (
+        <SetupSectionGate
+          salonId={salonId}
+          data={data}
+          fallback={
+            <SalonTenantDataPage salonId={salonId} tab="staff" />
+          }
+          render={() => (
+            <SalonSetupStaff
+              salonId={salonId}
+              isLiveData={data.isLiveData}
+              overrideMode={data.overrideMode}
+            />
+          )}
+        />
+      ) : null}
+      {section === 'services' ? (
+        <SetupSectionGate
+          salonId={salonId}
+          data={data}
+          fallback={
+            <SalonTenantDataPage salonId={salonId} tab="services" />
+          }
+          render={() => (
+            <SalonSetupCatalog
+              salonId={salonId}
+              isLiveData={data.isLiveData}
+              overrideMode={data.overrideMode}
+            />
+          )}
+        />
+      ) : null}
+      {section === 'clients' ? (
+        <SetupSectionGate
+          salonId={salonId}
+          data={data}
+          fallback={
+            <SalonTenantDataPage salonId={salonId} tab="clients" />
+          }
+          render={() => (
+            <SalonSetupClients
+              salonId={salonId}
+              isLiveData={data.isLiveData}
+              overrideMode={data.overrideMode}
+            />
+          )}
+        />
+      ) : null}
+      {section === 'requests' ? (
+        <SalonTenantDataPage salonId={salonId} tab="requests" />
+      ) : null}
+      {section === 'handoff' ? (
+        <SetupSectionGate
+          salonId={salonId}
+          data={data}
+          render={() =>
+            data.overrideMode ? (
+              <Panel title="تحویل سالن">
+                <p className="text-sm leading-6 text-muted-foreground">
+                  تحویل برای Override سالن فعال انجام نمی‌شود.
+                </p>
+              </Panel>
+            ) : (
+              <SalonSetupHandoff
+                salonId={salonId}
+                intendedOwnerPhone={text(data.salon.intendedOwnerPhone)}
+                isLiveData={data.isLiveData}
+              />
+            )
+          }
+        />
+      ) : null}
     </div>
   )
 }
+
+function SalonOverviewSection({
+  data,
+}: {
+  salonId: string
+  data: WorkspaceData
+}) {
+  const currentStatus = normalizeStatus(data.salon.status)
+
+  return (
+    <div className="space-y-4">
+      <Panel title="هویت سالن">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h2 className="truncate text-lg font-semibold">
+              {text(data.salon.name) || 'سالن بدون نام'}
+            </h2>
+            <p className="mt-1 truncate text-sm text-muted-foreground">
+              {text(data.salon.slug) || text(data.salon.id)}
+            </p>
+          </div>
+          <StatusBadge status={currentStatus} />
+        </div>
+        <DetailGrid
+          items={[
+            ['شماره تلفن', text(data.salon.phone)],
+            [
+              'تلفن مالک موردنظر',
+              text(data.salon.intendedOwnerPhone) || 'ثبت نشده',
+            ],
+            ['منطقه زمانی', text(data.salon.timezone)],
+            ['صفحه عمومی', truthy(data.salon.publicEnabled) ? 'فعال' : 'غیرفعال'],
+          ]}
+        />
+      </Panel>
+      <Panel title="آمار">
+        <DetailGrid
+          items={[
+            ['خدمات', number(data.detailQuery.data?.stats.services)],
+            ['نوبت‌ها', number(data.detailQuery.data?.stats.appointments)],
+            ['اعضا', number(data.detailQuery.data?.members.length)],
+          ]}
+        />
+      </Panel>
+      <Panel title="اعضا">
+        <CompactRows
+          rows={(data.detailQuery.data?.members ?? []).map((member) => ({
+            label: text(member.name),
+            value: text(member.role),
+            badge: text(member.phoneNumber) || text(member.email),
+          }))}
+          empty="عضوی برای این سالن ثبت نشده است."
+        />
+      </Panel>
+    </div>
+  )
+}
+
+function SalonEditSection({ data }: { data: WorkspaceData }) {
+  const currentStatus = normalizeStatus(data.salon.status)
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+      <Panel title="اطلاعات سالن">
+        <DetailGrid
+          items={[
+            ['نام سالن', text(data.salon.name)],
+            ['شناسه عمومی', text(data.salon.slug)],
+            ['شماره تلفن', text(data.salon.phone)],
+            ['منطقه زمانی', text(data.salon.timezone)],
+            ['وضعیت', WORKSPACE_STATUS_LABELS[currentStatus]],
+          ]}
+        />
+      </Panel>
+      <div className="space-y-4">
+        {currentStatus === 'setup' ? (
+          <Panel title="وضعیت راه‌اندازی">
+            <p className="text-sm leading-6 text-muted-foreground">
+              این سالن تا تحویل به مالک در وضعیت راه‌اندازی باقی می‌ماند و از
+              این صفحه فعال نمی‌شود.
+            </p>
+          </Panel>
+        ) : (
+          <StatusForm
+            current={currentStatus}
+            error={data.statusMutation.error}
+            isLiveData={data.isLiveData}
+            pending={data.statusMutation.isPending}
+            onSubmit={(input, options) =>
+              data.statusMutation.mutate(
+                { path: { id: text(data.salon.id) }, body: input },
+                options,
+              )
+            }
+          />
+        )}
+        <NotesPanel
+          error={data.noteMutation.error}
+          isError={data.notesQuery.isError}
+          isLoading={data.notesQuery.isLoading}
+          notes={data.notesQuery.data?.notes ?? []}
+          pending={data.noteMutation.isPending}
+          onRetry={() => void data.notesQuery.refetch()}
+          onSubmit={(input, options) =>
+            data.noteMutation.mutate(
+              { path: { id: text(data.salon.id) }, body: input },
+              options,
+            )
+          }
+        />
+      </div>
+    </div>
+  )
+}
+
+function SetupSectionGate({
+  salonId,
+  data,
+  fallback = null,
+  render,
+}: {
+  salonId: string
+  data: WorkspaceData
+  fallback?: ReactNode
+  render: () => ReactNode
+}) {
+  const currentStatus = normalizeStatus(data.salon.status)
+  const canUseSetup = currentStatus === 'setup' && data.canManageSetup
+
+  if (!canUseSetup && fallback) {
+    return <>{fallback}</>
+  }
+
+  if (!canUseSetup && !data.canEnterOverride) {
+    return <>{fallback}</>
+  }
+
+  if (data.canEnterOverride && !data.overrideMode && !canUseSetup) {
+    return (
+      <Alert variant="destructive">
+        <ShieldAlert />
+        <AlertTitle>ورود به Platform Owner Override</AlertTitle>
+        <AlertDescription className="flex flex-col items-start gap-3">
+          <p>
+            این حالت داده‌های عملیاتی سالن فعال را تغییر می‌دهد. هر تغییر به نام
+            شما و با جزئیات درخواست ممیزی می‌شود. هیچ نشست مستاجر یا جانشینی
+            کاربر سالن ساخته نمی‌شود.
+          </p>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => data.setOverrideSalonId(salonId)}
+          >
+            <ShieldAlert data-icon="inline-start" />
+            ورود آگاهانه به Override
+          </Button>
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {data.overrideMode ? (
+        <Alert variant="destructive">
+          <ShieldAlert />
+          <AlertTitle>Override فعال است</AlertTitle>
+          <AlertDescription className="flex flex-col items-start gap-3">
+            <p>
+              در حال ویرایش داده زنده سالن هستید. تغییرات با حساب شما در گزارش
+              ممیزی ثبت می‌شود.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => data.setOverrideSalonId(null)}
+            >
+              خروج از Override
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {data.setupQuery.isLoading ? (
+        <ScreenSkeleton label="در حال بارگذاری تنظیمات راه‌اندازی" />
+      ) : null}
+      {data.setupQuery.isError ? (
+        <ErrorPanel
+          message="بارگذاری تنظیمات راه‌اندازی ناموفق بود."
+          onRetry={() => void data.setupQuery.refetch()}
+        />
+      ) : null}
+      {data.setupQuery.data || data.overrideMode ? render() : null}
+    </div>
+  )
+}
+
+function WorkspaceNav({
+  salonId,
+  section,
+  showHandoff,
+}: {
+  salonId: string
+  section: SalonWorkspaceSection
+  showHandoff: boolean
+}) {
+  return (
+    <nav className="flex flex-wrap gap-2" aria-label="بخش‌های فضای کاری سالن">
+      {WORKSPACE_NAV_ITEMS.filter((item) => showHandoff || item.section !== 'handoff').map(
+        (item) => (
+          <Button
+            key={item.section}
+            asChild
+            size="sm"
+            variant={section === item.section ? 'default' : 'outline'}
+          >
+            <Link to={item.to} params={{ salonId }}>
+              <item.icon data-icon="inline-start" />
+              {item.label}
+            </Link>
+          </Button>
+        ),
+      )}
+    </nav>
+  )
+}
+
+const WORKSPACE_LABELS: Record<SalonWorkspaceSection, string> = {
+  overview: 'نمای کلی',
+  edit: 'اطلاعات سالن',
+  hours: 'ساعت کاری',
+  presence: 'حضور سالن',
+  staff: 'پرسنل',
+  services: 'خدمات',
+  clients: 'مشتریان',
+  requests: 'درخواست‌ها',
+  handoff: 'تحویل',
+}
+
+const WORKSPACE_STATUS_LABELS = {
+  setup: 'راه‌اندازی',
+  active: 'فعال',
+  suspended: 'تعلیق‌شده',
+  archived: 'آرشیوشده',
+} as const
+
+const WORKSPACE_NAV_ITEMS: Array<{
+  section: SalonWorkspaceSection
+  label: string
+  to: string
+  icon: LucideIcon
+}> = [
+  {
+    section: 'overview',
+    label: WORKSPACE_LABELS.overview,
+    to: '/salons/$salonId',
+    icon: LayoutDashboard,
+  },
+  {
+    section: 'edit',
+    label: WORKSPACE_LABELS.edit,
+    to: '/salons/$salonId/edit',
+    icon: Pencil,
+  },
+  {
+    section: 'hours',
+    label: WORKSPACE_LABELS.hours,
+    to: '/salons/$salonId/hours',
+    icon: Clock,
+  },
+  {
+    section: 'presence',
+    label: WORKSPACE_LABELS.presence,
+    to: '/salons/$salonId/presence',
+    icon: MapPin,
+  },
+  {
+    section: 'staff',
+    label: WORKSPACE_LABELS.staff,
+    to: '/salons/$salonId/staff',
+    icon: Users,
+  },
+  {
+    section: 'services',
+    label: WORKSPACE_LABELS.services,
+    to: '/salons/$salonId/services',
+    icon: Scissors,
+  },
+  {
+    section: 'clients',
+    label: WORKSPACE_LABELS.clients,
+    to: '/salons/$salonId/clients',
+    icon: UserRound,
+  },
+  {
+    section: 'requests',
+    label: WORKSPACE_LABELS.requests,
+    to: '/salons/$salonId/requests',
+    icon: Inbox,
+  },
+  {
+    section: 'handoff',
+    label: WORKSPACE_LABELS.handoff,
+    to: '/salons/$salonId/handoff',
+    icon: Handshake,
+  },
+]

@@ -185,82 +185,50 @@ function SalonRowActions({ row }: { row: RecordRow }) {
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link
-              to="/salons/$salonId"
-              params={{ salonId }}
-              search={{ tab: 'setup' }}
-            >
+            <Link to="/salons/$salonId/edit" params={{ salonId }}>
               <Pencil />
               ویرایش اطلاعات سالن
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link
-              to="/salons/$salonId"
-              params={{ salonId }}
-              search={{ tab: 'setup' }}
-            >
+            <Link to="/salons/$salonId/hours" params={{ salonId }}>
               <Clock />
               ساعت کاری
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link
-              to="/salons/$salonId"
-              params={{ salonId }}
-              search={{ tab: 'setup' }}
-            >
+            <Link to="/salons/$salonId/presence" params={{ salonId }}>
               <MapPin />
               حضور سالن
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link
-              to="/salons/$salonId"
-              params={{ salonId }}
-              search={{ tab: 'operations', subtab: 'staff' }}
-            >
+            <Link to="/salons/$salonId/staff" params={{ salonId }}>
               <Users />
               پرسنل
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link
-              to="/salons/$salonId"
-              params={{ salonId }}
-              search={{ tab: 'operations', subtab: 'services' }}
-            >
+            <Link to="/salons/$salonId/services" params={{ salonId }}>
               <Scissors />
               خدمات
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link
-              to="/salons/$salonId"
-              params={{ salonId }}
-              search={{ tab: 'operations', subtab: 'clients' }}
-            >
+            <Link to="/salons/$salonId/clients" params={{ salonId }}>
               <UserRound />
               مشتریان
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link
-              to="/salons/$salonId"
-              params={{ salonId }}
-              search={{ tab: 'operations', subtab: 'requests' }}
-            >
+            <Link to="/salons/$salonId/requests" params={{ salonId }}>
               <Inbox />
               درخواست‌ها
             </Link>
           </DropdownMenuItem>
           {setup ? (
             <DropdownMenuItem asChild>
-              <Link
-                to="/salons/$salonId"
-                params={{ salonId }}
-                search={{ tab: 'setup' }}
-              >
+              <Link to="/salons/$salonId/handoff" params={{ salonId }}>
                 <KeyRound />
                 تحویل
               </Link>

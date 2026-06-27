@@ -1,22 +1,5 @@
 import { z } from 'zod'
 
-export const SALON_DETAIL_SECTIONS = [
-  'overview',
-  'governance',
-  'operations',
-  'setup',
-] as const
-export const SALON_OPS_TABS = [
-  'clients',
-  'appointments',
-  'requests',
-  'staff',
-  'services',
-] as const
-
-export type SalonDetailSection = (typeof SALON_DETAIL_SECTIONS)[number]
-export type SalonOpsTab = (typeof SALON_OPS_TABS)[number]
-
 const positiveInt = z.coerce.number().int().min(1)
 
 export const PAGE_SIZE_OPTIONS = [10, 20, 50] as const
@@ -49,14 +32,8 @@ export const auditLogSearchSchema = tableSearchSchema.extend({
   salonId: z.string().optional(),
 })
 
-export const salonDetailSearchSchema = z.object({
-  tab: z.enum(SALON_DETAIL_SECTIONS).optional().default('overview'),
-  subtab: z.enum(SALON_OPS_TABS).optional().default('clients'),
-})
-
 export type TableSearch = z.infer<typeof tableSearchSchema>
 export type AuditLogSearch = z.infer<typeof auditLogSearchSchema>
-export type SalonDetailSearch = z.infer<typeof salonDetailSearchSchema>
 
 export type TableSearchDefaults = {
   page: number
@@ -97,17 +74,4 @@ export function compactAuditLogSearch(
     ...(input.targetId ? { targetId: input.targetId } : {}),
     ...(input.salonId ? { salonId: input.salonId } : {}),
   }
-}
-
-export function compactSalonDetailSearch(
-  input: Partial<SalonDetailSearch>,
-): Partial<SalonDetailSearch> {
-  const out: Partial<SalonDetailSearch> = {}
-  const tab = input.tab ?? 'overview'
-  const subtab = input.subtab ?? 'clients'
-
-  if (tab !== 'overview') out.tab = tab
-  if (tab === 'operations' && subtab !== 'clients') out.subtab = subtab
-
-  return out
 }
