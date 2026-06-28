@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getServiceById: vi.fn(),
   getActiveServiceAddonsForService: vi.fn(),
   validateComboServiceIsBookable: vi.fn(),
+  getAllStaff: vi.fn(),
   staffMayPerformService: vi.fn(),
   getUserById: vi.fn(),
   checkStaffAvailabilityForAppointment: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock('./service-queries', () => ({
 
 vi.mock('./staff-queries', () => ({
   checkStaffAvailabilityForAppointment: mocks.checkStaffAvailabilityForAppointment,
+  getAllStaff: mocks.getAllStaff,
   staffMayPerformService: mocks.staffMayPerformService,
 }))
 
@@ -64,6 +66,17 @@ describe('appointment intake placeholder rules', () => {
     })
     mocks.validateComboServiceIsBookable.mockResolvedValue(true)
     mocks.getActiveServiceAddonsForService.mockResolvedValue([])
+    mocks.getAllStaff.mockResolvedValue([
+      {
+        id: 'staff-1',
+        salonId: 'salon-1',
+        role: 'staff',
+        name: 'پرسنل',
+        color: 'bg-staff-1',
+        phone: '09120000000',
+        createdAt: new Date(),
+      },
+    ])
     mocks.staffMayPerformService.mockResolvedValue(true)
     mocks.getUserById.mockResolvedValue({
       id: 'staff-1',
